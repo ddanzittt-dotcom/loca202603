@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/map/:path*",
+      "destination": "/"
+    },
+    {
+      "source": "/shared",
+      "destination": "/"
+    }
+  ]
+}

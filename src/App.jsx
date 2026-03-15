@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from "react"
+﻿import { useCallback, useEffect, useMemo, useState } from "react"
 import { Avatar, BottomNav, BottomSheet, MapPreview, Toast } from "./components/ui"
 import {
   collections,
@@ -13,13 +13,15 @@ import {
   sharesSeed,
   users,
 } from "./data/sampleData"
-import { useInstallPrompt, useLocalStorageState, useToast } from "./hooks/useAppState"
+import { useLocalStorageState, useToast } from "./hooks/useAppState"
 import {
   buildCommunityPosts,
+  buildMapRoutePath,
+  buildMapSharePath,
+  buildMapShareUrl,
   buildOwnPosts,
   createId,
-  exportBackup,
-  importBackup,
+  parseAppLocation,
   placeEmojis,
   tagsToText,
   themePalette,
@@ -61,6 +63,14 @@ const getFeatureCenter = (feature) => {
   }
 }
 
+const resolveStoredMapTarget = (mapId, maps) => {
+  if (!mapId) return null
+  if (mapId === "community-map") return { source: "community", mapId }
+  if (demoMaps.some((map) => map.id === mapId)) return { source: "demo", mapId }
+  if (maps.some((map) => map.id === mapId)) return { source: "local", mapId }
+  return null
+}
+
 export default function App() {
   const [maps, setMaps] = useLocalStorageState("loca.mobile.maps", mapsSeed)
   const [features, setFeatures] = useLocalStorageState("loca.mobile.features", featuresSeed)
@@ -68,10 +78,21 @@ export default function App() {
   const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", followedSeed)
   const [communityPosts, setCommunityPosts] = useState(communityPostsSeed)
   const [communityMapFeatures, setCommunityMapFeatures] = useLocalStorageState("loca.mobile.communityMapFeatures", communityMapFeaturesSeed)
-  const [activeTab, setActiveTab] = useState("home")
-  const [mapsView, setMapsView] = useState("list")
-  const [activeMapId, setActiveMapId] = useState(mapsSeed[0]?.id ?? null)
-  const [activeMapSource, setActiveMapSource] = useState("local")
+  const routeAtLoad = useMemo(() => {
+    try {
+      return parseAppLocation(window.location)
+    } catch (error) {
+      console.error("공유 링크를 해석하지 못했어요.", error)
+      return { type: "invalid-shared" }
+    }
+  }, [])
+  const initialStoredTarget = routeAtLoad?.type === "map" ? resolveStoredMapTarget(routeAtLoad.mapId, maps) : null
+  const initialSharedMapData = routeAtLoad?.type === "shared" ? routeAtLoad.payload : null
+  const [sharedMapData, setSharedMapData] = useState(initialSharedMapData)
+  const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "home")
+  const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
+  const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
+  const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
   const [selectedFeatureId, setSelectedFeatureId] = useState(null)
   const [selectedFeatureSummaryId, setSelectedFeatureSummaryId] = useState(null)
   const [editorMode, setEditorMode] = useState("browse")
@@ -85,14 +106,27 @@ export default function App() {
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [memoText, setMemoText] = useState("")
-  const fileInputRef = useRef(null)
   const toast = useToast()
-  const install = useInstallPrompt()
+  const showToast = toast.show
 
   const usersById = useMemo(() => Object.fromEntries(users.map((user) => [user.id, user])), [])
   const communityMapMeta = useMemo(() => [{ id: "community-map", title: "모두의 지도", description: "모두가 함께 만드는 지도", theme: "#635bff", updatedAt: new Date().toISOString() }], [])
-  const activeMapPool = activeMapSource === "community" ? communityMapMeta : activeMapSource === "demo" ? demoMaps : maps
-  const activeFeaturePool = activeMapSource === "community" ? communityMapFeatures : activeMapSource === "demo" ? demoFeatures : features
+  const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
+  const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
+  const activeMapPool = activeMapSource === "community"
+    ? communityMapMeta
+    : activeMapSource === "demo"
+      ? demoMaps
+      : activeMapSource === "shared"
+        ? sharedMapPool
+        : maps
+  const activeFeaturePool = activeMapSource === "community"
+    ? communityMapFeatures
+    : activeMapSource === "demo"
+      ? demoFeatures
+      : activeMapSource === "shared"
+        ? sharedFeaturePool
+        : features
   const activeMap = activeMapPool.find((map) => map.id === activeMapId) || null
   const activeFeatures = useMemo(
     () => (activeMapId ? activeFeaturePool.filter((feature) => feature.mapId === activeMapId) : []),
@@ -100,10 +134,6 @@ export default function App() {
   )
   const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, me), [shares, maps, features])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
-  const feedPosts = useMemo(
-    () => [...ownPosts, ...communityFeed].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [communityFeed, ownPosts],
-  )
   const recommendedMaps = useMemo(() => {
     const fromCollections = collections.map((c) => ({
       id: c.id, mapId: c.mapId, title: c.title,
@@ -117,27 +147,6 @@ export default function App() {
     }))
     return [...fromCollections, ...fromPosts]
   }, [communityFeed])
-
-  const addCommunityPin = ({ lat, lng }) => {
-    const pin = {
-      id: createId("cm"),
-      mapId: "community-map",
-      type: "pin",
-      title: "새 핀",
-      emoji: "📍",
-      lat,
-      lng,
-      tags: [],
-      note: "",
-      highlight: false,
-      updatedAt: new Date().toISOString(),
-      createdBy: me.id,
-      createdByName: me.name,
-      memos: [],
-    }
-    setCommunityMapFeatures((prev) => [pin, ...prev])
-    toast.show("모두의 지도에 핀을 추가했어요!")
-  }
 
   const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
   const selectedUserPosts = useMemo(
@@ -155,9 +164,86 @@ export default function App() {
   }, [activeFeaturePool, selectedFeatureSummaryId])
 
   const unpublishedMaps = maps.filter((mapItem) => !shares.some((share) => share.mapId === mapItem.id))
+  const shareUrl = useMemo(
+    () => (activeMap ? buildMapShareUrl(activeMap, activeFeatures) : ""),
+    [activeFeatures, activeMap],
+  )
+
+  useEffect(() => {
+    if (routeAtLoad?.type === "invalid-shared") {
+      showToast("공유 링크를 열지 못했어요.")
+    }
+    if (routeAtLoad?.type === "map" && !initialStoredTarget) {
+      showToast("이 기기에서 찾을 수 없는 지도예요.")
+    }
+  }, [initialStoredTarget, routeAtLoad?.type, showToast])
+
+  useEffect(() => {
+    const nextPath = activeTab === "maps" && mapsView === "editor" && activeMapId
+      ? activeMapSource === "shared" && sharedMapData
+        ? buildMapSharePath(sharedMapData.map, sharedMapData.features)
+        : buildMapRoutePath(activeMapId)
+      : "/"
+    const currentPath = `${window.location.pathname}${window.location.search}`
+    if (currentPath !== nextPath) {
+      window.history.replaceState(null, "", nextPath)
+    }
+  }, [activeMapId, activeMapSource, activeTab, mapsView, sharedMapData])
+
+  const importSharedMapToLocal = useCallback(() => {
+    if (!sharedMapData) return
+    const nextMapId = createId("map")
+    const updatedAt = new Date().toISOString()
+    const nextMap = {
+      ...sharedMapData.map,
+      id: nextMapId,
+      updatedAt,
+    }
+    const nextFeatures = sharedMapData.features.map((feature) => ({
+      ...feature,
+      id: createId("feat"),
+      mapId: nextMapId,
+      updatedAt,
+    }))
+    setMaps((current) => [nextMap, ...current])
+    setFeatures((current) => [...nextFeatures, ...current])
+    setSharedMapData(null)
+    setActiveTab("maps")
+    setActiveMapSource("local")
+    setActiveMapId(nextMapId)
+    setMapsView("editor")
+    setSelectedFeatureId(null)
+    setSelectedFeatureSummaryId(null)
+    setFeatureSheet(null)
+    setEditorMode("browse")
+    setDraftPoints([])
+    setFitTrigger((value) => value + 1)
+    showToast("공유 지도를 내 지도로 저장했어요.")
+  }, [setFeatures, setMaps, sharedMapData, showToast])
 
   const headerConfig = useMemo(() => {
     if (activeTab === "maps" && mapsView === "editor") {
+      if (activeMapSource === "shared") {
+        return {
+          subtitle: activeMap ? `${activeMap.title} · 공유 지도` : "공유 지도",
+          actionLabel: "내 지도로 저장",
+          onAction: importSharedMapToLocal,
+        }
+      }
+      if (activeMapSource === "demo") {
+        return {
+          subtitle: activeMap ? `${activeMap.title} · 둘러보기` : "지도 보기",
+          actionLabel: "맞춤 보기",
+          onAction: () => setFitTrigger((value) => value + 1),
+        }
+      }
+      if (activeMapSource === "community") {
+        return {
+          subtitle: "모두의 지도",
+          actionLabel: "맞춤 보기",
+          onAction: () => setFitTrigger((value) => value + 1),
+        }
+      }
       return {
         subtitle: activeMap ? `${activeMap.title} · 편집 중` : "지도 편집",
         actionLabel: "맞춤 보기",
@@ -168,7 +254,7 @@ export default function App() {
       return { subtitle: null, actionLabel: null, onAction: null }
     }
     if (activeTab === "profile") {
-      return { subtitle: "내 프로필과 그리드", actionLabel: "지도 올리기", onAction: () => setPublishSheet({ caption: "" }) }
+      return { subtitle: "내 프로필과 그리드", actionLabel: null, onAction: null }
     }
     if (activeTab === "places") {
       return { subtitle: "장소와 경로 목록", actionLabel: null, onAction: null }
@@ -177,7 +263,7 @@ export default function App() {
       return { subtitle: null, actionLabel: null, onAction: null }
     }
     return { subtitle: null, actionLabel: null, onAction: null }
-  }, [activeMap, activeTab, mapsView])
+  }, [activeMap, activeMapSource, activeTab, importSharedMapToLocal, mapsView])
 
   const touchMap = (mapId) => {
     setMaps((current) =>
@@ -455,11 +541,19 @@ export default function App() {
     const feature = features.find((item) => item.id === featureId)
     if (!feature) return
     setActiveTab("maps")
-    openMapEditor(feature.mapId)
-    window.setTimeout(() => focusFeature(featureId), 80)
+    setActiveMapSource("local")
+    setActiveMapId(feature.mapId)
+    setMapsView("editor")
+    resetEditorState()
+    setSelectedFeatureId(featureId)
+    setSelectedFeatureSummaryId(featureId)
+    const center = getFeatureCenter(feature)
+    if (center) setFocusPoint(center)
+    setFitTrigger((value) => value + 1)
   }
 
-  const publishMap = (mapId) => {
+  const publishMap = (mapId = publishSheet?.selectedMapId) => {
+    if (!mapId) return toast.show("올릴 지도를 먼저 선택해 주세요.")
     if (shares.some((share) => share.mapId === mapId)) return toast.show("이미 프로필에 올라간 지도예요.")
     const caption = publishSheet?.caption?.trim() || ""
     setShares((current) => [
@@ -474,67 +568,6 @@ export default function App() {
     setShares((current) => current.filter((share) => share.id !== postId))
     setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
     toast.show("공유를 해제했어요.")
-  }
-
-  const restoreSeed = () => {
-    if (!window.confirm("샘플 데이터로 되돌릴까요?")) return
-    setMaps(mapsSeed)
-    setFeatures(featuresSeed)
-    setShares(sharesSeed)
-    setFollowed(followedSeed)
-    setCommunityPosts(communityPostsSeed)
-    setCommunityMapFeatures(communityMapFeaturesSeed)
-    setActiveMapId(mapsSeed[0]?.id ?? null)
-    setMapsView("list")
-    setFeatureSheet(null)
-    setMapSheet(null)
-    setSelectedFeatureSummaryId(null)
-    setSelectedPostRef(null)
-    setSelectedUserId(null)
-    setPublishSheet(null)
-    toast.show("샘플 데이터를 복원했어요.")
-  }
-
-  const clearAll = () => {
-    if (!window.confirm("모든 데이터를 삭제할까요? 이 작업은 되돌릴 수 없어요.")) return
-    setMaps([])
-    setFeatures([])
-    setShares([])
-    setFollowed([])
-    setCommunityMapFeatures([])
-    setActiveMapId(null)
-    setMapsView("list")
-    setFeatureSheet(null)
-    setMapSheet(null)
-    setSelectedFeatureSummaryId(null)
-    setSelectedPostRef(null)
-    setSelectedUserId(null)
-    setPublishSheet(null)
-    toast.show("모든 데이터를 삭제했어요.")
-  }
-
-  const importFile = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    try {
-      const restored = importBackup(JSON.parse(await file.text()), followedSeed)
-      setMaps(restored.maps)
-      setFeatures(restored.features)
-      setShares(restored.shares)
-      setFollowed(restored.followed)
-      setCommunityPosts(communityPostsSeed)
-      setActiveMapId(restored.maps[0]?.id ?? null)
-      setMapsView("list")
-      setFeatureSheet(null)
-      setMapSheet(null)
-      setSelectedPostRef(null)
-      toast.show("백업 파일을 불러왔어요.")
-    } catch (error) {
-      console.error(error)
-      toast.show("파일을 불러오지 못했어요.")
-    } finally {
-      event.target.value = ""
-    }
   }
 
   const featureEmojiChoices = featureSheet
@@ -602,13 +635,18 @@ export default function App() {
             draftPoints={draftPoints}
             focusPoint={focusPoint}
             fitTrigger={fitTrigger}
-            readOnly={activeMapSource === "demo"}
+            readOnly={activeMapSource === "demo" || activeMapSource === "shared"}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
+            shareUrl={shareUrl}
             showLabels={showMapLabels}
             onBack={() => {
-              if (activeMapSource === "community") {
+              if (activeMapSource === "community" || activeMapSource === "shared") {
                 setActiveTab("home")
+              }
+              if (activeMapSource === "shared") {
+                setSharedMapData(null)
+                setActiveMapId(maps[0]?.id ?? null)
               }
               setMapsView("list")
               resetEditorState()
@@ -642,16 +680,9 @@ export default function App() {
               setDraftPoints([])
               setEditorMode("browse")
             }}
-            onHighlightTap={focusFeature}
             onToggleLabels={() => setShowMapLabels((current) => !current)}
             onOpenFeatureDetail={openFeatureDetail}
-            onAddUserNote={(featureId, noteText) => {
-              setCommunityMapFeatures((current) =>
-                current.map((f) =>
-                  f.id === featureId ? { ...f, userNotes: [...(f.userNotes || []), noteText] } : f,
-                ),
-              )
-            }}
+            onAddMemo={addMemo}
             onCloseFeatureSummary={() => {
               setSelectedFeatureId(null)
               setSelectedFeatureSummaryId(null)
@@ -668,19 +699,8 @@ export default function App() {
             maps={maps}
             features={features}
             followedCount={followed.length}
-            canInstall={install.canInstall}
-            isStandalone={install.isStandalone}
-            installHint={install.installHint}
-            onInstall={async () => {
-              const accepted = await install.promptInstall()
-              toast.show(accepted ? "앱을 설치했어요." : "설치를 취소했어요.")
-            }}
-            onPublishOpen={() => setPublishSheet({ caption: "" })}
+            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: unpublishedMaps[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
-            onExport={() => exportBackup(maps, features, shares, followed)}
-            onImportClick={() => fileInputRef.current?.click()}
-            onRestoreSeed={restoreSeed}
-            onClearAll={clearAll}
           />
         ) : null}
       </main>
@@ -693,6 +713,11 @@ export default function App() {
             setMapsView("list")
             setEditorMode("browse")
             setDraftPoints([])
+            if (activeMapSource === "shared") {
+              setSharedMapData(null)
+              setActiveMapSource("local")
+              setActiveMapId(maps[0]?.id ?? null)
+            }
           }
         }}
       />
@@ -753,7 +778,13 @@ export default function App() {
       <BottomSheet
         open={Boolean(featureSheet)}
         title={getFeatureSheetTitle(featureSheet)}
-        subtitle={activeMapSource === "community" ? undefined : "이름, 태그, 메모를 저장해두면 휴대폰에서 바로 찾기 쉬워집니다."}
+        subtitle={activeMapSource === "community"
+          ? undefined
+          : activeMapSource === "demo"
+            ? "데모 지도는 읽기 전용이에요."
+            : activeMapSource === "shared"
+              ? "공유된 지도는 읽기 전용이에요."
+              : undefined}
         onClose={() => {
           setFeatureSheet(null)
           setSelectedFeatureId(null)
@@ -761,26 +792,13 @@ export default function App() {
       >
         {featureSheet ? (() => {
           const isCommunity = activeMapSource === "community"
-          const isAuthor = !isCommunity || featureSheet.createdBy === me.id
+          const canEdit = activeMapSource === "local" || (isCommunity && featureSheet.createdBy === me.id)
           return (
           <div className="form-stack">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              {isCommunity && featureSheet.createdByName ? (
-                <span className="memo-item__user" style={{ fontSize: "0.78rem" }}>작성자: {featureSheet.createdByName}</span>
-              ) : <span />}
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => {
-                  setFeatureSheet(null)
-                  setSelectedFeatureId(null)
-                }}
-                aria-label="닫기"
-              >
-                ✕
-              </button>
-            </div>
-            {isAuthor ? (
+            {isCommunity && featureSheet.createdByName ? (
+              <span className="memo-item__user" style={{ fontSize: "0.78rem" }}>작성자: {featureSheet.createdByName}</span>
+            ) : null}
+            {canEdit ? (
               <>
                 <label className="field">
                   <span>이름</span>
@@ -818,16 +836,6 @@ export default function App() {
                     placeholder="현장에서 바로 남기는 짧은 기록"
                   />
                 </label>
-                {!isCommunity ? (
-                  <label className="toggle-row">
-                    <span>하이라이트로 표시</span>
-                    <input
-                      type="checkbox"
-                      checked={featureSheet.highlight}
-                      onChange={(event) => setFeatureSheet((current) => ({ ...current, highlight: event.target.checked }))}
-                    />
-                  </label>
-                ) : null}
               </>
             ) : (
               <div className="community-detail-readonly">
@@ -882,28 +890,16 @@ export default function App() {
                 </div>
               </div>
             ) : null}
-            <div className="sheet-actions">
-              {isAuthor ? (
+            {canEdit ? (
+              <div className="sheet-actions">
                 <button className="button button--danger" type="button" onClick={deleteFeature}>
                   삭제
                 </button>
-              ) : null}
-              <button
-                className="button button--ghost"
-                type="button"
-                onClick={() => {
-                  setFeatureSheet(null)
-                  setSelectedFeatureId(null)
-                }}
-              >
-                닫기
-              </button>
-              {isAuthor ? (
                 <button className="button button--primary" type="button" onClick={saveFeatureSheet}>
                   저장
                 </button>
-              ) : null}
-            </div>
+              </div>
+            ) : null}
           </div>
           )
         })() : null}
@@ -912,44 +908,60 @@ export default function App() {
       <BottomSheet
         open={Boolean(publishSheet)}
         title="프로필에 지도 올리기"
-        subtitle="내 지도 중 아직 공유하지 않은 지도를 선택하세요."
+        subtitle="내가 만든 지도 중 프로필에 올릴 지도를 고르세요."
         onClose={() => setPublishSheet(null)}
       >
-        <div className="form-stack">
-          <label className="field">
-            <span>한마디</span>
-            <textarea
-              rows="3"
-              value={publishSheet?.caption || ""}
-              onChange={(event) => setPublishSheet((current) => ({ ...(current || {}), caption: event.target.value }))}
-              placeholder="이 지도에 대한 짧은 소개를 남겨보세요."
-            />
-          </label>
-          {unpublishedMaps.length === 0 ? (
-            <article className="empty-card">
-              <strong>추가로 올릴 지도가 없어요.</strong>
-              <p>새 지도를 만들거나 기존 게시물을 공유 해제해보세요.</p>
-            </article>
-          ) : (
+        {unpublishedMaps.length === 0 ? (
+          <article className="empty-card">
+            <strong>추가로 올릴 지도가 없어요.</strong>
+            <p>새 지도를 만들거나 기존 게시물을 공유 해제해보세요.</p>
+          </article>
+        ) : (
+          <div className="form-stack">
             <div className="card-list">
               {unpublishedMaps.map((mapItem) => {
                 const mapPins = features.filter((feature) => feature.mapId === mapItem.id && feature.type === "pin")
+                const isActive = publishSheet?.selectedMapId === mapItem.id
                 return (
-                  <article className="map-publish-row" key={mapItem.id}>
+                  <button
+                    className={`map-publish-row map-publish-row--select${isActive ? " is-active" : ""}`}
+                    key={mapItem.id}
+                    type="button"
+                    onClick={() => setPublishSheet((current) => ({ ...(current || {}), selectedMapId: mapItem.id }))}
+                  >
                     <MapPreview title={mapItem.title} emojis={mapPins.map((feature) => feature.emoji)} placeCount={mapPins.length} theme={mapItem.theme} variant="grid" compact />
                     <div className="map-publish-row__body">
                       <strong>{mapItem.title}</strong>
                       <span>{mapItem.description || "설명이 아직 없어요."}</span>
                     </div>
-                    <button className="button button--primary" type="button" onClick={() => publishMap(mapItem.id)}>
-                      올리기
-                    </button>
-                  </article>
+                    <span className={`map-publish-row__badge${isActive ? " is-active" : ""}`}>
+                      {isActive ? "선택됨" : "선택"}
+                    </span>
+                  </button>
                 )
               })}
             </div>
-          )}
-        </div>
+
+            <label className="field">
+              <span>한마디</span>
+              <textarea
+                rows="3"
+                value={publishSheet?.caption || ""}
+                onChange={(event) => setPublishSheet((current) => ({ ...(current || {}), caption: event.target.value }))}
+                placeholder="이 지도에 대한 짧은 소개를 남겨보세요."
+              />
+            </label>
+
+            <div className="sheet-actions">
+              <button className="button button--ghost" type="button" onClick={() => setPublishSheet(null)}>
+                닫기
+              </button>
+              <button className="button button--primary" type="button" onClick={() => publishMap()}>
+                프로필에 올리기
+              </button>
+            </div>
+          </div>
+        )}
       </BottomSheet>
 
       <BottomSheet
@@ -1038,8 +1050,6 @@ export default function App() {
           </div>
         ) : null}
       </BottomSheet>
-
-      <input ref={fileInputRef} type="file" hidden accept="application/json" onChange={importFile} />
       <Toast message={toast.message} />
     </div>
   )

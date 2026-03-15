@@ -1,0 +1,6 @@
+{
+  "appId": "com.ddanzittt.loca",
+  "appName": "LOCA",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

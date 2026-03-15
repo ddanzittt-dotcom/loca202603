@@ -51,7 +51,7 @@ export function PlacesScreen({ maps, features, onOpenFeature }) {
                   <strong>{feature.title}</strong>
                   <small>{feature.note || map?.title || "메모 없음"}</small>
                 </span>
-                <span className="place-row__type">{feature.type === "pin" ? "핀" : "경로"}</span>
+                <span className="place-row__type">{feature.type === "pin" ? "핀" : feature.type === "area" ? "범위" : "경로"}</span>
               </button>
             )
           })

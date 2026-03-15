@@ -14,12 +14,6 @@ const summarizeFeatureNote = (feature, length = 46) => {
   return feature.note.length > length ? `${feature.note.slice(0, length)}...` : feature.note
 }
 
-const draftModeLabel = (editorMode) => {
-  if (editorMode === "route") return "경로"
-  if (editorMode === "area") return "범위"
-  return ""
-}
-
 export function MapEditorScreen({
   map,
   features,
@@ -44,11 +38,11 @@ export function MapEditorScreen({
   onCompleteRoute,
   onCompleteArea,
   onCancelDraft,
-  onHighlightTap,
   onToggleLabels,
   onOpenFeatureDetail,
   onCloseFeatureSummary,
-  onAddUserNote,
+  onAddMemo,
+  shareUrl = "",
 }) {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
@@ -60,9 +54,10 @@ export function MapEditorScreen({
   const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState("")
   const shareRef = useRef(null)
-
-  const mapId = map.id || "unknown"
-  const shareUrl = `${window.location.origin}/map/${mapId}`
+  const trimmedSearchQuery = searchQuery.trim()
+  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function"
+  const showQrCode = shareUrl.length > 0 && shareUrl.length <= 1200
+  const recentMemos = selectedFeatureSummary?.memos || []
 
   useEffect(() => {
     if (!shareOpen) return
@@ -83,34 +78,46 @@ export function MapEditorScreen({
     }
   }
 
+  const handleNativeShare = async () => {
+    if (!canNativeShare || !shareUrl) return
+    try {
+      await navigator.share({
+        title: map.title,
+        text: `${map.title} 지도를 열어보세요.`,
+        url: shareUrl,
+      })
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        handleCopy(shareUrl, "link")
+      }
+    }
+  }
+
   const pinCount = features.filter((feature) => feature.type === "pin").length
   const routeCount = features.filter((feature) => feature.type === "route").length
   const areaCount = features.filter((feature) => feature.type === "area").length
-  const highlights = features.filter((feature) => feature.highlight && feature.type === "pin")
   const isDrawing = editorMode === "route" || editorMode === "area"
   const visibleFeatures = activeFilter === "all" ? features : features.filter((feature) => feature.type === activeFilter)
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([])
-      setSearchOpen(false)
-      return
-    }
+    if (!trimmedSearchQuery) return undefined
 
     const controller = new AbortController()
+    let cancelled = false
     const timeoutId = window.setTimeout(() => {
-      const query = searchQuery.trim()
+      const query = trimmedSearchQuery
       setSearching(true)
 
       // Naver geocode (주소 검색)
       const tryNaver = () =>
         new Promise((resolve) => {
-          if (typeof naver === "undefined" || !naver.maps || !naver.maps.Service) {
+          const naverMaps = window.naver?.maps
+          if (!naverMaps?.Service) {
             resolve([])
             return
           }
-          naver.maps.Service.geocode({ query }, (status, response) => {
-            if (status !== naver.maps.Service.Status.OK || !response.v2) {
+          naverMaps.Service.geocode({ query }, (status, response) => {
+            if (status !== naverMaps.Service.Status.OK || !response.v2) {
               resolve([])
               return
             }
@@ -145,12 +152,14 @@ export function MapEditorScreen({
           .catch(() => [])
 
       tryNaver().then((naverResults) => {
+        if (cancelled || controller.signal.aborted) return
         if (naverResults.length > 0) {
           setSearchResults(naverResults)
           setSearchOpen(true)
           setSearching(false)
         } else {
           tryNominatim().then((osmResults) => {
+            if (cancelled || controller.signal.aborted) return
             setSearchResults(osmResults)
             setSearchOpen(true)
             setSearching(false)
@@ -160,10 +169,11 @@ export function MapEditorScreen({
     }, 320)
 
     return () => {
+      cancelled = true
       controller.abort()
       window.clearTimeout(timeoutId)
     }
-  }, [searchQuery])
+  }, [trimmedSearchQuery])
 
   return (
     <section className="map-editor">
@@ -187,9 +197,18 @@ export function MapEditorScreen({
             {shareOpen ? (
               <div className="share-panel">
                 <strong className="share-panel__title">지도 공유하기</strong>
+                <p className="share-panel__description">링크 안에 지도 데이터가 포함되어 있어서 다른 기기에서도 바로 열 수 있어요.</p>
+
+                {canNativeShare ? (
+                  <div className="share-panel__section">
+                    <button className="button button--primary share-panel__native-btn" type="button" onClick={handleNativeShare}>
+                      시스템 공유
+                    </button>
+                  </div>
+                ) : null}
 
                 <div className="share-panel__section">
-                  <label className="share-panel__label">링크 복사</label>
+                  <label className="share-panel__label">앱 링크 복사</label>
                   <div className="share-panel__link-row">
                     <input className="share-panel__input" type="text" value={shareUrl} readOnly />
                     <button className="button button--primary share-panel__copy-btn" type="button" onClick={() => handleCopy(shareUrl, "link")}>
@@ -198,26 +217,20 @@ export function MapEditorScreen({
                   </div>
                 </div>
 
-                <div className="share-panel__section">
-                  <label className="share-panel__label">지도 번호</label>
-                  <div className="share-panel__link-row">
-                    <span className="share-panel__map-id">{mapId}</span>
-                    <button className="button button--primary share-panel__copy-btn" type="button" onClick={() => handleCopy(mapId, "id")}>
-                      {copied === "id" ? "복사됨!" : "복사"}
-                    </button>
+                {showQrCode ? (
+                  <div className="share-panel__section">
+                    <label className="share-panel__label">QR 코드</label>
+                    <img
+                      className="share-panel__qr"
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`}
+                      alt="QR 코드"
+                      width={160}
+                      height={160}
+                    />
                   </div>
-                </div>
-
-                <div className="share-panel__section">
-                  <label className="share-panel__label">QR 코드</label>
-                  <img
-                    className="share-panel__qr"
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`}
-                    alt="QR 코드"
-                    width={160}
-                    height={160}
-                  />
-                </div>
+                ) : (
+                  <p className="share-panel__hint">지도가 길어서 QR 코드는 생략했어요. 링크 복사나 시스템 공유를 사용해주세요.</p>
+                )}
               </div>
             ) : null}
           </div>
@@ -231,7 +244,15 @@ export function MapEditorScreen({
             <input
               type="search"
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event) => {
+                const nextQuery = event.target.value
+                setSearchQuery(nextQuery)
+                if (!nextQuery.trim()) {
+                  setSearchResults([])
+                  setSearchOpen(false)
+                  setSearching(false)
+                }
+              }}
               placeholder="주소·지명 검색"
             />
             {searchQuery ? (
@@ -242,6 +263,7 @@ export function MapEditorScreen({
                   setSearchQuery("")
                   setSearchResults([])
                   setSearchOpen(false)
+                  setSearching(false)
                 }}
                 aria-label="검색어 지우기"
               >
@@ -262,6 +284,7 @@ export function MapEditorScreen({
                     onSearchLocation?.({ lat: result.lat, lng: result.lng, zoom: 16 })
                     setSearchQuery(result.roadAddress || result.jibunAddress)
                     setSearchOpen(false)
+                    setSearching(false)
                   }}
                 >
                   <strong>{result.roadAddress || result.jibunAddress}</strong>
@@ -382,7 +405,7 @@ export function MapEditorScreen({
                     onChange={(e) => setUserNoteText(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && userNoteText.trim()) {
-                        onAddUserNote?.(selectedFeatureSummary.id, userNoteText.trim())
+                        onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
                         setUserNoteText("")
                       }
                     }}
@@ -393,7 +416,7 @@ export function MapEditorScreen({
                     disabled={!userNoteText.trim()}
                     onClick={() => {
                       if (userNoteText.trim()) {
-                        onAddUserNote?.(selectedFeatureSummary.id, userNoteText.trim())
+                        onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
                         setUserNoteText("")
                       }
                     }}
@@ -401,10 +424,13 @@ export function MapEditorScreen({
                     추가
                   </button>
                 </div>
-                {selectedFeatureSummary.userNotes?.length ? (
+                {recentMemos.length ? (
                   <ul className="map-feature-summary__notes-list">
-                    {selectedFeatureSummary.userNotes.map((note, i) => (
-                      <li key={i}>{note}</li>
+                    {recentMemos.map((memo) => (
+                      <li key={memo.id}>
+                        <strong>{memo.userName}</strong>
+                        <span>{memo.text}</span>
+                      </li>
                     ))}
                   </ul>
                 ) : null}

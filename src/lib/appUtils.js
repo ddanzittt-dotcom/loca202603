@@ -5,6 +5,23 @@ export function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+const encodeBase64Url = (value) => {
+  const bytes = new TextEncoder().encode(value)
+  let binary = ""
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte)
+  })
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/u, "")
+}
+
+const decodeBase64Url = (value) => {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/")
+  const padding = normalized.length % 4 === 0 ? "" : "=".repeat(4 - (normalized.length % 4))
+  const binary = atob(`${normalized}${padding}`)
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
+}
+
 export function formatShortDate(value) {
   if (!value) return "방금 수정"
   return new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(value))
@@ -66,6 +83,85 @@ export function importBackup(payload, fallbackFollowed) {
     shares: Array.isArray(payload.shares) ? payload.shares : [],
     followed: Array.isArray(payload.followed) ? payload.followed : fallbackFollowed,
   }
+}
+
+export function createMapSharePayload(map, features) {
+  if (!map || typeof map !== "object") throw new Error("공유할 지도 정보가 없습니다.")
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    map: {
+      id: map.id,
+      title: map.title || "공유 지도",
+      description: map.description || "",
+      theme: map.theme || themePalette[0],
+      updatedAt: map.updatedAt || new Date().toISOString(),
+    },
+    features: Array.isArray(features) ? features : [],
+  }
+}
+
+export function serializeMapSharePayload(map, features) {
+  return encodeBase64Url(JSON.stringify(createMapSharePayload(map, features)))
+}
+
+export function parseMapSharePayload(encodedPayload) {
+  if (!encodedPayload) throw new Error("공유 데이터가 비어 있습니다.")
+  const payload = JSON.parse(decodeBase64Url(encodedPayload))
+  if (!payload?.map || !Array.isArray(payload.features)) throw new Error("공유 데이터 형식이 올바르지 않습니다.")
+
+  const mapId = payload.map.id || createId("shared")
+  const normalizedMap = {
+    id: mapId,
+    title: payload.map.title || "공유 지도",
+    description: payload.map.description || "",
+    theme: payload.map.theme || themePalette[0],
+    updatedAt: payload.map.updatedAt || payload.exportedAt || new Date().toISOString(),
+  }
+
+  const normalizedFeatures = payload.features.map((feature) => ({
+    ...feature,
+    id: feature.id || createId("feat"),
+    mapId,
+    type: feature.type || "pin",
+    title: feature.title || "장소",
+    emoji: feature.emoji || "📍",
+    tags: Array.isArray(feature.tags) ? feature.tags : [],
+    note: feature.note || "",
+    updatedAt: feature.updatedAt || normalizedMap.updatedAt,
+  }))
+
+  return { map: normalizedMap, features: normalizedFeatures }
+}
+
+export function buildMapRoutePath(mapId) {
+  return `/map/${encodeURIComponent(mapId)}`
+}
+
+export function buildMapSharePath(map, features) {
+  const encodedPayload = serializeMapSharePayload(map, features)
+  return `/shared?data=${encodeURIComponent(encodedPayload)}`
+}
+
+export function buildMapShareUrl(map, features, origin = window.location.origin) {
+  return `${origin}${buildMapSharePath(map, features)}`
+}
+
+export function parseAppLocation(locationLike = window.location) {
+  const pathname = (locationLike.pathname || "/").replace(/\/+$/u, "") || "/"
+  if (pathname === "/shared") {
+    const params = new URLSearchParams(locationLike.search || "")
+    const encodedPayload = params.get("data")
+    if (!encodedPayload) return null
+    return { type: "shared", payload: parseMapSharePayload(encodedPayload) }
+  }
+
+  if (pathname.startsWith("/map/")) {
+    const mapId = decodeURIComponent(pathname.slice(5))
+    return mapId ? { type: "map", mapId } : null
+  }
+
+  return null
 }
 
 export function buildOwnPosts(shares, maps, features, me) {

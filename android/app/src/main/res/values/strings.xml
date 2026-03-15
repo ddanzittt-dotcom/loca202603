@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LOCA</string>
+    <string name="title_activity_main">LOCA</string>
+    <string name="package_name">com.ddanzittt.loca</string>
+    <string name="custom_url_scheme">com.ddanzittt.loca</string>
+</resources>

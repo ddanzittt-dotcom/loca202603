@@ -4,6 +4,9 @@ import "./map-editor-overlays.css"
 import "./map-labels.css"
 import "./legacy/styles.css"
 import App from "./App"
+import { registerServiceWorker } from "./registerServiceWorker"
+
+registerServiceWorker()
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 export function useLocalStorageState(key, initialValue) {
   const resolvedInitial = useMemo(() => {
@@ -28,11 +28,11 @@ export function useToast() {
   const [message, setMessage] = useState("")
   const timeoutRef = useRef(null)
 
-  const show = (nextMessage) => {
+  const show = useCallback((nextMessage) => {
     setMessage(nextMessage)
     window.clearTimeout(timeoutRef.current)
     timeoutRef.current = window.setTimeout(() => setMessage(""), 2200)
-  }
+  }, [])
 
   useEffect(() => () => window.clearTimeout(timeoutRef.current), [])
   return { message, show }
