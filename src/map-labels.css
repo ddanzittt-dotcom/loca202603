@@ -1,0 +1,73 @@
+.map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.map-canvas__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  background: #f0f0f0;
+}
+
+.map-canvas__fallback-icon {
+  font-size: 2rem;
+}
+
+.map-canvas__fallback-text {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.loca-emoji-marker {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loca-emoji-marker span {
+  font-size: 1.7rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.loca-map-label {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(20, 27, 52, 0.12);
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  color: #141b34;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.loca-map-label::before {
+  display: none;
+}
+
+.loca-map-route-label {
+  background: transparent;
+  border: 0;
+}
+
+.loca-map-route-label span {
+  align-items: center;
+  background: rgba(20, 27, 52, 0.91);
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  color: #fff;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  min-height: 28px;
+  padding: 0 10px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}

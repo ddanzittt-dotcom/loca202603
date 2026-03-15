@@ -1,0 +1,12 @@
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import "./map-editor-overlays.css"
+import "./map-labels.css"
+import "./legacy/styles.css"
+import App from "./App"
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

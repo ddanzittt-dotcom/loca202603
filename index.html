@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#635bff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LOCA" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>LOCA Mobile</title>
+    <script>
+      // Suppress Naver Maps SDK cross-origin errors from crashing React
+      // window.onerror returning true prevents the error before React sees it
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (!source || source === '' || message === 'Script error.') {
+          return true;
+        }
+      };
+      window.addEventListener('error', function(e) {
+        if (!e.filename || e.filename === '' || e.message === 'Script error.') {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          return true;
+        }
+      }, true);
+
+      window.__naverMapReady = false;
+      window.__naverMapLoading = false;
+      window.__naverMapCallbacks = [];
+      window.loadNaverMap = function(cb) {
+        if (window.__naverMapReady) { if (cb) cb(true); return; }
+        if (cb) window.__naverMapCallbacks.push(cb);
+        if (window.__naverMapLoading) return;
+        window.__naverMapLoading = true;
+        var s = document.createElement('script');
+        s.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=x5bkbkzlrw&submodules=geocoder';
+        s.onload = function() {
+          // Poll for auth completion (SDK nullifies naver.maps on auth failure)
+          var attempts = 0;
+          var maxAttempts = 20; // 20 x 200ms = 4 seconds max wait
+          var minAttempts = 12; // Wait at least 2.4 seconds before confirming success
+          var poll = setInterval(function() {
+            attempts++;
+            var authFailed = typeof naver !== 'undefined' && naver.maps == null;
+            if (authFailed) {
+              clearInterval(poll);
+              window.__naverMapReady = false;
+              window.__naverMapCallbacks.forEach(function(fn) { fn(false); });
+              window.__naverMapCallbacks = [];
+              return;
+            }
+            if (attempts >= maxAttempts) {
+              clearInterval(poll);
+              // Final check
+              var ok = typeof naver !== 'undefined' && naver.maps != null && typeof naver.maps.Map === 'function';
+              window.__naverMapReady = ok;
+              window.__naverMapCallbacks.forEach(function(fn) { fn(ok); });
+              window.__naverMapCallbacks = [];
+              return;
+            }
+            if (attempts >= minAttempts) {
+              var authOk = typeof naver !== 'undefined' && naver.maps != null && typeof naver.maps.Map === 'function';
+              if (authOk) {
+                clearInterval(poll);
+                window.__naverMapReady = true;
+                window.__naverMapCallbacks.forEach(function(fn) { fn(true); });
+                window.__naverMapCallbacks = [];
+              }
+            }
+          }, 200);
+        };
+        s.onerror = function() {
+          window.__naverMapCallbacks.forEach(function(fn) { fn(false); });
+          window.__naverMapCallbacks = [];
+          window.__naverMapLoading = false;
+        };
+        document.head.appendChild(s);
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
