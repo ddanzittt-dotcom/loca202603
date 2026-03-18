@@ -40,7 +40,20 @@ function ProfileMapCard({ map, pinFeatures, onClick }) {
   )
 }
 
-export function ProfileScreen({ user, shares, maps, features, followedCount, onPublishOpen, onSelectPost }) {
+export function ProfileScreen({
+  user,
+  shares,
+  maps,
+  features,
+  followedCount,
+  cloudMode = false,
+  cloudEmail = "",
+  canImportLocalData = false,
+  onImportLocalData,
+  onSignOut,
+  onPublishOpen,
+  onSelectPost,
+}) {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   return (
@@ -97,6 +110,25 @@ export function ProfileScreen({ user, shares, maps, features, followedCount, onP
         onClose={() => setSettingsOpen(false)}
       >
         <div className="settings-sheet-stack">
+          {cloudMode ? (
+            <div className="settings-card">
+              <h2>계정</h2>
+              <p>{cloudEmail ? `${cloudEmail} 계정으로 연결되어 있어요.` : "Supabase 계정과 연결되어 있어요."}</p>
+              <div className="settings-card__actions">
+                {canImportLocalData ? (
+                  <button className="button button--secondary" type="button" onClick={onImportLocalData}>
+                    이 기기 데이터 가져오기
+                  </button>
+                ) : null}
+                {onSignOut ? (
+                  <button className="button button--ghost" type="button" onClick={onSignOut}>
+                    로그아웃
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="settings-card">
             <h2>추천 카테고리</h2>
             <p>지금 단계에서는 프로필 액션보다 계정, 공개 범위, 알림 같은 기본 설정을 우선 두는 편이 자연스러워요.</p>

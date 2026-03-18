@@ -43,3 +43,21 @@ On this Windows machine, use `npm.cmd` in PowerShell if `npm` is blocked by exec
 - Build verified on March 15, 2026
 - ESLint passes on recovered source files
 - The minified legacy app bundle is no longer used
+
+## Supabase scaffold
+
+- `supabase/loca_v1_schema.sql` contains the first LOCA-tailored schema.
+- `src/lib/supabase.js` contains the shared Supabase client.
+- `src/lib/auth.js` contains email/OAuth auth helpers.
+- `src/lib/mapService.js` contains the first service layer shaped around LOCA's current `maps / features / shares / follows` model.
+
+### Setup
+
+1. Copy `.env.example` to `.env`
+2. Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+3. Run `supabase/loca_v1_schema.sql` in the Supabase SQL editor
+
+### Important
+
+- The app UI still runs on the existing localStorage flow today.
+- The new Supabase files are scaffolding for the next migration slice, so the current app keeps working while the service layer is wired screen by screen.

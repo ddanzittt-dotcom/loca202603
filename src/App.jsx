@@ -26,6 +26,23 @@ import {
   tagsToText,
   themePalette,
 } from "./lib/appUtils"
+import { getCurrentSession, onAuthStateChange, signOut } from "./lib/auth"
+import { hasSupabaseEnv } from "./lib/supabase"
+import {
+  createFeature as createFeatureRecord,
+  createMap as createMapRecord,
+  deleteFeature as deleteFeatureRecord,
+  deleteMap as deleteMapRecord,
+  followUser as followUserRecord,
+  getMyAppData,
+  getProfile as getProfileRecord,
+  publishMap as publishMapRecord,
+  unfollowUser as unfollowUserRecord,
+  unpublishMap as unpublishMapRecord,
+  updateFeature as updateFeatureRecord,
+  updateMap as updateMapRecord,
+} from "./lib/mapService"
+import { AuthScreen } from "./screens/AuthScreen"
 import { HomeScreen } from "./screens/HomeScreen"
 import { MapEditorScreen } from "./screens/MapEditorScreen"
 import { MapsListScreen } from "./screens/MapsListScreen"
@@ -78,6 +95,10 @@ export default function App() {
   const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", followedSeed)
   const [communityPosts, setCommunityPosts] = useState(communityPostsSeed)
   const [communityMapFeatures, setCommunityMapFeatures] = useLocalStorageState("loca.mobile.communityMapFeatures", communityMapFeaturesSeed)
+  const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
+  const [authUser, setAuthUser] = useState(null)
+  const [viewerProfile, setViewerProfile] = useState(me)
+  const [cloudLoading, setCloudLoading] = useState(false)
   const routeAtLoad = useMemo(() => {
     try {
       return parseAppLocation(window.location)
@@ -108,8 +129,48 @@ export default function App() {
   const [memoText, setMemoText] = useState("")
   const toast = useToast()
   const showToast = toast.show
+  const [localImportSnapshot] = useState(() => {
+    const readStored = (key, fallback) => {
+      try {
+        const raw = window.localStorage.getItem(key)
+        if (!raw) return { exists: false, value: fallback }
+        return { exists: true, value: JSON.parse(raw) }
+      } catch (error) {
+        console.error(`Failed to snapshot ${key}`, error)
+        return { exists: false, value: fallback }
+      }
+    }
 
-  const usersById = useMemo(() => Object.fromEntries(users.map((user) => [user.id, user])), [])
+    const storedMaps = readStored("loca.mobile.maps", [])
+    const storedFeatures = readStored("loca.mobile.features", [])
+    const storedShares = readStored("loca.mobile.shares", [])
+    const storedFollowed = readStored("loca.mobile.followed", [])
+
+    return {
+      maps: storedMaps.value,
+      features: storedFeatures.value,
+      shares: storedShares.value,
+      followed: storedFollowed.value,
+      hasAny:
+        (storedMaps.exists && storedMaps.value.length > 0) ||
+        (storedFeatures.exists && storedFeatures.value.length > 0) ||
+        (storedShares.exists && storedShares.value.length > 0) ||
+        (storedFollowed.exists && storedFollowed.value.length > 0),
+    }
+  })
+
+  const cloudMode = hasSupabaseEnv && Boolean(authUser)
+  const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
+  const requiresAuthForCurrentTab =
+    activeTab === "profile" ||
+    activeTab === "places" ||
+    (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
+  const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
+  const showPersonalLoading = hasSupabaseEnv && (!authReady || cloudLoading) && requiresAuthForCurrentTab
+  const usersById = useMemo(() => {
+    const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
+    return Object.fromEntries(mergedUsers.map((user) => [user.id, user]))
+  }, [viewerProfile])
   const communityMapMeta = useMemo(() => [{ id: "community-map", title: "모두의 지도", description: "모두가 함께 만드는 지도", theme: "#635bff", updatedAt: new Date().toISOString() }], [])
   const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
   const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
@@ -132,7 +193,7 @@ export default function App() {
     () => (activeMapId ? activeFeaturePool.filter((feature) => feature.mapId === activeMapId) : []),
     [activeFeaturePool, activeMapId],
   )
-  const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, me), [shares, maps, features])
+  const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, viewerProfile), [features, maps, shares, viewerProfile])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
   const recommendedMaps = useMemo(() => {
     const fromCollections = collections.map((c) => ({
@@ -169,14 +230,106 @@ export default function App() {
     [activeFeatures, activeMap],
   )
 
+  const loadCloudData = useCallback(async (user) => {
+    if (!hasSupabaseEnv || !user) return
+    setCloudLoading(true)
+    try {
+      const [appData, profile] = await Promise.all([
+        getMyAppData(),
+        getProfileRecord(user.id),
+      ])
+
+      const nextProfile = {
+        id: user.id,
+        name: profile.nickname || user.user_metadata?.name || user.email?.split("@")[0] || "LOCA 사용자",
+        handle: profile.slug ? `@${profile.slug}` : `@${(profile.nickname || user.email?.split("@")[0] || "loca").toLowerCase().replace(/\s+/g, "_")}`,
+        emoji: me.emoji,
+        bio: profile.bio || me.bio,
+        followers: 0,
+        following: appData.followed.length,
+        verified: false,
+        type: "creator",
+      }
+
+      setMaps(appData.maps)
+      setFeatures(appData.features)
+      setShares(appData.shares)
+      setFollowed(appData.followed)
+      setViewerProfile(nextProfile)
+      setActiveMapId((current) => {
+        if (current && appData.maps.some((mapItem) => mapItem.id === current)) return current
+        return appData.maps[0]?.id ?? null
+      })
+      if (routeAtLoad?.type === "map" && appData.maps.some((mapItem) => mapItem.id === routeAtLoad.mapId)) {
+        setActiveTab("maps")
+        setMapsView("editor")
+        setActiveMapSource("local")
+        setActiveMapId(routeAtLoad.mapId)
+      }
+    } catch (error) {
+      console.error("Failed to load Supabase app data", error)
+      showToast("Supabase 데이터를 불러오지 못했어요.")
+    } finally {
+      setCloudLoading(false)
+    }
+  }, [routeAtLoad, setFeatures, setFollowed, setMaps, setShares, showToast])
+
   useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
       showToast("공유 링크를 열지 못했어요.")
     }
-    if (routeAtLoad?.type === "map" && !initialStoredTarget) {
+    if (routeAtLoad?.type === "map" && !initialStoredTarget && (!hasSupabaseEnv || authReady)) {
       showToast("이 기기에서 찾을 수 없는 지도예요.")
     }
-  }, [initialStoredTarget, routeAtLoad?.type, showToast])
+  }, [authReady, initialStoredTarget, routeAtLoad?.type, showToast])
+
+  useEffect(() => {
+    if (!hasSupabaseEnv) return undefined
+
+    let isMounted = true
+
+    getCurrentSession()
+      .then((session) => {
+        if (!isMounted) return
+        setAuthUser(session?.user ?? null)
+        setAuthReady(true)
+        if (session?.user) {
+          loadCloudData(session.user)
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to resolve initial auth session", error)
+        if (isMounted) setAuthReady(true)
+      })
+
+    const { data: subscription } = onAuthStateChange((user) => {
+      if (!isMounted) return
+      setAuthUser(user)
+      setAuthReady(true)
+      if (user) {
+        loadCloudData(user)
+      } else {
+        setViewerProfile(me)
+      }
+    })
+
+    return () => {
+      isMounted = false
+      subscription.subscription.unsubscribe()
+    }
+  }, [loadCloudData])
+
+  useEffect(() => {
+    if (activeMapSource !== "local") return
+    if (activeMapId && maps.some((mapItem) => mapItem.id === activeMapId)) return
+    if (mapsView === "editor" && maps.length === 0) {
+      setMapsView("list")
+      return
+    }
+    if (maps.length > 0) {
+      setActiveMapId(maps[0].id)
+    }
+  }, [activeMapId, activeMapSource, maps, mapsView])
 
   useEffect(() => {
     const nextPath = activeTab === "maps" && mapsView === "editor" && activeMapId
@@ -190,36 +343,62 @@ export default function App() {
     }
   }, [activeMapId, activeMapSource, activeTab, mapsView, sharedMapData])
 
-  const importSharedMapToLocal = useCallback(() => {
+  const importSharedMapToLocal = useCallback(async () => {
     if (!sharedMapData) return
-    const nextMapId = createId("map")
-    const updatedAt = new Date().toISOString()
-    const nextMap = {
-      ...sharedMapData.map,
-      id: nextMapId,
-      updatedAt,
+
+    try {
+      if (cloudMode) {
+        const nextMap = await createMapRecord({
+          title: sharedMapData.map.title,
+          description: sharedMapData.map.description,
+          theme: sharedMapData.map.theme,
+        })
+        const createdFeatures = await Promise.all(
+          sharedMapData.features.map((feature) =>
+            createFeatureRecord(nextMap.id, {
+              ...feature,
+              mapId: nextMap.id,
+            }),
+          ),
+        )
+        setMaps((current) => [nextMap, ...current])
+        setFeatures((current) => [...createdFeatures, ...current])
+        setActiveMapId(nextMap.id)
+      } else {
+        const nextMapId = createId("map")
+        const updatedAt = new Date().toISOString()
+        const nextMap = {
+          ...sharedMapData.map,
+          id: nextMapId,
+          updatedAt,
+        }
+        const nextFeatures = sharedMapData.features.map((feature) => ({
+          ...feature,
+          id: createId("feat"),
+          mapId: nextMapId,
+          updatedAt,
+        }))
+        setMaps((current) => [nextMap, ...current])
+        setFeatures((current) => [...nextFeatures, ...current])
+        setActiveMapId(nextMapId)
+      }
+
+      setSharedMapData(null)
+      setActiveTab("maps")
+      setActiveMapSource("local")
+      setMapsView("editor")
+      setSelectedFeatureId(null)
+      setSelectedFeatureSummaryId(null)
+      setFeatureSheet(null)
+      setEditorMode("browse")
+      setDraftPoints([])
+      setFitTrigger((value) => value + 1)
+      showToast("공유 지도를 내 지도로 저장했어요.")
+    } catch (error) {
+      console.error("Failed to import shared map", error)
+      showToast("공유 지도를 저장하지 못했어요.")
     }
-    const nextFeatures = sharedMapData.features.map((feature) => ({
-      ...feature,
-      id: createId("feat"),
-      mapId: nextMapId,
-      updatedAt,
-    }))
-    setMaps((current) => [nextMap, ...current])
-    setFeatures((current) => [...nextFeatures, ...current])
-    setSharedMapData(null)
-    setActiveTab("maps")
-    setActiveMapSource("local")
-    setActiveMapId(nextMapId)
-    setMapsView("editor")
-    setSelectedFeatureId(null)
-    setSelectedFeatureSummaryId(null)
-    setFeatureSheet(null)
-    setEditorMode("browse")
-    setDraftPoints([])
-    setFitTrigger((value) => value + 1)
-    showToast("공유 지도를 내 지도로 저장했어요.")
-  }, [setFeatures, setMaps, sharedMapData, showToast])
+  }, [cloudMode, setFeatures, setMaps, sharedMapData, showToast])
 
   const headerConfig = useMemo(() => {
     if (activeTab === "maps" && mapsView === "editor") {
@@ -325,50 +504,88 @@ export default function App() {
     if (center) setFocusPoint(center)
   }
 
-  const saveMapSheet = () => {
+  const saveMapSheet = async () => {
     if (!mapSheet?.title.trim()) return toast.show("지도 이름을 입력하세요.")
-    if (mapSheet.mode === "create") {
-      const nextMap = {
-        id: createId("map"),
-        title: mapSheet.title.trim(),
-        description: mapSheet.description.trim(),
-        theme: mapSheet.theme,
-        updatedAt: new Date().toISOString(),
+
+    try {
+      if (mapSheet.mode === "create") {
+        if (cloudMode) {
+          const nextMap = await createMapRecord({
+            title: mapSheet.title.trim(),
+            description: mapSheet.description.trim(),
+            theme: mapSheet.theme,
+          })
+          setMaps((current) => [nextMap, ...current])
+          setMapSheet(null)
+          openMapEditor(nextMap.id)
+          return toast.show("지도를 만들었어요.")
+        }
+
+        const nextMap = {
+          id: createId("map"),
+          title: mapSheet.title.trim(),
+          description: mapSheet.description.trim(),
+          theme: mapSheet.theme,
+          updatedAt: new Date().toISOString(),
+        }
+        setMaps((current) => [nextMap, ...current])
+        setMapSheet(null)
+        openMapEditor(nextMap.id)
+        return toast.show("지도를 만들었어요.")
       }
-      setMaps((current) => [nextMap, ...current])
+
+      if (cloudMode) {
+        const nextMap = await updateMapRecord(mapSheet.id, {
+          title: mapSheet.title.trim(),
+          description: mapSheet.description.trim(),
+          theme: mapSheet.theme,
+        })
+        setMaps((current) => current.map((mapItem) => (mapItem.id === mapSheet.id ? nextMap : mapItem)))
+      } else {
+        setMaps((current) =>
+          current.map((mapItem) =>
+            mapItem.id === mapSheet.id
+              ? {
+                  ...mapItem,
+                  title: mapSheet.title.trim(),
+                  description: mapSheet.description.trim(),
+                  theme: mapSheet.theme,
+                  updatedAt: new Date().toISOString(),
+                }
+              : mapItem,
+          ),
+        )
+      }
+
       setMapSheet(null)
-      openMapEditor(nextMap.id)
-      return toast.show("지도를 만들었어요.")
+      toast.show("지도를 수정했어요.")
+    } catch (error) {
+      console.error("Failed to save map", error)
+      toast.show("지도를 저장하지 못했어요.")
     }
-    setMaps((current) =>
-      current.map((mapItem) =>
-        mapItem.id === mapSheet.id
-          ? {
-              ...mapItem,
-              title: mapSheet.title.trim(),
-              description: mapSheet.description.trim(),
-              theme: mapSheet.theme,
-              updatedAt: new Date().toISOString(),
-            }
-          : mapItem,
-      ),
-    )
-    setMapSheet(null)
-    toast.show("지도를 수정했어요.")
   }
 
-  const deleteMap = () => {
+  const deleteMap = async () => {
     if (!mapSheet?.id || !window.confirm("이 지도를 삭제할까요? 장소와 공유 정보도 함께 삭제됩니다.")) return
-    setMaps((current) => current.filter((mapItem) => mapItem.id !== mapSheet.id))
-    setFeatures((current) => current.filter((feature) => feature.mapId !== mapSheet.id))
-    setShares((current) => current.filter((share) => share.mapId !== mapSheet.id))
-    setMapSheet(null)
-    setFeatureSheet(null)
-    setMapsView("list")
-    toast.show("지도를 삭제했어요.")
+
+    try {
+      if (cloudMode) {
+        await deleteMapRecord(mapSheet.id)
+      }
+      setMaps((current) => current.filter((mapItem) => mapItem.id !== mapSheet.id))
+      setFeatures((current) => current.filter((feature) => feature.mapId !== mapSheet.id))
+      setShares((current) => current.filter((share) => share.mapId !== mapSheet.id))
+      setMapSheet(null)
+      setFeatureSheet(null)
+      setMapsView("list")
+      toast.show("지도를 삭제했어요.")
+    } catch (error) {
+      console.error("Failed to delete map", error)
+      toast.show("지도를 삭제하지 못했어요.")
+    }
   }
 
-  const saveFeatureSheet = () => {
+  const saveFeatureSheet = async () => {
     if (!featureSheet?.title.trim()) return toast.show("이름을 입력하세요.")
     const nextFeature = {
       ...featureSheet,
@@ -381,6 +598,24 @@ export default function App() {
     if (activeMapSource === "community") {
       setCommunityMapFeatures((current) => current.map((f) => (f.id === nextFeature.id ? nextFeature : f)))
     } else {
+      if (cloudMode) {
+        try {
+          const savedFeature = await updateFeatureRecord(nextFeature.id, {
+            ...nextFeature,
+            mapId: nextFeature.mapId,
+          })
+          setFeatures((current) => current.map((feature) => (feature.id === nextFeature.id ? savedFeature : feature)))
+          setFeatureSheet(toEditableFeature(savedFeature))
+          setMaps((current) => current.map((mapItem) => (mapItem.id === savedFeature.mapId ? { ...mapItem, updatedAt: new Date().toISOString() } : mapItem)))
+          toast.show("정보를 저장했어요.")
+          return
+        } catch (error) {
+          console.error("Failed to update feature", error)
+          toast.show("항목을 저장하지 못했어요.")
+          return
+        }
+      }
+
       setFeatures((current) => current.map((feature) => (feature.id === nextFeature.id ? nextFeature : feature)))
       touchMap(nextFeature.mapId)
     }
@@ -388,11 +623,20 @@ export default function App() {
     toast.show("정보를 저장했어요.")
   }
 
-  const deleteFeature = () => {
+  const deleteFeature = async () => {
     if (!featureSheet?.id || !window.confirm("이 항목을 삭제할까요?")) return
     if (activeMapSource === "community") {
       setCommunityMapFeatures((current) => current.filter((f) => f.id !== featureSheet.id))
     } else {
+      if (cloudMode) {
+        try {
+          await deleteFeatureRecord(featureSheet.id, featureSheet.mapId)
+        } catch (error) {
+          console.error("Failed to delete feature", error)
+          toast.show("항목을 삭제하지 못했어요.")
+          return
+        }
+      }
       setFeatures((current) => current.filter((feature) => feature.id !== featureSheet.id))
       touchMap(featureSheet.mapId)
     }
@@ -421,10 +665,10 @@ export default function App() {
     toast.show("메모를 추가했어요.")
   }
 
-  const handleMapTap = ({ lat, lng }) => {
+  const handleMapTap = async ({ lat, lng }) => {
     if (!activeMapId) return
     if (editorMode === "pin") {
-      const nextFeature = {
+      let nextFeature = {
         id: createId("feat"),
         mapId: activeMapId,
         type: "pin",
@@ -441,6 +685,14 @@ export default function App() {
       if (activeMapSource === "community") {
         setCommunityMapFeatures((current) => [nextFeature, ...current])
       } else {
+        if (cloudMode) {
+          try {
+            nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+          } catch (error) {
+            console.error("Failed to create pin", error)
+            return toast.show("핀을 추가하지 못했어요.")
+          }
+        }
         setFeatures((current) => [nextFeature, ...current])
         touchMap(activeMapId)
       }
@@ -455,9 +707,9 @@ export default function App() {
     }
   }
 
-  const completeRoute = () => {
+  const completeRoute = async () => {
     if (!activeMapId || draftPoints.length < 2) return toast.show("경로는 두 점 이상 필요해요.")
-    const nextFeature = {
+    let nextFeature = {
       id: createId("feat"),
       mapId: activeMapId,
       type: "route",
@@ -473,6 +725,14 @@ export default function App() {
     if (activeMapSource === "community") {
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
+      if (cloudMode) {
+        try {
+          nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+        } catch (error) {
+          console.error("Failed to create route", error)
+          return toast.show("경로를 저장하지 못했어요.")
+        }
+      }
       setFeatures((current) => [nextFeature, ...current])
       touchMap(activeMapId)
     }
@@ -484,9 +744,9 @@ export default function App() {
     toast.show("경로를 저장했어요.")
   }
 
-  const completeArea = () => {
+  const completeArea = async () => {
     if (!activeMapId || draftPoints.length < 3) return toast.show("범위는 세 점 이상 필요해요.")
-    const nextFeature = {
+    let nextFeature = {
       id: createId("feat"),
       mapId: activeMapId,
       type: "area",
@@ -502,6 +762,14 @@ export default function App() {
     if (activeMapSource === "community") {
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
+      if (cloudMode) {
+        try {
+          nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+        } catch (error) {
+          console.error("Failed to create area", error)
+          return toast.show("범위를 저장하지 못했어요.")
+        }
+      }
       setFeatures((current) => [nextFeature, ...current])
       touchMap(activeMapId)
     }
@@ -526,8 +794,19 @@ export default function App() {
     )
   }
 
-  const toggleFollow = (userId) => {
-    setFollowed((current) => (current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]))
+  const toggleFollow = async (userId) => {
+    const isFollowing = followed.includes(userId)
+
+    try {
+      if (cloudMode) {
+        if (isFollowing) await unfollowUserRecord(userId)
+        else await followUserRecord(userId)
+      }
+      setFollowed((current) => (current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]))
+    } catch (error) {
+      console.error("Failed to toggle follow", error)
+      toast.show("팔로우 상태를 바꾸지 못했어요.")
+    }
   }
 
   const likePost = (source, postId) => {
@@ -552,22 +831,49 @@ export default function App() {
     setFitTrigger((value) => value + 1)
   }
 
-  const publishMap = (mapId = publishSheet?.selectedMapId) => {
+  const publishMap = async (mapId = publishSheet?.selectedMapId) => {
     if (!mapId) return toast.show("올릴 지도를 먼저 선택해 주세요.")
     if (shares.some((share) => share.mapId === mapId)) return toast.show("이미 프로필에 올라간 지도예요.")
     const caption = publishSheet?.caption?.trim() || ""
-    setShares((current) => [
-      { id: createId("share"), mapId, caption, date: new Date().toISOString().slice(0, 10), likes: 0, saves: 0 },
-      ...current,
-    ])
-    setPublishSheet(null)
-    toast.show("프로필 그리드에 지도를 올렸어요.")
+
+    try {
+      if (cloudMode) {
+        const mapItem = maps.find((item) => item.id === mapId)
+        const { map: publishedMap, publication } = await publishMapRecord(mapId, {
+          caption,
+          title: mapItem?.title,
+        })
+        setMaps((current) => current.map((item) => (item.id === mapId ? publishedMap : item)))
+        setShares((current) => [publication, ...current])
+      } else {
+        setShares((current) => [
+          { id: createId("share"), mapId, caption, date: new Date().toISOString().slice(0, 10), likes: 0, saves: 0 },
+          ...current,
+        ])
+      }
+      setPublishSheet(null)
+      toast.show("프로필 그리드에 지도를 올렸어요.")
+    } catch (error) {
+      console.error("Failed to publish map", error)
+      toast.show("지도를 프로필에 올리지 못했어요.")
+    }
   }
 
-  const unpublish = (postId) => {
-    setShares((current) => current.filter((share) => share.id !== postId))
-    setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
-    toast.show("공유를 해제했어요.")
+  const unpublish = async (postId) => {
+    try {
+      if (cloudMode) {
+        const targetShare = shares.find((share) => share.id === postId)
+        if (targetShare?.mapId) {
+          await unpublishMapRecord(targetShare.mapId)
+        }
+      }
+      setShares((current) => current.filter((share) => share.id !== postId))
+      setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
+      toast.show("공유를 해제했어요.")
+    } catch (error) {
+      console.error("Failed to unpublish map", error)
+      toast.show("공유를 해제하지 못했어요.")
+    }
   }
 
   const featureEmojiChoices = featureSheet
@@ -577,6 +883,68 @@ export default function App() {
         ? ["\uD83D\uDFE9", "\uD83D\uDCD0", "\uD83C\uDFDE\uFE0F", "\uD83C\uDF33", "\uD83C\uDFD5\uFE0F"]
         : placeEmojis
     : []
+
+  const importLocalDataToCloud = useCallback(async () => {
+    if (!cloudMode) return showToast("먼저 로그인해 주세요.")
+    if (!localImportSnapshot.hasAny) return showToast("이 기기에서 가져올 로컬 데이터가 없어요.")
+    if (!window.confirm("이 기기에 저장된 로컬 지도를 현재 계정으로 가져올까요?")) return
+
+    try {
+      const mapIdMap = new Map()
+
+      for (const localMap of localImportSnapshot.maps) {
+        const createdMap = await createMapRecord({
+          title: localMap.title,
+          description: localMap.description,
+          theme: localMap.theme,
+          visibility: localMap.visibility || "private",
+          tags: localMap.tags || [],
+        })
+        mapIdMap.set(localMap.id, createdMap)
+      }
+
+      for (const localFeature of localImportSnapshot.features) {
+        const targetMap = mapIdMap.get(localFeature.mapId)
+        if (!targetMap) continue
+        await createFeatureRecord(targetMap.id, {
+          ...localFeature,
+          mapId: targetMap.id,
+        })
+      }
+
+      for (const localShare of localImportSnapshot.shares) {
+        const targetMap = mapIdMap.get(localShare.mapId)
+        if (!targetMap) continue
+        await publishMapRecord(targetMap.id, {
+          caption: localShare.caption || "",
+        })
+      }
+
+      for (const userId of localImportSnapshot.followed) {
+        try {
+          await followUserRecord(userId)
+        } catch (error) {
+          console.warn("Skipping follow import", userId, error)
+        }
+      }
+
+      await loadCloudData(authUser)
+      showToast("이 기기의 로컬 데이터를 계정으로 가져왔어요.")
+    } catch (error) {
+      console.error("Failed to import local snapshot", error)
+      showToast("로컬 데이터를 가져오지 못했어요.")
+    }
+  }, [authUser, cloudMode, loadCloudData, localImportSnapshot, showToast])
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await signOut()
+      showToast("로그아웃했어요.")
+    } catch (error) {
+      console.error("Failed to sign out", error)
+      showToast("로그아웃하지 못했어요.")
+    }
+  }, [showToast])
 
   return (
     <div className="app-shell">
@@ -595,7 +963,24 @@ export default function App() {
       </header>
 
       <main className="content">
-        {activeTab === "home" ? (
+        {showPersonalLoading ? (
+          <section className="screen screen--scroll">
+            <article className="empty-card">
+              <strong>내 지도를 불러오는 중이에요.</strong>
+              <p>Supabase 계정과 연결된 데이터를 확인하고 있어요.</p>
+            </article>
+          </section>
+        ) : null}
+
+        {showPersonalGate ? (
+          <AuthScreen
+            title="LOCA 계정 연결"
+            subtitle="내 지도와 프로필을 기기마다 불러오려면 먼저 로그인해 주세요."
+            onSuccess={(mode) => showToast(mode === "signup" ? "회원가입이 완료됐어요." : "로그인했어요.")}
+          />
+        ) : null}
+
+        {!showPersonalLoading && !showPersonalGate && activeTab === "home" ? (
           <HomeScreen
             recommendedMaps={recommendedMaps}
             communityMapFeatures={communityMapFeatures}
@@ -604,7 +989,7 @@ export default function App() {
           />
         ) : null}
 
-        {activeTab === "maps" && mapsView === "list" ? (
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
           <MapsListScreen
             maps={maps}
             features={features}
@@ -625,7 +1010,7 @@ export default function App() {
           />
         ) : null}
 
-        {activeTab === "maps" && mapsView === "editor" && activeMap ? (
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap ? (
           <MapEditorScreen
             map={activeMap}
             features={activeFeatures}
@@ -690,15 +1075,20 @@ export default function App() {
           />
         ) : null}
 
-        {activeTab === "places" ? <PlacesScreen maps={maps} features={features} onOpenFeature={openFeatureFromPlaces} /> : null}
-        {activeTab === "search" ? <SearchScreen users={users} followed={followed} onToggleFollow={toggleFollow} onSelectUser={setSelectedUserId} /> : null}
-        {activeTab === "profile" ? (
+        {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? <PlacesScreen maps={maps} features={features} onOpenFeature={openFeatureFromPlaces} /> : null}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "search" ? <SearchScreen users={users} followed={followed} onToggleFollow={toggleFollow} onSelectUser={setSelectedUserId} /> : null}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
           <ProfileScreen
-            user={me}
+            user={viewerProfile}
             shares={shares}
             maps={maps}
             features={features}
             followedCount={followed.length}
+            cloudMode={cloudMode}
+            cloudEmail={authUser?.email || ""}
+            canImportLocalData={cloudMode && localImportSnapshot.hasAny}
+            onImportLocalData={importLocalDataToCloud}
+            onSignOut={cloudMode ? handleSignOut : null}
             onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: unpublishedMaps[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
           />
