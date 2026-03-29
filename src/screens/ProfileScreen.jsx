@@ -38,6 +38,8 @@ export function ProfileScreen({
   onPublishOpen,
   onSelectPost,
   onUpdateProfile,
+  characterStyle = "m3",
+  onChangeCharacter,
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editName, setEditName] = useState(user.name)
@@ -172,6 +174,28 @@ export function ProfileScreen({
               </label>
               <button className="button button--primary" type="button" onClick={handleSaveProfile}>
                 저장
+              </button>
+            </div>
+          </div>
+
+          <div className="settings-card">
+            <h2>지도 캐릭터</h2>
+            <div className="character-select-row">
+              <button
+                className={`character-select-btn${characterStyle === "m3" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => onChangeCharacter?.("m3")}
+              >
+                <span className="character-select-label">👦 남자</span>
+                <span className="character-select-desc">초록 점퍼 + 배낭</span>
+              </button>
+              <button
+                className={`character-select-btn${characterStyle === "w1" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => onChangeCharacter?.("w1")}
+              >
+                <span className="character-select-label">👩 여자</span>
+                <span className="character-select-desc">핑크 원피스 + 긴머리</span>
               </button>
             </div>
           </div>

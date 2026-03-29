@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Geolocation } from "@capacitor/geolocation"
 import { BottomNav, Toast } from "./components/ui"
 import {
@@ -110,6 +110,10 @@ export default function App() {
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
+  const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
+  const [myLocation, setMyLocation] = useState(null)
+  const watchIdRef = useRef(null)
+  const prevLocationRef = useRef(null)
   const toast = useToast()
   const showToast = toast.show
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
@@ -534,28 +538,88 @@ export default function App() {
     }
   }, [showToast])
 
-  const locateMe = async () => {
-    try {
-      const permStatus = await Geolocation.checkPermissions()
-      if (permStatus.location === "denied") {
-        const req = await Geolocation.requestPermissions()
-        if (req.location === "denied") {
-          showToast("위치 권한을 확인해주세요.")
-          return
-        }
+  const calcBearing = useCallback((from, to) => {
+    const toRad = (d) => (d * Math.PI) / 180
+    const toDeg = (r) => (r * 180) / Math.PI
+    const dLng = toRad(to.lng - from.lng)
+    const y = Math.sin(dLng) * Math.cos(toRad(to.lat))
+    const x = Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) -
+      Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(dLng)
+    return (toDeg(Math.atan2(y, x)) + 360) % 360
+  }, [])
+
+  const handlePositionUpdate = useCallback((position) => {
+    const coords = { lat: position.coords.latitude, lng: position.coords.longitude }
+    const prev = prevLocationRef.current
+    let heading = myLocation?.heading ?? 0
+    if (position.coords.heading != null && !isNaN(position.coords.heading)) {
+      heading = position.coords.heading
+    } else if (prev) {
+      const dist = Math.abs(coords.lat - prev.lat) + Math.abs(coords.lng - prev.lng)
+      if (dist > 0.00005) {
+        heading = calcBearing(prev, coords)
       }
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
-      })
-      const nextLocation = { lat: position.coords.latitude, lng: position.coords.longitude }
-      setFocusPoint({ ...nextLocation, zoom: 16 })
+    }
+    prevLocationRef.current = coords
+    setMyLocation({ ...coords, heading })
+  }, [calcBearing, myLocation?.heading])
+
+  const locateMe = async () => {
+    // 이미 추적 중이면 위치로만 이동
+    if (watchIdRef.current != null && myLocation) {
+      setFocusPoint({ lat: myLocation.lat, lng: myLocation.lng, zoom: 16 })
       showToast("현재 위치로 이동했어요.")
+      return
+    }
+    try {
+      // 첫 위치 가져오기
+      let firstCoords
+      try {
+        const permStatus = await Geolocation.checkPermissions()
+        if (permStatus.location === "denied") {
+          const req = await Geolocation.requestPermissions()
+          if (req.location === "denied") throw new Error("denied")
+        }
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000,
+        })
+        firstCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
+      } catch {
+        if (!navigator.geolocation) throw new Error("no-geo")
+        const position = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 10000, maximumAge: 30000,
+          })
+        )
+        firstCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
+      }
+      prevLocationRef.current = firstCoords
+      setMyLocation({ ...firstCoords, heading: 0 })
+      setFocusPoint({ ...firstCoords, zoom: 16 })
+      showToast("현재 위치로 이동했어요.")
+
+      // 연속 추적 시작
+      if (navigator.geolocation && watchIdRef.current == null) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          handlePositionUpdate,
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 5000 },
+        )
+      }
     } catch {
       showToast("위치를 가져올 수 없어요. 권한을 확인해주세요.")
     }
   }
+
+  // 컴포넌트 언마운트 시 watch 정리
+  useEffect(() => () => {
+    if (watchIdRef.current != null) {
+      navigator.geolocation?.clearWatch(watchIdRef.current)
+      watchIdRef.current = null
+    }
+  }, [])
 
   // --- Header Config ---
 
@@ -692,11 +756,13 @@ export default function App() {
             draftPoints={draftPoints}
             focusPoint={focusPoint}
             fitTrigger={fitTrigger}
+            myLocation={myLocation}
             readOnly={activeMapSource === "demo" || activeMapSource === "shared"}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
             shareUrl={shareUrl}
             showLabels={showMapLabels}
+            characterStyle={characterStyle}
             onBack={() => {
               if (activeMapSource === "community" || activeMapSource === "shared") {
                 setActiveTab("home")
@@ -758,6 +824,8 @@ export default function App() {
             onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: unpublishedMaps[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
             onUpdateProfile={handleUpdateProfile}
+            characterStyle={characterStyle}
+            onChangeCharacter={setCharacterStyle}
           />
         ) : null}
       </main>

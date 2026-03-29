@@ -7,7 +7,13 @@ const escapeHtml = (str) => {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true }, ref) {
+const BASE_ZOOM = 14
+const zoomScale = (zoom) => {
+  const s = Math.pow(1.08, zoom - BASE_ZOOM)
+  return Math.max(0.5, Math.min(s, 1.3))
+}
+
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3" }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
@@ -102,6 +108,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           if (Date.now() < ignoreMapTapUntilRef.current) return
           onMapTapRef.current?.({ lat: e.coord.lat(), lng: e.coord.lng() })
         })
+        const applyZoomScale = () => {
+          const s = zoomScale(map.getZoom())
+          containerRef.current?.style.setProperty("--map-scale", s)
+        }
+        naverMaps.Event.addListener(map, "zoom_changed", applyZoomScale)
+        applyZoomScale()
         mapRef.current = map
         if (!cancelled) setMapReady(true)
       } catch (e) {
@@ -161,31 +173,20 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
 
       features.forEach((feature) => {
         if (feature.type === "pin") {
+          const labelHtml = showLabels
+            ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
+            : ""
           const marker = new naverMaps.Marker({
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-emoji-marker"><span>${escapeHtml(feature.emoji || "📍")}</span></div>`,
-              size: new naverMaps.Size(32, 32),
-              anchor: new naverMaps.Point(16, 16),
+              content: `<div class="loca-pin-marker"><div class="loca-pin-emoji"><span>${escapeHtml(feature.emoji || "📍")}</span></div>${labelHtml}</div>`,
+              size: new naverMaps.Size(40, 56),
+              anchor: new naverMaps.Point(20, 20),
             },
           })
           bindFeatureSelection(marker, feature.id)
           layersRef.current.push(marker)
-
-          if (showLabels) {
-            const label = new naverMaps.Marker({
-              position: toLatLng(feature.lat, feature.lng),
-              map,
-              icon: {
-                content: `<div class="loca-map-label">${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</div>`,
-                anchor: new naverMaps.Point(0, 42),
-              },
-              clickable: true,
-            })
-            bindFeatureSelection(label, feature.id)
-            layersRef.current.push(label)
-          }
         } else if (feature.type === "route") {
           const polyline = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
@@ -296,10 +297,39 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           layersRef.current.push(draft)
         }
       }
+      if (myLocation) {
+        const h = myLocation.heading ?? 0
+        const charClass = characterStyle === "w1" ? "loca-char-w1" : "loca-char-m3"
+        const person = `<div class="loca-my-location ${charClass}">`
+          + `<div class="loca-pulse"></div>`
+          + `<div class="loca-direction" style="transform:rotate(${h}deg)">`
+          + `<div class="loca-dir-arrow"></div>`
+          + `</div>`
+          + `<div class="loca-person">`
+          + `<div class="loca-person__head"></div>`
+          + `<div class="loca-person__body"></div>`
+          + `<div class="loca-person__arm-l"></div>`
+          + `<div class="loca-person__arm-r"></div>`
+          + `<div class="loca-person__leg-l"></div>`
+          + `<div class="loca-person__leg-r"></div>`
+          + `</div>`
+          + `</div>`
+        const locMarker = new naverMaps.Marker({
+          position: toLatLng(myLocation.lat, myLocation.lng),
+          map,
+          icon: {
+            content: person,
+            size: new naverMaps.Size(56, 56),
+            anchor: new naverMaps.Point(28, 28),
+          },
+          zIndex: 9999,
+        })
+        layersRef.current.push(locMarker)
+      }
     } catch (e) {
       console.warn("네이버 지도 레이어 업데이트 실패:", e)
     }
-  }, [draftMode, draftPoints, features, mapReady, onFeatureTap, selectedFeatureId, showLabels])
+  }, [characterStyle, draftMode, draftPoints, features, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
 
   // Focus
   useEffect(() => {

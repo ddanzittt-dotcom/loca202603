@@ -29,6 +29,8 @@ export function MapEditorScreen({
   hideCount = false,
   communityMode = false,
   showLabels = true,
+  myLocation = null,
+  characterStyle = "m3",
   onBack,
   onLocate,
   onSearchLocation,
@@ -353,6 +355,8 @@ export function MapEditorScreen({
             onMapTap={readOnly ? undefined : onMapTap}
             onFeatureTap={onFeatureTap}
             showLabels={showLabels}
+            myLocation={myLocation}
+            characterStyle={characterStyle}
           />
         </MapErrorBoundary>
 

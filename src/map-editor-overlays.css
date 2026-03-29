@@ -1,5 +1,39 @@
 ﻿@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
+.character-select-row {
+  display: flex;
+  gap: 10px;
+}
+
+.character-select-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.character-select-btn.is-active {
+  border-color: #635BFF;
+  background: #f5f3ff;
+}
+
+.character-select-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.character-select-desc {
+  font-size: 0.68rem;
+  color: #888;
+}
+
 .emoji-grid {
   max-height: 160px;
   overflow-y: auto;
