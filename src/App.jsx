@@ -50,6 +50,7 @@ import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
+import { cleanupOrphanedMedia } from "./lib/mediaStore"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
@@ -113,9 +114,7 @@ export default function App() {
   const showToast = toast.show
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
   useEffect(() => {
-    import("./lib/mediaStore").then(({ cleanupOrphanedMedia }) => {
-      cleanupOrphanedMedia([...features, ...communityMapFeatures])
-    })
+    cleanupOrphanedMedia([...features, ...communityMapFeatures])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [localImportSnapshot] = useState(() => {
     const readStored = (key, fallback) => {
@@ -710,15 +709,6 @@ export default function App() {
               resetEditorState()
               setActiveMapSource("local")
             }}
-            onEditMap={() =>
-              setMapSheet({
-                mode: "edit",
-                id: activeMap.id,
-                title: activeMap.title,
-                description: activeMap.description,
-                theme: activeMap.theme,
-              })
-            }
             onFit={() => setFitTrigger((value) => value + 1)}
             onSearchLocation={(loc) => setFocusPoint(loc)}
             onLocate={locateMe}

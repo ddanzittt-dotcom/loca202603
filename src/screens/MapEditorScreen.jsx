@@ -30,7 +30,6 @@ export function MapEditorScreen({
   communityMode = false,
   showLabels = true,
   onBack,
-  onEditMap,
   onLocate,
   onSearchLocation,
   onModeChange,
@@ -201,15 +200,10 @@ export function MapEditorScreen({
         <div className="map-editor__title-wrap">
           <strong>{map.title}</strong>
         </div>
-        {!readOnly && !communityMode ? (
-          <button className="icon-button" type="button" onClick={onEditMap} aria-label="지도 수정">
-            수정
-          </button>
-        ) : null}
         {!communityMode ? (
           <div className="share-button-wrap" ref={shareRef}>
             <button className="icon-button" type="button" onClick={() => setShareOpen(!shareOpen)} aria-label="지도 공유하기">
-              공유
+              🔗
             </button>
             {shareOpen ? (
               <div className="share-panel">
