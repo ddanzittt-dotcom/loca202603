@@ -286,7 +286,7 @@
 .map-list-bar {
   position: absolute;
   left: 12px;
-  bottom: 14px;
+  bottom: 4px;
   z-index: 510;
   display: flex;
   gap: 4px;
