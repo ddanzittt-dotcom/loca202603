@@ -45,7 +45,6 @@ export function useFeatureEditing({
   setSelectedFeatureSummaryId,
   setEditorMode,
   setDraftPoints,
-  setFocusPoint,
   setMemoText,
   activeFeaturePool,
   communityMapFeatures,
@@ -62,24 +61,18 @@ export function useFeatureEditing({
       setSelectedFeatureId(featureId)
       setSelectedFeatureSummaryId(featureId)
       setFeatureSheet(toEditableFeature(feature))
-      const center = getFeatureCenter(feature)
-      if (center) setFocusPoint(center)
       return
     }
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-    const center = getFeatureCenter(feature)
-    if (center) setFocusPoint(center)
-  }, [activeFeaturePool, selectedFeatureSummaryId, setFeatureSheet, setFocusPoint, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, selectedFeatureSummaryId, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const focusFeatureOnly = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-    const center = getFeatureCenter(feature)
-    if (center) setFocusPoint(center)
-  }, [activeFeaturePool, setFocusPoint, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const openFeatureDetail = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
@@ -87,9 +80,7 @@ export function useFeatureEditing({
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
     setFeatureSheet(toEditableFeature(feature))
-    const center = getFeatureCenter(feature)
-    if (center) setFocusPoint(center)
-  }, [activeFeaturePool, setFeatureSheet, setFocusPoint, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const saveFeatureSheet = useCallback(async () => {
     if (!featureSheet?.title.trim()) return showToast("이름을 입력하세요.")

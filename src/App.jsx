@@ -14,7 +14,7 @@ import {
   sharesSeed,
   users,
 } from "./data/sampleData"
-import { useLocalStorageState, useToast } from "./hooks/useAppState"
+import { useLocalStorageState, useToast, setStorageWarningCallback } from "./hooks/useAppState"
 import {
   buildCommunityPosts,
   buildMapRoutePath,
@@ -111,6 +111,12 @@ export default function App() {
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const toast = useToast()
   const showToast = toast.show
+  useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
+  useEffect(() => {
+    import("./lib/mediaStore").then(({ cleanupOrphanedMedia }) => {
+      cleanupOrphanedMedia([...features, ...communityMapFeatures])
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [localImportSnapshot] = useState(() => {
     const readStored = (key, fallback) => {
       try {
@@ -256,7 +262,7 @@ export default function App() {
     setFeatures, featureSheet, setFeatureSheet,
     selectedFeatureSummaryId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
-    setEditorMode, setDraftPoints, setFocusPoint, setMemoText,
+    setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
   })
