@@ -362,6 +362,10 @@
   border-color: #141b34;
 }
 
+.map-filter-chip.map-filter-toggle {
+  flex-shrink: 0;
+}
+
 .map-editor__count {
   font-size: 0.72rem;
   font-weight: 800;
