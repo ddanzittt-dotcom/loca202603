@@ -1,5 +1,6 @@
 import { useCallback } from "react"
 import { createId } from "../lib/appUtils"
+import { deleteMedia } from "../lib/mediaStore"
 import {
   createMap as createMapRecord,
   updateMap as updateMapRecord,
@@ -146,6 +147,11 @@ export function useMapCRUD({
       if (cloudMode) {
         await deleteMapRecord(mapSheet.id)
       }
+      const mapFeatures = features.filter((f) => f.mapId === mapSheet.id)
+      for (const f of mapFeatures) {
+        for (const p of (f.photos || [])) { try { await deleteMedia(p.id) } catch { /* ignore */ } }
+        for (const v of (f.voices || [])) { try { await deleteMedia(v.id) } catch { /* ignore */ } }
+      }
       setMaps((current) => current.filter((mapItem) => mapItem.id !== mapSheet.id))
       setFeatures((current) => current.filter((feature) => feature.mapId !== mapSheet.id))
       setShares((current) => current.filter((share) => share.mapId !== mapSheet.id))
@@ -157,7 +163,7 @@ export function useMapCRUD({
       console.error("Failed to delete map", error)
       showToast("지도를 삭제하지 못했어요.")
     }
-  }, [cloudMode, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
+  }, [cloudMode, features, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
 
   const importSharedMapToLocal = useCallback(async () => {
     if (!sharedMapData) return
