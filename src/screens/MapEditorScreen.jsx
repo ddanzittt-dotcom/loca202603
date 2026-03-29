@@ -55,6 +55,7 @@ export function MapEditorScreen({
   const [userNoteText, setUserNoteText] = useState("")
   const [activeFilter, setActiveFilter] = useState("all")
   const [filterOpen, setFilterOpen] = useState(false)
+  const [stripOpen, setStripOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState("")
   const [capturing, setCapturing] = useState(false)
@@ -200,6 +201,9 @@ export function MapEditorScreen({
         <div className="map-editor__title-wrap">
           <strong>{map.title}</strong>
         </div>
+        {!hideCount ? (
+          <span className="map-editor__count">📍{pinCount} 🔀{routeCount} ⬡{areaCount}</span>
+        ) : null}
         {!communityMode ? (
           <div className="share-button-wrap" ref={shareRef}>
             <button className="icon-button" type="button" onClick={() => setShareOpen(!shareOpen)} aria-label="지도 공유하기">
@@ -486,61 +490,60 @@ export function MapEditorScreen({
           </article>
         ) : null}
 
-        {!hideCount ? (
-          <div className="map-count-card" aria-label="지도 개수 요약">
-            <span>📍 {pinCount}</span>
-            <span>🔀 {routeCount}</span>
-            <span>⬡ {areaCount}</span>
-          </div>
-        ) : null}
-
         {features.length > 0 ? (
-          <div
-            className="map-place-strip"
-            ref={stripRef}
-            onMouseDown={(e) => {
-              const el = stripRef.current
-              if (!el) return
-              stripDragRef.current = { startX: e.pageX, scrollLeft: el.scrollLeft, dragging: true }
-              el.style.cursor = "grabbing"
-            }}
-            onMouseMove={(e) => {
-              const d = stripDragRef.current
-              if (!d.dragging) return
-              e.preventDefault()
-              const el = stripRef.current
-              if (!el) return
-              el.scrollLeft = d.scrollLeft - (e.pageX - d.startX)
-            }}
-            onMouseUp={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
-            onMouseLeave={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
-            onTouchStart={(e) => {
-              const el = stripRef.current
-              if (!el) return
-              stripDragRef.current = { startX: e.touches[0].pageX, scrollLeft: el.scrollLeft, dragging: true }
-            }}
-            onTouchMove={(e) => {
-              const d = stripDragRef.current
-              if (!d.dragging) return
-              const el = stripRef.current
-              if (!el) return
-              el.scrollLeft = d.scrollLeft - (e.touches[0].pageX - d.startX)
-            }}
-            onTouchEnd={() => { stripDragRef.current.dragging = false }}
-          >
-            {features.map((feature) => (
+          <div className={`map-place-strip-wrap${stripOpen ? " is-open" : ""}`}>
+            <button className="map-place-strip-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
+              목록 ({features.length}) <span style={{ fontSize: "0.6em", verticalAlign: "middle" }}>{stripOpen ? "▼" : "▲"}</span>
+            </button>
+            {stripOpen ? (
               <div
-                key={feature.id}
-                className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
-                onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                className="map-place-strip"
+                ref={stripRef}
+                onMouseDown={(e) => {
+                  const el = stripRef.current
+                  if (!el) return
+                  stripDragRef.current = { startX: e.pageX, scrollLeft: el.scrollLeft, dragging: true }
+                  el.style.cursor = "grabbing"
+                }}
+                onMouseMove={(e) => {
+                  const d = stripDragRef.current
+                  if (!d.dragging) return
+                  e.preventDefault()
+                  const el = stripRef.current
+                  if (!el) return
+                  el.scrollLeft = d.scrollLeft - (e.pageX - d.startX)
+                }}
+                onMouseUp={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+                onMouseLeave={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+                onTouchStart={(e) => {
+                  const el = stripRef.current
+                  if (!el) return
+                  stripDragRef.current = { startX: e.touches[0].pageX, scrollLeft: el.scrollLeft, dragging: true }
+                }}
+                onTouchMove={(e) => {
+                  const d = stripDragRef.current
+                  if (!d.dragging) return
+                  const el = stripRef.current
+                  if (!el) return
+                  el.scrollLeft = d.scrollLeft - (e.touches[0].pageX - d.startX)
+                }}
+                onTouchEnd={() => { stripDragRef.current.dragging = false }}
               >
-                <span className="map-place-card__meta">{feature.type === "route" ? "경로" : feature.type === "area" ? "범위" : "장소"}</span>
-                <strong>{feature.emoji} {feature.title}</strong>
+                {features.map((feature) => (
+                  <div
+                    key={feature.id}
+                    className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                    onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                  >
+                    <span className="map-place-card__meta">{feature.type === "route" ? "경로" : feature.type === "area" ? "범위" : "장소"}</span>
+                    <strong>{feature.emoji} {feature.title}</strong>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : null}
           </div>
         ) : null}
 

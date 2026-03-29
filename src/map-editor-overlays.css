@@ -352,31 +352,40 @@
   border-color: #141b34;
 }
 
-.map-count-card {
-  position: absolute;
-  left: 12px;
-  bottom: 80px;
-  z-index: 510;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 1px solid rgba(20, 27, 52, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
-  color: #2c2925;
-  font-size: 0.82rem;
-  font-weight: 900;
+.map-editor__count {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #667085;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
-.map-place-strip {
+.map-place-strip-wrap {
   position: absolute;
   left: 12px;
   right: 12px;
   bottom: 14px;
   z-index: 510;
+}
+
+.map-place-strip-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 6px 14px;
+  border: 1px solid rgba(20, 27, 52, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2c2925;
+  cursor: pointer;
+}
+
+.map-place-strip {
   display: flex;
   gap: 8px;
   height: 52px;
