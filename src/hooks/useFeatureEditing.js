@@ -102,9 +102,22 @@ export function useFeatureEditing({
       note: (featureSheet.note || "").slice(0, 2000),
       updatedAt: new Date().toISOString(),
     }
+    if (nextFeature.type === "pin" && nextFeature.lat != null) {
+      const sc = sanitizeCoord(nextFeature.lat, nextFeature.lng)
+      nextFeature.lat = sc.lat
+      nextFeature.lng = sc.lng
+    }
+    if (nextFeature.points) {
+      nextFeature.points = sanitizePoints(nextFeature.points)
+    }
     delete nextFeature.tagsText
+    // Merge: keep photos/voices/memos from the live features array to avoid overwriting
+    const mergeMediaFromCurrent = (current) => current.map((f) => {
+      if (f.id !== nextFeature.id) return f
+      return { ...nextFeature, photos: f.photos || nextFeature.photos, voices: f.voices || nextFeature.voices, memos: f.memos || nextFeature.memos }
+    })
     if (activeMapSource === "community") {
-      setCommunityMapFeatures((current) => current.map((f) => (f.id === nextFeature.id ? nextFeature : f)))
+      setCommunityMapFeatures(mergeMediaFromCurrent)
     } else {
       if (cloudMode) {
         try {
@@ -112,8 +125,11 @@ export function useFeatureEditing({
             ...nextFeature,
             mapId: nextFeature.mapId,
           })
-          setFeatures((current) => current.map((feature) => (feature.id === nextFeature.id ? savedFeature : feature)))
-          setFeatureSheet(toEditableFeature(savedFeature))
+          setFeatures((current) => current.map((feature) => {
+            if (feature.id !== nextFeature.id) return feature
+            return { ...savedFeature, photos: feature.photos || [], voices: feature.voices || [], memos: feature.memos || [] }
+          }))
+          setFeatureSheet((c) => toEditableFeature({ ...savedFeature, photos: c?.photos || [], voices: c?.voices || [], memos: c?.memos || [] }))
           setMaps((current) => current.map((mapItem) => (mapItem.id === savedFeature.mapId ? { ...mapItem, updatedAt: new Date().toISOString() } : mapItem)))
           showToast("정보를 저장했어요.")
           return
@@ -124,10 +140,10 @@ export function useFeatureEditing({
         }
       }
 
-      setFeatures((current) => current.map((feature) => (feature.id === nextFeature.id ? nextFeature : feature)))
+      setFeatures(mergeMediaFromCurrent)
       touchMap(nextFeature.mapId)
     }
-    setFeatureSheet(toEditableFeature(nextFeature))
+    setFeatureSheet((c) => toEditableFeature({ ...nextFeature, photos: c?.photos || [], voices: c?.voices || [], memos: c?.memos || [] }))
     showToast("정보를 저장했어요.")
   }, [activeMapSource, cloudMode, featureSheet, setCommunityMapFeatures, setFeatureSheet, setFeatures, setMaps, showToast, touchMap])
 
@@ -184,6 +200,7 @@ export function useFeatureEditing({
 
   const createHandleMapTap = (editorMode) => async ({ lat, lng }) => {
     if (!activeMapId) return
+    const sc = sanitizeCoord(lat, lng)
     if (editorMode === "pin") {
       let nextFeature = {
         id: createId("feat"),
@@ -191,8 +208,8 @@ export function useFeatureEditing({
         type: "pin",
         title: "새 장소",
         emoji: "\uD83D\uDCCD",
-        lat,
-        lng,
+        lat: sc.lat,
+        lng: sc.lng,
         tags: [],
         note: "",
         highlight: false,
@@ -219,7 +236,7 @@ export function useFeatureEditing({
       return showToast("핀을 추가했어요.")
     }
     if (editorMode === "route" || editorMode === "area") {
-      setDraftPoints((current) => [...current, [lng, lat]])
+      setDraftPoints((current) => [...current, [sc.lng, sc.lat]])
     }
   }
 
@@ -231,7 +248,7 @@ export function useFeatureEditing({
       type: "route",
       title: "새 경로",
       emoji: "\uD83D\uDEE3\uFE0F",
-      points: draftPoints,
+      points: sanitizePoints(draftPoints),
       tags: [],
       note: "",
       highlight: false,
@@ -267,7 +284,7 @@ export function useFeatureEditing({
       type: "area",
       title: "새 범위",
       emoji: "\uD83D\uDFE9",
-      points: draftPoints,
+      points: sanitizePoints(draftPoints),
       tags: [],
       note: "",
       highlight: false,

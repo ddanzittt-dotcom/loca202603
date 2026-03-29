@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createId } from "../lib/appUtils"
 import { saveMedia, deleteMedia } from "../lib/mediaStore"
 
@@ -8,6 +8,8 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
   const mediaRecorderRef = useRef(null)
   const recordingTimerRef = useRef(null)
   const photoInputRef = useRef(null)
+  const featureSheetRef = useRef(featureSheet)
+  useEffect(() => { featureSheetRef.current = featureSheet }, [featureSheet])
 
   const handlePhotoSelected = async (event) => {
     const file = event.target.files?.[0]
@@ -73,7 +75,9 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
         const voiceId = createId("voice")
         await saveMedia(voiceId, blob)
         const voiceEntry = { id: voiceId, duration, date: new Date().toISOString() }
-        const featureId = featureSheet.id
+        const currentSheet = featureSheetRef.current
+        if (!currentSheet) return
+        const featureId = currentSheet.id
         const updater = (f) => f.id === featureId ? { ...f, voices: [...(f.voices || []), voiceEntry] } : f
         updateFeatures((c) => c.map(updater))
         setFeatureSheet((c) => ({ ...c, voices: [...(c.voices || []), voiceEntry] }))
