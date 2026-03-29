@@ -268,7 +268,6 @@
 .map-filter-bar {
   position: absolute;
   left: 12px;
-  bottom: 62px;
   z-index: 510;
   display: flex;
   gap: 4px;
@@ -276,12 +275,23 @@
   flex-wrap: nowrap;
 }
 
-.map-filter-bar--bottom {
-  bottom: 130px;
+.map-filter-bar--upper {
+  bottom: 80px;
 }
 
 .map-filter-bar--community {
-  bottom: 80px;
+  bottom: 46px;
+}
+
+.map-list-bar {
+  position: absolute;
+  left: 12px;
+  bottom: 14px;
+  z-index: 510;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .draft-bar.draft-bar--compact {
@@ -360,40 +370,17 @@
   letter-spacing: 0.02em;
 }
 
-.map-place-strip-wrap {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 14px;
-  z-index: 510;
-}
-
-.map-place-strip-toggle {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 6px;
-  padding: 6px 14px;
-  border: 1px solid rgba(20, 27, 52, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
-  font-family: "Pretendard", "Noto Sans KR", sans-serif;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #2c2925;
-  cursor: pointer;
-}
-
 .map-place-strip {
   display: flex;
-  gap: 8px;
-  height: 52px;
+  gap: 4px;
+  height: 42px;
   align-items: center;
-  overflow: scroll;
+  overflow-x: scroll;
+  overflow-y: hidden;
   cursor: grab;
   -ms-overflow-style: none;
   scrollbar-width: none;
+  max-width: calc(100vw - 100px);
 }
 
 .map-place-strip::-webkit-scrollbar {

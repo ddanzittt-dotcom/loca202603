@@ -490,10 +490,24 @@ export function MapEditorScreen({
           </article>
         ) : null}
 
+        <div className={`map-filter-bar map-filter-bar--upper${communityMode ? " map-filter-bar--community" : ""}`} aria-label="지도 필터">
+          <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
+            필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "◀" : "▶"}</span>
+          </button>
+          {filterOpen ? (
+            <>
+              <button className={`map-filter-chip${activeFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("all")}>전체</button>
+              <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>핀</button>
+              <button className={`map-filter-chip${activeFilter === "route" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("route")}>경로</button>
+              <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>범위</button>
+            </>
+          ) : null}
+        </div>
+
         {features.length > 0 ? (
-          <div className={`map-place-strip-wrap${stripOpen ? " is-open" : ""}`}>
-            <button className="map-place-strip-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
-              목록 ({features.length}) <span style={{ fontSize: "0.6em", verticalAlign: "middle" }}>{stripOpen ? "▼" : "▲"}</span>
+          <div className="map-list-bar" aria-label="맵핑 목록">
+            <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
+              목록 ({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "◀" : "▶"}</span>
             </button>
             {stripOpen ? (
               <div
@@ -546,20 +560,6 @@ export function MapEditorScreen({
             ) : null}
           </div>
         ) : null}
-
-        <div className={`map-filter-bar map-filter-bar--bottom${communityMode ? " map-filter-bar--community" : ""}`} aria-label="지도 필터">
-          <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
-            필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "◀" : "▶"}</span>
-          </button>
-          {filterOpen ? (
-            <>
-              <button className={`map-filter-chip${activeFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("all")}>전체</button>
-              <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>핀</button>
-              <button className={`map-filter-chip${activeFilter === "route" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("route")}>경로</button>
-              <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>범위</button>
-            </>
-          ) : null}
-        </div>
 
       </div>
     </section>
