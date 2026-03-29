@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { signInWithEmail, signUpWithEmail } from "../lib/auth"
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithKakao } from "../lib/auth"
 
 export function AuthScreen({ title = "로그인", subtitle = "내 지도를 계정에 저장하고 불러올 수 있어요.", onSuccess }) {
   const [mode, setMode] = useState("login")
@@ -20,6 +20,7 @@ export function AuthScreen({ title = "로그인", subtitle = "내 지도를 계�
       } else {
         await signInWithEmail(email.trim(), password)
       }
+      setPassword("")
       onSuccess?.(mode)
     } catch (error) {
       setErrorMessage(error.message || "로그인에 실패했어요.")
@@ -83,6 +84,37 @@ export function AuthScreen({ title = "로그인", subtitle = "내 지도를 계�
 
           <button className="button button--primary" type="submit" disabled={submitting}>
             {submitting ? "처리 중..." : mode === "signup" ? "계정 만들기" : "로그인"}
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "4px 0" }}>
+            <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--color-border, #e5e5e5)" }} />
+            <span style={{ fontSize: 13, color: "var(--color-text-secondary, #888)" }}>또는</span>
+            <hr style={{ flex: 1, border: "none", borderTop: "1px solid var(--color-border, #e5e5e5)" }} />
+          </div>
+
+          <button
+            className="button"
+            type="button"
+            disabled={submitting}
+            onClick={async () => {
+              setErrorMessage("")
+              try { await signInWithGoogle() } catch (e) { setErrorMessage(e.message || "Google 로그인에 실패했어요.") }
+            }}
+          >
+            Google로 계속하기
+          </button>
+
+          <button
+            className="button"
+            type="button"
+            disabled={submitting}
+            style={{ backgroundColor: "#FEE500", color: "#191919" }}
+            onClick={async () => {
+              setErrorMessage("")
+              try { await signInWithKakao() } catch (e) { setErrorMessage(e.message || "카카오 로그인에 실패했어요.") }
+            }}
+          >
+            카카오로 계속하기
           </button>
         </form>
       </div>

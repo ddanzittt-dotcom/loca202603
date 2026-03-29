@@ -1,16 +1,77 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
 
 const getNaverMaps = () => window.naver?.maps ?? null
 
-export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true }) {
+const escapeHtml = (str) => {
+  if (!str) return ""
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
-  const lastFitTriggerRef = useRef(fitTrigger)
+  const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
   const ignoreMapTapUntilRef = useRef(0)
   const lastFeatureTapRef = useRef({ featureId: null, at: 0 })
   const [mapReady, setMapReady] = useState(false)
+
+  useImperativeHandle(ref, () => ({
+    async capture() {
+      const container = containerRef.current
+      if (!container) return null
+
+      // Try to find the internal canvas elements rendered by Naver Maps
+      const canvasList = container.querySelectorAll("canvas")
+      if (canvasList.length > 0) {
+        const rect = container.getBoundingClientRect()
+        const output = document.createElement("canvas")
+        output.width = rect.width * 2
+        output.height = rect.height * 2
+        const ctx = output.getContext("2d")
+        ctx.scale(2, 2)
+
+        // Draw each internal canvas at its position
+        for (const src of canvasList) {
+          try {
+            const srcRect = src.getBoundingClientRect()
+            ctx.drawImage(
+              src,
+              srcRect.left - rect.left,
+              srcRect.top - rect.top,
+              srcRect.width,
+              srcRect.height,
+            )
+          } catch {
+            // skip tainted canvases
+          }
+        }
+
+        // Draw overlay markers/labels (HTML elements) via html2canvas
+        try {
+          const html2canvas = (await import("html2canvas")).default
+          const overlayCanvas = await html2canvas(container, {
+            useCORS: true,
+            allowTaint: true,
+            scale: 2,
+            backgroundColor: null,
+            ignoreElements: (el) => el.tagName === "CANVAS",
+          })
+          ctx.setTransform(1, 0, 0, 1, 0, 0)
+          ctx.drawImage(overlayCanvas, 0, 0, output.width, output.height)
+        } catch {
+          // overlays optional
+        }
+
+        return output
+      }
+
+      // Fallback: html2canvas only
+      const html2canvas = (await import("html2canvas")).default
+      return html2canvas(container, { useCORS: true, allowTaint: true, scale: 2 })
+    },
+  }), [])
 
   useEffect(() => {
     onMapTapRef.current = onMapTap
@@ -104,7 +165,7 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-emoji-marker"><span>${feature.emoji || "📍"}</span></div>`,
+              content: `<div class="loca-emoji-marker"><span>${escapeHtml(feature.emoji || "📍")}</span></div>`,
               size: new naverMaps.Size(32, 32),
               anchor: new naverMaps.Point(16, 16),
             },
@@ -117,11 +178,12 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
               position: toLatLng(feature.lat, feature.lng),
               map,
               icon: {
-                content: `<div class="loca-map-label">${feature.emoji} ${feature.title}</div>`,
+                content: `<div class="loca-map-label">${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</div>`,
                 anchor: new naverMaps.Point(0, 42),
               },
-              clickable: false,
+              clickable: true,
             })
+            bindFeatureSelection(label, feature.id)
             layersRef.current.push(label)
           }
         } else if (feature.type === "route") {
@@ -141,6 +203,7 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
             strokeColor: "#0EA5E9",
             strokeWeight: 24,
             strokeOpacity: 0.05,
+            clickable: true,
             map,
           })
           bindFeatureSelection(hitArea, feature.id)
@@ -152,7 +215,7 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
               position: toLatLng(midpoint[1], midpoint[0]),
               map,
               icon: {
-                content: `<div class="loca-map-route-label"><span>${feature.emoji} ${feature.title}</span></div>`,
+                content: `<div class="loca-map-route-label"><span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span></div>`,
                 anchor: new naverMaps.Point(0, 14),
               },
               clickable: true,
@@ -178,6 +241,7 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
             strokeColor: "#16A34A",
             strokeWeight: 24,
             strokeOpacity: 0.05,
+            clickable: true,
             map,
           })
           bindFeatureSelection(hitArea, feature.id)
@@ -196,7 +260,7 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
               position: centerPoint,
               map,
               icon: {
-                content: `<div class="loca-map-route-label"><span>${feature.emoji} ${feature.title}</span></div>`,
+                content: `<div class="loca-map-route-label"><span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span></div>`,
                 anchor: new naverMaps.Point(0, 14),
               },
               clickable: true,
@@ -250,36 +314,67 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
     }
   }, [focusPoint])
 
-  // fitBounds
+  // fitBounds - focus on densest cluster
   useEffect(() => {
     const map = mapRef.current
     const naverMaps = getNaverMaps()
-    if (!map || !naverMaps) return
+    if (!map || !naverMaps || !mapReady) return
     if (lastFitTriggerRef.current === fitTrigger) return
     lastFitTriggerRef.current = fitTrigger
     try {
-      const bounds = new naverMaps.LatLngBounds()
-      let hasPoints = false
+      // Collect all coordinates
+      const coords = []
       features.forEach((feature) => {
         if (feature.type === "pin") {
-          bounds.extend(new naverMaps.LatLng(feature.lat, feature.lng))
-          hasPoints = true
-        } else {
-          feature.points.forEach(([lng, lat]) => {
-            bounds.extend(new naverMaps.LatLng(lat, lng))
-            hasPoints = true
-          })
+          coords.push({ lat: feature.lat, lng: feature.lng })
+        } else if (feature.points?.length) {
+          const total = feature.points.reduce(
+            (acc, [fLng, fLat]) => ({ lat: acc.lat + fLat, lng: acc.lng + fLng }),
+            { lat: 0, lng: 0 },
+          )
+          coords.push({ lat: total.lat / feature.points.length, lng: total.lng / feature.points.length })
         }
       })
-      draftPoints.forEach(([lng, lat]) => {
-        bounds.extend(new naverMaps.LatLng(lat, lng))
-        hasPoints = true
-      })
-      if (hasPoints) map.fitBounds(bounds, { top: 28, right: 28, bottom: 28, left: 28 })
+      draftPoints.forEach(([dLng, dLat]) => coords.push({ lat: dLat, lng: dLng }))
+
+      if (coords.length === 0) return
+
+      if (coords.length <= 5) {
+        // Few points: fit all
+        const bounds = new naverMaps.LatLngBounds()
+        coords.forEach((c) => bounds.extend(new naverMaps.LatLng(c.lat, c.lng)))
+        map.fitBounds(bounds, { top: 28, right: 28, bottom: 28, left: 28 })
+      } else {
+        // Find densest cluster: for each point, count neighbors within ~0.03 deg (~3km)
+        const radius = 0.03
+        let bestIdx = 0, bestCount = 0
+        coords.forEach((c, i) => {
+          let count = 0
+          coords.forEach((d) => {
+            if (Math.abs(c.lat - d.lat) < radius && Math.abs(c.lng - d.lng) < radius) count++
+          })
+          if (count > bestCount) { bestCount = count; bestIdx = i }
+        })
+        // Fit bounds to the densest cluster
+        const center = coords[bestIdx]
+        const bounds = new naverMaps.LatLngBounds()
+        coords.forEach((c) => {
+          if (Math.abs(c.lat - center.lat) < radius && Math.abs(c.lng - center.lng) < radius) {
+            bounds.extend(new naverMaps.LatLng(c.lat, c.lng))
+          }
+        })
+        map.fitBounds(bounds, { top: 28, right: 28, bottom: 28, left: 28 })
+      }
     } catch (e) {
       console.warn("네이버 지도 fitBounds 실패:", e)
     }
-  }, [draftPoints, features, fitTrigger])
+  }, [draftPoints, features, fitTrigger, mapReady])
+
+  // fit on first ready
+  useEffect(() => {
+    if (!mapReady) return
+    lastFitTriggerRef.current = 0
+  }, [mapReady])
 
   return (
     <div className={`map-canvas map-canvas--${draftMode || "browse"}`} style={{ position: "relative" }}>
@@ -292,4 +387,4 @@ export function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, 
       ) : null}
     </div>
   )
-}
+})

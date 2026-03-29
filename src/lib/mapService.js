@@ -334,6 +334,7 @@ export async function createMap(mapData = {}) {
 }
 
 export async function updateMap(mapId, updates = {}) {
+  const user = await requireUser()
   const supabase = requireSupabase()
   const payload = {
     updated_at: new Date().toISOString(),
@@ -352,6 +353,7 @@ export async function updateMap(mapId, updates = {}) {
     .from("maps")
     .update(payload)
     .eq("id", mapId)
+    .eq("user_id", user.id)
     .select("*")
     .single()
 
@@ -360,12 +362,14 @@ export async function updateMap(mapId, updates = {}) {
 }
 
 export async function deleteMap(mapId) {
+  const user = await requireUser()
   const supabase = requireSupabase()
-  const { error } = await supabase.from("maps").delete().eq("id", mapId)
+  const { error } = await supabase.from("maps").delete().eq("id", mapId).eq("user_id", user.id)
   if (error) throw error
 }
 
 export async function createFeature(mapId, featureData) {
+  await requireUser()
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from("map_features")
@@ -382,6 +386,7 @@ export async function createFeature(mapId, featureData) {
 }
 
 export async function updateFeature(featureId, updates) {
+  await requireUser()
   const supabase = requireSupabase()
   const mapId = updates.mapId
   const { data, error } = await supabase
@@ -397,6 +402,7 @@ export async function updateFeature(featureId, updates) {
 }
 
 export async function deleteFeature(featureId, mapId) {
+  await requireUser()
   const supabase = requireSupabase()
   const { error } = await supabase.from("map_features").delete().eq("id", featureId)
   if (error) throw error
@@ -442,6 +448,7 @@ export async function getFeatureMemos(featureId) {
 }
 
 export async function publishMap(mapId, options = {}) {
+  const user = await requireUser()
   const supabase = requireSupabase()
   const now = new Date().toISOString()
   const slug = options.slug || createSlugCandidate(options.title || options.caption || mapId)
@@ -456,6 +463,7 @@ export async function publishMap(mapId, options = {}) {
       updated_at: now,
     })
     .eq("id", mapId)
+    .eq("user_id", user.id)
     .select("*")
     .single()
 
@@ -485,6 +493,7 @@ export async function publishMap(mapId, options = {}) {
 }
 
 export async function unpublishMap(mapId) {
+  const user = await requireUser()
   const supabase = requireSupabase()
   const now = new Date().toISOString()
 
@@ -497,7 +506,8 @@ export async function unpublishMap(mapId) {
         slug: null,
         updated_at: now,
       })
-      .eq("id", mapId),
+      .eq("id", mapId)
+      .eq("user_id", user.id),
     supabase.from("map_publications").delete().eq("map_id", mapId),
   ])
 
@@ -520,6 +530,8 @@ export async function getProfileBySlug(slug) {
 }
 
 export async function updateProfile(userId, updates = {}) {
+  const user = await requireUser()
+  if (user.id !== userId) throw new Error("자신의 프로필만 수정할 수 있습니다.")
   const supabase = requireSupabase()
   const { data, error } = await supabase
     .from("profiles")

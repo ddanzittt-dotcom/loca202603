@@ -49,7 +49,12 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
       </div>
 
       <div className="card-list">
-        {filtered.length > 0 ? (
+        {users.length === 0 ? (
+          <div className="empty-card">
+            <strong>아직 다른 사용자가 없어요.</strong>
+            <p>새로운 사용자가 가입하면 여기에서 찾을 수 있어요.</p>
+          </div>
+        ) : filtered.length > 0 ? (
           filtered.map((user) => (
             <UserRowCard key={user.id} user={user} isFollowed={followed.includes(user.id)} onToggleFollow={onToggleFollow} onSelect={onSelectUser} />
           ))

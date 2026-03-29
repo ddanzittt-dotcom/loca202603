@@ -4,24 +4,15 @@ export const me = {
   handle: "@gyeongju_loca",
   emoji: "🧭",
   bio: "내 지도로 기록하는 로컬 산책과 주말 코스",
-  followers: 128,
-  following: 45,
+  followers: 0,
+  following: 0,
   verified: false,
   type: "creator",
 }
 
-export const followedSeed = ["u1", "u5"]
+export const followedSeed = []
 
-export const users = [
-  { id: "u1", name: "성수러버", handle: "@seongsu_lover", emoji: "🏙️", bio: "성수동 카페와 전시 위주 로컬 큐레이터", type: "creator", maps: 12, followers: 1240, following: 89, verified: true },
-  { id: "u2", name: "제주탐험대", handle: "@jeju_explore", emoji: "🏝️", bio: "제주 구석구석 드라이브 기록", type: "creator", maps: 8, followers: 3200, following: 156, verified: true },
-  { id: "u3", name: "김민지", handle: "@minji_food", emoji: "🍜", bio: "맛집 찾아다니는 친구", type: "friend", maps: 3, followers: 45, following: 120, verified: false },
-  { id: "u4", name: "부여군청", handle: "@buyeo_gun", emoji: "🏯", bio: "백제의 시간을 담아내는 부여군 공식 계정", type: "org", maps: 6, followers: 2800, following: 35, verified: true },
-  { id: "u5", name: "공주시", handle: "@gongju_city", emoji: "🏛️", bio: "공주시 관광홍보 공식 계정", type: "org", maps: 8, followers: 3400, following: 28, verified: true },
-  { id: "u6", name: "올드서울", handle: "@oldseoul", emoji: "🌙", bio: "오래된 골목의 레트로 감성", type: "creator", maps: 15, followers: 5600, following: 201, verified: true },
-  { id: "u7", name: "박서연", handle: "@hiking_yeon", emoji: "🥾", bio: "등산부터 둘레길까지 기록 중", type: "friend", maps: 6, followers: 180, following: 95, verified: false },
-  { id: "u8", name: "천안문화재단", handle: "@ca_culture", emoji: "🎭", bio: "천안 문화예술 진행 공식 계정", type: "org", maps: 7, followers: 1900, following: 45, verified: true },
-]
+export const users = [me]
 
 export const collections = [
   { id: "c1", mapId: "demo-collection-seongsu", title: "성수 감성카페 7곳", creator: "@seongsu_lover", emojis: ["☕", "🖼️", "🏭"], places: 7, gradient: ["#fde68a", "#f59e0b"] },
@@ -29,14 +20,7 @@ export const collections = [
   { id: "c3", mapId: "demo-collection-euljiro", title: "을지로 레트로 산책", creator: "@oldseoul", emojis: ["🍢", "🌙", "📷"], places: 6, gradient: ["#99f6e4", "#14b8a6"] },
 ]
 
-export const communityPostsSeed = [
-  { id: "cp1", mapId: "demo-post-seongsu-day", userId: "u1", title: "성수동 하루", description: "성수의 무드가 좋은 장소들", caption: "카페부터 서울숲까지 한 번에 이어지는 동선을 정리했어요.", date: "2026-03-13", likes: 132, saves: 31, placeCount: 7, tags: ["카페", "산책"], emojis: ["☕", "🌳", "🏭", "🖼️"], gradient: ["#667eea", "#764ba2"] },
-  { id: "cp2", mapId: "demo-post-jeju-west", userId: "u2", title: "제주 서쪽 하루 코스", description: "바다와 식당을 묶은 드라이브", caption: "협재에서 시작해서 노을 보고 저녁까지 이어지는 일정이에요.", date: "2026-03-11", likes: 248, saves: 72, placeCount: 9, tags: ["제주", "드라이브"], emojis: ["🏖️", "🍽️", "🚗", "🌅"], gradient: ["#43e97b", "#38f9d7"] },
-  { id: "cp3", mapId: "demo-post-gongju-night", userId: "u5", title: "공주 야간 문화산책", description: "야경이 아름다운 문화유산 코스", caption: "주말 야간 개장 기준으로 다시 묶어봤어요.", date: "2026-03-10", likes: 89, saves: 24, placeCount: 5, tags: ["야경", "문화"], emojis: ["🏛️", "🌌", "🏯"], gradient: ["#fa709a", "#fee140"] },
-  { id: "cp4", mapId: "demo-post-seoul-night", userId: "u6", title: "서울 야경 스팟", description: "서울에서 밤이 예쁜 곳", caption: "차 없이도 갈 수 있는 야경 포인트만 모았어요.", date: "2026-03-08", likes: 316, saves: 90, placeCount: 8, tags: ["야경", "사진"], emojis: ["🌙", "🌉", "📸", "🏙️"], gradient: ["#4facfe", "#00f2fe"] },
-  { id: "cp5", mapId: "demo-post-buyeo-history", userId: "u4", title: "부여 역사 명소", description: "백제 문화유산 코스", caption: "아이와 함께 걷기 좋은 동선으로 업데이트했습니다.", date: "2026-03-06", likes: 74, saves: 28, placeCount: 6, tags: ["가족", "역사"], emojis: ["🏯", "🌿", "👣"], gradient: ["#a18cd1", "#fbc2eb"] },
-  { id: "cp6", mapId: "demo-post-cheonan-stage", userId: "u8", title: "천안 공연장 하루", description: "공연 보고 산책하는 코스", caption: "공연장과 카페를 묶은 주말 루트예요.", date: "2026-03-05", likes: 58, saves: 12, placeCount: 4, tags: ["공연", "문화"], emojis: ["🎭", "☕", "🎟️"], gradient: ["#fccb90", "#d57eeb"] },
-]
+export const communityPostsSeed = []
 
 export const mapsSeed = [
   { id: "map-seongsu", title: "성수 반나절 코스", description: "카페와 산책 위주로 빠르게 도는 코스", theme: "#635BFF", updatedAt: "2026-03-14T09:00:00.000Z" },
@@ -53,22 +37,14 @@ export const featuresSeed = [
 ]
 
 export const communityMapFeaturesSeed = [
-  { id: "cm1", mapId: "community-map", type: "pin", title: "모두가 좋아하는 카페", emoji: "☕", lat: 37.545, lng: 127.052, tags: ["카페"], note: "누구나 추천하는 곳", highlight: false, updatedAt: "2026-03-15T00:00:00.000Z", createdBy: "u1", createdByName: "성수러버", memos: [
-    { id: "memo1", userId: "u1", userName: "성수러버", date: "2026-03-15T09:00:00.000Z", text: "라떼가 정말 맛있어요! 꼭 가보세요" },
-    { id: "memo2", userId: "u6", userName: "올드서울", date: "2026-03-14T15:30:00.000Z", text: "주말 오전이 한적해서 좋아요" },
-  ] },
-  { id: "cm2", mapId: "community-map", type: "pin", title: "성수 맛집", emoji: "🍜", lat: 37.541, lng: 127.060, tags: ["맛집"], note: "점심시간에 줄이 길다", highlight: false, updatedAt: "2026-03-14T00:00:00.000Z", createdBy: "u3", createdByName: "김민지", memos: [
-    { id: "memo3", userId: "u3", userName: "김민지", date: "2026-03-13T12:00:00.000Z", text: "여기 된장찌개 진짜 맛있음" },
-  ] },
-  { id: "cm3", mapId: "community-map", type: "pin", title: "뚝섬 한강공원", emoji: "🌳", lat: 37.531, lng: 127.066, tags: ["산책"], note: "저녁 산책 추천", highlight: false, updatedAt: "2026-03-13T00:00:00.000Z", createdBy: "u2", createdByName: "제주탐험대", memos: [] },
-  { id: "cm4", mapId: "community-map", type: "pin", title: "성수 팝업스토어", emoji: "🏭", lat: 37.544, lng: 127.058, tags: ["팝업"], note: "이번 주말까지 진행", highlight: false, updatedAt: "2026-03-12T00:00:00.000Z", createdBy: "u6", createdByName: "올드서울", memos: [] },
+  { id: "cm1", mapId: "community-map", type: "pin", title: "모두가 좋아하는 카페", emoji: "☕", lat: 37.545, lng: 127.052, tags: ["카페"], note: "누구나 추천하는 곳", highlight: false, updatedAt: "2026-03-15T00:00:00.000Z", createdBy: "me", createdByName: "경주", memos: [] },
+  { id: "cm2", mapId: "community-map", type: "pin", title: "성수 맛집", emoji: "🍜", lat: 37.541, lng: 127.060, tags: ["맛집"], note: "점심시간에 줄이 길다", highlight: false, updatedAt: "2026-03-14T00:00:00.000Z", createdBy: "me", createdByName: "경주", memos: [] },
+  { id: "cm3", mapId: "community-map", type: "pin", title: "뚝섬 한강공원", emoji: "🌳", lat: 37.531, lng: 127.066, tags: ["산책"], note: "저녁 산책 추천", highlight: false, updatedAt: "2026-03-13T00:00:00.000Z", createdBy: "me", createdByName: "경주", memos: [] },
+  { id: "cm4", mapId: "community-map", type: "pin", title: "성수 팝업스토어", emoji: "🏭", lat: 37.544, lng: 127.058, tags: ["팝업"], note: "이번 주말까지 진행", highlight: false, updatedAt: "2026-03-12T00:00:00.000Z", createdBy: "me", createdByName: "경주", memos: [] },
   { id: "cm5", mapId: "community-map", type: "pin", title: "서울숲 입구", emoji: "🌿", lat: 37.544, lng: 127.038, tags: ["공원"], note: "주말에 사람이 많다", highlight: false, updatedAt: "2026-03-11T00:00:00.000Z", createdBy: "me", createdByName: "경주", memos: [] },
 ]
 
-export const sharesSeed = [
-  { id: "share-seongsu", mapId: "map-seongsu", caption: "성수동 카페랑 산책 코스를 한 장으로 정리했어요 ☕", date: "2026-03-12", likes: 24, saves: 8 },
-  { id: "share-jeju", mapId: "map-jeju", caption: "제주 서쪽 드라이브 동선 추천 🏖️", date: "2026-02-25", likes: 67, saves: 19 },
-]
+export const sharesSeed = []
 
 export const demoMaps = [
   { id: "demo-collection-seongsu", title: "성수 감성카페 7곳", description: "걷기 좋은 동선으로 묶은 카페 컬렉션", theme: "#F59E0B", updatedAt: "2026-03-15T00:00:00.000Z" },

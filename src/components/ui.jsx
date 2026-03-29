@@ -81,6 +81,9 @@ export function MapCard({ map, features, onOpen, onEdit }) {
   return (
     <article className="map-card">
       <button className="map-card__preview" type="button" style={{ "--card-start": start, "--card-end": end }} onClick={() => onOpen(map.id)}>
+        <span className={`map-card__badge${map.importedFrom ? " map-card__badge--imported" : ""}`}>
+          {map.importedFrom ? `${map.importedFrom}의 지도` : "EDITOR"}
+        </span>
         <div className="map-card__emoji-row">
           {(pins.length > 0 ? pins : [{ emoji: "📍" }]).slice(0, 4).map((item, index) => (
             <span key={`${item.emoji}-${index}`}>{item.emoji}</span>
@@ -163,8 +166,8 @@ export function FeedCard({ post, isFollowed, onToggleFollow, onSelectUser, onSel
       <div className="feed-card__body">
         <div className="feed-card__actions">
           <button className="icon-link" type="button" onClick={() => onLike(post.source, post.id)}>좋아요 {post.likes}</button>
-          <span className="icon-link">저장 {post.saves}</span>
-          <span className="icon-link">장소 {post.placeCount}</span>
+          <span className="icon-link icon-link--static">저장 {post.saves}</span>
+          <span className="icon-link icon-link--static">장소 {post.placeCount}</span>
         </div>
         <p className="feed-card__caption">
           <strong>{post.title}</strong> {post.caption}

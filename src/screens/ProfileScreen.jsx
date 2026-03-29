@@ -2,35 +2,17 @@ import { useState } from "react"
 import { BottomSheet } from "../components/ui"
 import { mapThemeGradient } from "../lib/appUtils"
 
-const coverImages = {
-  "map-seongsu": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&h=300&fit=crop",
-  "map-jeju": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=400&h=300&fit=crop",
-}
-
-const suggestedSettings = [
-  { id: "account", icon: "👤", title: "계정 및 프로필", description: "이름, 소개, 프로필 이미지, 공개 범위를 관리해요." },
-  { id: "notifications", icon: "🔔", title: "알림", description: "팔로우, 댓글, 메모, 공유 반응 알림을 조정해요." },
-  { id: "map", icon: "🗺️", title: "지도 및 편집 환경", description: "기본 지도 스타일, 라벨 표시, 위치 권한을 다뤄요." },
-  { id: "privacy", icon: "🔒", title: "공개 범위 및 공유", description: "지도 공개 여부, 링크 공유, 프로필 노출 범위를 정해요." },
-  { id: "support", icon: "🛠️", title: "도움말 및 앱 정보", description: "문의, 약관, 버전 정보, 업데이트 안내를 모아둬요." },
-]
-
 function ProfileMapCard({ map, pinFeatures, onClick }) {
   const [start, end] = mapThemeGradient(map.theme)
-  const coverUrl = coverImages[map.id]
 
   return (
     <button className="profile-map-card" type="button" onClick={onClick}>
       <div className="profile-map-card__preview" style={{ "--card-start": start, "--card-end": end }}>
-        {coverUrl ? (
-          <img className="profile-map-card__cover" src={coverUrl} alt={map.title} />
-        ) : (
-          <div className="profile-map-card__emojis">
-            {(pinFeatures.length > 0 ? pinFeatures.map((f) => f.emoji).slice(0, 4) : ["📍"]).map((emoji, i) => (
-              <span key={`${emoji}-${i}`}>{emoji}</span>
-            ))}
-          </div>
-        )}
+        <div className="profile-map-card__emojis">
+          {(pinFeatures.length > 0 ? pinFeatures.map((f) => f.emoji).slice(0, 4) : ["📍"]).map((emoji, i) => (
+            <span key={`${emoji}-${i}`}>{emoji}</span>
+          ))}
+        </div>
       </div>
       <div className="profile-map-card__body">
         <strong>{map.title}</strong>
@@ -39,6 +21,8 @@ function ProfileMapCard({ map, pinFeatures, onClick }) {
     </button>
   )
 }
+
+const profileEmojis = ["🧭", "😊", "🌟", "🎨", "🌿", "☕", "📸", "🎵", "🏃", "✈️", "🐱", "🌸"]
 
 export function ProfileScreen({
   user,
@@ -53,8 +37,25 @@ export function ProfileScreen({
   onSignOut,
   onPublishOpen,
   onSelectPost,
+  onUpdateProfile,
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [editName, setEditName] = useState(user.name)
+  const [editBio, setEditBio] = useState(user.bio)
+  const [editEmoji, setEditEmoji] = useState(user.emoji)
+
+  const handleOpenSettings = () => {
+    setEditName(user.name)
+    setEditBio(user.bio)
+    setEditEmoji(user.emoji)
+    setSettingsOpen(true)
+  }
+
+  const handleSaveProfile = () => {
+    if (onUpdateProfile) {
+      onUpdateProfile({ name: editName, bio: editBio, emoji: editEmoji })
+    }
+  }
 
   return (
     <section className="screen screen--scroll">
@@ -73,7 +74,7 @@ export function ProfileScreen({
               <p>{user.bio}</p>
             </div>
           </div>
-          <button className="icon-button profile-page__settings" type="button" onClick={() => setSettingsOpen(true)} aria-label="설정">
+          <button className="icon-button profile-page__settings" type="button" onClick={handleOpenSettings} aria-label="설정">
             ⚙️
           </button>
         </div>
@@ -106,7 +107,7 @@ export function ProfileScreen({
       <BottomSheet
         open={settingsOpen}
         title="설정"
-        subtitle="프로필 설정에는 이런 카테고리 구성이 잘 맞아요."
+        subtitle="프로필과 계정을 관리할 수 있어요."
         onClose={() => setSettingsOpen(false)}
       >
         <div className="settings-sheet-stack">
@@ -130,25 +131,51 @@ export function ProfileScreen({
           ) : null}
 
           <div className="settings-card">
-            <h2>추천 카테고리</h2>
-            <p>지금 단계에서는 프로필 액션보다 계정, 공개 범위, 알림 같은 기본 설정을 우선 두는 편이 자연스러워요.</p>
-            <div className="settings-category-list">
-              {suggestedSettings.map((item) => (
-                <article className="settings-category-card" key={item.id}>
-                  <span className="settings-category-card__icon" aria-hidden="true">{item.icon}</span>
-                  <span className="settings-category-card__body">
-                    <strong>{item.title}</strong>
-                    <small>{item.description}</small>
-                  </span>
-                </article>
-              ))}
+            <h2>프로필 편집</h2>
+            <div className="profile-edit-form">
+              <label className="profile-edit-field">
+                <span className="profile-edit-field__label">프로필 이모지</span>
+                <div className="profile-edit-emoji-grid">
+                  {profileEmojis.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      className={`profile-edit-emoji-btn${editEmoji === em ? " profile-edit-emoji-btn--selected" : ""}`}
+                      onClick={() => setEditEmoji(em)}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </label>
+              <label className="profile-edit-field">
+                <span className="profile-edit-field__label">이름</span>
+                <input
+                  type="text"
+                  className="profile-edit-input"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="이름을 입력하세요"
+                  maxLength={20}
+                />
+              </label>
+              <label className="profile-edit-field">
+                <span className="profile-edit-field__label">소개</span>
+                <textarea
+                  className="profile-edit-input profile-edit-textarea"
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  placeholder="소개를 입력하세요"
+                  maxLength={80}
+                  rows={2}
+                />
+              </label>
+              <button className="button button--primary" type="button" onClick={handleSaveProfile}>
+                저장
+              </button>
             </div>
           </div>
 
-          <div className="settings-card settings-card--muted">
-            <h2>분리 추천</h2>
-            <p>앱 설치, 백업/복원, 샘플 복원 같은 운영성 기능은 일반 사용자 설정과 분리해서 `앱 정보` 또는 별도 `관리 도구` 화면으로 빼는 편이 더 깔끔해요.</p>
-          </div>
         </div>
       </BottomSheet>
     </section>

@@ -1,12 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+const MAX_STORAGE_VALUE_SIZE = 5 * 1024 * 1024 // 5MB per key
+
 export function useLocalStorageState(key, initialValue) {
   const resolvedInitial = useMemo(() => {
     try {
       const saved = window.localStorage.getItem(key)
-      if (saved) return JSON.parse(saved)
+      if (saved) {
+        if (saved.length > MAX_STORAGE_VALUE_SIZE) {
+          console.warn(`localStorage key ${key} exceeds size limit, resetting`)
+          window.localStorage.removeItem(key)
+          return typeof initialValue === "function" ? initialValue() : initialValue
+        }
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed === "object" && parsed.constructor !== Object && !Array.isArray(parsed)) {
+          console.warn(`localStorage key ${key} has unexpected type, resetting`)
+          window.localStorage.removeItem(key)
+          return typeof initialValue === "function" ? initialValue() : initialValue
+        }
+        return parsed
+      }
     } catch (error) {
       console.error(`Failed to read ${key} from localStorage`, error)
+      try { window.localStorage.removeItem(key) } catch { /* ignore */ }
     }
     return typeof initialValue === "function" ? initialValue() : initialValue
   }, [initialValue, key])
@@ -15,7 +31,12 @@ export function useLocalStorageState(key, initialValue) {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(key, JSON.stringify(state))
+      const json = JSON.stringify(state)
+      if (json.length > MAX_STORAGE_VALUE_SIZE) {
+        console.error(`localStorage key ${key} value too large, skipping save`)
+        return
+      }
+      window.localStorage.setItem(key, json)
     } catch (error) {
       console.error(`Failed to save ${key} to localStorage`, error)
     }

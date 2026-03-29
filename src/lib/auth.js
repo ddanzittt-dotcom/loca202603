@@ -1,8 +1,20 @@
 import { requireSupabase } from "./supabase"
 
+const ALLOWED_ORIGINS = [
+  "https://loca.ddanzittt.com",
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173",
+  "capacitor://localhost",
+]
+
 function getDefaultRedirectTo() {
   if (typeof window === "undefined") return undefined
-  return window.location.origin
+  const origin = window.location.origin
+  if (ALLOWED_ORIGINS.includes(origin)) return origin
+  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return origin
+  return ALLOWED_ORIGINS[0]
 }
 
 export async function signInWithEmail(email, password) {

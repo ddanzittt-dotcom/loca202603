@@ -8,6 +8,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 })
 
+const escapeHtml = (str) => {
+  if (!str) return ""
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
 const getCenterPoint = (points) => {
   if (!points?.length) return null
   const total = points.reduce(
@@ -51,13 +56,13 @@ export function LeafletMap({ features, selectedFeatureId, draftPoints, draftMode
       if (feature.type === "pin") {
         const emojiIcon = L.divIcon({
           className: "loca-emoji-marker",
-          html: `<span>${feature.emoji || "📍"}</span>`,
+          html: `<span>${escapeHtml(feature.emoji || "📍")}</span>`,
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         })
         const marker = L.marker([feature.lat, feature.lng], { icon: emojiIcon }).addTo(map)
         if (showLabels) {
-          marker.bindTooltip(`${feature.emoji} ${feature.title}`, {
+          marker.bindTooltip(`${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}`, {
             permanent: true,
             direction: "top",
             offset: [0, -12],
@@ -80,7 +85,7 @@ export function LeafletMap({ features, selectedFeatureId, draftPoints, draftMode
             interactive: false,
             icon: L.divIcon({
               className: "loca-map-route-label",
-              html: `<span>${feature.emoji} ${feature.title}</span>`,
+              html: `<span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span>`,
             }),
           }).addTo(map)
           layersRef.current.push(routeLabel)
@@ -101,7 +106,7 @@ export function LeafletMap({ features, selectedFeatureId, draftPoints, draftMode
             interactive: false,
             icon: L.divIcon({
               className: "loca-map-route-label",
-              html: `<span>${feature.emoji} ${feature.title}</span>`,
+              html: `<span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span>`,
             }),
           }).addTo(map)
           layersRef.current.push(areaLabel)

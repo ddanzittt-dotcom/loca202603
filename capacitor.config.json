@@ -2,5 +2,24 @@
   "appId": "com.ddanzittt.loca",
   "appName": "LOCA",
   "webDir": "dist",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#635bff",
+      "showSpinner": false,
+      "launchFadeOutDuration": 300
+    },
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#635bff"
+    }
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "allowMixedContent": false
+  }
 }

@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState, useRef } from "react"
+import { Share } from "@capacitor/share"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
+import QRCode from "qrcode"
 
 const formatFeatureMeta = (feature) => {
   if (!feature) return ""
@@ -42,6 +44,9 @@ export function MapEditorScreen({
   onOpenFeatureDetail,
   onCloseFeatureSummary,
   onAddMemo,
+  onOpenShareEditor,
+  onStripFeatureTap,
+  showToast,
   shareUrl = "",
 }) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -53,10 +58,15 @@ export function MapEditorScreen({
   const [filterOpen, setFilterOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [copied, setCopied] = useState("")
+  const [capturing, setCapturing] = useState(false)
   const shareRef = useRef(null)
+  const naverMapRef = useRef(null)
+  const stripRef = useRef(null)
+  const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
+  const qrCanvasRef = useRef(null)
   const trimmedSearchQuery = searchQuery.trim()
-  const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function"
-  const showQrCode = shareUrl.length > 0 && shareUrl.length <= 1200
+  const canNativeShare = true
+  const showQrCode = shareUrl.length > 0 && shareUrl.length <= 2500
   const recentMemos = selectedFeatureSummary?.memos || []
 
   useEffect(() => {
@@ -68,26 +78,37 @@ export function MapEditorScreen({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [shareOpen])
 
+  useEffect(() => {
+    const canvas = qrCanvasRef.current
+    if (!shareOpen || !showQrCode || !canvas) return
+    QRCode.toCanvas(canvas, shareUrl, { width: 160, margin: 2, errorCorrectionLevel: "L" }).catch((err) => {
+      console.warn("QR 코드 생성 실패", err)
+      if (showToast) showToast("QR 코드를 만들지 못했어요.")
+    })
+  }, [shareOpen, shareUrl, showQrCode, showToast])
+
   const handleCopy = async (text, type) => {
     try {
       await navigator.clipboard.writeText(text)
       setCopied(type)
       setTimeout(() => setCopied(""), 2000)
     } catch {
-      prompt("복사하세요:", text)
+      if (showToast) showToast("클립보드 복사에 실패했어요.")
+      else prompt("복사하세요:", text)
     }
   }
 
   const handleNativeShare = async () => {
-    if (!canNativeShare || !shareUrl) return
+    if (!shareUrl) return
     try {
-      await navigator.share({
+      await Share.share({
         title: map.title,
         text: `${map.title} 지도를 열어보세요.`,
         url: shareUrl,
+        dialogTitle: "지도 공유하기",
       })
     } catch (error) {
-      if (error?.name !== "AbortError") {
+      if (error?.message !== "Share canceled") {
         handleCopy(shareUrl, "link")
       }
     }
@@ -151,20 +172,16 @@ export function MapEditorScreen({
           )
           .catch(() => [])
 
-      tryNaver().then((naverResults) => {
+      Promise.all([tryNaver(), tryNominatim()]).then(([naverResults, osmResults]) => {
         if (cancelled || controller.signal.aborted) return
-        if (naverResults.length > 0) {
-          setSearchResults(naverResults)
-          setSearchOpen(true)
-          setSearching(false)
-        } else {
-          tryNominatim().then((osmResults) => {
-            if (cancelled || controller.signal.aborted) return
-            setSearchResults(osmResults)
-            setSearchOpen(true)
-            setSearching(false)
-          })
-        }
+        // 한글이 포함된 검색어면 네이버 우선, 아니면 Nominatim 우선
+        const hasKorean = /[가-힣]/.test(query)
+        const primary = hasKorean ? naverResults : osmResults
+        const secondary = hasKorean ? osmResults : naverResults
+        const merged = primary.length > 0 ? primary : secondary
+        setSearchResults(merged)
+        setSearchOpen(true)
+        setSearching(false)
       })
     }, 320)
 
@@ -185,8 +202,8 @@ export function MapEditorScreen({
           <strong>{map.title}</strong>
         </div>
         {!readOnly && !communityMode ? (
-          <button className="icon-button" type="button" onClick={onEditMap} aria-label="지도 편집">
-            편집
+          <button className="icon-button" type="button" onClick={onEditMap} aria-label="지도 수정">
+            수정
           </button>
         ) : null}
         {!communityMode ? (
@@ -197,39 +214,70 @@ export function MapEditorScreen({
             {shareOpen ? (
               <div className="share-panel">
                 <strong className="share-panel__title">지도 공유하기</strong>
-                <p className="share-panel__description">링크 안에 지도 데이터가 포함되어 있어서 다른 기기에서도 바로 열 수 있어요.</p>
-
-                {canNativeShare ? (
-                  <div className="share-panel__section">
-                    <button className="button button--primary share-panel__native-btn" type="button" onClick={handleNativeShare}>
-                      시스템 공유
-                    </button>
-                  </div>
-                ) : null}
 
                 <div className="share-panel__section">
-                  <label className="share-panel__label">앱 링크 복사</label>
+                  <label className="share-panel__label">링크</label>
                   <div className="share-panel__link-row">
                     <input className="share-panel__input" type="text" value={shareUrl} readOnly />
-                    <button className="button button--primary share-panel__copy-btn" type="button" onClick={() => handleCopy(shareUrl, "link")}>
-                      {copied === "link" ? "복사됨!" : "복사"}
+                    <button
+                      className="button button--primary share-panel__share-btn"
+                      type="button"
+                      onClick={canNativeShare ? handleNativeShare : () => handleCopy(shareUrl, "link")}
+                    >
+                      {!canNativeShare && copied === "link" ? "복사됨!" : "공유"}
                     </button>
                   </div>
+                </div>
+
+                <div className="share-panel__section">
+                  <button
+                    className="button button--primary share-panel__image-btn"
+                    type="button"
+                    disabled={capturing}
+                    onClick={async () => {
+                      if (capturing || !naverMapRef.current) return
+                      setCapturing(true)
+                      try {
+                        const canvas = await naverMapRef.current.capture()
+                        if (canvas) {
+                          setShareOpen(false)
+                          onOpenShareEditor?.(canvas)
+                        }
+                      } catch (err) {
+                        console.error("지도 캡처 실패:", err)
+                      } finally {
+                        setCapturing(false)
+                      }
+                    }}
+                  >
+                    {capturing ? "캡처 중..." : "이미지 꾸며서 공유"}
+                  </button>
                 </div>
 
                 {showQrCode ? (
                   <div className="share-panel__section">
                     <label className="share-panel__label">QR 코드</label>
-                    <img
-                      className="share-panel__qr"
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareUrl)}`}
-                      alt="QR 코드"
-                      width={160}
-                      height={160}
-                    />
+                    <div className="share-panel__qr-wrap">
+                      <canvas ref={qrCanvasRef} className="share-panel__qr" />
+                      <button
+                        className="button button--ghost share-panel__qr-download"
+                        type="button"
+                        onClick={() => {
+                          const canvas = qrCanvasRef.current
+                          if (!canvas) return
+                          const url = canvas.toDataURL("image/png")
+                          const a = document.createElement("a")
+                          a.href = url
+                          a.download = `${map.title}-QR.png`
+                          a.click()
+                        }}
+                      >
+                        QR 다운로드
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <p className="share-panel__hint">지도가 길어서 QR 코드는 생략했어요. 링크 복사나 시스템 공유를 사용해주세요.</p>
+                  <p className="share-panel__hint">지도가 길어서 QR 코드는 생략했어요.</p>
                 )}
               </div>
             ) : null}
@@ -297,6 +345,7 @@ export function MapEditorScreen({
 
         <MapErrorBoundary>
           <NaverMap
+            ref={naverMapRef}
             features={visibleFeatures}
             selectedFeatureId={selectedFeatureId}
             draftPoints={draftPoints}
@@ -451,7 +500,57 @@ export function MapEditorScreen({
           </div>
         ) : null}
 
-        <div className="map-filter-bar map-filter-bar--bottom" aria-label="지도 필터">
+        {features.length > 0 ? (
+          <div
+            className="map-place-strip"
+            ref={stripRef}
+            onMouseDown={(e) => {
+              const el = stripRef.current
+              if (!el) return
+              stripDragRef.current = { startX: e.pageX, scrollLeft: el.scrollLeft, dragging: true }
+              el.style.cursor = "grabbing"
+            }}
+            onMouseMove={(e) => {
+              const d = stripDragRef.current
+              if (!d.dragging) return
+              e.preventDefault()
+              const el = stripRef.current
+              if (!el) return
+              el.scrollLeft = d.scrollLeft - (e.pageX - d.startX)
+            }}
+            onMouseUp={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+            onMouseLeave={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+            onTouchStart={(e) => {
+              const el = stripRef.current
+              if (!el) return
+              stripDragRef.current = { startX: e.touches[0].pageX, scrollLeft: el.scrollLeft, dragging: true }
+            }}
+            onTouchMove={(e) => {
+              const d = stripDragRef.current
+              if (!d.dragging) return
+              const el = stripRef.current
+              if (!el) return
+              el.scrollLeft = d.scrollLeft - (e.touches[0].pageX - d.startX)
+            }}
+            onTouchEnd={() => { stripDragRef.current.dragging = false }}
+          >
+            {features.map((feature) => (
+              <div
+                key={feature.id}
+                className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+              >
+                <span className="map-place-card__meta">{feature.type === "route" ? "경로" : feature.type === "area" ? "범위" : "장소"}</span>
+                <strong>{feature.emoji} {feature.title}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div className={`map-filter-bar map-filter-bar--bottom${communityMode ? " map-filter-bar--community" : ""}`} aria-label="지도 필터">
           <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
             필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "◀" : "▶"}</span>
           </button>
@@ -464,7 +563,6 @@ export function MapEditorScreen({
             </>
           ) : null}
         </div>
-
 
       </div>
     </section>
