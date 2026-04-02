@@ -68,20 +68,21 @@ export function HomeScreen({
             {recommendedMaps.map((item) => (
               <button
                 key={item.id}
-                className="home-map-card"
+                className="rec-card"
                 type="button"
                 onClick={() => onOpenMap(item.mapId || item.id)}
-                style={{ "--card-accent": item.gradient?.[0] || "#635BFF" }}
+                style={{ "--rec-start": item.gradient?.[0] || "#667eea", "--rec-end": item.gradient?.[1] || "#764ba2" }}
               >
-                <div className="home-map-card__emojis">
-                  {(item.emojis || []).slice(0, 3).map((e, i) => (
+                <div className="rec-card__emoji-row">
+                  {(item.emojis || []).slice(0, 4).map((e, i) => (
                     <span key={`${e}-${i}`}>{e}</span>
                   ))}
                 </div>
-                <strong className="home-map-card__title">{item.title}</strong>
-                <span className="home-map-card__meta">
-                  {item.creator ? `${item.creator} · ` : ""}📍{item.placeCount || 0}
-                </span>
+                <div className="rec-card__body">
+                  <strong className="rec-card__title">{item.title}</strong>
+                  {item.creator ? <span className="rec-card__creator">{item.creator}</span> : null}
+                  <span className="rec-card__count">📍 {item.placeCount || 0}</span>
+                </div>
               </button>
             ))}
           </div>
