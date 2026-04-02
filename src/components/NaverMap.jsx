@@ -109,8 +109,10 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           onMapTapRef.current?.({ lat: e.coord.lat(), lng: e.coord.lng() })
         })
         const applyZoomScale = () => {
-          const s = zoomScale(map.getZoom())
+          const zoom = map.getZoom()
+          const s = zoomScale(zoom)
           containerRef.current?.style.setProperty("--map-scale", s)
+          containerRef.current?.setAttribute("data-zoom", zoom < 15 ? "far" : "near")
         }
         naverMaps.Event.addListener(map, "zoom_changed", applyZoomScale)
         applyZoomScale()

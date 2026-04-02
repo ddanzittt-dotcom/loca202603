@@ -59,6 +59,13 @@
   max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity 0.2s ease;
+}
+
+/* 줌아웃 시 라벨 숨김 — 이모지만 표시 */
+[data-zoom="far"] .loca-pin-label {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* 레거시 — 다른 곳에서 참조 시 유지 */
