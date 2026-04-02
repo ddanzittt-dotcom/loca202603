@@ -65,6 +65,7 @@ import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
 import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
+const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
 import "./map-share-editor.css"
 
@@ -131,6 +132,7 @@ export default function App() {
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
+  const [importSheetOpen, setImportSheetOpen] = useState(false)
   const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
   const [myLocation, setMyLocation] = useState(null)
   const watchIdRef = useRef(null)
@@ -278,6 +280,23 @@ export default function App() {
     showToast, sharedMapData, setSharedMapData,
     publishSheet, setPublishSheet, setSelectedPostRef,
   })
+
+  const handleImportMap = useCallback(async (slugCode) => {
+    if (!hasSupabaseEnv) throw new Error("클라우드 연결이 필요해요.")
+    const bundle = await getPublishedMapBySlug(slugCode)
+    if (!bundle) throw new Error("해당 코드의 지도를 찾을 수 없어요.")
+    const { map: importedMap, features: importedFeatures } = bundle
+    // 이미 가져온 지도인지 확인
+    if (maps.some((m) => m.id === importedMap.id)) {
+      showToast("이미 목록에 있는 지도예요.")
+      openMapEditor(importedMap.id)
+      return
+    }
+    setMaps((prev) => [importedMap, ...prev])
+    setFeatures((prev) => [...prev, ...importedFeatures])
+    showToast(`"${importedMap.title}" 지도를 가져왔어요!`)
+    openMapEditor(importedMap.id)
+  }, [maps, setMaps, setFeatures, showToast, openMapEditor])
 
   const {
     focusFeature, focusFeatureOnly, openFeatureDetail,
@@ -842,6 +861,7 @@ export default function App() {
             maps={maps}
             features={features}
             loading={cloudLoading}
+            onImport={() => setImportSheetOpen(true)}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
             onEdit={(mapId) => {
               const mapItem = maps.find((item) => item.id === mapId)
@@ -1044,6 +1064,17 @@ export default function App() {
         onSaveToMap={saveSharePlaceToMap}
         onClose={() => setPendingSharePlace(null)}
       />
+
+      {importSheetOpen ? (
+        <Suspense fallback={null}>
+          <ImportMapSheet
+            open={importSheetOpen}
+            onClose={() => setImportSheetOpen(false)}
+            onImport={handleImportMap}
+            showToast={showToast}
+          />
+        </Suspense>
+      ) : null}
 
       <Toast message={toast.message} />
     </div>

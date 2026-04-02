@@ -95,6 +95,24 @@ export function ShareSheet({
 }) {
   const qrPreviewRef = useRef(null)
   const [copied, setCopied] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
+
+  const handleCopyCode = useCallback(async () => {
+    const slug = map?.slug
+    if (!slug) {
+      if (showToast) showToast("발행된 지도만 코드를 복사할 수 있어요.")
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(slug)
+      setCodeCopied(true)
+      if (showToast) showToast("공유 코드가 복사되었어요!")
+      setTimeout(() => setCodeCopied(false), 2000)
+    } catch {
+      if (showToast) showToast("클립보드 복사에 실패했어요.")
+      else prompt("공유 코드:", slug)
+    }
+  }, [map, showToast])
 
   // Generate QR preview
   useEffect(() => {
@@ -256,6 +274,17 @@ export function ShareSheet({
             <span className="share-sheet__action-icon">🖼️</span>
             <span className="share-sheet__action-label">{capturing ? "캡처 중..." : "이미지 공유"}</span>
           </button>
+
+          {map?.slug ? (
+            <button
+              className="share-sheet__action-btn share-sheet__action-btn--code"
+              type="button"
+              onClick={handleCopyCode}
+            >
+              <span className="share-sheet__action-icon">📋</span>
+              <span className="share-sheet__action-label">{codeCopied ? "복사됨!" : "코드 복사"}</span>
+            </button>
+          ) : null}
         </div>
 
         <div className="share-sheet__url-row">

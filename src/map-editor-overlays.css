@@ -1789,6 +1789,129 @@
   50% { opacity: 0.6; }
 }
 
+/* ── 섹션 헤드 액션 버튼 그룹 ── */
+.section-head__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ── 지도 가져오기 시트 ── */
+.import-map-sheet {
+  padding: 0 16px 20px;
+}
+
+.import-map-sheet__options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.import-map-sheet__option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1.5px solid #e4e7ec;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.import-map-sheet__option:active {
+  background: #f8f8ff;
+  border-color: #635BFF;
+}
+
+.import-map-sheet__option-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(99, 91, 255, 0.08);
+}
+
+.import-map-sheet__option strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #101828;
+}
+
+.import-map-sheet__option span {
+  font-size: 0.78rem;
+  color: #667085;
+}
+
+/* QR 카메라 */
+.import-map-sheet__qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.import-map-sheet__camera {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+}
+
+.import-map-sheet__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.import-map-sheet__viewfinder {
+  position: absolute;
+  inset: 15%;
+  border: 2.5px solid rgba(99, 91, 255, 0.7);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.import-map-sheet__hint {
+  font-size: 0.8rem;
+  color: #667085;
+  text-align: center;
+}
+
+.import-map-sheet__error {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.import-map-sheet__error p {
+  font-size: 0.88rem;
+  color: #EF4444;
+  margin-bottom: 12px;
+}
+
+/* 코드 입력 */
+.import-map-sheet__code {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.import-map-sheet__code-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 /* ── 소셜 로그인 버튼 ── */
 .auth-divider {
   display: flex;

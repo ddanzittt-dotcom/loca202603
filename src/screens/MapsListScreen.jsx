@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
 
-export function MapsListScreen({ maps, features, onCreate, onEdit, onOpen, loading = false }) {
+export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, loading = false }) {
   const [query, setQuery] = useState("")
 
   const filteredMaps = useMemo(() => {
@@ -19,9 +19,14 @@ export function MapsListScreen({ maps, features, onCreate, onEdit, onOpen, loadi
         <div>
           <h1 className="section-head__title">내 지도</h1>
         </div>
-        <button className="button button--primary" type="button" onClick={onCreate}>
-          새 지도
-        </button>
+        <div className="section-head__actions">
+          <button className="button button--ghost" type="button" onClick={onImport}>
+            가져오기
+          </button>
+          <button className="button button--primary" type="button" onClick={onCreate}>
+            새 지도
+          </button>
+        </div>
       </div>
 
       <label className="search-box">
