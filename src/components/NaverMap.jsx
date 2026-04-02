@@ -9,8 +9,8 @@ const escapeHtml = (str) => {
 
 const BASE_ZOOM = 14
 const zoomScale = (zoom) => {
-  const s = Math.pow(1.08, zoom - BASE_ZOOM)
-  return Math.max(0.5, Math.min(s, 1.3))
+  const s = Math.pow(1.12, zoom - BASE_ZOOM)
+  return Math.max(0.3, Math.min(s, 1.4))
 }
 
 export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3" }, ref) {
