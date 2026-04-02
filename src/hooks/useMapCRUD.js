@@ -95,10 +95,27 @@ export function useMapCRUD({
             config: mapSheet.config || {},
           })
 
-          setMaps((current) => [nextMap, ...current])
+          // 행사지도는 자동 발행
+          if (mapSheet.category === "event") {
+            try {
+              const { map: publishedMap, publication } = await publishMapRecord(nextMap.id, {
+                caption: "",
+                title: mapSheet.title.trim(),
+              })
+              setMaps((current) => [publishedMap, ...current])
+              setShares((current) => [publication, ...current])
+              logEvent("map_publish", { map_id: nextMap.id })
+            } catch {
+              // 발행 실패해도 지도 생성은 유지
+              setMaps((current) => [nextMap, ...current])
+            }
+          } else {
+            setMaps((current) => [nextMap, ...current])
+          }
+
           setMapSheet(null)
           openMapEditor(nextMap.id)
-          return showToast("지도를 만들었어요.")
+          return showToast(mapSheet.category === "event" ? "행사지도가 생성되고 발행되었어요." : "지도를 만들었어요.")
         }
 
         const nextMapId = createId("map")
