@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { EmptyState } from "../components/ui"
 import { featureSort } from "../lib/appUtils"
 
 export function PlacesScreen({ maps, features, onOpenFeature }) {
@@ -36,11 +37,14 @@ export function PlacesScreen({ maps, features, onOpenFeature }) {
       </div>
 
       <div className="card-list">
-        {filteredFeatures.length === 0 ? (
-          <article className="empty-card">
-            <strong>저장된 장소가 없어요.</strong>
-            <p>지도에서 핀을 추가하면 이 목록에도 자동으로 표시돼요.</p>
-          </article>
+        {features.length === 0 ? (
+          <EmptyState
+            icon="📍"
+            title="저장된 장소가 없어요"
+            description="지도에서 핀을 추가하면 이 목록에도 자동으로 표시돼요."
+          />
+        ) : filteredFeatures.length === 0 ? (
+          <EmptyState icon="🔍" title="검색 결과가 없어요" description="다른 단어로 다시 찾아보세요." />
         ) : (
           filteredFeatures.map((feature) => {
             const map = maps.find((item) => item.id === feature.mapId)

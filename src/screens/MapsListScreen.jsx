@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
-import { MapCard } from "../components/ui"
+import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
 
-export function MapsListScreen({ maps, features, onCreate, onEdit, onOpen }) {
+export function MapsListScreen({ maps, features, onCreate, onEdit, onOpen, loading = false }) {
   const [query, setQuery] = useState("")
 
   const filteredMaps = useMemo(() => {
@@ -35,11 +35,22 @@ export function MapsListScreen({ maps, features, onCreate, onEdit, onOpen }) {
       </label>
 
       <div className="card-list">
-        {filteredMaps.length === 0 ? (
-          <article className="empty-card">
-            <strong>검색 결과가 없어요</strong>
-            <p>새 지도를 만들거나 다른 단어로 다시 찾아보세요.</p>
-          </article>
+        {loading ? (
+          <SkeletonCard count={3} />
+        ) : maps.length === 0 ? (
+          <EmptyState
+            icon="🗺"
+            title="첫 번째 지도를 만들어보세요"
+            description="나만의 장소를 기록하고 공유할 수 있어요."
+            action="새 지도 만들기"
+            onAction={onCreate}
+          />
+        ) : filteredMaps.length === 0 ? (
+          <EmptyState
+            icon="🔍"
+            title="검색 결과가 없어요"
+            description="다른 단어로 다시 찾아보세요."
+          />
         ) : (
           filteredMaps.map((map) => (
             <MapCard

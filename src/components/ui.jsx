@@ -180,3 +180,49 @@ export function FeedCard({ post, isFollowed, onToggleFollow, onSelectUser, onSel
 export function Toast({ message }) {
   return message ? <div className="toast">{message}</div> : null
 }
+
+export function Spinner({ size = 20 }) {
+  return (
+    <span
+      className="loca-spinner"
+      style={{ width: size, height: size }}
+    />
+  )
+}
+
+export function SkeletonCard({ count = 1 }) {
+  return Array.from({ length: count }, (_, i) => (
+    <div key={i} className="skeleton-card">
+      <div className="skeleton-card__preview skeleton-pulse" />
+      <div className="skeleton-card__body">
+        <div className="skeleton-line skeleton-line--title skeleton-pulse" />
+        <div className="skeleton-line skeleton-line--text skeleton-pulse" />
+      </div>
+    </div>
+  ))
+}
+
+export function EmptyState({ icon = "📭", title, description, action, onAction }) {
+  return (
+    <article className="empty-state-card">
+      <span className="empty-state-card__icon">{icon}</span>
+      <strong>{title}</strong>
+      {description ? <p>{description}</p> : null}
+      {action && onAction ? (
+        <button className="button button--primary" type="button" onClick={onAction}>{action}</button>
+      ) : null}
+    </article>
+  )
+}
+
+export function ErrorCard({ message, onRetry }) {
+  return (
+    <article className="error-card">
+      <strong>문제가 발생했어요</strong>
+      <p>{message || "네트워크 연결을 확인해주세요."}</p>
+      {onRetry ? (
+        <button className="button button--secondary" type="button" onClick={onRetry}>다시 시도</button>
+      ) : null}
+    </article>
+  )
+}

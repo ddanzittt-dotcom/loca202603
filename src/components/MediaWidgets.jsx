@@ -1,43 +1,66 @@
 import { useEffect, useRef, useState } from "react"
 import { getMedia } from "../lib/mediaStore"
 
-export function MediaPhoto({ mediaId, date, onDelete }) {
-  const [src, setSrc] = useState(null)
+function PhotoViewer({ src, onClose }) {
   useEffect(() => {
-    let url = null
-    getMedia(mediaId).then((blob) => {
-      if (blob) {
-        url = URL.createObjectURL(blob)
-        setSrc(url)
-      }
-    })
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [mediaId])
-  if (!src) return null
-  const formattedDate = date ? new Date(date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) : ""
+    const handleKey = (e) => { if (e.key === "Escape") onClose() }
+    document.addEventListener("keydown", handleKey)
+    return () => document.removeEventListener("keydown", handleKey)
+  }, [onClose])
   return (
-    <div className="feature-photo-thumb-wrap">
-      <img src={src} alt="" className="feature-photo-thumb" />
-      {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
-      {formattedDate ? <span className="feature-photo-date">{formattedDate}</span> : null}
+    <div className="photo-viewer-overlay" onClick={onClose}>
+      <img src={src} alt="" className="photo-viewer-img" onClick={(e) => e.stopPropagation()} />
+      <button className="photo-viewer-close" type="button" onClick={onClose}>&times;</button>
     </div>
   )
 }
 
-export function MediaVoice({ mediaId, duration, date, onDelete }) {
-  const [src, setSrc] = useState(null)
-  const [playing, setPlaying] = useState(false)
-  const audioRef = useRef(null)
+export function MediaPhoto({ mediaId, localId, date, onDelete, cloudUrl }) {
+  const [localSrc, setLocalSrc] = useState(null)
+  const [viewerOpen, setViewerOpen] = useState(false)
   useEffect(() => {
+    if (cloudUrl) return
     let url = null
-    getMedia(mediaId).then((blob) => {
+    // localId가 있으면 원래 IndexedDB key로 먼저 시도
+    const key = localId || mediaId
+    getMedia(key).then((blob) => {
       if (blob) {
         url = URL.createObjectURL(blob)
-        setSrc(url)
+        setLocalSrc(url)
       }
     })
     return () => { if (url) URL.revokeObjectURL(url) }
-  }, [mediaId])
+  }, [mediaId, localId, cloudUrl])
+  const src = cloudUrl || localSrc
+  if (!src) return null
+  const formattedDate = date ? new Date(date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) : ""
+  return (
+    <div className="feature-photo-thumb-wrap">
+      <img src={src} alt="" className="feature-photo-thumb" onClick={() => setViewerOpen(true)} style={{ cursor: "pointer" }} />
+      {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
+      {formattedDate ? <span className="feature-photo-date">{formattedDate}</span> : null}
+      {viewerOpen ? <PhotoViewer src={src} onClose={() => setViewerOpen(false)} /> : null}
+    </div>
+  )
+}
+
+export function MediaVoice({ mediaId, localId, duration, date, onDelete, cloudUrl }) {
+  const [localSrc, setLocalSrc] = useState(null)
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef(null)
+  useEffect(() => {
+    if (cloudUrl) return
+    let url = null
+    const key = localId || mediaId
+    getMedia(key).then((blob) => {
+      if (blob) {
+        url = URL.createObjectURL(blob)
+        setLocalSrc(url)
+      }
+    })
+    return () => { if (url) URL.revokeObjectURL(url) }
+  }, [mediaId, localId, cloudUrl])
+  const src = cloudUrl || localSrc
   const togglePlay = () => {
     if (!audioRef.current) return
     if (playing) {

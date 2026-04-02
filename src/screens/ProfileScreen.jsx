@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { BottomSheet } from "../components/ui"
 import { mapThemeGradient } from "../lib/appUtils"
+import { redeemInvitationCode } from "../lib/mapService"
 
 function ProfileMapCard({ map, pinFeatures, onClick }) {
   const [start, end] = mapThemeGradient(map.theme)
@@ -40,11 +41,43 @@ export function ProfileScreen({
   onUpdateProfile,
   characterStyle = "m3",
   onChangeCharacter,
+  hasB2BAccess = false,
+  onB2BAccessChange,
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editName, setEditName] = useState(user.name)
   const [editBio, setEditBio] = useState(user.bio)
   const [editEmoji, setEditEmoji] = useState(user.emoji)
+  const [inviteCode, setInviteCode] = useState("")
+  const [inviteStatus, setInviteStatus] = useState(null) // null | 'loading' | 'success' | 'error'
+  const [inviteError, setInviteError] = useState("")
+
+  const handleRedeemCode = async () => {
+    if (!inviteCode.trim()) return
+    setInviteStatus("loading")
+    setInviteError("")
+    try {
+      const result = await redeemInvitationCode(inviteCode)
+      if (result.success) {
+        setInviteStatus("success")
+        setInviteCode("")
+        onB2BAccessChange?.(true)
+      } else {
+        setInviteStatus("error")
+        const messages = {
+          invalid_code: "유효하지 않은 코드예요.",
+          code_exhausted: "사용 횟수가 초과된 코드예요.",
+          already_redeemed: "이미 등록된 코드예요.",
+          not_authenticated: "로그인이 필요해요.",
+          rate_limited: "시도 횟수를 초과했어요. 1분 후 다시 시도해주세요.",
+        }
+        setInviteError(messages[result.error] || "코드 등록에 실패했어요.")
+      }
+    } catch {
+      setInviteStatus("error")
+      setInviteError("코드 등록에 실패했어요.")
+    }
+  }
 
   const handleOpenSettings = () => {
     setEditName(user.name)
@@ -199,6 +232,44 @@ export function ProfileScreen({
               </button>
             </div>
           </div>
+
+          {cloudMode ? (
+            <div className="settings-card">
+              <h2>기관/기업 지도</h2>
+              {hasB2BAccess ? (
+                <p style={{ color: "#12B981" }}>이벤트 지도 제작이 활성화되어 있어요.</p>
+              ) : (
+                <>
+                  <p>초대코드를 입력하면 이벤트 지도(B2B/B2G)를 만들 수 있어요.</p>
+                  <div className="invite-code-form">
+                    <input
+                      type="text"
+                      className="profile-edit-input"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="초대코드 입력"
+                      maxLength={30}
+                      disabled={inviteStatus === "loading"}
+                    />
+                    <button
+                      className="button button--primary"
+                      type="button"
+                      onClick={handleRedeemCode}
+                      disabled={inviteStatus === "loading" || !inviteCode.trim()}
+                    >
+                      {inviteStatus === "loading" ? "확인 중..." : "등록"}
+                    </button>
+                  </div>
+                  {inviteStatus === "success" ? (
+                    <p style={{ color: "#12B981", marginTop: 8 }}>코드가 등록되었어요! 이벤트 지도를 만들 수 있어요.</p>
+                  ) : null}
+                  {inviteStatus === "error" ? (
+                    <p style={{ color: "#EF4444", marginTop: 8 }}>{inviteError}</p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : null}
 
         </div>
       </BottomSheet>

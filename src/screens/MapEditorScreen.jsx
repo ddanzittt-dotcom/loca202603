@@ -1,8 +1,9 @@
 ﻿import { useEffect, useState, useRef } from "react"
-import { Share } from "@capacitor/share"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
-import QRCode from "qrcode"
+import { AnnouncementSheet } from "../components/sheets/AnnouncementSheet"
+import { CollaboratorsSheet } from "../components/sheets/CollaboratorsSheet"
+import { ShareSheet } from "../components/sheets/ShareSheet"
 
 const formatFeatureMeta = (feature) => {
   if (!feature) return ""
@@ -31,6 +32,8 @@ export function MapEditorScreen({
   showLabels = true,
   myLocation = null,
   characterStyle = "m3",
+  cloudMode = false,
+  isAdmin = false,
   onBack,
   onLocate,
   onSearchLocation,
@@ -50,6 +53,9 @@ export function MapEditorScreen({
   showToast,
   shareUrl = "",
 }) {
+  const isEventMap = map.category === "event"
+  const [announcementSheetOpen, setAnnouncementSheetOpen] = useState(false)
+  const [collaboratorsSheetOpen, setCollaboratorsSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -59,62 +65,12 @@ export function MapEditorScreen({
   const [filterOpen, setFilterOpen] = useState(false)
   const [stripOpen, setStripOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
-  const [copied, setCopied] = useState("")
   const [capturing, setCapturing] = useState(false)
-  const shareRef = useRef(null)
   const naverMapRef = useRef(null)
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
-  const qrCanvasRef = useRef(null)
   const trimmedSearchQuery = searchQuery.trim()
-  const canNativeShare = true
-  const showQrCode = shareUrl.length > 0 && shareUrl.length <= 2500
   const recentMemos = selectedFeatureSummary?.memos || []
-
-  useEffect(() => {
-    if (!shareOpen) return
-    const handleClickOutside = (e) => {
-      if (shareRef.current && !shareRef.current.contains(e.target)) setShareOpen(false)
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [shareOpen])
-
-  useEffect(() => {
-    const canvas = qrCanvasRef.current
-    if (!shareOpen || !showQrCode || !canvas) return
-    QRCode.toCanvas(canvas, shareUrl, { width: 160, margin: 2, errorCorrectionLevel: "L" }).catch((err) => {
-      console.warn("QR 코드 생성 실패", err)
-      if (showToast) showToast("QR 코드를 만들지 못했어요.")
-    })
-  }, [shareOpen, shareUrl, showQrCode, showToast])
-
-  const handleCopy = async (text, type) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(type)
-      setTimeout(() => setCopied(""), 2000)
-    } catch {
-      if (showToast) showToast("클립보드 복사에 실패했어요.")
-      else prompt("복사하세요:", text)
-    }
-  }
-
-  const handleNativeShare = async () => {
-    if (!shareUrl) return
-    try {
-      await Share.share({
-        title: map.title,
-        text: `${map.title} 지도를 열어보세요.`,
-        url: shareUrl,
-        dialogTitle: "지도 공유하기",
-      })
-    } catch (error) {
-      if (error?.message !== "Share canceled") {
-        handleCopy(shareUrl, "link")
-      }
-    }
-  }
 
   const pinCount = features.filter((feature) => feature.type === "pin").length
   const routeCount = features.filter((feature) => feature.type === "route").length
@@ -206,82 +162,25 @@ export function MapEditorScreen({
         {!hideCount ? (
           <span className="map-editor__count">📍{pinCount} 🔀{routeCount} ⬡{areaCount}</span>
         ) : null}
-        {!communityMode ? (
-          <div className="share-button-wrap" ref={shareRef}>
-            <button className="icon-button" type="button" onClick={() => setShareOpen(!shareOpen)} aria-label="지도 공유하기">
-              🔗
-            </button>
-            {shareOpen ? (
-              <div className="share-panel">
-                <strong className="share-panel__title">지도 공유하기</strong>
-
-                <div className="share-panel__section">
-                  <label className="share-panel__label">링크</label>
-                  <div className="share-panel__link-row">
-                    <input className="share-panel__input" type="text" value={shareUrl} readOnly />
-                    <button
-                      className="button button--primary share-panel__share-btn"
-                      type="button"
-                      onClick={canNativeShare ? handleNativeShare : () => handleCopy(shareUrl, "link")}
-                    >
-                      {!canNativeShare && copied === "link" ? "복사됨!" : "공유"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="share-panel__section">
-                  <button
-                    className="button button--primary share-panel__image-btn"
-                    type="button"
-                    disabled={capturing}
-                    onClick={async () => {
-                      if (capturing || !naverMapRef.current) return
-                      setCapturing(true)
-                      try {
-                        const canvas = await naverMapRef.current.capture()
-                        if (canvas) {
-                          setShareOpen(false)
-                          onOpenShareEditor?.(canvas)
-                        }
-                      } catch (err) {
-                        console.error("지도 캡처 실패:", err)
-                      } finally {
-                        setCapturing(false)
-                      }
-                    }}
-                  >
-                    {capturing ? "캡처 중..." : "이미지 꾸며서 공유"}
-                  </button>
-                </div>
-
-                {showQrCode ? (
-                  <div className="share-panel__section">
-                    <label className="share-panel__label">QR 코드</label>
-                    <div className="share-panel__qr-wrap">
-                      <canvas ref={qrCanvasRef} className="share-panel__qr" />
-                      <button
-                        className="button button--ghost share-panel__qr-download"
-                        type="button"
-                        onClick={() => {
-                          const canvas = qrCanvasRef.current
-                          if (!canvas) return
-                          const url = canvas.toDataURL("image/png")
-                          const a = document.createElement("a")
-                          a.href = url
-                          a.download = `${map.title}-QR.png`
-                          a.click()
-                        }}
-                      >
-                        QR 다운로드
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="share-panel__hint">지도가 길어서 QR 코드는 생략했어요.</p>
-                )}
-              </div>
+        {isEventMap && cloudMode && !communityMode ? (
+          <>
+            {isAdmin ? (
+              <>
+                <button className="icon-button" type="button" onClick={() => setCollaboratorsSheetOpen(true)} aria-label="협업자 관리" title="협업자 관리">
+                  👥
+                </button>
+                <button className="icon-button" type="button" onClick={() => setAnnouncementSheetOpen(true)} aria-label="공지 관리" title="공지 관리">
+                  📢
+                </button>
+              </>
             ) : null}
-          </div>
+            <span className="map-editor__event-badge">이벤트</span>
+          </>
+        ) : null}
+        {!communityMode ? (
+          <button className="icon-button" type="button" onClick={() => setShareOpen(true)} aria-label="지도 공유하기">
+            🔗
+          </button>
         ) : null}
       </header>
 
@@ -408,6 +307,14 @@ export function MapEditorScreen({
           ) : null}
         </div>
 
+        {editorMode === "relocate" ? (
+          <div className="draft-bar draft-bar--compact draft-bar--relocate">
+            <span>📍 지도를 탭하여 위치를 지정하세요</span>
+            <button className="button button--ghost" type="button" onClick={() => onModeChange("browse")}>
+              취소
+            </button>
+          </div>
+        ) : null}
         {!readOnly && isDrawing && draftPoints.length > 0 ? (
           <div className="draft-bar draft-bar--compact">
             <button className="button button--ghost" type="button" onClick={onUndoDraft}>
@@ -566,6 +473,44 @@ export function MapEditorScreen({
         ) : null}
 
       </div>
+
+      <CollaboratorsSheet
+        open={collaboratorsSheetOpen}
+        mapId={map.id}
+        onClose={() => setCollaboratorsSheetOpen(false)}
+        showToast={showToast}
+      />
+
+      <AnnouncementSheet
+        open={announcementSheetOpen}
+        mapId={map.id}
+        onClose={() => setAnnouncementSheetOpen(false)}
+        showToast={showToast}
+      />
+
+      <ShareSheet
+        open={shareOpen}
+        map={map}
+        shareUrl={shareUrl}
+        onClose={() => setShareOpen(false)}
+        capturing={capturing}
+        onOpenImageShare={async () => {
+          if (capturing || !naverMapRef.current) return
+          setCapturing(true)
+          try {
+            const canvas = await naverMapRef.current.capture()
+            if (canvas) {
+              setShareOpen(false)
+              onOpenShareEditor?.(canvas)
+            }
+          } catch (err) {
+            console.error("지도 캡처 실패:", err)
+          } finally {
+            setCapturing(false)
+          }
+        }}
+        showToast={showToast}
+      />
     </section>
   )
 }

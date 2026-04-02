@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { UserRowCard } from "../components/ui"
+import { UserRowCard, EmptyState } from "../components/ui"
 
 export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) {
   const [query, setQuery] = useState("")
@@ -50,19 +50,13 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
 
       <div className="card-list">
         {users.length === 0 ? (
-          <div className="empty-card">
-            <strong>아직 다른 사용자가 없어요.</strong>
-            <p>새로운 사용자가 가입하면 여기에서 찾을 수 있어요.</p>
-          </div>
+          <EmptyState icon="👥" title="아직 다른 사용자가 없어요" description="새로운 사용자가 가입하면 여기에서 찾을 수 있어요." />
         ) : filtered.length > 0 ? (
           filtered.map((user) => (
             <UserRowCard key={user.id} user={user} isFollowed={followed.includes(user.id)} onToggleFollow={onToggleFollow} onSelect={onSelectUser} />
           ))
         ) : (
-          <div className="empty-card">
-            <strong>검색 결과가 없습니다</strong>
-            <p>다른 이름이나 ID로 검색해보세요.</p>
-          </div>
+          <EmptyState icon="🔍" title="검색 결과가 없어요" description="다른 이름이나 ID로 검색해보세요." />
         )}
       </div>
     </section>

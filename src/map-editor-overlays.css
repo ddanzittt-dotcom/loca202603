@@ -1,5 +1,213 @@
 ﻿@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
+/* ── 스피너 ── */
+.loca-spinner {
+  display: inline-block;
+  border: 2px solid #e5e5e5;
+  border-top-color: #635BFF;
+  border-radius: 50%;
+  animation: loca-spin 0.6s linear infinite;
+}
+
+@keyframes loca-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── 스켈레톤 카드 ── */
+.skeleton-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #eee;
+}
+
+.skeleton-card__preview {
+  height: 120px;
+  background: #f0f0f0;
+}
+
+.skeleton-card__body {
+  padding: 12px;
+}
+
+.skeleton-line {
+  border-radius: 4px;
+  background: #f0f0f0;
+}
+
+.skeleton-line--title {
+  width: 60%;
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line--text {
+  width: 40%;
+  height: 12px;
+}
+
+.skeleton-pulse {
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── 빈 상태 카드 ── */
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  gap: 8px;
+}
+
+.empty-state-card__icon {
+  font-size: 2.5rem;
+  margin-bottom: 4px;
+}
+
+.empty-state-card strong {
+  font-size: 1rem;
+  color: #333;
+}
+
+.empty-state-card p {
+  font-size: 0.85rem;
+  color: #999;
+  margin: 0;
+}
+
+.empty-state-card .button {
+  margin-top: 12px;
+}
+
+/* ── 에러 카드 ── */
+.error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 20px;
+  gap: 8px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  margin: 16px;
+}
+
+.error-card strong {
+  color: #DC2626;
+  font-size: 0.95rem;
+}
+
+.error-card p {
+  color: #7F1D1D;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.error-card .button {
+  margin-top: 8px;
+}
+
+/* ── 공지 관리 ── */
+.ann-list__create {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.ann-item {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.ann-item--inactive {
+  opacity: 0.5;
+}
+
+.ann-item__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ann-item__info strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.ann-item__date {
+  font-size: 0.72rem;
+  color: #999;
+}
+
+.ann-item__badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  color: #999;
+}
+
+.ann-item__badge--active {
+  background: #ECFDF5;
+  color: #12B981;
+}
+
+.ann-item__body {
+  font-size: 0.82rem;
+  color: #666;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.ann-item__actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.ann-item__actions .button {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}
+
+.ann-item__delete {
+  color: #EF4444 !important;
+}
+
+.ann-preview {
+  margin-top: 4px;
+}
+
+.ann-preview__label {
+  font-size: 0.72rem;
+  color: #999;
+  margin-bottom: 4px;
+  display: block;
+}
+
+/* ── 오프라인 배너 ── */
+.offline-banner {
+  background: #F59E0B;
+  color: #fff;
+  text-align: center;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  z-index: 999;
+}
+
 .character-select-row {
   display: flex;
   gap: 10px;
@@ -353,6 +561,21 @@
   border-radius: 999px;
 }
 
+.draft-bar--relocate {
+  background: #635BFF;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  right: 14px;
+  left: 14px;
+  justify-content: space-between;
+}
+
+.draft-bar--relocate .button {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 .fab.fab--cancel {
   position: absolute;
   top: 10px;
@@ -406,6 +629,16 @@
   color: #667085;
   white-space: nowrap;
   letter-spacing: 0.02em;
+}
+
+.map-editor__event-badge {
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #fff;
+  background: #F97316;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .map-place-strip {
@@ -492,6 +725,7 @@
   right: 0;
   z-index: 2000;
   width: 300px;
+  max-width: calc(100vw - 32px);
   margin-top: 8px;
   padding: 18px;
   border: 1px solid rgba(20, 27, 52, 0.08);
@@ -613,6 +847,119 @@
   cursor: pointer;
 }
 
+/* ShareSheet (BottomSheet-based share UI) */
+.share-sheet {
+  padding: 8px 20px 24px;
+}
+
+.share-sheet__qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.share-sheet__qr-preview {
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.share-sheet__qr-download-btn {
+  font-size: 0.8rem !important;
+  font-weight: 700;
+  color: var(--primary) !important;
+}
+
+.share-sheet__hint {
+  text-align: center;
+  color: #667085;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+}
+
+.share-sheet__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.share-sheet__action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 110px;
+  padding: 16px 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.share-sheet__action-btn:active {
+  background: var(--line);
+}
+
+.share-sheet__action-btn--copy:active {
+  border-color: var(--primary);
+}
+
+.share-sheet__action-btn--kakao {
+  background: #FEE500;
+  border-color: #FEE500;
+}
+
+.share-sheet__action-btn--kakao:active {
+  background: #F5DC00;
+}
+
+.share-sheet__action-btn--image:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-sheet__action-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.share-sheet__action-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #344054;
+  white-space: nowrap;
+}
+
+.share-sheet__action-btn--kakao .share-sheet__action-label {
+  color: #3C1E1E;
+}
+
+.share-sheet__url-row {
+  display: flex;
+  gap: 6px;
+}
+
+.share-sheet__url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 0.78rem;
+  background: var(--surface-soft);
+  color: #667085;
+  outline: none;
+}
+
+.share-sheet__url-input:focus {
+  border-color: var(--primary);
+}
+
 .profile-map-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -718,6 +1065,10 @@
   border-color: rgba(99, 91, 255, 0.42);
   background: rgba(99, 91, 255, 0.05);
   box-shadow: 0 12px 28px rgba(99, 91, 255, 0.14);
+}
+
+.map-publish-row--empty {
+  opacity: 0.55;
 }
 
 .map-publish-row__badge {
@@ -1156,6 +1507,105 @@
   background: #eee8ff;
 }
 
+/* ── 초대코드 입력 ── */
+.invite-code-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.invite-code-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-code-form .button {
+  flex-shrink: 0;
+}
+
+/* ── 카테고리 토글 (MapFormSheet) ── */
+.category-toggle-row {
+  display: flex;
+  gap: 8px;
+}
+
+.category-toggle-btn {
+  flex: 1;
+  padding: 10px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid #e5e5e5;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.category-toggle-btn.is-active {
+  border-color: #635BFF;
+  background: #f5f3ff;
+  color: #635BFF;
+}
+
+
+/* ── 이벤트 설정 체크리스트 ── */
+.event-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.event-config-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.event-config-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #635BFF;
+}
+
+/* ── 핀 위치 정보 ── */
+.pin-location-unset {
+  padding: 12px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.pin-location-unset__hint {
+  margin: 0 0 10px;
+  color: #EF4444;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pin-location-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin-location-info__coords {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-soft);
+  font-size: 0.82rem;
+  font-family: monospace;
+  color: #667085;
+}
+
+.pin-location-info__change {
+  white-space: nowrap;
+  font-size: 0.78rem !important;
+}
+
 /* ── photo section ── */
 .feature-photo-section {
   margin-top: 12px;
@@ -1231,6 +1681,44 @@
   background: #f0f0f0;
 }
 
+/* ── photo viewer (fullscreen) ── */
+.photo-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.photo-viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.photo-viewer-close {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10001;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ── voice section ── */
 .feature-voice-section {
   margin-top: 12px;
@@ -1299,4 +1787,190 @@
 @keyframes voice-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+/* ── 소셜 로그인 버튼 ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 4px;
+}
+
+.auth-divider hr {
+  flex: 1;
+  border: none;
+  border-top: 1px solid #e5e5e5;
+}
+
+.auth-divider span {
+  font-size: 0.78rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.auth-social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.auth-social-btn:active {
+  filter: brightness(0.92);
+}
+
+.auth-social-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.auth-social-btn__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* 네이버 */
+.auth-social-btn--naver {
+  background: #03C75A;
+  color: #fff;
+}
+
+/* 카카오 */
+.auth-social-btn--kakao {
+  background: #FEE500;
+  color: #191919;
+}
+
+/* 구글 */
+.auth-social-btn--google {
+  background: #fff;
+  color: #344054;
+  border: 1.5px solid #dadce0;
+}
+
+/* ── 협업자 관리 시트 ── */
+.collab-search {
+  margin-bottom: 12px;
+}
+
+.collab-search__input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.collab-search__input:focus {
+  outline: none;
+  border-color: #635BFF;
+}
+
+.collab-search__hint {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #667085;
+}
+
+.collab-search-results {
+  margin-bottom: 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.collab-section-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #344054;
+  margin: 16px 0 10px;
+}
+
+.collab-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(20, 27, 52, 0.04);
+}
+
+.collab-item:last-child {
+  border-bottom: none;
+}
+
+.collab-item__avatar {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(99, 91, 255, 0.08);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.collab-item__name {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.collab-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.collab-item__info strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.collab-item__role {
+  font-size: 0.72rem;
+  color: #667085;
+}
+
+.collab-item__action {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.collab-item__action--add {
+  background: #635BFF;
+  color: #fff;
+}
+
+.collab-item__action--add:disabled {
+  opacity: 0.5;
+}
+
+.collab-item__action--remove {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
 }

@@ -136,6 +136,20 @@ export function importBackup(payload, fallbackFollowed) {
 
 export function createMapSharePayload(map, features) {
   if (!map || typeof map !== "object") throw new Error("공유할 지도 정보가 없습니다.")
+  // 공유 URL에는 지도 구조만 포함, 개인 기록(memos/photos/voices)은 제외
+  const safeFeatures = (Array.isArray(features) ? features : []).map((f) => ({
+    id: f.id,
+    mapId: f.mapId,
+    type: f.type,
+    title: f.title,
+    emoji: f.emoji,
+    tags: f.tags,
+    note: f.note || "",
+    highlight: f.highlight,
+    lat: f.lat,
+    lng: f.lng,
+    points: f.points,
+  }))
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -146,7 +160,7 @@ export function createMapSharePayload(map, features) {
       theme: map.theme || themePalette[0],
       updatedAt: map.updatedAt || new Date().toISOString(),
     },
-    features: Array.isArray(features) ? features : [],
+    features: safeFeatures,
   }
 }
 
@@ -227,6 +241,21 @@ export function buildMapShareUrl(map, features, origin = window.location.origin)
     safeOrigin = safeOrigin.replace(/^http:/, "https:")
   }
   return `${safeOrigin}${buildMapSharePath(map, features)}`
+}
+
+/**
+ * 발행된 지도의 슬러그 기반 공유 URL을 생성한다.
+ * utm_source 파라미터를 포함한다.
+ * @param {string} slug
+ * @param {'link'|'kakao'|'qr'} source
+ */
+export function buildSlugShareUrl(slug, source = "link", origin = window.location.origin) {
+  if (!slug) return ""
+  let safeOrigin = origin
+  if (!safeOrigin.startsWith("https://") && !safeOrigin.startsWith("http://localhost")) {
+    safeOrigin = safeOrigin.replace(/^http:/, "https:")
+  }
+  return `${safeOrigin}/s/${encodeURIComponent(slug)}?utm_source=${source}`
 }
 
 export function parseSharedMapUrl(text) {
@@ -355,6 +384,12 @@ export function parseAppLocation(locationLike = window.location) {
     const encodedPayload = params.get("data")
     if (!encodedPayload) return null
     return { type: "shared", payload: parseMapSharePayload(encodedPayload) }
+  }
+
+  if (pathname.startsWith("/s/")) {
+    const slug = decodeURIComponent(pathname.slice(3))
+    if (!slug || slug.length > 128) return null
+    return { type: "slug", slug }
   }
 
   if (pathname.startsWith("/map/")) {

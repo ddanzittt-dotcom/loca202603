@@ -2,6 +2,7 @@ import { requireSupabase } from "./supabase"
 
 const ALLOWED_ORIGINS = [
   "https://loca.ddanzittt.com",
+  "https://loca202603.vercel.app",
   "http://localhost:5173",
   "http://localhost:4173",
   "http://127.0.0.1:5173",
@@ -14,6 +15,7 @@ function getDefaultRedirectTo() {
   const origin = window.location.origin
   if (ALLOWED_ORIGINS.includes(origin)) return origin
   if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return origin
+  if (origin.endsWith(".vercel.app")) return origin
   return ALLOWED_ORIGINS[0]
 }
 
@@ -58,6 +60,12 @@ export function signInWithGoogle(options) {
 
 export function signInWithKakao(options) {
   return signInWithOAuth("kakao", options)
+}
+
+export function signInWithNaver() {
+  const redirectTo = getDefaultRedirectTo()
+  const naverAuthUrl = `/api/auth/naver?redirect_to=${encodeURIComponent(redirectTo)}`
+  window.location.href = naverAuthUrl
 }
 
 export async function resetPasswordForEmail(email) {

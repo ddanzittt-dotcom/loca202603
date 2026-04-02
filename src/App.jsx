@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Geolocation } from "@capacitor/geolocation"
 import { BottomNav, Toast } from "./components/ui"
 import {
@@ -14,38 +14,46 @@ import {
   sharesSeed,
   users,
 } from "./data/sampleData"
-import { useLocalStorageState, useToast, setStorageWarningCallback } from "./hooks/useAppState"
+import { useLocalStorageState, useOnlineStatus, useToast, setStorageWarningCallback } from "./hooks/useAppState"
 import {
   buildCommunityPosts,
   buildMapRoutePath,
   buildMapSharePath,
   buildMapShareUrl,
   buildOwnPosts,
+  buildSlugShareUrl,
   createId,
   parseAppLocation,
   placeEmojis,
   themePalette,
 } from "./lib/appUtils"
+import { logEvent } from "./lib/analytics"
 import { getCurrentSession, onAuthStateChange, signOut } from "./lib/auth"
 import { hasSupabaseEnv } from "./lib/supabase"
 import {
+  checkB2BAccess as checkB2BAccessRecord,
+  checkAdminRole,
   createFeature as createFeatureRecord,
   createMap as createMapRecord,
   followUser as followUserRecord,
   getMyAppData,
   getProfile as getProfileRecord,
+  getPublishedMapBySlug,
   publishMap as publishMapRecord,
   unfollowUser as unfollowUserRecord,
+  updateProfile as updateProfileRecord,
+  friendlySupabaseError,
 } from "./lib/mapService"
-import { AuthScreen } from "./screens/AuthScreen"
-import { HomeScreen } from "./screens/HomeScreen"
-import { MapEditorScreen } from "./screens/MapEditorScreen"
-import { MapsListScreen } from "./screens/MapsListScreen"
-import { PlacesScreen } from "./screens/PlacesScreen"
-import { ProfileScreen } from "./screens/ProfileScreen"
-import { SearchScreen } from "./screens/SearchScreen"
-import { SharedMapViewer } from "./screens/SharedMapViewer"
-import { MapShareEditor } from "./screens/MapShareEditor"
+// 라우트별 코드 스플리팅 — 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
+const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
+const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
+const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
+const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
+const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
+const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
+const SearchScreen = lazy(() => import("./screens/SearchScreen").then((m) => ({ default: m.SearchScreen })))
+const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
+const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
@@ -59,6 +67,17 @@ import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import "./shared-viewer.css"
 import "./map-share-editor.css"
+
+function ScreenFallback() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#999" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🗺</div>
+        <span style={{ fontSize: 14 }}>로딩 중...</span>
+      </div>
+    </div>
+  )
+}
 
 const resolveStoredMapTarget = (mapId, maps) => {
   if (!mapId) return null
@@ -78,6 +97,8 @@ export default function App() {
   const [communityMapFeatures, setCommunityMapFeatures] = useLocalStorageState("loca.mobile.communityMapFeatures", communityMapFeaturesSeed)
   const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
   const [authUser, setAuthUser] = useState(null)
+  const [hasB2BAccess, setHasB2BAccess] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [viewerProfile, setViewerProfile] = useLocalStorageState("loca.mobile.viewerProfile", me)
   const [cloudLoading, setCloudLoading] = useState(false)
   const routeAtLoad = useMemo(() => {
@@ -114,29 +135,27 @@ export default function App() {
   const [myLocation, setMyLocation] = useState(null)
   const watchIdRef = useRef(null)
   const prevLocationRef = useRef(null)
+  const isOnline = useOnlineStatus()
   const toast = useToast()
   const showToast = toast.show
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
   useEffect(() => {
     cleanupOrphanedMedia([...features, ...communityMapFeatures])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const [localImportSnapshot] = useState(() => {
-    const readStored = (key, fallback) => {
+  const readLocalImportData = useCallback(() => {
+    const readStored = (key) => {
       try {
         const raw = window.localStorage.getItem(key)
-        if (!raw) return { exists: false, value: fallback }
+        if (!raw) return { exists: false, value: [] }
         return { exists: true, value: JSON.parse(raw) }
-      } catch (error) {
-        console.error(`Failed to snapshot ${key}`, error)
-        return { exists: false, value: fallback }
+      } catch {
+        return { exists: false, value: [] }
       }
     }
-
-    const storedMaps = readStored("loca.mobile.maps", [])
-    const storedFeatures = readStored("loca.mobile.features", [])
-    const storedShares = readStored("loca.mobile.shares", [])
-    const storedFollowed = readStored("loca.mobile.followed", [])
-
+    const storedMaps = readStored("loca.mobile.maps")
+    const storedFeatures = readStored("loca.mobile.features")
+    const storedShares = readStored("loca.mobile.shares")
+    const storedFollowed = readStored("loca.mobile.followed")
     return {
       maps: storedMaps.value,
       features: storedFeatures.value,
@@ -148,7 +167,7 @@ export default function App() {
         (storedShares.exists && storedShares.value.length > 0) ||
         (storedFollowed.exists && storedFollowed.value.length > 0),
     }
-  })
+  }, [])
 
   const cloudMode = hasSupabaseEnv && Boolean(authUser)
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
@@ -217,10 +236,14 @@ export default function App() {
   }, [activeFeaturePool, selectedFeatureSummaryId])
 
   const unpublishedMaps = maps.filter((mapItem) => !shares.some((share) => share.mapId === mapItem.id))
-  const shareUrl = useMemo(
-    () => (activeMap ? buildMapShareUrl(activeMap, activeFeatures) : ""),
-    [activeFeatures, activeMap],
-  )
+  const shareUrl = useMemo(() => {
+    if (!activeMap) return ""
+    // 발행된 지도(slug 있음) → 슬러그 URL, 아니면 → 인코딩 URL
+    if (activeMap.slug && activeMap.isPublished) {
+      return buildSlugShareUrl(activeMap.slug, "link")
+    }
+    return buildMapShareUrl(activeMap, activeFeatures)
+  }, [activeFeatures, activeMap])
 
   const featureEmojiChoices = featureSheet
     ? featureSheet.type === "route"
@@ -238,7 +261,7 @@ export default function App() {
     photoInputRef, isRecording, recordingSeconds,
     handlePhotoSelected, handleDeletePhoto,
     startRecording, stopRecording, handleDeleteVoice,
-  } = useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast })
+  } = useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast, cloudMode })
 
   const {
     touchMap, resetEditorState,
@@ -260,6 +283,7 @@ export default function App() {
     focusFeature, focusFeatureOnly, openFeatureDetail,
     saveFeatureSheet, deleteFeature,
     addMemo, createHandleMapTap, completeRoute, completeArea,
+    startRelocatePin,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
     setFeatures, featureSheet, setFeatureSheet,
@@ -278,16 +302,20 @@ export default function App() {
     if (!hasSupabaseEnv || !user) return
     setCloudLoading(true)
     try {
-      const [appData, profile] = await Promise.all([
+      const [appData, profile, b2bAccess, adminRole] = await Promise.all([
         getMyAppData(),
         getProfileRecord(user.id),
+        checkB2BAccessRecord().catch(() => false),
+        checkAdminRole().catch(() => false),
       ])
+      setHasB2BAccess(b2bAccess)
+      setIsAdmin(adminRole)
 
       const nextProfile = {
         id: user.id,
         name: profile.nickname || user.user_metadata?.name || user.email?.split("@")[0] || "LOCA 사용자",
         handle: profile.slug ? `@${profile.slug}` : `@${(profile.nickname || user.email?.split("@")[0] || "loca").toLowerCase().replace(/\s+/g, "_")}`,
-        emoji: me.emoji,
+        emoji: profile.avatar_url || me.emoji,
         bio: profile.bio || me.bio,
         followers: 0,
         following: appData.followed.length,
@@ -295,11 +323,22 @@ export default function App() {
         type: "creator",
       }
 
+      // 클라우드가 비어있고 로컬에 데이터가 있으면 자동 마이그레이션 알림
+      const cloudEmpty = appData.maps.length === 0
+      const localData = readLocalImportData()
+      const hasLocalData = localData.hasAny && localData.maps.length > 0
+        && !localData.maps.every((m) => mapsSeed.some((s) => s.id === m.id))
+
       setMaps(appData.maps)
       setFeatures(appData.features)
       setShares(appData.shares)
       setFollowed(appData.followed)
       setViewerProfile(nextProfile)
+
+      if (cloudEmpty && hasLocalData) {
+        showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
+      }
+
       setActiveMapId((current) => {
         if (current && appData.maps.some((mapItem) => mapItem.id === current)) return current
         return appData.maps[0]?.id ?? null
@@ -316,7 +355,7 @@ export default function App() {
     } finally {
       setCloudLoading(false)
     }
-  }, [routeAtLoad, setFeatures, setFollowed, setMaps, setShares, showToast])
+  }, [readLocalImportData, routeAtLoad, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, showToast])
 
   useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
@@ -326,6 +365,58 @@ export default function App() {
       showToast("이 기기에서 찾을 수 없는 지도예요.")
     }
   }, [authReady, initialStoredTarget, routeAtLoad?.type, showToast])
+
+  // 슬러그 기반 공유 URL 로딩 (/s/:slug)
+  useEffect(() => {
+    if (routeAtLoad?.type !== "slug" || !hasSupabaseEnv) return
+    let isMounted = true
+    setCloudLoading(true)
+    getPublishedMapBySlug(routeAtLoad.slug)
+      .then((result) => {
+        if (!isMounted) return
+        if (result) {
+          setSharedMapData({ map: result.map, features: result.features })
+          setActiveTab("maps")
+          setMapsView("editor")
+          setActiveMapSource("shared")
+          setActiveMapId(result.map.id)
+        } else {
+          showToast("존재하지 않는 지도예요.")
+        }
+      })
+      .catch(() => {
+        if (isMounted) showToast("지도를 불러오지 못했어요.")
+      })
+      .finally(() => {
+        if (isMounted) setCloudLoading(false)
+      })
+    return () => { isMounted = false }
+  }, [routeAtLoad, showToast])
+
+  const resetToLoggedOut = useCallback(() => {
+    setMaps(mapsSeed)
+    setFeatures(featuresSeed)
+    setShares(sharesSeed)
+    setFollowed(followedSeed)
+    setViewerProfile(me)
+    setHasB2BAccess(false)
+    setIsAdmin(false)
+    setActiveTab("home")
+    setMapsView("list")
+    setActiveMapSource("local")
+    setActiveMapId(mapsSeed[0]?.id ?? null)
+    setSelectedFeatureId(null)
+    setSelectedFeatureSummaryId(null)
+    setFeatureSheet(null)
+    setEditorMode("browse")
+    setDraftPoints([])
+    setMapSheet(null)
+    setPublishSheet(null)
+    setSelectedUserId(null)
+    setSelectedPostRef(null)
+    setSharedMapData(null)
+    setShareEditorImage(null)
+  }, [setFeatures, setFollowed, setMaps, setShares, setViewerProfile])
 
   useEffect(() => {
     if (!hasSupabaseEnv) return undefined
@@ -353,7 +444,8 @@ export default function App() {
       if (user) {
         loadCloudData(user)
       } else {
-        setViewerProfile(me)
+        // 세션 만료 또는 외부 로그아웃 감지 시 상태 초기화
+        resetToLoggedOut()
       }
     })
 
@@ -361,7 +453,7 @@ export default function App() {
       isMounted = false
       subscription.subscription.unsubscribe()
     }
-  }, [loadCloudData])
+  }, [loadCloudData, resetToLoggedOut])
 
   useEffect(() => {
     if (activeMapSource !== "local") return
@@ -439,14 +531,27 @@ export default function App() {
     }
   }, [cloudMode, pendingSharePlace, setFeatures, showToast, touchMap])
 
-  const handleUpdateProfile = useCallback(({ name, bio, emoji }) => {
+  const handleUpdateProfile = useCallback(async ({ name, bio, emoji }) => {
+    // optimistic update
     setViewerProfile((prev) => ({
       ...prev,
       name: name ?? prev.name,
       bio: bio ?? prev.bio,
       emoji: emoji ?? prev.emoji,
     }))
-  }, [setViewerProfile])
+
+    if (cloudMode && authUser) {
+      try {
+        await updateProfileRecord(authUser.id, {
+          nickname: name ?? undefined,
+          bio: bio ?? undefined,
+          avatar_url: emoji ?? undefined,
+        })
+      } catch (error) {
+        showToast(friendlySupabaseError(error))
+      }
+    }
+  }, [authUser, cloudMode, setViewerProfile, showToast])
 
   const toggleFollow = async (userId) => {
     const isFollowing = followed.includes(userId)
@@ -455,6 +560,7 @@ export default function App() {
         if (isFollowing) await unfollowUserRecord(userId)
         else await followUserRecord(userId)
       }
+      logEvent("follow_toggle", { meta: { target_user_id: userId, action: isFollowing ? "unfollow" : "follow" } })
       setFollowed((current) => (current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]))
     } catch (error) {
       console.error("Failed to toggle follow", error)
@@ -477,13 +583,15 @@ export default function App() {
 
   const importLocalDataToCloud = useCallback(async () => {
     if (!cloudMode) return showToast("먼저 로그인해 주세요.")
-    if (!localImportSnapshot.hasAny) return showToast("이 기기에서 가져올 로컬 데이터가 없어요.")
+    // 현재 시점의 localStorage를 읽어서 import
+    const localData = readLocalImportData()
+    if (!localData.hasAny) return showToast("이 기기에서 가져올 로컬 데이터가 없어요.")
     if (!window.confirm("이 기기에 저장된 로컬 지도를 현재 계정으로 가져올까요?")) return
 
     try {
       const mapIdMap = new Map()
 
-      for (const localMap of localImportSnapshot.maps) {
+      for (const localMap of localData.maps) {
         const createdMap = await createMapRecord({
           title: localMap.title,
           description: localMap.description,
@@ -494,7 +602,7 @@ export default function App() {
         mapIdMap.set(localMap.id, createdMap)
       }
 
-      for (const localFeature of localImportSnapshot.features) {
+      for (const localFeature of localData.features) {
         const targetMap = mapIdMap.get(localFeature.mapId)
         if (!targetMap) continue
         await createFeatureRecord(targetMap.id, {
@@ -503,16 +611,15 @@ export default function App() {
         })
       }
 
-      for (const localShare of localImportSnapshot.shares) {
+      for (const localShare of localData.shares) {
         const targetMap = mapIdMap.get(localShare.mapId)
         if (!targetMap) continue
-        // publishMapRecord is used from useMapCRUD but we need direct import here
         await publishMapRecord(targetMap.id, {
           caption: localShare.caption || "",
         })
       }
 
-      for (const userId of localImportSnapshot.followed) {
+      for (const userId of localData.followed) {
         try {
           await followUserRecord(userId)
         } catch (error) {
@@ -523,20 +630,21 @@ export default function App() {
       await loadCloudData(authUser)
       showToast("이 기기의 로컬 데이터를 계정으로 가져왔어요.")
     } catch (error) {
-      console.error("Failed to import local snapshot", error)
+      console.error("Failed to import local data", error)
       showToast("로컬 데이터를 가져오지 못했어요.")
     }
-  }, [authUser, cloudMode, loadCloudData, localImportSnapshot, showToast])
+  }, [authUser, cloudMode, loadCloudData, readLocalImportData, showToast])
 
   const handleSignOut = useCallback(async () => {
     try {
       await signOut()
+      resetToLoggedOut()
       showToast("로그아웃했어요.")
     } catch (error) {
       console.error("Failed to sign out", error)
       showToast("로그아웃하지 못했어요.")
     }
-  }, [showToast])
+  }, [resetToLoggedOut, showToast])
 
   const calcBearing = useCallback((from, to) => {
     const toRad = (d) => (d * Math.PI) / 180
@@ -671,19 +779,22 @@ export default function App() {
 
   if (sharedMapData) {
     return (
-      <>
+      <Suspense fallback={<ScreenFallback />}>
         <SharedMapViewer
           map={sharedMapData.map}
           features={sharedMapData.features}
           onSaveToApp={importSharedMapToLocal}
         />
         <Toast message={toast.message} />
-      </>
+      </Suspense>
     )
   }
 
   return (
     <div className="app-shell">
+      {!isOnline ? (
+        <div className="offline-banner">오프라인 모드 — 데이터가 자동 저장됩니다</div>
+      ) : null}
       <header className="top-bar">
         <div>
           <strong className="brand">LOCA</strong>
@@ -699,6 +810,7 @@ export default function App() {
       </header>
 
       <main className="content">
+      <Suspense fallback={<ScreenFallback />}>
         {showPersonalLoading ? (
           <section className="screen screen--scroll">
             <article className="empty-card">
@@ -729,6 +841,7 @@ export default function App() {
           <MapsListScreen
             maps={maps}
             features={features}
+            loading={cloudLoading}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
             onEdit={(mapId) => {
               const mapItem = maps.find((item) => item.id === mapId)
@@ -739,6 +852,8 @@ export default function App() {
                   title: mapItem.title,
                   description: mapItem.description,
                   theme: mapItem.theme,
+                  category: mapItem.category || "personal",
+                  config: mapItem.config || {},
                 })
               }
             }}
@@ -760,6 +875,8 @@ export default function App() {
             readOnly={activeMapSource === "demo" || activeMapSource === "shared"}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
+            cloudMode={cloudMode}
+            isAdmin={isAdmin}
             shareUrl={shareUrl}
             showLabels={showMapLabels}
             characterStyle={characterStyle}
@@ -818,7 +935,7 @@ export default function App() {
             followedCount={followed.length}
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
-            canImportLocalData={cloudMode && localImportSnapshot.hasAny}
+            canImportLocalData={cloudMode && readLocalImportData().hasAny}
             onImportLocalData={importLocalDataToCloud}
             onSignOut={cloudMode ? handleSignOut : null}
             onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: unpublishedMaps[0]?.id ?? null })}
@@ -826,8 +943,11 @@ export default function App() {
             onUpdateProfile={handleUpdateProfile}
             characterStyle={characterStyle}
             onChangeCharacter={setCharacterStyle}
+            hasB2BAccess={hasB2BAccess}
+            onB2BAccessChange={setHasB2BAccess}
           />
         ) : null}
+      </Suspense>
       </main>
 
       <BottomNav
@@ -848,6 +968,8 @@ export default function App() {
         onSave={saveMapSheet}
         onDelete={deleteMapAction}
         onClose={() => setMapSheet(null)}
+        hasB2BAccess={hasB2BAccess}
+        isAdmin={isAdmin}
       />
 
       <FeatureDetailSheet
@@ -861,6 +983,7 @@ export default function App() {
         }}
         onSave={saveFeatureSheet}
         onDelete={deleteFeature}
+        onRelocatePin={activeMapSource === "local" ? startRelocatePin : undefined}
         photoInputRef={photoInputRef}
         isRecording={isRecording}
         recordingSeconds={recordingSeconds}
@@ -901,15 +1024,17 @@ export default function App() {
       />
 
       {shareEditorImage ? (
-        <MapShareEditor
-          mapImage={shareEditorImage}
-          mapTitle={activeMap?.title || "LOCA"}
-          mapTheme={activeMap?.theme}
-          mapFeatures={activeFeatures}
-          shareUrl={shareUrl}
-          onClose={() => setShareEditorImage(null)}
-          showToast={showToast}
-        />
+        <Suspense fallback={<ScreenFallback />}>
+          <MapShareEditor
+            mapImage={shareEditorImage}
+            mapTitle={activeMap?.title || "LOCA"}
+            mapTheme={activeMap?.theme}
+            mapFeatures={activeFeatures}
+            shareUrl={shareUrl}
+            onClose={() => setShareEditorImage(null)}
+            showToast={showToast}
+          />
+        </Suspense>
       ) : null}
 
       <SharePlaceSheet

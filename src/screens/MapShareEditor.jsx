@@ -320,12 +320,29 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
 
   const frame = FRAMES.find((f) => f.id === frameId) || FRAMES[0]
 
-  // Generate QR code image
+  // Generate QR code image with logo
   useEffect(() => {
     if (!shareUrl) return
+    const qrUrl = shareUrl.includes("utm_source")
+      ? shareUrl.replace(/utm_source=[^&]+/, "utm_source=qr")
+      : shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=qr"
     const qrCanvas = document.createElement("canvas")
-    QRCode.toCanvas(qrCanvas, shareUrl, { width: 140, margin: 1, errorCorrectionLevel: "L", color: { dark: "#000", light: "#fff" } })
-      .then(() => setQrImage(qrCanvas))
+    QRCode.toCanvas(qrCanvas, qrUrl, { width: 140, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000", light: "#fff" } })
+      .then(() => {
+        // Draw logo emoji in center
+        const ctx = qrCanvas.getContext("2d")
+        const logoSize = Math.round(140 * 0.15)
+        const cx = 70, cy = 70
+        ctx.fillStyle = "#ffffff"
+        ctx.beginPath()
+        ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.font = `${logoSize}px serif`
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        ctx.fillText("📍", cx, cy)
+        setQrImage(qrCanvas)
+      })
       .catch((err) => {
         console.warn("QR 코드 생성 실패", err)
         if (showToast) showToast("QR 코드를 만들지 못했어요.")

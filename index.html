@@ -11,6 +11,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LOCA - 로컬 큐레이션 지도" />
+    <meta property="og:description" content="나만의 장소를 기록하고 공유하세요." />
+    <meta property="og:site_name" content="LOCA" />
+    <meta property="og:locale" content="ko_KR" />
     <title>LOCA Mobile</title>
     <script>
       // Suppress Naver Maps SDK cross-origin errors from crashing React
@@ -84,19 +89,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      // Force clear stale SW caches before app loads
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-        });
-        if (typeof caches !== 'undefined') {
-          caches.keys().then(function(names) {
-            names.forEach(function(n) { caches.delete(n); });
-          });
-        }
-      }
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

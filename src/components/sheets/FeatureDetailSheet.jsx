@@ -16,6 +16,7 @@ export function FeatureDetailSheet({
   onClose,
   onSave,
   onDelete,
+  onRelocatePin,
   photoInputRef,
   isRecording,
   recordingSeconds,
@@ -80,6 +81,32 @@ export function FeatureDetailSheet({
                   ))}
                 </div>
               </label>
+              {featureSheet.type === "pin" ? (
+                <div className="field">
+                  <span>위치</span>
+                  {featureSheet.lat === 0 && featureSheet.lng === 0 ? (
+                    <div className="pin-location-unset">
+                      <p className="pin-location-unset__hint">위치가 아직 지정되지 않았어요.</p>
+                      {onRelocatePin ? (
+                        <button className="button button--primary" type="button" onClick={() => onRelocatePin(featureSheet.id)}>
+                          지도에서 위치 지정
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="pin-location-info">
+                      <span className="pin-location-info__coords">
+                        {featureSheet.lat.toFixed(6)}, {featureSheet.lng.toFixed(6)}
+                      </span>
+                      {onRelocatePin ? (
+                        <button className="button button--ghost pin-location-info__change" type="button" onClick={() => onRelocatePin(featureSheet.id)}>
+                          위치 변경
+                        </button>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              ) : null}
               <label className="field">
                 <span>태그</span>
                 <input
@@ -119,7 +146,7 @@ export function FeatureDetailSheet({
             <strong className="memo-section__title">사진 ({(featureSheet.photos || []).length})</strong>
             <div className="feature-photo-row">
               {(featureSheet.photos || []).map((p) => (
-                <MediaPhoto key={p.id} mediaId={p.id} date={p.date} onDelete={canEdit ? () => onDeletePhoto(p.id) : undefined} />
+                <MediaPhoto key={p.id} mediaId={p.id} localId={p.localId} date={p.date} cloudUrl={p.url} onDelete={canEdit ? () => onDeletePhoto(p.id) : undefined} />
               ))}
               {canEdit ? (
                 <>
@@ -132,7 +159,7 @@ export function FeatureDetailSheet({
           <div className="feature-voice-section">
             <strong className="memo-section__title">음성 ({(featureSheet.voices || []).length})</strong>
             {(featureSheet.voices || []).map((v) => (
-              <MediaVoice key={v.id} mediaId={v.id} duration={v.duration} date={v.date} onDelete={canEdit ? () => onDeleteVoice(v.id) : undefined} />
+              <MediaVoice key={v.id} mediaId={v.id} localId={v.localId} duration={v.duration} date={v.date} cloudUrl={v.url} onDelete={canEdit ? () => onDeleteVoice(v.id) : undefined} />
             ))}
             {canEdit ? (
               <button className={`feature-voice-record${isRecording ? " feature-voice-record--active" : ""}`} type="button" onClick={isRecording ? onStopRecording : onStartRecording}>

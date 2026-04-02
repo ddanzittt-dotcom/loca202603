@@ -1,4 +1,40 @@
 import { requireSupabase } from "./supabase"
+import { getSessionId } from "./analytics"
+
+/**
+ * Supabase 에러를 사용자 친화적 메시지로 변환한다.
+ */
+export function friendlySupabaseError(error) {
+  if (!error) return "알 수 없는 오류가 발생했어요."
+  const msg = (error.message || "").toLowerCase()
+  const code = error.code || ""
+
+  // 네트워크 에러
+  if (msg.includes("fetch") || msg.includes("network") || msg.includes("failed to fetch")) {
+    return "네트워크 연결을 확인해주세요."
+  }
+  // 권한 에러
+  if (code === "42501" || msg.includes("permission") || msg.includes("policy")) {
+    return "이 작업을 수행할 권한이 없어요."
+  }
+  // 인증 만료
+  if (code === "PGRST301" || msg.includes("jwt") || msg.includes("token")) {
+    return "로그인이 만료되었어요. 다시 로그인해주세요."
+  }
+  // 중복
+  if (code === "23505" || msg.includes("duplicate") || msg.includes("unique")) {
+    return "이미 존재하는 데이터예요."
+  }
+  // 찾을 수 없음
+  if (code === "PGRST116" || msg.includes("not found")) {
+    return "요청한 데이터를 찾을 수 없어요."
+  }
+  // 서버 에러
+  if (msg.includes("500") || msg.includes("internal")) {
+    return "서버에 문제가 생겼어요. 잠시 후 다시 시도해주세요."
+  }
+  return error.message || "알 수 없는 오류가 발생했어요."
+}
 
 const DEFAULT_MAP_THEME = "#635BFF"
 const DEFAULT_FEATURE_TITLE = "새 항목"
@@ -73,7 +109,7 @@ function normalizeMemo(row) {
   }
 }
 
-function normalizeFeature(row, memos = []) {
+function normalizeFeature(row, memos = [], photos = [], voices = []) {
   const base = {
     id: row.id,
     mapId: row.map_id,
@@ -86,7 +122,11 @@ function normalizeFeature(row, memos = []) {
     updatedAt: row.updated_at || row.created_at,
     createdBy: row.created_by || null,
     createdByName: row.created_by_name || null,
+    regionCode: row.region_code || null,
+    regionName: row.region_name || null,
     memos,
+    photos,
+    voices,
   }
 
   if (row.type === "pin") {
@@ -151,6 +191,62 @@ function toFeaturePatch(updates = {}) {
   return payload
 }
 
+/**
+ * 역지오코딩으로 행정구역 정보를 가져와 DB에 태깅한다.
+ * 네이버 지도 API 우선, 실패 시 Nominatim fallback.
+ * 실패해도 핀 저장에 영향 없음 (fire-and-forget).
+ */
+async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
+  let regionName = null
+  let regionCode = null
+
+  // 1) 네이버 역지오코딩 시도
+  try {
+    if (window.naver?.maps?.Service) {
+      const result = await new Promise((resolve, reject) => {
+        window.naver.maps.Service.reverseGeocode(
+          { coords: new window.naver.maps.LatLng(lat, lng), orders: "legalcode,addr" },
+          (status, response) => {
+            if (status !== window.naver.maps.Service.Status.OK) return reject(new Error("naver rg fail"))
+            resolve(response)
+          },
+        )
+      })
+      const items = result?.v2?.results || []
+      const legalItem = items.find((i) => i.name === "legalcode") || items[0]
+      if (legalItem) {
+        const r = legalItem.region
+        regionName = [r.area1?.name, r.area2?.name, r.area3?.name, r.area4?.name]
+          .filter(Boolean).join(" ")
+        regionCode = legalItem.code?.id || null
+      }
+    }
+  } catch { /* 네이버 실패 시 Nominatim fallback */ }
+
+  // 2) Nominatim fallback
+  if (!regionName) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ko&zoom=16`,
+        { headers: { "User-Agent": "LOCA-App/1.0" } },
+      )
+      if (res.ok) {
+        const json = await res.json()
+        const addr = json.address || {}
+        regionName = [addr.city || addr.state, addr.borough || addr.county, addr.suburb || addr.neighbourhood || addr.quarter]
+          .filter(Boolean).join(" ")
+      }
+    } catch { /* 무시 */ }
+  }
+
+  if (!regionName) return
+
+  await supabase
+    .from("map_features")
+    .update({ region_name: regionName, region_code: regionCode })
+    .eq("id", featureId)
+}
+
 async function requireUser() {
   const supabase = requireSupabase()
   const {
@@ -205,13 +301,14 @@ async function listMemosForFeatureIds(featureIds) {
     .from("feature_memos")
     .select("*")
     .in("feature_id", featureIds)
+    .eq("status", "visible")
     .order("created_at", { ascending: true })
 
   if (error) throw error
   return data || []
 }
 
-function mergeFeaturesWithMemos(featureRows, memoRows) {
+function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
   const memosByFeatureId = memoRows.reduce((acc, row) => {
     const current = acc.get(row.feature_id) || []
     current.push(normalizeMemo(row))
@@ -219,7 +316,28 @@ function mergeFeaturesWithMemos(featureRows, memoRows) {
     return acc
   }, new Map())
 
-  return featureRows.map((row) => normalizeFeature(row, memosByFeatureId.get(row.id) || []))
+  const photosByFeatureId = new Map()
+  const voicesByFeatureId = new Map()
+  for (const row of mediaRows) {
+    const m = normalizeMedia(row)
+    const entry = { id: m.id, date: m.date, url: m.url, storagePath: m.storagePath }
+    if (m.type === "photo") {
+      const arr = photosByFeatureId.get(row.feature_id) || []
+      arr.push(entry)
+      photosByFeatureId.set(row.feature_id, arr)
+    } else if (m.type === "voice") {
+      const arr = voicesByFeatureId.get(row.feature_id) || []
+      arr.push({ ...entry, duration: m.duration })
+      voicesByFeatureId.set(row.feature_id, arr)
+    }
+  }
+
+  return featureRows.map((row) => normalizeFeature(
+    row,
+    memosByFeatureId.get(row.id) || [],
+    photosByFeatureId.get(row.id) || [],
+    voicesByFeatureId.get(row.id) || [],
+  ))
 }
 
 export async function getMyMaps() {
@@ -267,9 +385,15 @@ export async function getMyAppData() {
     listPublicationsForMapIds(mapIds),
   ])
 
+  const featureIds = featureRows.map((row) => row.id)
+  const [memoRows, mediaRows] = await Promise.all([
+    listMemosForFeatureIds(featureIds),
+    listMediaForFeatureIds(featureIds),
+  ])
+
   return {
     maps: mapRows.map((row) => normalizeMap(row, normalizePublication(publicationRows.find((item) => item.map_id === row.id)))),
-    features: featureRows.map((row) => normalizeFeature(row)),
+    features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
     shares: publicationRows.map((row) => normalizePublication(row)),
     followed: (followsRes.data || []).map((row) => row.following_id),
   }
@@ -287,28 +411,31 @@ export async function getMapBundle(mapId) {
   if (publicationError) throw publicationError
 
   const featureRows = await listFeaturesForMapIds([mapId])
-  const memoRows = await listMemosForFeatureIds(featureRows.map((row) => row.id))
+  const featureIds = featureRows.map((row) => row.id)
+  const [memoRows, mediaRows] = await Promise.all([
+    listMemosForFeatureIds(featureIds),
+    listMediaForFeatureIds(featureIds),
+  ])
 
   return {
     map: normalizeMap(mapRow, normalizePublication(publicationRow)),
-    features: mergeFeaturesWithMemos(featureRows, memoRows),
+    features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
     publication: normalizePublication(publicationRow),
   }
 }
 
-export async function getPublishedMapBySlug(slug, source = "link") {
+export async function getPublishedMapBySlug(slug) {
   const supabase = requireSupabase()
   const { data: mapRow, error } = await supabase
     .from("maps")
     .select("*")
     .eq("slug", slug)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
+  if (!mapRow) return null
 
-  const bundle = await getMapBundle(mapRow.id)
-  await logMapView(mapRow.id, source)
-  return bundle
+  return getMapBundle(mapRow.id)
 }
 
 export async function createMap(mapData = {}) {
@@ -382,6 +509,10 @@ export async function createFeature(mapId, featureData) {
 
   if (error) throw error
   await touchMapRecord(mapId)
+  // 핀이면 행정구역 비동기 태깅 (실패해도 무시)
+  if (data.type === "pin" && data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
+    reverseGeocodeAndTag(supabase, data.id, data.lat, data.lng).catch(() => {})
+  }
   return normalizeFeature(data)
 }
 
@@ -398,6 +529,10 @@ export async function updateFeature(featureId, updates) {
 
   if (error) throw error
   if (mapId) await touchMapRecord(mapId)
+  // 위치가 바뀌었으면 행정구역 재태깅
+  if (("lat" in updates || "lng" in updates) && data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
+    reverseGeocodeAndTag(supabase, data.id, data.lat, data.lng).catch(() => {})
+  }
   return normalizeFeature(data)
 }
 
@@ -425,7 +560,7 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "") {
     .insert({
       feature_id: featureId,
       user_id: user.id,
-      user_name: userNameOverride || profile?.nickname || user.email || "User",
+      user_name: userNameOverride || profile?.nickname || "익명 사용자",
       text: text.trim(),
     })
     .select("*")
@@ -441,10 +576,72 @@ export async function getFeatureMemos(featureId) {
     .from("feature_memos")
     .select("*")
     .eq("feature_id", featureId)
+    .eq("status", "visible")
     .order("created_at", { ascending: true })
 
   if (error) throw error
   return (data || []).map((row) => normalizeMemo(row))
+}
+
+// ─── Feature Media ───
+
+function normalizeMedia(row) {
+  return {
+    id: row.id,
+    featureId: row.feature_id,
+    type: row.media_type,
+    url: row.public_url,
+    storagePath: row.storage_path,
+    mimeType: row.mime_type,
+    ext: row.file_ext,
+    sizeBytes: row.size_bytes,
+    duration: row.duration_sec ?? null,
+    date: row.created_at,
+  }
+}
+
+export async function createMediaRecord(featureId, { storagePath, publicUrl, mimeType, fileExt, sizeBytes, mediaType, duration }) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("feature_media")
+    .insert({
+      feature_id: featureId,
+      media_type: mediaType,
+      storage_path: storagePath,
+      public_url: publicUrl,
+      mime_type: mimeType,
+      file_ext: fileExt,
+      size_bytes: sizeBytes || 0,
+      duration_sec: duration ?? null,
+    })
+    .select("*")
+    .single()
+  if (error) throw error
+  return normalizeMedia(data)
+}
+
+export async function deleteMediaRecord(mediaId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("feature_media")
+    .delete()
+    .eq("id", mediaId)
+    .select("storage_path")
+    .maybeSingle()
+  if (error) throw error
+  return data?.storage_path || null
+}
+
+export async function listMediaForFeatureIds(featureIds) {
+  if (!featureIds.length) return []
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("feature_media")
+    .select("*")
+    .in("feature_id", featureIds)
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  return data || []
 }
 
 export async function publishMap(mapId, options = {}) {
@@ -583,16 +780,211 @@ export async function unfollowUser(targetUserId) {
   if (error) throw error
 }
 
-export async function logMapView(mapId, source = "link") {
+// ─── B2B/B2G 초대코드 ───
+
+export async function redeemInvitationCode(codeText) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("redeem_invitation_code", {
+    code_text: codeText.trim(),
+  })
+  if (error) throw error
+  return data // { success: boolean, error?: string }
+}
+
+export async function checkB2BAccess() {
+  const supabase = requireSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data, error } = await supabase
+    .from("invitation_redemptions")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1)
+
+  if (error) return false
+  return data.length > 0
+}
+
+export async function checkAdminRole() {
+  const supabase = requireSupabase()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (error) return false
+  return data?.role === "admin"
+}
+
+// ─── 공지사항 ───
+
+export async function getActiveAnnouncements(mapId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("id, title, body, created_at")
+    .eq("map_id", mapId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function getAllAnnouncements(mapId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("id, title, body, is_active, created_at, updated_at")
+    .eq("map_id", mapId)
+    .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function createAnnouncement(mapId, { title, body }) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("announcements")
+    .insert({ map_id: mapId, title: title.trim(), body: (body || "").trim() })
+    .select("*")
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function updateAnnouncement(announcementId, { title, body }) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("announcements")
+    .update({ title: title.trim(), body: (body || "").trim() })
+    .eq("id", announcementId)
+    .select("*")
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function toggleAnnouncementActive(announcementId, isActive) {
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from("announcements")
+    .update({ is_active: isActive })
+    .eq("id", announcementId)
+
+  if (error) throw error
+}
+
+export async function deleteAnnouncement(announcementId) {
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from("announcements")
+    .delete()
+    .eq("id", announcementId)
+
+  if (error) throw error
+}
+
+// ─── 협업자 ───
+
+export async function getCollaborators(mapId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("map_collaborators")
+    .select("id, user_id, role, created_at, profiles:user_id(nickname, emoji)")
+    .eq("map_id", mapId)
+    .order("created_at", { ascending: true })
+
+  if (error) throw error
+  return (data || []).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    role: row.role,
+    nickname: row.profiles?.nickname || "사용자",
+    emoji: row.profiles?.emoji || "😀",
+    createdAt: row.created_at,
+  }))
+}
+
+export async function addCollaborator(mapId, userId) {
+  const supabase = requireSupabase()
+  const user = await requireUser()
+  const { data, error } = await supabase
+    .from("map_collaborators")
+    .insert({ map_id: mapId, user_id: userId, role: "editor", invited_by: user.id })
+    .select("id, user_id, role, created_at")
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function removeCollaborator(collaboratorId) {
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from("map_collaborators")
+    .delete()
+    .eq("id", collaboratorId)
+
+  if (error) throw error
+}
+
+export async function searchUsersForInvite(query) {
+  if (!query || query.trim().length < 2) return []
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, nickname, emoji")
+    .ilike("nickname", `%${query.trim()}%`)
+    .limit(10)
+
+  if (error) throw error
+  return data || []
+}
+
+export async function checkCollaboratorAccess(mapId) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data, error } = await supabase
+    .from("map_collaborators")
+    .select("id, role")
+    .eq("map_id", mapId)
+    .eq("user_id", user.id)
+    .limit(1)
+
+  if (error) return false
+  return data.length > 0 ? data[0].role : false
+}
+
+// ─── 설문 ───
+
+export async function submitSurveyResponse(mapId, { rating, comment }) {
   const supabase = requireSupabase()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { error } = await supabase.from("view_logs").insert({
+  const { error } = await supabase.from("survey_responses").insert({
     map_id: mapId,
-    viewer_id: user?.id || null,
-    source,
+    session_id: getSessionId(),
+    user_id: user?.id || null,
+    rating,
+    comment: comment || "",
+    answers: {},
   })
 
   if (error) throw error

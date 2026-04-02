@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react"
 import { createId } from "../lib/appUtils"
-import { saveMedia, deleteMedia } from "../lib/mediaStore"
+import { saveMedia, deleteMedia, uploadMediaToCloud, deleteMediaFromCloud } from "../lib/mediaStore"
+import { createMediaRecord, deleteMediaRecord } from "../lib/mapService"
 
-export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast }) {
+export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast, cloudMode = false }) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const mediaRecorderRef = useRef(null)
@@ -34,7 +35,27 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.7))
       const photoId = createId("photo")
       await saveMedia(photoId, blob)
-      const photoEntry = { id: photoId, date: new Date().toISOString() }
+      let photoEntry = { id: photoId, date: new Date().toISOString() }
+      if (cloudMode) {
+        const cloudMeta = await uploadMediaToCloud(photoId, blob, "photos")
+        if (cloudMeta?.publicUrl) {
+          try {
+            const record = await createMediaRecord(featureSheet.id, {
+              storagePath: cloudMeta.storagePath,
+              publicUrl: cloudMeta.publicUrl,
+              mimeType: cloudMeta.mimeType,
+              fileExt: cloudMeta.fileExt,
+              sizeBytes: cloudMeta.sizeBytes,
+              mediaType: "photo",
+            })
+            // localId 보존: IndexedDB key와 feature entry를 연결
+            photoEntry = { id: record.id, localId: photoId, date: record.date, url: record.url, storagePath: record.storagePath }
+          } catch {
+            // DB 메타 저장 실패 — URL은 로컬에라도 유지
+            photoEntry = { ...photoEntry, url: cloudMeta.publicUrl }
+          }
+        }
+      }
       const featureId = featureSheet.id
       const updater = (f) => f.id === featureId ? { ...f, photos: [...(f.photos || []), photoEntry] } : f
       updateFeatures((c) => c.map(updater))
@@ -49,7 +70,14 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
 
   const handleDeletePhoto = async (photoId) => {
     if (!featureSheet || !window.confirm("이 사진을 삭제할까요?")) return
+    const photo = (featureSheet.photos || []).find((p) => p.id === photoId)
     await deleteMedia(photoId)
+    // localId가 있으면 IndexedDB의 원래 키도 삭제
+    if (photo?.localId && photo.localId !== photoId) await deleteMedia(photo.localId)
+    if (cloudMode) {
+      const storagePath = await deleteMediaRecord(photoId).catch(() => null)
+      deleteMediaFromCloud(photoId, "photos", storagePath || photo?.storagePath || null)
+    }
     const featureId = featureSheet.id
     const updater = (f) => f.id === featureId ? { ...f, photos: (f.photos || []).filter((p) => p.id !== photoId) } : f
     updateFeatures((c) => c.map(updater))
@@ -61,7 +89,12 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
     if (!featureSheet) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+      // 브라우저 지원 MIME 타입 자동 선택 (iOS Safari 호환)
+      const mimeCandidates = ["audio/webm", "audio/mp4", "audio/ogg", "audio/wav"]
+      const mimeType = mimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) || ""
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream) // 브라우저 기본값 fallback
       const chunks = []
       let secs = 0
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
@@ -71,12 +104,33 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
         setIsRecording(false)
         const duration = secs
         setRecordingSeconds(0)
-        const blob = new Blob(chunks, { type: "audio/webm" })
-        const voiceId = createId("voice")
-        await saveMedia(voiceId, blob)
-        const voiceEntry = { id: voiceId, duration, date: new Date().toISOString() }
         const currentSheet = featureSheetRef.current
         if (!currentSheet) return
+        const actualMime = recorder.mimeType || mimeType || "audio/webm"
+        const blob = new Blob(chunks, { type: actualMime })
+        const voiceId = createId("voice")
+        await saveMedia(voiceId, blob)
+        let voiceEntry = { id: voiceId, duration, date: new Date().toISOString() }
+        if (cloudMode) {
+          const cloudMeta = await uploadMediaToCloud(voiceId, blob, "voices")
+          if (cloudMeta?.publicUrl) {
+            try {
+              const record = await createMediaRecord(currentSheet.id, {
+                storagePath: cloudMeta.storagePath,
+                publicUrl: cloudMeta.publicUrl,
+                mimeType: cloudMeta.mimeType,
+                fileExt: cloudMeta.fileExt,
+                sizeBytes: cloudMeta.sizeBytes,
+                mediaType: "voice",
+                duration,
+              })
+              // localId 보존: IndexedDB key와 feature entry를 연결
+              voiceEntry = { id: record.id, localId: voiceId, duration: record.duration ?? duration, date: record.date, url: record.url, storagePath: record.storagePath }
+            } catch {
+              voiceEntry = { ...voiceEntry, url: cloudMeta.publicUrl }
+            }
+          }
+        }
         const featureId = currentSheet.id
         const updater = (f) => f.id === featureId ? { ...f, voices: [...(f.voices || []), voiceEntry] } : f
         updateFeatures((c) => c.map(updater))
@@ -108,7 +162,14 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
 
   const handleDeleteVoice = async (voiceId) => {
     if (!featureSheet || !window.confirm("이 음성을 삭제할까요?")) return
+    const voice = (featureSheet.voices || []).find((v) => v.id === voiceId)
     await deleteMedia(voiceId)
+    // localId가 있으면 IndexedDB의 원래 키도 삭제
+    if (voice?.localId && voice.localId !== voiceId) await deleteMedia(voice.localId)
+    if (cloudMode) {
+      const storagePath = await deleteMediaRecord(voiceId).catch(() => null)
+      deleteMediaFromCloud(voiceId, "voices", storagePath || voice?.storagePath || null)
+    }
     const featureId = featureSheet.id
     const updater = (f) => f.id === featureId ? { ...f, voices: (f.voices || []).filter((v) => v.id !== voiceId) } : f
     updateFeatures((c) => c.map(updater))

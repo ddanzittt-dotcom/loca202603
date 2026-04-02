@@ -1,6 +1,8 @@
 import { useCallback } from "react"
 import { createId } from "../lib/appUtils"
-import { deleteMedia } from "../lib/mediaStore"
+import { deleteMedia, deleteMediaFromCloud } from "../lib/mediaStore"
+import { logEvent } from "../lib/analytics"
+import { friendlySupabaseError } from "../lib/mapService"
 import {
   createMap as createMapRecord,
   updateMap as updateMapRecord,
@@ -89,44 +91,50 @@ export function useMapCRUD({
             title: mapSheet.title.trim(),
             description: mapSheet.description.trim(),
             theme: mapSheet.theme,
+            category: mapSheet.category || "personal",
+            config: mapSheet.config || {},
           })
+
           setMaps((current) => [nextMap, ...current])
           setMapSheet(null)
           openMapEditor(nextMap.id)
           return showToast("지도를 만들었어요.")
         }
 
+        const nextMapId = createId("map")
+        const updatedAt = new Date().toISOString()
         const nextMap = {
-          id: createId("map"),
+          id: nextMapId,
           title: mapSheet.title.trim(),
           description: mapSheet.description.trim(),
           theme: mapSheet.theme,
-          updatedAt: new Date().toISOString(),
+          category: mapSheet.category || "personal",
+          config: mapSheet.config || {},
+          updatedAt,
         }
+
         setMaps((current) => [nextMap, ...current])
         setMapSheet(null)
-        openMapEditor(nextMap.id)
+        openMapEditor(nextMapId)
         return showToast("지도를 만들었어요.")
       }
 
+      const editPayload = {
+        title: mapSheet.title.trim(),
+        description: mapSheet.description.trim(),
+        theme: mapSheet.theme,
+        category: mapSheet.category || "personal",
+        config: mapSheet.config || {},
+      }
+
       if (cloudMode) {
-        const nextMap = await updateMapRecord(mapSheet.id, {
-          title: mapSheet.title.trim(),
-          description: mapSheet.description.trim(),
-          theme: mapSheet.theme,
-        })
+        const nextMap = await updateMapRecord(mapSheet.id, editPayload)
         setMaps((current) => current.map((mapItem) => (mapItem.id === mapSheet.id ? nextMap : mapItem)))
       } else {
         setMaps((current) =>
           current.map((mapItem) =>
             mapItem.id === mapSheet.id
-              ? {
-                  ...mapItem,
-                  title: mapSheet.title.trim(),
-                  description: mapSheet.description.trim(),
-                  theme: mapSheet.theme,
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...mapItem, ...editPayload, updatedAt: new Date().toISOString() }
               : mapItem,
           ),
         )
@@ -136,9 +144,9 @@ export function useMapCRUD({
       showToast("지도를 수정했어요.")
     } catch (error) {
       console.error("Failed to save map", error)
-      showToast("지도를 저장하지 못했어요.")
+      showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, showToast])
+  }, [cloudMode, mapSheet, openMapEditor, setFeatures, setMapSheet, setMaps, showToast])
 
   const deleteMap = useCallback(async () => {
     if (!mapSheet?.id || !window.confirm("이 지도를 삭제할까요? 장소와 공유 정보도 함께 삭제됩니다.")) return
@@ -149,8 +157,20 @@ export function useMapCRUD({
       }
       const mapFeatures = features.filter((f) => f.mapId === mapSheet.id)
       for (const f of mapFeatures) {
-        for (const p of (f.photos || [])) { try { await deleteMedia(p.id) } catch { /* ignore */ } }
-        for (const v of (f.voices || [])) { try { await deleteMedia(v.id) } catch { /* ignore */ } }
+        for (const p of (f.photos || [])) {
+          try { await deleteMedia(p.id) } catch { /* ignore */ }
+          if (p.localId) try { await deleteMedia(p.localId) } catch { /* ignore */ }
+          if (cloudMode && (p.storagePath || p.url)) {
+            deleteMediaFromCloud(p.id, "photos", p.storagePath || null)
+          }
+        }
+        for (const v of (f.voices || [])) {
+          try { await deleteMedia(v.id) } catch { /* ignore */ }
+          if (v.localId) try { await deleteMedia(v.localId) } catch { /* ignore */ }
+          if (cloudMode && (v.storagePath || v.url)) {
+            deleteMediaFromCloud(v.id, "voices", v.storagePath || null)
+          }
+        }
       }
       setMaps((current) => current.filter((mapItem) => mapItem.id !== mapSheet.id))
       setFeatures((current) => current.filter((feature) => feature.mapId !== mapSheet.id))
@@ -161,7 +181,7 @@ export function useMapCRUD({
       showToast("지도를 삭제했어요.")
     } catch (error) {
       console.error("Failed to delete map", error)
-      showToast("지도를 삭제하지 못했어요.")
+      showToast(friendlySupabaseError(error))
     }
   }, [cloudMode, features, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
 
@@ -207,6 +227,7 @@ export function useMapCRUD({
         setActiveMapId(nextMapId)
       }
 
+      logEvent("map_import", { map_id: sharedMapData.map.id, meta: { feature_count: sharedMapData.features?.length || 0 } })
       setSharedMapData(null)
       setActiveTab("maps")
       setActiveMapSource("local")
@@ -220,14 +241,16 @@ export function useMapCRUD({
       showToast("공유 지도를 내 지도로 저장했어요.")
     } catch (error) {
       console.error("Failed to import shared map", error)
-      showToast("공유 지도를 저장하지 못했어요.")
+      showToast(friendlySupabaseError(error))
     }
   }, [cloudMode, setFeatures, setMaps, sharedMapData, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger])
 
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
     if (!effectiveMapId) return showToast("올릴 지도를 먼저 선택해 주세요.")
-    if (shares.some((share) => share.mapId === effectiveMapId)) return showToast("이미 프��필에 올라간 지도예요.")
+    if (shares.some((share) => share.mapId === effectiveMapId)) return showToast("이미 프로필에 올라간 지도예요.")
+    const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
+    if (mapFeatureCount === 0) return showToast("장소를 추가해야 프로필에 올릴 수 있어요.")
     const caption = publishSheet?.caption?.trim() || ""
 
     try {
@@ -245,13 +268,14 @@ export function useMapCRUD({
           ...current,
         ])
       }
+      logEvent("map_publish", { map_id: effectiveMapId })
       setPublishSheet(null)
       showToast("프로필 그리드에 지도를 올렸어요.")
     } catch (error) {
       console.error("Failed to publish map", error)
-      showToast("지도를 프로필에 올리지 못했어요.")
+      showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, maps, publishSheet, setMaps, setPublishSheet, setShares, shares, showToast])
+  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, setShares, shares, showToast])
 
   const unpublish = useCallback(async (postId) => {
     try {
@@ -261,12 +285,14 @@ export function useMapCRUD({
           await unpublishMapRecord(targetShare.mapId)
         }
       }
+      const targetShareForLog = shares.find((share) => share.id === postId)
+      logEvent("map_unpublish", { map_id: targetShareForLog?.mapId })
       setShares((current) => current.filter((share) => share.id !== postId))
       setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
       showToast("공유를 해제했어요.")
     } catch (error) {
       console.error("Failed to unpublish map", error)
-      showToast("공유를 해제하지 못했어요.")
+      showToast(friendlySupabaseError(error))
     }
   }, [cloudMode, setSelectedPostRef, setShares, shares, showToast])
 

@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 const MAX_STORAGE_VALUE_SIZE = 5 * 1024 * 1024 // 5MB per key
+const WARN_THRESHOLD = 0.8 // 80%
+
+let _storageWarningCallback = null
+export function setStorageWarningCallback(fn) { _storageWarningCallback = fn }
+
+function checkStorageWarning(key, size) {
+  const ratio = size / MAX_STORAGE_VALUE_SIZE
+  if (ratio >= 1) {
+    _storageWarningCallback?.(`저장 공간이 가득 찼어요. '${key}' 데이터를 백업해 주세요.`)
+    return false
+  }
+  if (ratio >= WARN_THRESHOLD) {
+    _storageWarningCallback?.(`저장 공간이 ${Math.round(ratio * 100)}% 찼어요. 백업을 권장합니다.`)
+  }
+  return true
+}
 
 export function useLocalStorageState(key, initialValue) {
   const resolvedInitial = useMemo(() => {
@@ -8,8 +24,8 @@ export function useLocalStorageState(key, initialValue) {
       const saved = window.localStorage.getItem(key)
       if (saved) {
         if (saved.length > MAX_STORAGE_VALUE_SIZE) {
-          console.warn(`localStorage key ${key} exceeds size limit, resetting`)
-          window.localStorage.removeItem(key)
+          console.warn(`localStorage key ${key} exceeds size limit`)
+          _storageWarningCallback?.(`'${key}' 데이터가 용량을 초과했어요. 프로필 > 백업에서 데이터를 저장해 주세요.`)
           return typeof initialValue === "function" ? initialValue() : initialValue
         }
         const parsed = JSON.parse(saved)
@@ -32,13 +48,14 @@ export function useLocalStorageState(key, initialValue) {
   useEffect(() => {
     try {
       const json = JSON.stringify(state)
-      if (json.length > MAX_STORAGE_VALUE_SIZE) {
+      if (!checkStorageWarning(key, json.length)) {
         console.error(`localStorage key ${key} value too large, skipping save`)
         return
       }
       window.localStorage.setItem(key, json)
     } catch (error) {
       console.error(`Failed to save ${key} to localStorage`, error)
+      _storageWarningCallback?.("저장에 실패했어요. 저장 공간이 부족할 수 있습니다.")
     }
   }, [key, state])
 
@@ -57,6 +74,23 @@ export function useToast() {
 
   useEffect(() => () => window.clearTimeout(timeoutRef.current), [])
   return { message, show }
+}
+
+export function useOnlineStatus() {
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
+
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true)
+    const goOffline = () => setIsOnline(false)
+    window.addEventListener("online", goOnline)
+    window.addEventListener("offline", goOffline)
+    return () => {
+      window.removeEventListener("online", goOnline)
+      window.removeEventListener("offline", goOffline)
+    }
+  }, [])
+
+  return isOnline
 }
 
 export function useInstallPrompt() {

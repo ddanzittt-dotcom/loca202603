@@ -173,6 +173,8 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
 
       features.forEach((feature) => {
         if (feature.type === "pin") {
+          // 미설정 핀(0,0) 스킵 — 템플릿에서 생성 후 위치 미지정 상태
+          if (feature.lat === 0 && feature.lng === 0) return
           const labelHtml = showLabels
             ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
             : ""
@@ -352,10 +354,11 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     if (lastFitTriggerRef.current === fitTrigger) return
     lastFitTriggerRef.current = fitTrigger
     try {
-      // Collect all coordinates
+      // Collect all coordinates (미설정 0,0 핀 제외)
       const coords = []
       features.forEach((feature) => {
         if (feature.type === "pin") {
+          if (feature.lat === 0 && feature.lng === 0) return
           coords.push({ lat: feature.lat, lng: feature.lng })
         } else if (feature.points?.length) {
           const total = feature.points.reduce(

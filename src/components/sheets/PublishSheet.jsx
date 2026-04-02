@@ -18,10 +18,12 @@ export function PublishSheet({ publishSheet, setPublishSheet, unpublishedMaps, f
           <div className="card-list">
             {unpublishedMaps.map((mapItem) => {
               const mapPins = features.filter((feature) => feature.mapId === mapItem.id && feature.type === "pin")
+              const totalFeatures = features.filter((feature) => feature.mapId === mapItem.id).length
               const isActive = publishSheet?.selectedMapId === mapItem.id
+              const isEmpty = totalFeatures === 0
               return (
                 <button
-                  className={`map-publish-row map-publish-row--select${isActive ? " is-active" : ""}`}
+                  className={`map-publish-row map-publish-row--select${isActive ? " is-active" : ""}${isEmpty ? " map-publish-row--empty" : ""}`}
                   key={mapItem.id}
                   type="button"
                   onClick={() => setPublishSheet((current) => ({ ...(current || {}), selectedMapId: mapItem.id }))}
@@ -29,7 +31,7 @@ export function PublishSheet({ publishSheet, setPublishSheet, unpublishedMaps, f
                   <MapPreview title={mapItem.title} emojis={mapPins.map((feature) => feature.emoji)} placeCount={mapPins.length} theme={mapItem.theme} variant="grid" compact />
                   <div className="map-publish-row__body">
                     <strong>{mapItem.title}</strong>
-                    <span>{mapItem.description || "설명이 아직 없어요."}</span>
+                    <span>{isEmpty ? "장소를 먼저 추가해주세요." : (mapItem.description || "설명이 아직 없어요.")}</span>
                   </div>
                   <span className={`map-publish-row__badge${isActive ? " is-active" : ""}`}>
                     {isActive ? "선택됨" : "선택"}
