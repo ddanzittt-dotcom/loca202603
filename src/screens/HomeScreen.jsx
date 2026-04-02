@@ -49,16 +49,6 @@ export function HomeScreen({
             <span>🗺{userStats?.maps || 0}</span>
             {streak > 0 ? <span className="home-stat--streak">🔥{streak}일</span> : null}
           </div>
-          {earnedBadges.length > 0 ? (
-            <div className="home-badges-inline">
-              {earnedBadges.slice(0, 3).map((b) => (
-                <span key={b.id} className="home-badge-mini" title={b.name}>{b.emoji}</span>
-              ))}
-              {earnedBadges.length > 3 ? (
-                <span className="home-badge-mini home-badge-mini--more">+{earnedBadges.length - 3}</span>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         {nextBadge ? (
