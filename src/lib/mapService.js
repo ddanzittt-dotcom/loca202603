@@ -970,6 +970,101 @@ export async function checkCollaboratorAccess(mapId) {
   return data.length > 0 ? data[0].role : false
 }
 
+// ─── 유저 통계 (게이미피케이션) ───
+
+export async function getUserStats() {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from("user_stats")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (error) throw error
+  return data
+}
+
+export async function upsertUserStats(stats) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  const { error } = await supabase
+    .from("user_stats")
+    .upsert({
+      user_id: user.id,
+      xp: stats.xp || 0,
+      level: stats.level || 1,
+      checkins: stats.checkins || 0,
+      completions: stats.completions || 0,
+      memos: stats.memos || 0,
+      imports: stats.imports || 0,
+      publishes: stats.publishes || 0,
+      streak_days: stats.streak || 0,
+      regions: stats.regions || 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" })
+
+  if (error) throw error
+}
+
+export async function updateStreak() {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  await supabase.rpc("update_user_streak", { p_user_id: user.id }).catch(() => {})
+}
+
+export async function getUserBadges() {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("user_badges")
+    .select("badge_id, earned_at")
+    .eq("user_id", user.id)
+    .order("earned_at", { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function awardBadge(badgeId) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from("user_badges")
+    .upsert({ user_id: user.id, badge_id: badgeId }, { onConflict: "user_id,badge_id" })
+    .select("badge_id, earned_at")
+    .single()
+
+  if (error && error.code !== "23505") throw error // 중복 무시
+  return data
+}
+
+export async function getPublishedMaps(limit = 10) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("maps")
+    .select("*, map_publications(likes_count, saves_count)")
+    .eq("is_published", true)
+    .in("visibility", ["public", "unlisted"])
+    .order("published_at", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return (data || []).map((row) => {
+    const pub = row.map_publications?.[0] || row.map_publications || {}
+    return normalizeMap(row, normalizePublication(pub))
+  })
+}
+
 // ─── 설문 ───
 
 export async function submitSurveyResponse(mapId, { rating, comment }) {

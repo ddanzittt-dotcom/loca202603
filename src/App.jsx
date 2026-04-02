@@ -59,6 +59,7 @@ import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
+import { computeStatsFromLocal, getLevelForXp } from "./data/gamification"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
@@ -221,6 +222,22 @@ export default function App() {
     }))
     return [...fromCollections, ...fromPosts]
   }, [communityFeed])
+
+  // 게이미피케이션 통계 (로컬 데이터 기반)
+  const userStats = useMemo(() => {
+    const publishedCount = maps.filter((m) => m.isPublished).length
+    return computeStatsFromLocal({
+      maps,
+      features,
+      checkins: 0,
+      completions: 0,
+      memos: 0,
+      imports: 0,
+      publishes: publishedCount,
+      streak: 0,
+      regions: 0,
+    })
+  }, [maps, features])
 
   const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
   const selectedUserPosts = useMemo(
@@ -851,8 +868,11 @@ export default function App() {
           <HomeScreen
             recommendedMaps={recommendedMaps}
             communityMapFeatures={communityMapFeatures}
+            userStats={userStats}
+            viewerProfile={viewerProfile}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
+            onOpenMaps={() => setActiveTab("maps")}
           />
         ) : null}
 
