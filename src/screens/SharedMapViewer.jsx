@@ -357,19 +357,13 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
                 const dist = pinDistances[selectedFeature.id]
                 const isNearby = dist != null && dist <= CHECKIN_RADIUS_M
                 const noGps = !userPos && !geoError
-                const btnDisabled = alreadyChecked || (!isNearby && !alreadyChecked)
+                const btnDisabled = alreadyChecked
 
                 let label
                 if (alreadyChecked) {
                   label = "✓ 완료"
-                } else if (geoError) {
-                  label = "위치 오류"
-                } else if (noGps) {
-                  label = "위치 확인 중"
-                } else if (isNearby) {
-                  label = "체크인"
                 } else {
-                  label = formatDistance(dist)
+                  label = "체크인"
                 }
 
                 return (
