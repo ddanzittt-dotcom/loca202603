@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
-import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, BADGES } from "../data/gamification"
+import { getLevelProgress, getEarnedBadges, getNextEarnableBadge } from "../data/gamification"
 
 export function HomeScreen({
   recommendedMaps,
@@ -59,80 +59,68 @@ export function HomeScreen({
       </div>
 
       {/* ─── 2. 인기 지도 ─── */}
-      <div className="section-head" style={{ marginTop: 8 }}>
-        <div>
-          <h2 className="section-head__title">인기 지도</h2>
-          <p className="section-head__subtitle">사람들이 많이 찾는 지도</p>
+      <div className="home-section">
+        <div className="home-section__head">
+          <h2>🔥 인기 지도</h2>
         </div>
+        {recommendedMaps.length > 0 ? (
+          <div className="home-map-scroller">
+            {recommendedMaps.map((item) => (
+              <button
+                key={item.id}
+                className="home-map-card"
+                type="button"
+                onClick={() => onOpenMap(item.mapId || item.id)}
+                style={{ "--card-accent": item.gradient?.[0] || "#635BFF" }}
+              >
+                <div className="home-map-card__emojis">
+                  {(item.emojis || []).slice(0, 3).map((e, i) => (
+                    <span key={`${e}-${i}`}>{e}</span>
+                  ))}
+                </div>
+                <strong className="home-map-card__title">{item.title}</strong>
+                <span className="home-map-card__meta">
+                  {item.creator ? `${item.creator} · ` : ""}📍{item.placeCount || 0}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="home-section__empty">아직 발행된 지도가 없어요</div>
+        )}
       </div>
-
-      {recommendedMaps.length > 0 ? (
-        <div className="recommended-scroller">
-          {recommendedMaps.map((item) => (
-            <button
-              key={item.id}
-              className="rec-card"
-              type="button"
-              onClick={() => onOpenMap(item.mapId || item.id)}
-              style={{ "--rec-start": item.gradient?.[0] || "#667eea", "--rec-end": item.gradient?.[1] || "#764ba2" }}
-            >
-              <div className="rec-card__emoji-row">
-                {(item.emojis || []).slice(0, 4).map((e, i) => (
-                  <span key={`${e}-${i}`}>{e}</span>
-                ))}
-              </div>
-              <div className="rec-card__body">
-                <strong className="rec-card__title">{item.title}</strong>
-                {item.creator ? <span className="rec-card__creator">{item.creator}</span> : null}
-                <span className="rec-card__count">📍 {item.placeCount || 0}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p style={{ textAlign: "center", color: "#999", fontSize: "0.82rem", padding: "16px" }}>
-          아직 발행된 지도가 없어요.
-        </p>
-      )}
 
       {/* ─── 3. 모두의 지도 ─── */}
-      <div className="section-head" style={{ marginTop: 8 }}>
-        <div>
-          <h2 className="section-head__title">모두의 지도</h2>
-          <p className="section-head__subtitle">모두가 함께 만드는 지도</p>
+      <div className="home-section">
+        <div className="home-section__head">
+          <h2>🗺 모두의 지도</h2>
+          <button className="home-section__link" type="button" onClick={onOpenCommunityEditor}>
+            열기 →
+          </button>
         </div>
-        <button className="button button--primary" type="button" onClick={onOpenCommunityEditor}>
-          지도 열기
-        </button>
-      </div>
-
-      <div className="community-map-wrap">
-        <MapErrorBoundary>
-          <NaverMap
-            features={communityMapFeatures}
-            selectedFeatureId={null}
-            draftPoints={[]}
-            draftMode="browse"
-            focusPoint={null}
-            fitTrigger={0}
-            onMapTap={undefined}
-            onFeatureTap={() => {}}
-            showLabels={true}
-          />
-        </MapErrorBoundary>
-      </div>
-
-      {/* ─── 4. 내 근처 이벤트 (placeholder) ─── */}
-      <div className="section-head" style={{ marginTop: 8 }}>
-        <div>
-          <h2 className="section-head__title">내 근처 이벤트</h2>
-          <p className="section-head__subtitle">참여할 수 있는 이벤트를 찾아보세요</p>
+        <div className="home-community-map">
+          <MapErrorBoundary>
+            <NaverMap
+              features={communityMapFeatures}
+              selectedFeatureId={null}
+              draftPoints={[]}
+              draftMode="browse"
+              focusPoint={null}
+              fitTrigger={0}
+              onMapTap={undefined}
+              onFeatureTap={() => {}}
+              showLabels={true}
+            />
+          </MapErrorBoundary>
         </div>
       </div>
 
-      <div className="home-events-empty">
-        <span>🎪</span>
-        <p>근처 진행 중인 이벤트가 없어요</p>
+      {/* ─── 4. 내 근처 이벤트 ─── */}
+      <div className="home-section">
+        <div className="home-section__head">
+          <h2>🎪 내 근처 이벤트</h2>
+        </div>
+        <div className="home-section__empty">근처 진행 중인 이벤트가 없어요</div>
       </div>
     </section>
   )
