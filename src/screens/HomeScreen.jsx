@@ -21,83 +21,47 @@ export function HomeScreen({
 
   return (
     <section className="screen screen--scroll">
-      {/* ─── 1. 탐험가 프로필 카드 ─── */}
+      {/* ─── 1. 탐험가 프로필 카드 (컴팩트) ─── */}
       <div className="home-profile-card">
-        <div className="home-profile-card__top">
-          <div className="home-profile-card__greeting">
-            <span className="home-profile-card__level-emoji">{levelInfo.current.emoji}</span>
-            <div>
-              <strong className="home-profile-card__name">{nickname}</strong>
-              <span className="home-profile-card__level-title">{levelInfo.current.title}</span>
+        <div className="home-profile-card__row">
+          <span className="home-profile-card__level-emoji">{levelInfo.current.emoji}</span>
+          <div className="home-profile-card__info">
+            <div className="home-profile-card__name-line">
+              <strong>{nickname}</strong>
+              <span className="home-profile-card__level-tag">{levelInfo.current.title}</span>
             </div>
-          </div>
-          <div className="home-profile-card__xp-label">{xp} XP</div>
-        </div>
-
-        {/* 경험치 바 */}
-        <div className="home-xp-bar">
-          <div className="home-xp-bar__track">
-            <div
-              className="home-xp-bar__fill"
-              style={{ width: `${Math.round(levelInfo.progress * 100)}%` }}
-            />
-          </div>
-          {levelInfo.next ? (
-            <span className="home-xp-bar__next">
-              {levelInfo.next.emoji} {levelInfo.next.title}까지 {levelInfo.remaining} XP
-            </span>
-          ) : (
-            <span className="home-xp-bar__next">최고 등급 달성!</span>
-          )}
-        </div>
-
-        {/* 핵심 통계 */}
-        <div className="home-stats-row">
-          <div className="home-stat">
-            <strong>{userStats?.pins || 0}</strong>
-            <span>핀</span>
-          </div>
-          <div className="home-stat">
-            <strong>{userStats?.checkins || 0}</strong>
-            <span>체크인</span>
-          </div>
-          <div className="home-stat">
-            <strong>{userStats?.completions || 0}</strong>
-            <span>완주</span>
-          </div>
-          <div className="home-stat">
-            <strong>{userStats?.maps || 0}</strong>
-            <span>지도</span>
-          </div>
-          {streak > 0 ? (
-            <div className="home-stat home-stat--streak">
-              <strong>{streak}일</strong>
-              <span>연속</span>
-            </div>
-          ) : null}
-        </div>
-
-        {/* 뱃지 미리보기 */}
-        {earnedBadges.length > 0 || nextBadge ? (
-          <div className="home-badges">
-            {earnedBadges.slice(0, 4).map((b) => (
-              <div key={b.id} className="home-badge is-earned" title={b.name}>
-                <span>{b.emoji}</span>
+            <div className="home-xp-bar">
+              <div className="home-xp-bar__track">
+                <div className="home-xp-bar__fill" style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} />
               </div>
+              <span className="home-xp-bar__label">
+                {levelInfo.next ? `${xp} / ${levelInfo.next.minXp} XP` : `${xp} XP ✦ MAX`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="home-profile-card__bottom">
+          <div className="home-stats-row">
+            <span>📍{userStats?.pins || 0}</span>
+            <span>🎯{userStats?.checkins || 0}</span>
+            <span>🏅{userStats?.completions || 0}</span>
+            <span>🗺{userStats?.maps || 0}</span>
+            {streak > 0 ? <span className="home-stat--streak">🔥{streak}일</span> : null}
+          </div>
+          <div className="home-badges-inline">
+            {earnedBadges.slice(0, 3).map((b) => (
+              <span key={b.id} className="home-badge-mini" title={b.name}>{b.emoji}</span>
             ))}
             {BADGES.length - earnedBadges.length > 0 ? (
-              <div className="home-badge home-badge--remaining">
-                +{BADGES.length - earnedBadges.length}
-              </div>
+              <span className="home-badge-mini home-badge-mini--more">+{BADGES.length - earnedBadges.length}</span>
             ) : null}
           </div>
-        ) : null}
+        </div>
 
-        {/* 넛지 메시지 */}
         {nextBadge ? (
           <div className="home-nudge">
-            <span>{nextBadge.emoji}</span>
-            <span>{nextBadge.desc}하면 <strong>"{nextBadge.name}"</strong> 뱃지를 받아요!</span>
+            {nextBadge.emoji} {nextBadge.desc} → <strong>{nextBadge.name}</strong>
           </div>
         ) : null}
       </div>
