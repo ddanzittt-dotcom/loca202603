@@ -1,11 +1,67 @@
+import { useState } from "react"
 import { BottomSheet } from "../ui"
 import { themePalette } from "../../lib/appUtils"
+import { redeemInvitationCode } from "../../lib/mapService"
 
-export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose, hasB2BAccess = false, isAdmin = false }) {
+export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose }) {
   const isCreate = mapSheet?.mode === "create"
   const category = mapSheet?.category || "personal"
   const config = mapSheet?.config || {}
-  const canCreateEvent = isAdmin || hasB2BAccess
+
+  // 행사지도 코드 입력 상태
+  const [eventCode, setEventCode] = useState("")
+  const [codeStatus, setCodeStatus] = useState("idle") // idle | loading | verified | error
+  const [codeError, setCodeError] = useState("")
+
+  const handleSelectEvent = () => {
+    setMapSheet((c) => ({
+      ...c,
+      category: "event",
+      config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true },
+    }))
+    setEventCode("")
+    setCodeStatus("idle")
+    setCodeError("")
+  }
+
+  const handleSelectPersonal = () => {
+    setMapSheet((c) => ({ ...c, category: "personal", config: {} }))
+    setEventCode("")
+    setCodeStatus("idle")
+    setCodeError("")
+  }
+
+  const handleVerifyCode = async () => {
+    if (!eventCode.trim()) return
+    setCodeStatus("loading")
+    setCodeError("")
+    try {
+      const result = await redeemInvitationCode(eventCode)
+      if (result.success) {
+        setCodeStatus("verified")
+      } else {
+        setCodeStatus("error")
+        const messages = {
+          invalid_code: "유효하지 않은 코드예요.",
+          code_exhausted: "사용 횟수가 초과된 코드예요.",
+          already_redeemed: "이미 등록된 코드예요. 그대로 진행하세요!",
+          not_authenticated: "로그인이 필요해요.",
+          rate_limited: "시도 횟수를 초과했어요. 1분 후 다시 시도해주세요.",
+        }
+        if (result.error === "already_redeemed") {
+          // 이미 등록된 코드는 사용 가능
+          setCodeStatus("verified")
+        } else {
+          setCodeError(messages[result.error] || "코드 확인에 실패했어요.")
+        }
+      }
+    } catch {
+      setCodeStatus("error")
+      setCodeError("코드 확인에 실패했어요. 다시 시도해주세요.")
+    }
+  }
+
+  const isEventReady = category !== "event" || codeStatus === "verified"
 
   return (
     <BottomSheet
@@ -16,29 +72,57 @@ export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose,
     >
       {mapSheet ? (
         <div className="form-stack">
-          {canCreateEvent && isCreate ? (
+          {isCreate ? (
             <div className="field">
               <span>지도 유형</span>
               <div className="category-toggle-row">
                 <button
                   className={`category-toggle-btn${category === "personal" ? " is-active" : ""}`}
                   type="button"
-                  onClick={() => setMapSheet((c) => ({ ...c, category: "personal", config: {} }))}
+                  onClick={handleSelectPersonal}
                 >
-                  📍 개인 지도
+                  📍 일반지도
                 </button>
                 <button
                   className={`category-toggle-btn${category === "event" ? " is-active" : ""}`}
                   type="button"
-                  onClick={() => setMapSheet((c) => ({
-                    ...c,
-                    category: "event",
-                    config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true },
-                  }))}
+                  onClick={handleSelectEvent}
                 >
-                  🎪 이벤트 지도
+                  🎪 행사지도
                 </button>
               </div>
+            </div>
+          ) : null}
+
+          {/* 행사지도 코드 입력 */}
+          {isCreate && category === "event" ? (
+            <div className="field">
+              <span>행사 코드</span>
+              <p className="field-hint">LOCA에서 발급받은 행사 코드를 입력해주세요.</p>
+              <div className="event-code-row">
+                <input
+                  value={eventCode}
+                  onChange={(e) => {
+                    setEventCode(e.target.value.toUpperCase())
+                    if (codeStatus !== "idle") { setCodeStatus("idle"); setCodeError("") }
+                  }}
+                  placeholder="예: LOCA-EVENT-2026"
+                  disabled={codeStatus === "verified" || codeStatus === "loading"}
+                />
+                {codeStatus === "verified" ? (
+                  <span className="event-code-verified">확인됨</span>
+                ) : (
+                  <button
+                    className="button button--small"
+                    type="button"
+                    onClick={handleVerifyCode}
+                    disabled={!eventCode.trim() || codeStatus === "loading"}
+                  >
+                    {codeStatus === "loading" ? "확인 중..." : "확인"}
+                  </button>
+                )}
+              </div>
+              {codeError ? <p className="field-error">{codeError}</p> : null}
             </div>
           ) : null}
 
@@ -74,9 +158,9 @@ export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose,
             </div>
           </div>
 
-          {category === "event" ? (
+          {category === "event" && codeStatus === "verified" ? (
             <div className="field">
-              <span>이벤트 설정</span>
+              <span>행사 설정</span>
               <div className="event-config-list">
                 <label className="event-config-item">
                   <input
@@ -121,7 +205,12 @@ export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose,
                 지도 삭제
               </button>
             ) : null}
-            <button className="button button--primary" type="button" onClick={onSave}>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={onSave}
+              disabled={!isEventReady}
+            >
               저장
             </button>
           </div>

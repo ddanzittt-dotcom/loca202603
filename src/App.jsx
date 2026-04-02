@@ -1008,8 +1008,6 @@ export default function App() {
         onSave={saveMapSheet}
         onDelete={deleteMapAction}
         onClose={() => setMapSheet(null)}
-        hasB2BAccess={hasB2BAccess}
-        isAdmin={isAdmin}
       />
 
       <FeatureDetailSheet

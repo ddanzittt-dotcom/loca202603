@@ -450,16 +450,13 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
               onClick={() => handleFeatureListTap(feature)}
             >
               <span className="shared-viewer__list-emoji">
-                {isEventMap && config.checkin_enabled && checkedInIds.has(feature.id) ? "✅" : feature.emoji}
+                {feature.emoji}
               </span>
               <div className="shared-viewer__list-info">
                 <strong>{feature.title}</strong>
                 <span>
                   {featureTypeLabel(feature.type)}
                   {feature.tags?.length ? ` · ${feature.tags.slice(0, 2).join(", ")}` : ""}
-                  {isEventMap && config.checkin_enabled && feature.type === "pin" && pinDistances[feature.id] != null
-                    ? ` · ${formatDistance(pinDistances[feature.id])}`
-                    : ""}
                 </span>
               </div>
             </button>
