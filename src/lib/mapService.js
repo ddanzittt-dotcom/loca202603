@@ -809,20 +809,8 @@ export async function checkB2BAccess() {
 }
 
 export async function checkAdminRole() {
-  const supabase = requireSupabase()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return false
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single()
-
-  if (error) return false
-  return data?.role === "admin"
+  // profiles 테이블에 role 컬럼이 없으므로 비활성화
+  return false
 }
 
 // ─── 공지사항 ───
