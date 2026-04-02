@@ -13,7 +13,7 @@ const zoomScale = (zoom) => {
   return Math.max(0.3, Math.min(s, 1.4))
 }
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3" }, ref) {
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", checkedInIds = null }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
@@ -180,11 +180,13 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const labelHtml = showLabels
             ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
             : ""
+          const isChecked = checkedInIds && checkedInIds.has(feature.id)
+          const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
           const marker = new naverMaps.Marker({
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-pin-marker"><div class="loca-pin-emoji"><span>${escapeHtml(feature.emoji || "📍")}</span></div>${labelHtml}</div>`,
+              content: `<div class="loca-pin-marker">${checkBadge}<div class="loca-pin-emoji"><span>${escapeHtml(feature.emoji || "📍")}</span></div>${labelHtml}</div>`,
               size: new naverMaps.Size(40, 56),
               anchor: new naverMaps.Point(20, 20),
             },
@@ -333,7 +335,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("네이버 지도 레이어 업데이트 실패:", e)
     }
-  }, [characterStyle, draftMode, draftPoints, features, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
+  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
 
   // Focus
   useEffect(() => {

@@ -333,6 +333,7 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
             fitTrigger={fitTrigger}
             onFeatureTap={(id) => handleFeatureSelect(id)}
             showLabels
+            checkedInIds={isEventMap && config.checkin_enabled ? checkedInIds : null}
           />
         </MapErrorBoundary>
 

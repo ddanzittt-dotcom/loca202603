@@ -25,6 +25,7 @@
 
 /* 핀: 이모지 + 라벨 통합 마커 */
 .loca-pin-marker {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -32,6 +33,24 @@
   transform: scale(var(--map-scale, 1));
   transform-origin: center top;
   transition: transform 0.15s ease-out;
+}
+
+.loca-pin-check {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  background: #12B981;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.55rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 .loca-pin-emoji {
