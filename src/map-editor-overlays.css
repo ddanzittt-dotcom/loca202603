@@ -1796,28 +1796,58 @@
   align-items: center;
 }
 
-/* ── 지도 가져오기 시트 ── */
-.import-map-sheet {
-  padding: 0 16px 20px;
+/* ── 지도 가져오기 모달 ── */
+.import-map-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.import-map-modal {
+  position: fixed;
+  z-index: 1001;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 48px);
+  max-width: 340px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px 20px;
+  animation: import-modal-in 0.2s ease;
+}
+
+@keyframes import-modal-in {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.import-map-modal__title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  text-align: center;
+  margin: 0 0 18px;
+  color: #101828;
 }
 
 .import-map-sheet__options {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .import-map-sheet__option {
+  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 16px;
+  gap: 10px;
+  padding: 20px 12px;
   border: 1.5px solid #e4e7ec;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -1827,27 +1857,21 @@
 }
 
 .import-map-sheet__option-icon {
-  font-size: 1.6rem;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  font-size: 1.8rem;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(99, 91, 255, 0.08);
 }
 
 .import-map-sheet__option strong {
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: #101828;
-}
-
-.import-map-sheet__option span {
-  font-size: 0.78rem;
-  color: #667085;
 }
 
 /* QR 카메라 */

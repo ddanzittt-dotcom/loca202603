@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useCallback } from "react"
-import { BottomSheet } from "../ui"
 import jsQR from "jsqr"
 
 export function ImportMapSheet({ open, onClose, onImport, showToast }) {
@@ -109,34 +108,34 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
     }
   }
 
+  if (!open) return null
+
   return (
-    <BottomSheet open={open} title="지도 가져오기" subtitle="다른 사람의 공유 지도를 내 목록에 추가해요" onClose={onClose}>
-      <div className="import-map-sheet">
+    <>
+      <div className="import-map-overlay" onClick={onClose} />
+      <div className="import-map-modal">
         {!mode ? (
-          <div className="import-map-sheet__options">
-            <button
-              className="import-map-sheet__option"
-              type="button"
-              onClick={() => setMode("qr")}
-            >
-              <span className="import-map-sheet__option-icon">📷</span>
-              <div>
+          <>
+            <h3 className="import-map-modal__title">지도 가져오기</h3>
+            <div className="import-map-sheet__options">
+              <button
+                className="import-map-sheet__option"
+                type="button"
+                onClick={() => setMode("qr")}
+              >
+                <span className="import-map-sheet__option-icon">📷</span>
                 <strong>QR 스캔</strong>
-                <span>카메라로 QR 코드를 스캔해요</span>
-              </div>
-            </button>
-            <button
-              className="import-map-sheet__option"
-              type="button"
-              onClick={() => setMode("code")}
-            >
-              <span className="import-map-sheet__option-icon">⌨️</span>
-              <div>
+              </button>
+              <button
+                className="import-map-sheet__option"
+                type="button"
+                onClick={() => setMode("code")}
+              >
+                <span className="import-map-sheet__option-icon">⌨️</span>
                 <strong>코드 입력</strong>
-                <span>공유 코드를 직접 입력해요</span>
-              </div>
-            </button>
-          </div>
+              </button>
+            </div>
+          </>
         ) : null}
 
         {/* QR 스캔 모드 */}
@@ -189,6 +188,6 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
           </div>
         ) : null}
       </div>
-    </BottomSheet>
+    </>
   )
 }
