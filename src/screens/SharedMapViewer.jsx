@@ -346,10 +346,46 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
       {selectedFeature ? (
         <div className="shared-viewer__selected">
           <div className="shared-viewer__selected-head">
-            <strong>{selectedFeature.emoji} {selectedFeature.title}</strong>
-            <button className="shared-viewer__close-btn" type="button" onClick={() => setSelectedId(null)}>✕</button>
+            <div className="shared-viewer__selected-info">
+              <strong>{selectedFeature.emoji} {selectedFeature.title}</strong>
+              <span className="shared-viewer__selected-type">{featureTypeLabel(selectedFeature.type)}</span>
+            </div>
+            <div className="shared-viewer__selected-actions">
+              {/* 이벤트 지도: 체크인 버튼 */}
+              {isEventMap && config.checkin_enabled && selectedFeature.type === "pin" ? (() => {
+                const alreadyChecked = checkedInIds.has(selectedFeature.id)
+                const dist = pinDistances[selectedFeature.id]
+                const isNearby = dist != null && dist <= CHECKIN_RADIUS_M
+                const noGps = !userPos && !geoError
+                const btnDisabled = alreadyChecked || (!isNearby && !alreadyChecked)
+
+                let label
+                if (alreadyChecked) {
+                  label = "✓ 완료"
+                } else if (geoError) {
+                  label = "위치 오류"
+                } else if (noGps) {
+                  label = "위치 확인 중"
+                } else if (isNearby) {
+                  label = "체크인"
+                } else {
+                  label = formatDistance(dist)
+                }
+
+                return (
+                  <button
+                    className={`shared-viewer__checkin-btn${alreadyChecked ? " is-checked" : isNearby ? "" : " is-far"}`}
+                    type="button"
+                    onClick={() => handleCheckin(selectedFeature.id)}
+                    disabled={btnDisabled}
+                  >
+                    {label}
+                  </button>
+                )
+              })() : null}
+              <button className="shared-viewer__close-btn" type="button" onClick={() => setSelectedId(null)}>✕</button>
+            </div>
           </div>
-          <span className="shared-viewer__selected-type">{featureTypeLabel(selectedFeature.type)}</span>
           {selectedFeature.note ? <p className="shared-viewer__selected-note">{selectedFeature.note}</p> : null}
           {selectedFeature.tags?.length ? (
             <div className="shared-viewer__selected-tags">
@@ -358,39 +394,6 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
               ))}
             </div>
           ) : null}
-
-          {/* 이벤트 지도: 체크인 버튼 (GPS 근접 시 활성화) */}
-          {isEventMap && config.checkin_enabled && selectedFeature.type === "pin" ? (() => {
-            const alreadyChecked = checkedInIds.has(selectedFeature.id)
-            const dist = pinDistances[selectedFeature.id]
-            const isNearby = dist != null && dist <= CHECKIN_RADIUS_M
-            const noGps = !userPos && !geoError
-            const btnDisabled = alreadyChecked || (!isNearby && !alreadyChecked)
-
-            let label
-            if (alreadyChecked) {
-              label = "✓ 체크인 완료"
-            } else if (geoError) {
-              label = geoError
-            } else if (noGps) {
-              label = "위치 확인 중..."
-            } else if (isNearby) {
-              label = "체크인"
-            } else {
-              label = `${formatDistance(dist)} 떨어져 있어요`
-            }
-
-            return (
-              <button
-                className={`shared-viewer__checkin-btn${alreadyChecked ? " is-checked" : isNearby ? "" : " is-far"}`}
-                type="button"
-                onClick={() => handleCheckin(selectedFeature.id)}
-                disabled={btnDisabled}
-              >
-                {label}
-              </button>
-            )
-          })() : null}
 
           {/* 댓글 */}
           {hasSupabaseEnv ? (

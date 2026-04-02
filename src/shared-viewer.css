@@ -69,9 +69,26 @@
   gap: 10px;
 }
 
-.shared-viewer__selected-head strong {
+.shared-viewer__selected-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shared-viewer__selected-info strong {
   font-size: 1rem;
   font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shared-viewer__selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .shared-viewer__close-btn {
@@ -89,8 +106,6 @@
 }
 
 .shared-viewer__selected-type {
-  display: block;
-  margin-top: 4px;
   font-size: 0.75rem;
   color: #667085;
   font-weight: 700;
@@ -317,17 +332,15 @@
 
 /* 체크인 버튼 */
 .shared-viewer__checkin-btn {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  font-size: 0.85rem;
+  padding: 6px 14px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #fff;
   background: #635BFF;
   border: none;
-  border-radius: 8px;
+  border-radius: 20px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .shared-viewer__checkin-btn:active {
