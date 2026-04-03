@@ -1217,8 +1217,9 @@
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding: 0 16px 4px;
-  margin: 0 -16px;
+  overflow-y: hidden;
+  padding: 0 34px 4px;
+  margin: 0 -34px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
