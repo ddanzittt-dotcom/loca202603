@@ -1217,8 +1217,10 @@
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 0 16px 4px;
+  margin: 0 -16px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .home-map-scroller::-webkit-scrollbar { display: none; }
