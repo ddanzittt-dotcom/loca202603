@@ -1193,6 +1193,11 @@
   margin: 0;
 }
 
+.map-card__actions {
+  display: flex;
+  gap: 4px;
+}
+
 .home-section__desc {
   margin: 2px 0 0;
   font-size: 0.72rem;

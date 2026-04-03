@@ -165,14 +165,16 @@ export function useMapCRUD({
     }
   }, [cloudMode, mapSheet, openMapEditor, setFeatures, setMapSheet, setMaps, showToast])
 
-  const deleteMap = useCallback(async () => {
-    if (!mapSheet?.id || !window.confirm("이 지도를 삭제할까요? 장소와 공유 정보도 함께 삭제됩니다.")) return
+  const deleteMap = useCallback(async (directMapId) => {
+    const targetId = directMapId || mapSheet?.id
+    if (!targetId) return
+    if (!directMapId && !window.confirm("이 지도를 삭제할까요? 장소와 공유 정보도 함께 삭제됩니다.")) return
 
     try {
       if (cloudMode) {
-        await deleteMapRecord(mapSheet.id)
+        await deleteMapRecord(targetId)
       }
-      const mapFeatures = features.filter((f) => f.mapId === mapSheet.id)
+      const mapFeatures = features.filter((f) => f.mapId === targetId)
       for (const f of mapFeatures) {
         for (const p of (f.photos || [])) {
           try { await deleteMedia(p.id) } catch { /* ignore */ }
@@ -189,10 +191,10 @@ export function useMapCRUD({
           }
         }
       }
-      setMaps((current) => current.filter((mapItem) => mapItem.id !== mapSheet.id))
-      setFeatures((current) => current.filter((feature) => feature.mapId !== mapSheet.id))
-      setShares((current) => current.filter((share) => share.mapId !== mapSheet.id))
-      setMapSheet(null)
+      setMaps((current) => current.filter((mapItem) => mapItem.id !== targetId))
+      setFeatures((current) => current.filter((feature) => feature.mapId !== targetId))
+      setShares((current) => current.filter((share) => share.mapId !== targetId))
+      if (mapSheet?.id === targetId) setMapSheet(null)
       setFeatureSheet(null)
       setMapsView("list")
       showToast("지도를 삭제했어요.")

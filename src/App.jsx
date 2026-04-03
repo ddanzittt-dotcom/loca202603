@@ -54,6 +54,7 @@ const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => (
 const SearchScreen = lazy(() => import("./screens/SearchScreen").then((m) => ({ default: m.SearchScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
+const DashboardScreen = lazy(() => import("./screens/DashboardScreen").then((m) => ({ default: m.DashboardScreen })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
@@ -69,6 +70,7 @@ import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
 import "./map-share-editor.css"
+import "./dashboard-screen.css"
 
 function ScreenFallback() {
   return (
@@ -898,6 +900,11 @@ export default function App() {
               }
             }}
             onOpen={openMapEditor}
+            onDelete={(mapId, mapTitle) => {
+              if (!window.confirm(`"${mapTitle}" 지도를 삭제할까요?`)) return
+              deleteMapAction(mapId)
+            }}
+            onOpenDashboard={() => setMapsView("dashboard")}
           />
         ) : null}
 
@@ -960,7 +967,23 @@ export default function App() {
               setSelectedFeatureId(null)
               setSelectedFeatureSummaryId(null)
             }}
+            onOpenDashboard={() => setMapsView("dashboard")}
             showToast={showToast}
+          />
+        ) : null}
+
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "dashboard" ? (
+          <DashboardScreen
+            map={activeMap}
+            features={activeFeatures}
+            ownerMaps={maps}
+            onBack={() => {
+              setMapsView("list")
+            }}
+            onSelectMap={(mapId) => {
+              setActiveMapId(mapId)
+              setActiveMapSource("local")
+            }}
           />
         ) : null}
 

@@ -74,7 +74,7 @@ export function MapPreview({ title, emojis, placeCount, theme, gradient, variant
   )
 }
 
-export function MapCard({ map, features, onOpen, onEdit }) {
+export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
   const pins = features.filter((feature) => feature.type === "pin")
   const [start, end] = mapThemeGradient(map.theme)
 
@@ -96,9 +96,16 @@ export function MapCard({ map, features, onOpen, onEdit }) {
             <h2>{map.title}</h2>
             <p>{map.description || "설명이 아직 없어요."}</p>
           </div>
-          <button className="icon-button" type="button" onClick={() => onEdit(map.id)}>
-            ✏️
-          </button>
+          <div className="map-card__actions">
+            <button className="icon-button" type="button" onClick={() => onEdit(map.id)}>
+              ✏️
+            </button>
+            {onDelete ? (
+              <button className="icon-button" type="button" onClick={() => onDelete(map.id, map.title)}>
+                🗑️
+              </button>
+            ) : null}
+          </div>
         </div>
         <button className="button button--primary map-card__open" type="button" onClick={() => onOpen(map.id)}>
           지도 열기

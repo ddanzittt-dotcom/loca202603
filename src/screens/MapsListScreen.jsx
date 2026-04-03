@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
 
-export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, loading = false }) {
+export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, onDelete, onOpenDashboard, loading = false }) {
   const [query, setQuery] = useState("")
 
   const filteredMaps = useMemo(() => {
@@ -28,6 +28,17 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
           </button>
         </div>
       </div>
+
+      {onOpenDashboard ? (
+        <button
+          className="button button--secondary"
+          type="button"
+          onClick={onOpenDashboard}
+          style={{ width: "100%", marginBottom: 12, padding: "12px 16px", fontSize: 14 }}
+        >
+          📊 대시보드 미리보기 (더미데이터)
+        </button>
+      ) : null}
 
       <label className="search-box">
         <span aria-hidden="true">⌕</span>
@@ -64,6 +75,7 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
               features={features.filter((feature) => feature.mapId === map.id)}
               onOpen={onOpen}
               onEdit={onEdit}
+              onDelete={onDelete}
             />
           ))
         )}
