@@ -96,7 +96,7 @@ export function HomeScreen({
         <div className="home-section__head">
           <div>
             <h2>🗺 모두의 지도</h2>
-            <p className="home-section__desc">다른 사람들이 기록한 장소를 함께 둘러보세요.</p>
+            <p className="home-section__desc">나만 아는 장소를 공유하고, 다른 사람의 추천도 만나보세요!</p>
           </div>
           <button className="home-section__link" type="button" onClick={onOpenCommunityEditor}>
             참여 →
