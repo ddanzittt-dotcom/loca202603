@@ -1193,6 +1193,13 @@
   margin: 0;
 }
 
+.home-section__desc {
+  margin: 2px 0 0;
+  font-size: 0.72rem;
+  color: #98a2b3;
+  font-weight: 500;
+}
+
 .home-section__link {
   border: none;
   background: none;

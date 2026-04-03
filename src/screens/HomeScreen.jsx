@@ -94,9 +94,12 @@ export function HomeScreen({
       {/* ─── 3. 모두의 지도 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>🗺 모두의 지도</h2>
+          <div>
+            <h2>🗺 모두의 지도</h2>
+            <p className="home-section__desc">다른 사람들이 기록한 장소를 함께 둘러보세요.</p>
+          </div>
           <button className="home-section__link" type="button" onClick={onOpenCommunityEditor}>
-            열기 →
+            참여 →
           </button>
         </div>
         <div className="home-community-map">
