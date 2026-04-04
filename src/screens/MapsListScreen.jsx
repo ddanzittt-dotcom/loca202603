@@ -24,33 +24,24 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
             가져오기
           </button>
           <button className="button button--primary" type="button" onClick={onCreate}>
-            새 지도
+            + 새 지도
           </button>
         </div>
       </div>
 
-      {onOpenDashboard ? (
-        <button
-          className="button button--secondary"
-          type="button"
-          onClick={onOpenDashboard}
-          style={{ width: "100%", marginBottom: 12, padding: "12px 16px", fontSize: 14 }}
-        >
-          📊 대시보드 미리보기 (더미데이터)
-        </button>
+      {maps.length > 3 ? (
+        <label className="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="지도 검색"
+          />
+        </label>
       ) : null}
 
-      <label className="search-box">
-        <span aria-hidden="true">⌕</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="지도 이름이나 설명 검색"
-        />
-      </label>
-
-      <div className="card-list">
+      <div className="card-list card-list--maps">
         {loading ? (
           <SkeletonCard count={3} />
         ) : maps.length === 0 ? (

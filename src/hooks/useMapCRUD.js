@@ -11,6 +11,7 @@ import {
   publishMap as publishMapRecord,
   unpublishMap as unpublishMapRecord,
 } from "../lib/mapService"
+import { recordMapAction } from "../lib/gamificationService"
 
 export function useMapCRUD({
   maps,
@@ -39,6 +40,7 @@ export function useMapCRUD({
   publishSheet,
   setPublishSheet,
   setSelectedPostRef,
+  refreshGameProfile,
 }) {
   const touchMap = useCallback((mapId) => {
     setMaps((current) =>
@@ -115,6 +117,7 @@ export function useMapCRUD({
 
           setMapSheet(null)
           openMapEditor(nextMap.id)
+          recordMapAction({ actionType: "map_create", eventKey: `map:${nextMap.id}`, mapId: nextMap.id }).then(() => refreshGameProfile?.()).catch(() => {})
           return showToast(mapSheet.category === "event" ? "행사지도가 생성되고 발행되었어요." : "지도를 만들었어요.")
         }
 
@@ -247,6 +250,7 @@ export function useMapCRUD({
       }
 
       logEvent("map_import", { map_id: sharedMapData.map.id, meta: { feature_count: sharedMapData.features?.length || 0 } })
+      if (cloudMode) recordMapAction({ actionType: "map_import", eventKey: `import:${sharedMapData.map.id}`, mapId: sharedMapData.map.id }).then(() => refreshGameProfile?.()).catch(() => {})
       setSharedMapData(null)
       setActiveTab("maps")
       setActiveMapSource("local")
@@ -288,6 +292,7 @@ export function useMapCRUD({
         ])
       }
       logEvent("map_publish", { map_id: effectiveMapId })
+      if (cloudMode) recordMapAction({ actionType: "map_publish", eventKey: `publish:${effectiveMapId}`, mapId: effectiveMapId }).then(() => refreshGameProfile?.()).catch(() => {})
       setPublishSheet(null)
       showToast("프로필 그리드에 지도를 올렸어요.")
     } catch (error) {

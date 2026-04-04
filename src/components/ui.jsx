@@ -74,42 +74,64 @@ export function MapPreview({ title, emojis, placeCount, theme, gradient, variant
   )
 }
 
+// 핀 좌표 중심점 → 지역별 고유 단색
+const REGION_COLORS = [
+  { name: "서울", lat: 37.56, lng: 126.98, color: "#635BFF" },  // 보라
+  { name: "경기", lat: 37.27, lng: 127.01, color: "#3B82F6" },  // 파랑
+  { name: "인천", lat: 37.45, lng: 126.70, color: "#06B6D4" },  // 시안
+  { name: "강원", lat: 37.87, lng: 128.20, color: "#10B981" },  // 초록
+  { name: "대전", lat: 36.35, lng: 127.38, color: "#F59E0B" },  // 노랑
+  { name: "충북", lat: 36.63, lng: 127.49, color: "#84CC16" },  // 라임
+  { name: "충남", lat: 36.50, lng: 126.80, color: "#14B8A6" },  // 틸
+  { name: "대구", lat: 35.87, lng: 128.60, color: "#EF4444" },  // 빨강
+  { name: "경북", lat: 36.25, lng: 128.96, color: "#F97316" },  // 주황
+  { name: "부산", lat: 35.18, lng: 129.07, color: "#EC4899" },  // 핑크
+  { name: "경남", lat: 35.23, lng: 128.68, color: "#E11D48" },  // 로즈
+  { name: "울산", lat: 35.54, lng: 129.31, color: "#F43F5E" },  // 코랄
+  { name: "광주", lat: 35.16, lng: 126.85, color: "#8B5CF6" },  // 바이올렛
+  { name: "전북", lat: 35.82, lng: 127.15, color: "#A855F7" },  // 퍼플
+  { name: "전남", lat: 34.81, lng: 126.46, color: "#6366F1" },  // 인디고
+  { name: "제주", lat: 33.49, lng: 126.53, color: "#0EA5E9" },  // 스카이
+  { name: "세종", lat: 36.48, lng: 127.26, color: "#22D3EE" },  // 라이트시안
+]
+
+function locationColor(pins) {
+  const validPins = pins.filter((p) => p.lat && p.lng)
+  if (validPins.length === 0) return "#98A2B3" // 기본 회색
+
+  const avgLat = validPins.reduce((s, p) => s + p.lat, 0) / validPins.length
+  const avgLng = validPins.reduce((s, p) => s + p.lng, 0) / validPins.length
+
+  // 가장 가까운 지역 찾기
+  let closest = REGION_COLORS[0]
+  let minDist = Infinity
+  for (const region of REGION_COLORS) {
+    const dist = (region.lat - avgLat) ** 2 + (region.lng - avgLng) ** 2
+    if (dist < minDist) { minDist = dist; closest = region }
+  }
+  return closest.color
+}
+
 export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
   const pins = features.filter((feature) => feature.type === "pin")
-  const [start, end] = mapThemeGradient(map.theme)
+  const color = locationColor(pins)
 
   return (
-    <article className="map-card">
-      <button className="map-card__preview" type="button" style={{ "--card-start": start, "--card-end": end }} onClick={() => onOpen(map.id)}>
-        <span className={`map-card__badge${map.importedFrom ? " map-card__badge--imported" : ""}`}>
-          {map.importedFrom ? `${map.importedFrom}의 지도` : "EDITOR"}
-        </span>
-        <div className="map-card__emoji-row">
-          {(pins.length > 0 ? pins : [{ emoji: "📍" }]).slice(0, 4).map((item, index) => (
-            <span key={`${item.emoji}-${index}`}>{item.emoji}</span>
-          ))}
-        </div>
-      </button>
+    <article className="map-card" onClick={() => onOpen(map.id)}>
+      <div className="map-card__preview" style={{ background: color }} />
       <div className="map-card__body">
         <div className="map-card__header">
-          <div>
+          <div className="map-card__info">
             <h2>{map.title}</h2>
-            <p>{map.description || "설명이 아직 없어요."}</p>
+            <span className="map-card__count">{pins.length}곳</span>
           </div>
-          <div className="map-card__actions">
-            <button className="icon-button" type="button" onClick={() => onEdit(map.id)}>
-              ✏️
-            </button>
+          <div className="map-card__btns">
+            <button className="map-card__icon-btn" type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}>✏️</button>
             {onDelete ? (
-              <button className="icon-button" type="button" onClick={() => onDelete(map.id, map.title)}>
-                🗑️
-              </button>
+              <button className="map-card__icon-btn map-card__icon-btn--del" type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}>✕</button>
             ) : null}
           </div>
         </div>
-        <button className="button button--primary map-card__open" type="button" onClick={() => onOpen(map.id)}>
-          지도 열기
-        </button>
       </div>
     </article>
   )

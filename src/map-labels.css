@@ -171,7 +171,36 @@
   filter: blur(1px);
 }
 
-/* 사람 캐릭터 */
+/* 등급 이모지 캐릭터 */
+.loca-level-emoji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -18px 0 0 -18px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: emoji-bounce 0.6s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+}
+
+.loca-level-emoji span {
+  font-size: 1.8rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
+}
+
+@keyframes emoji-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  15% { transform: translateY(-8px) scale(1.05, 0.95); }
+  30% { transform: translateY(0) scale(0.95, 1.05); }
+  45% { transform: translateY(-4px) scale(1.02, 0.98); }
+  60% { transform: translateY(0) scale(0.98, 1.02); }
+  75% { transform: translateY(-1px) scale(1); }
+}
+
+/* 사람 캐릭터 (레거시) */
 .loca-person {
   position: absolute;
   top: 50%;

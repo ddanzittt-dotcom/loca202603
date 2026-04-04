@@ -1,14 +1,18 @@
+// ─── 게이미피케이션 카탈로그 ───
+// 서버 authoritative: XP/레벨/배지는 서버(gamificationService.js)가 source of truth
+// 이 파일은 카탈로그 정의 + local fallback 전용
+
 // ─── 레벨 정의 ───
 export const LEVELS = [
-  { level: 1, title: "새싹 탐험가",    emoji: "🌱", minXp: 0 },
-  { level: 2, title: "동네 산책러",    emoji: "🚶", minXp: 50 },
-  { level: 3, title: "길 찾는 사람",   emoji: "🧭", minXp: 200 },
-  { level: 4, title: "지도 제작자",    emoji: "🗺",  minXp: 500 },
-  { level: 5, title: "로컬 큐레이터",  emoji: "⭐", minXp: 1200 },
-  { level: 6, title: "마스터 탐험가",  emoji: "👑", minXp: 3000 },
+  { level: 1, title: "새싹 탐험가",    emoji: "🥚", minXp: 0 },
+  { level: 2, title: "동네 산책러",    emoji: "🐣", minXp: 50 },
+  { level: 3, title: "길 찾는 사람",   emoji: "🐥", minXp: 200 },
+  { level: 4, title: "지도 제작자",    emoji: "🦊", minXp: 500 },
+  { level: 5, title: "로컬 큐레이터",  emoji: "🦁", minXp: 1200 },
+  { level: 6, title: "마스터 탐험가",  emoji: "🐉", minXp: 3000 },
 ]
 
-// ─── XP 획득 기준 ───
+// ─── XP 획득 기준 (참고용 — 서버 record_map_action RPC가 실제 값을 결정) ───
 export const XP_VALUES = {
   map_create: 20,
   pin_add: 5,
@@ -86,7 +90,7 @@ export function getNextEarnableBadge(stats) {
   return BADGES.find((b) => !b.condition(stats)) || null
 }
 
-/** view_logs + 로컬 데이터로 통계 계산 */
+/** local fallback: 로컬 데이터로 통계 계산 (cloud mode에서는 서버 stats 사용) */
 export function computeStatsFromLocal({ maps, features, checkins, completions, memos, imports, publishes, streak, regions }) {
   const pins = features.filter((f) => f.type === "pin").length
   const routes = features.filter((f) => f.type === "route").length

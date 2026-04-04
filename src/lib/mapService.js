@@ -958,8 +958,9 @@ export async function checkCollaboratorAccess(mapId) {
   return data.length > 0 ? data[0].role : false
 }
 
-// ─── 유저 통계 (게이미피케이션) ───
+// ─── 유저 통계 (레거시 — gamificationService.js 경유 권장) ───
 
+/** @deprecated gamificationService.getGameProfile() 사용 */
 export async function getUserStats() {
   const supabase = requireSupabase()
   const { data: { user } } = await supabase.auth.getUser()
@@ -975,6 +976,7 @@ export async function getUserStats() {
   return data
 }
 
+/** @deprecated 서버 RPC가 stats를 직접 관리 */
 export async function upsertUserStats(stats) {
   const supabase = requireSupabase()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1021,6 +1023,7 @@ export async function getUserBadges() {
   return data || []
 }
 
+/** @deprecated gamificationService.awardBadge() 사용 */
 export async function awardBadge(badgeId) {
   const supabase = requireSupabase()
   const { data: { user } } = await supabase.auth.getUser()
@@ -1033,6 +1036,92 @@ export async function awardBadge(badgeId) {
     .single()
 
   if (error && error.code !== "23505") throw error // 중복 무시
+  return data
+}
+
+// ─── 성장 엔진 RPC (v2) ───
+
+// 서버 기반 체크인 (submit_event_checkin RPC)
+export async function submitEventCheckin(mapId, featureId, sessionId = null, lat = null, lng = null, accuracy = null) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("submit_event_checkin", {
+    p_map_id: mapId,
+    p_feature_id: featureId,
+    p_session_id: sessionId,
+    p_lat: lat,
+    p_lng: lng,
+    p_accuracy: accuracy,
+  })
+  if (error) throw error
+  return data
+}
+
+// 범용 지도/피처 액션 XP (record_map_action RPC)
+export async function recordMapAction(actionType, eventKey, mapId = null, featureId = null, payload = {}) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("record_map_action", {
+    p_action_type: actionType,
+    p_event_key: eventKey,
+    p_map_id: mapId,
+    p_feature_id: featureId,
+    p_payload: payload,
+  })
+  if (error) throw error
+  return data
+}
+
+// 설문 제출 보상 (submit_survey_reward RPC)
+export async function submitSurveyReward(mapId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("submit_survey_reward", { p_map_id: mapId })
+  if (error) throw error
+  return data
+}
+
+// 게임 프로필 통합 조회 (get_game_profile RPC)
+export async function getGameProfile(userId = null) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_game_profile", {
+    p_user_id: userId,
+  })
+  if (error) throw error
+  return data
+}
+
+// 내 체크인 목록 조회 (특정 지도)
+export async function getMyCheckins(mapId) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data, error } = await supabase
+    .from("event_checkins")
+    .select("feature_id, created_at")
+    .eq("user_id", user.id)
+    .eq("map_id", mapId)
+
+  if (error) throw error
+  return data || []
+}
+
+// 수비니어 발급
+export async function awardSouvenir(souvenirCode, mapId = null, meta = {}) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from("user_souvenirs")
+    .insert({
+      user_id: user.id,
+      souvenir_code: souvenirCode,
+      map_id: mapId,
+      meta,
+    })
+    .select()
+    .maybeSingle()
+
+  if (error && error.code !== "23505") throw error
   return data
 }
 

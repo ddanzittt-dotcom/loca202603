@@ -13,7 +13,7 @@ const zoomScale = (zoom) => {
   return Math.max(0.3, Math.min(s, 1.4))
 }
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", checkedInIds = null }, ref) {
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
@@ -305,20 +305,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
       }
       if (myLocation) {
         const h = myLocation.heading ?? 0
-        const charClass = characterStyle === "w1" ? "loca-char-w1" : "loca-char-m3"
-        const person = `<div class="loca-my-location ${charClass}">`
+        const person = `<div class="loca-my-location">`
           + `<div class="loca-pulse"></div>`
           + `<div class="loca-direction" style="transform:rotate(${h}deg)">`
           + `<div class="loca-dir-arrow"></div>`
           + `</div>`
-          + `<div class="loca-person">`
-          + `<div class="loca-person__head"></div>`
-          + `<div class="loca-person__body"></div>`
-          + `<div class="loca-person__arm-l"></div>`
-          + `<div class="loca-person__arm-r"></div>`
-          + `<div class="loca-person__leg-l"></div>`
-          + `<div class="loca-person__leg-r"></div>`
-          + `</div>`
+          + `<div class="loca-level-emoji"><span>${escapeHtml(levelEmoji)}</span></div>`
           + `</div>`
         const locMarker = new naverMaps.Marker({
           position: toLatLng(myLocation.lat, myLocation.lng),
@@ -335,7 +327,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("네이버 지도 레이어 업데이트 실패:", e)
     }
-  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
+  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
 
   // Focus
   useEffect(() => {

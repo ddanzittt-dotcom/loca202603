@@ -60,7 +60,13 @@ import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
-import { computeStatsFromLocal, getLevelForXp } from "./data/gamification"
+import {
+  getGameProfile as fetchGameProfile,
+  checkAndAwardBadges,
+  computeLocalStats,
+  updateStreak,
+} from "./lib/gamificationService"
+import { getLevelForXp } from "./data/gamification"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
@@ -225,21 +231,46 @@ export default function App() {
     return [...fromCollections, ...fromPosts]
   }, [communityFeed])
 
-  // 게이미피케이션 통계 (로컬 데이터 기반)
+  // ─── 게이미피케이션 상태 ───
+  const [gameProfile, setGameProfile] = useState(null) // normalized { stats, badges, souvenirs }
+  const [recentReward, setRecentReward] = useState(null) // { type, xp, badge, ... }
+
+  // cloud mode: 서버 프로필 로드 / local mode: null
+  const refreshGameProfile = useCallback(async () => {
+    if (!cloudMode) { setGameProfile(null); return }
+    const profile = await fetchGameProfile()
+    if (profile) setGameProfile(profile)
+  }, [cloudMode])
+
+  // 초기 로드 + auth 전환 시
+  useEffect(() => {
+    refreshGameProfile()
+  }, [refreshGameProfile, authUser]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // userStats: 화면에 전달하는 통합 shape (cloud/local 무관하게 같은 형태)
   const userStats = useMemo(() => {
-    const publishedCount = maps.filter((m) => m.isPublished).length
-    return computeStatsFromLocal({
-      maps,
-      features,
-      checkins: 0,
-      completions: 0,
-      memos: 0,
-      imports: 0,
-      publishes: publishedCount,
-      streak: 0,
-      regions: 0,
+    if (cloudMode && gameProfile?.stats) {
+      return gameProfile.stats // 이미 camelCase normalize됨
+    }
+    // local fallback
+    return computeLocalStats({ maps, features })
+  }, [cloudMode, gameProfile, maps, features])
+
+  const levelEmoji = useMemo(() => getLevelForXp(userStats?.xp || 0).emoji, [userStats])
+
+  const userBadges = useMemo(() => gameProfile?.badges || [], [gameProfile])
+  const userBadgeIds = useMemo(() => userBadges.map((b) => b.badge_id), [userBadges])
+  const souvenirs = useMemo(() => gameProfile?.souvenirs || [], [gameProfile])
+
+  // 배지 자동 체크 + 부여 (서버 프로필 갱신 시)
+  useEffect(() => {
+    if (!cloudMode || !gameProfile?.stats) return
+    checkAndAwardBadges(userStats, userBadgeIds).then((newIds) => {
+      if (newIds.length > 0) {
+        refreshGameProfile() // 뱃지 반영된 프로필 다시 로드
+      }
     })
-  }, [maps, features])
+  }, [cloudMode, gameProfile, userStats, userBadgeIds, refreshGameProfile])
 
   const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
   const selectedUserPosts = useMemo(
@@ -298,6 +329,7 @@ export default function App() {
     setEditorMode, setDraftPoints, setFitTrigger, setFocusPoint,
     showToast, sharedMapData, setSharedMapData,
     publishSheet, setPublishSheet, setSelectedPostRef,
+    refreshGameProfile,
   })
 
   const handleImportMap = useCallback(async (slugCode) => {
@@ -330,6 +362,7 @@ export default function App() {
     setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
+    maps, features, refreshGameProfile,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
@@ -372,6 +405,9 @@ export default function App() {
       setShares(appData.shares)
       setFollowed(appData.followed)
       setViewerProfile(nextProfile)
+
+      // 스트릭 + 서버 통계 갱신
+      updateStreak().catch(() => {})
 
       if (cloudEmpty && hasLocalData) {
         showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
@@ -454,6 +490,8 @@ export default function App() {
     setSelectedPostRef(null)
     setSharedMapData(null)
     setShareEditorImage(null)
+    setGameProfile(null)
+    setRecentReward(null)
   }, [setFeatures, setFollowed, setMaps, setShares, setViewerProfile])
 
   useEffect(() => {
@@ -802,10 +840,10 @@ export default function App() {
       return { subtitle: null, actionLabel: null, onAction: null }
     }
     if (activeTab === "profile") {
-      return { subtitle: "내 프로필과 그리드", actionLabel: null, onAction: null }
+      return { subtitle: null, actionLabel: null, onAction: null }
     }
     if (activeTab === "places") {
-      return { subtitle: "장소와 경로 목록", actionLabel: null, onAction: null }
+      return { subtitle: null, actionLabel: null, onAction: null }
     }
     if (activeTab === "search") {
       return { subtitle: null, actionLabel: null, onAction: null }
@@ -872,6 +910,7 @@ export default function App() {
             communityMapFeatures={communityMapFeatures}
             userStats={userStats}
             viewerProfile={viewerProfile}
+            souvenirs={souvenirs}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
             onOpenMaps={() => setActiveTab("maps")}
@@ -927,6 +966,7 @@ export default function App() {
             shareUrl={shareUrl}
             showLabels={showMapLabels}
             characterStyle={characterStyle}
+            levelEmoji={levelEmoji}
             onBack={() => {
               if (activeMapSource === "community" || activeMapSource === "shared") {
                 setActiveTab("home")
@@ -1008,6 +1048,8 @@ export default function App() {
             onChangeCharacter={setCharacterStyle}
             hasB2BAccess={hasB2BAccess}
             onB2BAccessChange={setHasB2BAccess}
+            userStats={userStats}
+            souvenirs={souvenirs}
           />
         ) : null}
       </Suspense>
@@ -1080,7 +1122,7 @@ export default function App() {
         post={selectedPost}
         onClose={() => setSelectedPostRef(null)}
         onLike={likePost}
-        onOpenMap={openMapEditor}
+        onOpenMap={(mapId) => { setSelectedPostRef(null); openMapEditor(mapId) }}
         onUnpublish={unpublish}
       />
 

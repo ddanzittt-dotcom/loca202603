@@ -4,8 +4,9 @@ import { NaverMap } from "../components/NaverMap"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent, setUtmSource } from "../lib/analytics"
 import { getActiveAnnouncements, submitSurveyResponse, addFeatureMemo, getFeatureMemos } from "../lib/mapService"
+import { submitEventCheckin, getMyCheckins, awardSouvenir, submitSurveyReward } from "../lib/gamificationService"
 
-const CHECKIN_RADIUS_M = 10
+const DEFAULT_CHECKIN_RADIUS_M = 50
 
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000
@@ -52,6 +53,21 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
       return stored ? new Set(JSON.parse(stored)) : new Set()
     } catch { return new Set() }
   })
+
+  // 서버에서 기존 체크인 복원 (cloud mode)
+  useEffect(() => {
+    if (!isEventMap || !hasSupabaseEnv || !map.id) return
+    getMyCheckins(map.id).then((rows) => {
+      if (rows.length > 0) {
+        const serverIds = new Set(rows.map((r) => r.feature_id))
+        setCheckedInIds((prev) => {
+          const merged = new Set([...prev, ...serverIds])
+          sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify([...merged]))
+          return merged
+        })
+      }
+    }).catch(() => {})
+  }, [isEventMap, map.id])
   const [announcements, setAnnouncements] = useState([])
   const [announcementDismissed, setAnnouncementDismissed] = useState(false)
   const [surveyOpen, setSurveyOpen] = useState(false)
@@ -210,27 +226,93 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
     }
   }, [map.id])
 
-  // 체크인 (오프라인에서도 동작)
-  const handleCheckin = useCallback((featureId) => {
+  // 오프라인 체크인 큐 flush
+  useEffect(() => {
+    const flushCheckinQueue = async () => {
+      if (!hasSupabaseEnv) return
+      const key = "loca.checkin_queue"
+      try {
+        const queue = JSON.parse(localStorage.getItem(key) || "[]")
+        if (queue.length === 0) return
+        const remaining = []
+        for (const item of queue) {
+          try {
+            await submitEventCheckin({
+              mapId: item.mapId, featureId: item.featureId,
+              sessionId: item.sessionId,
+              proofMeta: item.proofMeta,
+            })
+          } catch {
+            remaining.push(item)
+          }
+        }
+        if (remaining.length === 0) localStorage.removeItem(key)
+        else localStorage.setItem(key, JSON.stringify(remaining))
+      } catch { /* ignore */ }
+    }
+    window.addEventListener("online", flushCheckinQueue)
+    if (navigator.onLine) flushCheckinQueue()
+    return () => window.removeEventListener("online", flushCheckinQueue)
+  }, [])
+
+  // 체크인 (서버 authoritative + sessionStorage 즉시 반영 + 오프라인 큐)
+  const handleCheckin = useCallback(async (featureId) => {
     if (checkedInIds.has(featureId)) return
+
+    const sessionId = sessionStorage.getItem("loca_session_id") || null
+    const proofMeta = { lat: userPos?.lat || null, lng: userPos?.lng || null, accuracy: userPos?.accuracy || null }
+
+    // 즉시 UI 반영 (낙관적)
     const next = new Set(checkedInIds)
     next.add(featureId)
     setCheckedInIds(next)
     sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify([...next]))
+
+    // analytics 기록 (항상)
     if (hasSupabaseEnv && map.id) {
       const feat = features.find((f) => f.id === featureId)
       logEvent("checkin", { map_id: map.id, feature_id: featureId, meta: { feature_type: feat?.type || "pin" } })
     }
-    // 완주 체크
-    if (next.size >= totalCheckpoints && hasSupabaseEnv && map.id) {
-      logEvent("completion", { map_id: map.id })
-    }
-    if (!navigator.onLine) {
-      showViewerToast("오프라인 체크인 완료! 온라인 시 자동 동기화됩니다.")
+
+    // 서버 체크인
+    if (hasSupabaseEnv && map.id && navigator.onLine) {
+      try {
+        const result = await submitEventCheckin({ mapId: map.id, featureId, sessionId, proofMeta })
+
+        if (result?.completed) {
+          logEvent("completion", { map_id: map.id })
+          // 수비니어 발급
+          if (config.souvenir_enabled !== false) {
+            awardSouvenir(
+              `event_completion:${map.id}`, map.id,
+              { title: config.souvenir_title || `${map.title} 완주`, emoji: config.souvenir_emoji || "🏆", map_title: map.title },
+            ).catch(() => {})
+          }
+          const totalXp = (result.xp_earned || 15) + (result.completion_xp || 50)
+          showViewerToast(`🎉 완주! +${totalXp} XP`)
+        } else if (result?.xp_earned) {
+          showViewerToast(`체크인! +${result.xp_earned} XP`)
+        } else if (result?.status === "already_checked_in") {
+          showViewerToast("이미 체크인한 장소예요.")
+        } else {
+          showViewerToast("체크인 완료!")
+        }
+      } catch {
+        showViewerToast("체크인 완료!")
+      }
+    } else if (hasSupabaseEnv && map.id && !navigator.onLine) {
+      // 오프라인 → 큐에 저장 (XP 미확정)
+      try {
+        const key = "loca.checkin_queue"
+        const queue = JSON.parse(localStorage.getItem(key) || "[]")
+        queue.push({ mapId: map.id, featureId, sessionId, proofMeta, timestamp: new Date().toISOString() })
+        localStorage.setItem(key, JSON.stringify(queue))
+      } catch { /* ignore */ }
+      showViewerToast("오프라인 체크인! 온라인 시 자동 동기화됩니다.")
     } else {
       showViewerToast("체크인 완료!")
     }
-  }, [checkedInIds, features, map.id, totalCheckpoints, showViewerToast])
+  }, [checkedInIds, config, features, map.id, map.title, showViewerToast, userPos])
 
   // 설문 제출 (오프라인 시 로컬 저장 후 온라인 복귀 시 재시도)
   const handleSurveySubmit = async () => {
@@ -254,13 +336,20 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
     try {
       if (hasSupabaseEnv && map.id) {
         await submitSurveyResponse(map.id, surveyData)
+        // 설문 보상 (중복은 서버에서 방지)
+        const reward = await submitSurveyReward({ mapId: map.id })
+        if (reward?.xp_delta) {
+          showViewerToast(`설문 완료! +${reward.xp_delta} XP`)
+        } else {
+          showViewerToast("설문을 제출했어요!")
+        }
+      } else {
+        showViewerToast("설문을 제출했어요!")
       }
       setSurveySubmitted(true)
       setSurveyOpen(false)
-      showViewerToast("설문을 제출했어요!")
     } catch {
       showViewerToast("설문 제출에 실패했어요. 다시 시도해주세요.")
-      // 설문 팝업 유지 — 재시도 가능
     }
   }
 
@@ -356,20 +445,24 @@ export function SharedMapViewer({ map, features, onSaveToApp }) {
               {isEventMap && config.checkin_enabled && selectedFeature.type === "pin" ? (() => {
                 const alreadyChecked = checkedInIds.has(selectedFeature.id)
                 const dist = pinDistances[selectedFeature.id]
-                const isNearby = dist != null && dist <= CHECKIN_RADIUS_M
-                const noGps = !userPos && !geoError
-                const btnDisabled = alreadyChecked
+                const radiusM = config.checkin_radius || DEFAULT_CHECKIN_RADIUS_M
+                const noLimit = radiusM === 0
+                const isNearby = noLimit || (dist != null && dist <= radiusM)
+                const tooFar = !noLimit && !isNearby && dist != null
+                const btnDisabled = alreadyChecked || tooFar
 
                 let label
                 if (alreadyChecked) {
                   label = "✓ 완료"
+                } else if (tooFar) {
+                  label = `${formatDistance(dist)} 거리`
                 } else {
                   label = "체크인"
                 }
 
                 return (
                   <button
-                    className={`shared-viewer__checkin-btn${alreadyChecked ? " is-checked" : isNearby ? "" : " is-far"}`}
+                    className={`shared-viewer__checkin-btn${alreadyChecked ? " is-checked" : tooFar ? " is-far" : ""}`}
                     type="button"
                     onClick={() => handleCheckin(selectedFeature.id)}
                     disabled={btnDisabled}

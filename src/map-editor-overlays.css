@@ -1193,10 +1193,446 @@
   margin: 0;
 }
 
-.map-card__actions {
+/* ── 홈 보상 행 ── */
+.home-reward-row {
   display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.home-reward-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(255,255,255,0.15);
+  color: #c4b5fd;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+.home-next-goal {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.55);
+}
+
+/* ── 프로필 성장 카드 ── */
+.profile-growth-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  margin-bottom: 12px;
+}
+.profile-growth__level {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.profile-growth__emoji {
+  font-size: 2rem;
+}
+.profile-growth__info {
+  flex: 1;
+  min-width: 0;
+}
+.profile-growth__info > strong {
+  font-size: 0.85rem;
+  display: block;
+  margin-bottom: 4px;
+}
+.profile-growth__xp-bar {
+  height: 6px;
+  background: #f2f4f7;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.profile-growth__xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #635BFF, #a78bfa);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.profile-growth__xp-label {
+  font-size: 0.6rem;
+  color: #98a2b3;
+}
+.profile-growth__axes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.profile-growth__axis {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.profile-growth__axis-label {
+  font-size: 0.62rem;
+  color: #667085;
+  width: 40px;
+}
+.profile-growth__axis-bar {
+  flex: 1;
+  height: 5px;
+  background: #f2f4f7;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.profile-growth__axis-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.profile-growth__axis-pct {
+  font-size: 0.58rem;
+  color: #98a2b3;
+  width: 26px;
+  text-align: right;
+}
+.profile-growth__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.profile-badge-chip {
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+.profile-souvenirs {
+  margin-bottom: 12px;
+}
+.profile-souvenirs__title {
+  font-size: 0.78rem;
+  display: block;
+  margin-bottom: 8px;
+}
+.profile-souvenirs__list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── 지도 완성도 게이지 (에디터) ── */
+.map-completion-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid #f2f4f7;
+  cursor: pointer;
+}
+.map-completion-bar__gauge {
+  flex: 1;
+  height: 6px;
+  background: #f2f4f7;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.map-completion-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #635BFF, #10B981);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.map-completion-bar__label {
+  font-size: 0.68rem;
+  color: #667085;
+  white-space: nowrap;
+}
+.map-completion-bar__toggle {
+  font-size: 0.6rem;
+  color: #98a2b3;
+}
+.map-completion-checklist {
+  padding: 8px 12px 10px;
+  background: #fafbfc;
+  border-bottom: 1px solid #f2f4f7;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
 }
+.map-completion-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #98a2b3;
+}
+.map-completion-item.is-done {
+  color: #10B981;
+}
+.map-completion-item__pts {
+  margin-left: auto;
+  font-size: 0.6rem;
+}
+.map-completion-feedback {
+  font-size: 0.7rem;
+  color: #635BFF;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+
+/* ── 전문화 축 (홈화면) ── */
+.home-spec-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+}
+.home-spec-axis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-spec-axis__label {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.7);
+  width: 50px;
+  flex-shrink: 0;
+}
+.home-spec-axis__bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.home-spec-axis__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.home-spec-axis__pct {
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.6);
+  font-weight: 600;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.home-spec-axis__tip {
+  font-size: 0.52rem;
+  color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.12);
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  position: relative;
+  margin-left: 2px;
+}
+.home-spec-axis__tip::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 3px solid transparent;
+  border-right-color: rgba(255,255,255,0.12);
+}
+.home-spec-axis__tip--done {
+  color: #10B981;
+  background: rgba(16,185,129,0.15);
+}
+.home-spec-axis__tip--done::before {
+  border-right-color: rgba(16,185,129,0.15);
+}
+.home-spec-daily-total {
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.5);
+  text-align: right;
+  margin-top: 2px;
+}
+
+/* ── 수비니어 (홈화면) ── */
+.home-souvenir-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.souvenir-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.souvenir-chip__emoji {
+  font-size: 1.2rem;
+}
+.souvenir-chip__title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+/* ── 이벤트 카드 (홈화면) ── */
+.home-event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.event-card {
+  display: flex;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.event-card__img {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+.event-card__img--empty {
+  background: #f2f4f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.event-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  justify-content: center;
+}
+.event-card__title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.event-card__date {
+  font-size: 0.68rem;
+  color: #635BFF;
+  font-weight: 600;
+}
+.event-card__addr {
+  font-size: 0.65rem;
+  color: #98a2b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 지도 카드 리디자인 ── */
+.card-list--maps {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.map-card {
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  transition: transform 0.15s;
+}
+.map-card:active {
+  transform: scale(0.97);
+}
+
+.map-card__preview {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  border-radius: 14px 14px 0 0;
+  overflow: hidden;
+}
+
+.map-card__dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.map-card__pin {
+  position: absolute;
+  font-size: 0.85rem;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+  pointer-events: none;
+}
+
+.map-card__body {
+  padding: 6px 8px 8px;
+}
+
+.map-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.map-card__info {
+  min-width: 0;
+  flex: 1;
+}
+.map-card__info h2 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+.map-card__count {
+  font-size: 0.62rem;
+  color: #98a2b3;
+}
+
+.map-card__btns {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.map-card__icon-btn {
+  background: none;
+  border: none;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.6;
+}
+.map-card__icon-btn:active {
+  opacity: 1;
+}
+.map-card__icon-btn--del {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #98a2b3;
+  font-style: normal;
+}
+
+.map-card__open { display: none; }
+.map-card__emoji-row { display: none; }
 
 .home-section__desc {
   margin: 2px 0 0;
@@ -1463,34 +1899,42 @@
   border-radius: 8px;
 }
 
-/* 지도 카드 제작자 배지 */
-.map-card__preview {
-  position: relative;
+/* ── 운영자 설정 UI ── */
+.souvenir-config {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+.field--inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field--inline > span {
+  font-size: 0.78rem;
+  color: #667085;
+  width: 48px;
+  flex-shrink: 0;
+}
+.field--inline > input {
+  flex: 1;
+}
+.field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: #fff;
+  color: #344054;
 }
 
-.map-card__badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #635bff;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  line-height: 1.4;
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.map-card__badge--imported {
-  background: rgba(20, 27, 52, 0.82);
-  color: #fff;
-}
+/* 지도 카드 배지 (레거시 — 신규 카드에서는 미사용) */
+.map-card__badge { display: none; }
 
 /* Profile edit form */
 .profile-edit-form {
@@ -1905,8 +2349,9 @@
   margin: 10px 16px 6px;
   padding: 14px 14px 10px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #635BFF 0%, #8B7FFF 100%);
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
   color: #fff;
+  box-shadow: 0 2px 10px rgba(30,27,75,0.3);
 }
 
 .home-profile-card__row {
@@ -1916,15 +2361,20 @@
 }
 
 .home-profile-card__level-emoji {
-  font-size: 1.5rem;
-  width: 38px;
-  height: 38px;
+  font-size: 2.4rem;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 16px;
   flex-shrink: 0;
+  animation: level-bounce 2s ease-in-out infinite;
+}
+@keyframes level-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
 .home-profile-card__info {
@@ -1948,7 +2398,8 @@
   font-size: 0.62rem;
   font-weight: 700;
   padding: 1px 6px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255,255,255,0.15);
+  color: #c4b5fd;
   border-radius: 6px;
   white-space: nowrap;
 }
@@ -1963,14 +2414,14 @@
 .home-xp-bar__track {
   flex: 1;
   height: 5px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255,255,255,0.15);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .home-xp-bar__fill {
   height: 100%;
-  background: #FEE500;
+  background: linear-gradient(90deg, #a78bfa, #FEE500);
   border-radius: 3px;
   transition: width 0.5s ease;
   min-width: 3px;
@@ -1979,7 +2430,7 @@
 .home-xp-bar__label {
   font-size: 0.62rem;
   font-weight: 700;
-  opacity: 0.8;
+  color: rgba(255,255,255,0.7);
   white-space: nowrap;
 }
 
@@ -1990,7 +2441,7 @@
   justify-content: space-between;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid rgba(255,255,255,0.12);
 }
 
 .home-stats-row {
@@ -1998,7 +2449,7 @@
   gap: 8px;
   font-size: 0.72rem;
   font-weight: 700;
-  opacity: 0.9;
+  color: rgba(255,255,255,0.9);
 }
 
 .home-stat--streak {
@@ -2018,7 +2469,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255,255,255,0.15);
   border-radius: 7px;
 }
 
@@ -2032,11 +2483,11 @@
 .home-nudge {
   margin-top: 8px;
   padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255,255,255,0.08);
   border-radius: 8px;
   font-size: 0.68rem;
   line-height: 1.4;
-  opacity: 0.85;
+  color: rgba(255,255,255,0.75);
 }
 
 .home-nudge strong {

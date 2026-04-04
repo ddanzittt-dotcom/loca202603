@@ -43,6 +43,8 @@ export function ProfileScreen({
   onChangeCharacter,
   hasB2BAccess = false,
   onB2BAccessChange,
+  userStats,
+  souvenirs = [],
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editName, setEditName] = useState(user.name)

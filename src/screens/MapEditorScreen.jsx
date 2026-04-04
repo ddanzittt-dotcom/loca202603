@@ -1,5 +1,6 @@
-﻿import { useEffect, useState, useRef } from "react"
+﻿import { useEffect, useMemo, useState, useRef } from "react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
+import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { NaverMap } from "../components/NaverMap"
 import { AnnouncementSheet } from "../components/sheets/AnnouncementSheet"
 import { CollaboratorsSheet } from "../components/sheets/CollaboratorsSheet"
@@ -32,6 +33,7 @@ export function MapEditorScreen({
   showLabels = true,
   myLocation = null,
   characterStyle = "m3",
+  levelEmoji = "🥚",
   cloudMode = false,
   isAdmin = false,
   onBack,
@@ -50,6 +52,7 @@ export function MapEditorScreen({
   onAddMemo,
   onOpenShareEditor,
   onStripFeatureTap,
+  onOpenDashboard,
   showToast,
   shareUrl = "",
 }) {
@@ -76,6 +79,11 @@ export function MapEditorScreen({
   const routeCount = features.filter((feature) => feature.type === "route").length
   const areaCount = features.filter((feature) => feature.type === "area").length
   const isDrawing = editorMode === "route" || editorMode === "area"
+
+  // 지도 완성도
+  const completion = useMemo(() => getMapCompletionSnapshot(map, features), [map, features])
+  const [completionOpen, setCompletionOpen] = useState(false)
+  const completionLabel = completion.tier === "excellent" ? "추천 후보" : completion.tier === "good" ? "발행 준비 완료" : completion.tier === "progress" ? "정리 중" : "초안"
   const visibleFeatures = activeFilter === "all" ? features : features.filter((feature) => feature.type === activeFilter)
 
   useEffect(() => {
@@ -162,9 +170,14 @@ export function MapEditorScreen({
         {!hideCount ? (
           <span className="map-editor__count">📍{pinCount} 🔀{routeCount} ⬡{areaCount}</span>
         ) : null}
-        {isEventMap && cloudMode && !communityMode ? (
+        {isEventMap && !communityMode ? (
           <>
-            {isAdmin ? (
+            {onOpenDashboard ? (
+              <button className="icon-button" type="button" onClick={onOpenDashboard} aria-label="대시보드" title="대시보드">
+                📊
+              </button>
+            ) : null}
+            {cloudMode && isAdmin ? (
               <>
                 <button className="icon-button" type="button" onClick={() => setCollaboratorsSheetOpen(true)} aria-label="협업자 관리" title="협업자 관리">
                   👥
@@ -183,6 +196,34 @@ export function MapEditorScreen({
           </button>
         ) : null}
       </header>
+
+      {/* 완성도 게이지 */}
+      {!communityMode && !readOnly ? (
+        <div className="map-completion-bar" onClick={() => setCompletionOpen(!completionOpen)}>
+          <div className="map-completion-bar__gauge">
+            <div className="map-completion-bar__fill" style={{ width: `${completion.score}%` }} />
+          </div>
+          <span className="map-completion-bar__label">{completionLabel} · {completion.score}점</span>
+          <span className="map-completion-bar__toggle">{completionOpen ? "▲" : "▼"}</span>
+        </div>
+      ) : null}
+
+      {completionOpen && !communityMode && !readOnly ? (
+        <div className="map-completion-checklist">
+          {completion.breakdown.map((item) => (
+            <div key={item.key} className={`map-completion-item${item.done ? " is-done" : ""}`}>
+              <span>{item.done ? "✓" : "○"}</span>
+              <span>{item.label}</span>
+              <span className="map-completion-item__pts">{item.points}/{item.max}</span>
+            </div>
+          ))}
+          {completion.score >= 90 ? (
+            <p className="map-completion-feedback">🎉 훌륭해요! 발행하면 더 많은 사람이 볼 수 있어요.</p>
+          ) : completion.score >= 70 ? (
+            <p className="map-completion-feedback">👍 발행 준비가 거의 끝났어요! 조금만 더 보강해보세요.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="map-editor__canvas-wrap">
         <div className="map-search-box">
@@ -256,6 +297,7 @@ export function MapEditorScreen({
             showLabels={showLabels}
             myLocation={myLocation}
             characterStyle={characterStyle}
+            levelEmoji={levelEmoji}
           />
         </MapErrorBoundary>
 

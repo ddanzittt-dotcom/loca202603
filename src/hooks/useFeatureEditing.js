@@ -9,6 +9,8 @@ import {
   deleteFeature as deleteFeatureRecord,
   deleteMediaRecord,
 } from "../lib/mapService"
+import { recordMapAction } from "../lib/gamificationService"
+import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { me } from "../data/sampleData"
 
 const toEditableFeature = (feature) => ({ ...feature, tagsText: tagsToText(feature.tags) })
@@ -69,6 +71,9 @@ export function useFeatureEditing({
   touchMap,
   showToast,
   setMaps,
+  maps,
+  features,
+  refreshGameProfile,
 }) {
   const focusFeature = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
@@ -98,6 +103,20 @@ export function useFeatureEditing({
     setSelectedFeatureSummaryId(featureId)
     setFeatureSheet(toEditableFeature(feature))
   }, [activeFeaturePool, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
+
+  // 지도 완성도 마일스톤 체크 (cloud mode only)
+  const checkCompletionMilestone = useCallback((mapId) => {
+    if (!cloudMode || !mapId) return
+    const map = maps?.find((m) => m.id === mapId)
+    const mapFeatures = features?.filter((f) => f.mapId === mapId) || []
+    if (!map || mapFeatures.length === 0) return
+    const { score } = getMapCompletionSnapshot(map, mapFeatures)
+    if (score >= 90) {
+      recordMapAction({ actionType: "map_completion_90", eventKey: `comp90:${mapId}`, mapId }).catch(() => {})
+    } else if (score >= 70) {
+      recordMapAction({ actionType: "map_completion_70", eventKey: `comp70:${mapId}`, mapId }).catch(() => {})
+    }
+  }, [cloudMode, maps, features])
 
   const saveFeatureSheet = useCallback(async () => {
     if (!featureSheet?.title.trim()) return showToast("이름을 입력하세요.")
@@ -139,6 +158,11 @@ export function useFeatureEditing({
           }))
           setFeatureSheet((c) => toEditableFeature(mergeFeatureMedia(savedFeature, c)))
           setMaps((current) => current.map((mapItem) => (mapItem.id === savedFeature.mapId ? { ...mapItem, updatedAt: new Date().toISOString() } : mapItem)))
+          // feature_enrich: note/photo/voice가 있으면 보상
+          if (nextFeature.note?.trim() || nextFeature.photos?.length > 0 || nextFeature.voices?.length > 0) {
+            recordMapAction({ actionType: "feature_enrich", eventKey: `enrich:${nextFeature.id}`, mapId: nextFeature.mapId, featureId: nextFeature.id }).catch(() => {})
+          }
+          checkCompletionMilestone(nextFeature.mapId)
           showToast("정보를 저장했어요.")
           return
         } catch (error) {
@@ -307,6 +331,9 @@ export function useFeatureEditing({
         touchMap(activeMapId)
       }
       logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
+      if (cloudMode) {
+        recordMapAction({ actionType: "feature_create_pin", eventKey: `pin:${nextFeature.id}`, mapId: activeMapId, featureId: nextFeature.id }).then(() => refreshGameProfile?.()).catch(() => {})
+      }
       setEditorMode("browse")
       setSelectedFeatureId(nextFeature.id)
       setFeatureSheet(toEditableFeature(nextFeature))
@@ -347,6 +374,9 @@ export function useFeatureEditing({
       touchMap(activeMapId)
     }
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
+    if (cloudMode) {
+      recordMapAction({ actionType: "feature_create_route", eventKey: `route:${nextFeature.id}`, mapId: activeMapId, featureId: nextFeature.id }).then(() => refreshGameProfile?.()).catch(() => {})
+    }
     setDraftPoints([])
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
@@ -384,6 +414,9 @@ export function useFeatureEditing({
       touchMap(activeMapId)
     }
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
+    if (cloudMode) {
+      recordMapAction({ actionType: "feature_create_area", eventKey: `area:${nextFeature.id}`, mapId: activeMapId, featureId: nextFeature.id }).then(() => refreshGameProfile?.()).catch(() => {})
+    }
     setDraftPoints([])
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
