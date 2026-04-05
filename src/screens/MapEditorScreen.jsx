@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useRef } from "react"
+﻿import { useEffect, useState, useRef } from "react"
 import { Search as SearchIcon, X } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 

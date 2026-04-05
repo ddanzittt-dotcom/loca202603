@@ -2465,6 +2465,101 @@
   min-height: unset !important;
 }
 
+/* ── 커뮤니티 댓글 입력 ── */
+.community-author {
+  font-size: 0.78rem;
+  color: var(--muted, #888);
+}
+.comment-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--line, #EDE8E0);
+  border-radius: var(--radius-md, 12px);
+  padding: 10px;
+  background: var(--surface, #fff);
+}
+.comment-input-box .memo-input {
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  resize: none;
+}
+.comment-input-box .memo-input:focus {
+  border: none;
+  outline: none;
+}
+.comment-input-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.comment-photo-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: var(--surface-muted, #f5f5f5);
+  color: var(--muted, #888);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.comment-photo-btn:disabled {
+  opacity: 0.4;
+}
+.comment-submit {
+  padding: 6px 16px !important;
+  font-size: 0.78rem !important;
+  min-height: unset !important;
+  border-radius: 8px !important;
+}
+.comment-photo-preview {
+  display: flex;
+  gap: 6px;
+}
+.comment-photo-thumb {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.comment-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.comment-photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ── 댓글 사진 표시 ── */
+.memo-item__photos {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.memo-item__photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
 /* ── community read-only detail ── */
 .community-detail-readonly {
   display: flex;

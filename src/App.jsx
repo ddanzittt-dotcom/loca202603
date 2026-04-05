@@ -36,7 +36,6 @@ const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ 
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
 const SearchScreen = lazy(() => import("./screens/SearchScreen").then((m) => ({ default: m.SearchScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
-const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing } from "./hooks/useFeatureEditing"
@@ -46,16 +45,9 @@ import { useGamification } from "./hooks/useGamification"
 import { useGeolocation } from "./hooks/useGeolocation"
 import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
-import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
-import { MapFormSheet } from "./components/sheets/MapFormSheet"
-import { PublishSheet } from "./components/sheets/PublishSheet"
-import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
-import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
-import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
-const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
+import { AppSheets } from "./components/AppSheets"
 import "./shared-viewer.css"
 import "./map-share-editor.css"
-import "./dashboard-screen.css"
 
 function ScreenFallback() {
   return (
@@ -298,7 +290,7 @@ export default function App() {
     setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
-    maps, features, refreshGameProfile,
+    maps, features, refreshGameProfile, myLocation,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
@@ -627,97 +619,26 @@ export default function App() {
       />
       )}
 
-      <MapFormSheet
-        mapSheet={mapSheet}
-        setMapSheet={setMapSheet}
-        onSave={saveMapSheet}
-        onDelete={deleteMapAction}
-        onClose={() => setMapSheet(null)}
+      <AppSheets
+        mapSheet={mapSheet} setMapSheet={setMapSheet} saveMapSheet={saveMapSheet} deleteMapAction={deleteMapAction}
+        featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} activeMapSource={activeMapSource}
+        featureEmojiChoices={featureEmojiChoices} setSelectedFeatureId={setSelectedFeatureId}
+        saveFeatureSheet={saveFeatureSheet} deleteFeature={deleteFeature} startRelocatePin={startRelocatePin}
+        photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}
+        handlePhotoSelected={handlePhotoSelected} handleDeletePhoto={handleDeletePhoto}
+        startRecording={startRecording} stopRecording={stopRecording} handleDeleteVoice={handleDeleteVoice}
+        memoText={memoText} setMemoText={setMemoText} addMemo={addMemo}
+        publishSheet={publishSheet} setPublishSheet={setPublishSheet} unpublishedMaps={unpublishedMaps}
+        features={features} publishMap={publishMap}
+        selectedUser={selectedUser} selectedUserPosts={selectedUserPosts} followed={followed}
+        setSelectedUserId={setSelectedUserId} toggleFollow={toggleFollow} setSelectedPostRef={setSelectedPostRef}
+        selectedPost={selectedPost} likePost={likePost} openMapEditor={openMapEditor} unpublish={unpublish}
+        shareEditorImage={shareEditorImage} setShareEditorImage={setShareEditorImage}
+        activeMap={activeMap} activeFeatures={activeFeatures} shareUrl={shareUrl} showToast={showToast}
+        pendingSharePlace={pendingSharePlace} setPendingSharePlace={setPendingSharePlace}
+        maps={maps} saveSharePlaceToMap={saveSharePlaceToMap}
+        importSheetOpen={importSheetOpen} setImportSheetOpen={setImportSheetOpen} handleImportMap={handleImportMap}
       />
-
-      <FeatureDetailSheet
-        featureSheet={featureSheet}
-        setFeatureSheet={setFeatureSheet}
-        activeMapSource={activeMapSource}
-        featureEmojiChoices={featureEmojiChoices}
-        onClose={() => {
-          setFeatureSheet(null)
-          setSelectedFeatureId(null)
-        }}
-        onSave={saveFeatureSheet}
-        onDelete={deleteFeature}
-        onRelocatePin={activeMapSource === "local" ? startRelocatePin : undefined}
-        photoInputRef={photoInputRef}
-        isRecording={isRecording}
-        recordingSeconds={recordingSeconds}
-        onPhotoSelected={handlePhotoSelected}
-        onDeletePhoto={handleDeletePhoto}
-        onStartRecording={startRecording}
-        onStopRecording={stopRecording}
-        onDeleteVoice={handleDeleteVoice}
-        memoText={memoText}
-        onMemoTextChange={setMemoText}
-        onAddMemo={addMemo}
-      />
-
-      <PublishSheet
-        publishSheet={publishSheet}
-        setPublishSheet={setPublishSheet}
-        unpublishedMaps={unpublishedMaps}
-        features={features}
-        onPublish={() => publishMap()}
-        onClose={() => setPublishSheet(null)}
-      />
-
-      <UserProfileSheet
-        user={selectedUser}
-        userPosts={selectedUserPosts}
-        isFollowing={selectedUser ? followed.includes(selectedUser.id) : false}
-        onClose={() => setSelectedUserId(null)}
-        onToggleFollow={toggleFollow}
-        onSelectPost={setSelectedPostRef}
-      />
-
-      <PostDetailSheet
-        post={selectedPost}
-        onClose={() => setSelectedPostRef(null)}
-        onLike={likePost}
-        onOpenMap={(mapId) => { setSelectedPostRef(null); openMapEditor(mapId) }}
-        onUnpublish={unpublish}
-      />
-
-      {shareEditorImage ? (
-        <Suspense fallback={<ScreenFallback />}>
-          <MapShareEditor
-            mapImage={shareEditorImage}
-            mapTitle={activeMap?.title || "LOCA"}
-            mapTheme={activeMap?.theme}
-            mapFeatures={activeFeatures}
-            shareUrl={shareUrl}
-            onClose={() => setShareEditorImage(null)}
-            showToast={showToast}
-          />
-        </Suspense>
-      ) : null}
-
-      <SharePlaceSheet
-        pendingSharePlace={pendingSharePlace}
-        maps={maps}
-        features={features}
-        onSaveToMap={saveSharePlaceToMap}
-        onClose={() => setPendingSharePlace(null)}
-      />
-
-      {importSheetOpen ? (
-        <Suspense fallback={null}>
-          <ImportMapSheet
-            open={importSheetOpen}
-            onClose={() => setImportSheetOpen(false)}
-            onImport={handleImportMap}
-            showToast={showToast}
-          />
-        </Suspense>
-      ) : null}
 
       <Toast message={toast.message} />
     </div>

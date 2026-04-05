@@ -21,19 +21,16 @@ const getFeatureDefaultEmoji = (type) => {
   return "\uD83D\uDCCD"
 }
 
-const getFeatureCenter = (feature) => {
-  if (!feature) return null
-  if (feature.type === "pin") return { lat: feature.lat, lng: feature.lng, zoom: 16 }
-  if (!feature.points?.length) return null
-  const total = feature.points.reduce(
-    (acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }),
-    { lat: 0, lng: 0 },
-  )
-  return {
-    lat: total.lat / feature.points.length,
-    lng: total.lng / feature.points.length,
-    zoom: 15,
-  }
+import { getFeatureCenter } from "../lib/appUtils"
+
+// 두 좌표 간 거리 (km) — haversine
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const toRad = (d) => d * Math.PI / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 /**
@@ -74,6 +71,7 @@ export function useFeatureEditing({
   maps,
   features,
   refreshGameProfile,
+  myLocation,
 }) {
   const focusFeature = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
@@ -302,6 +300,17 @@ export function useFeatureEditing({
     }
 
     if (editorMode === "pin") {
+      // 커뮤니티 모드: 내 위치 1km 이내만 핀 추가 가능
+      if (activeMapSource === "community") {
+        if (!myLocation) {
+          return showToast("위치 권한을 허용하면 내 근처에 장소를 추가할 수 있어요.")
+        }
+        const dist = haversineKm(myLocation.lat, myLocation.lng, sc.lat, sc.lng)
+        if (dist > 1) {
+          return showToast(`내 위치에서 ${dist.toFixed(1)}km 떨어져 있어요. 1km 이내만 추가할 수 있어요.`)
+        }
+      }
+
       let nextFeature = {
         id: createId("feat"),
         mapId: activeMapId,
