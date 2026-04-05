@@ -311,7 +311,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           + `<div class="loca-dir-arrow"></div>`
           + `</div>`
           + (levelEmoji.startsWith("/")
-            ? `<div class="loca-level-emoji"><img src="${levelEmoji}" alt="" style="width:28px;height:28px;object-fit:contain"/></div>`
+            ? `<div class="loca-level-emoji"><img src="${levelEmoji}" alt="" style="width:36px;height:36px;object-fit:contain"/></div>`
             : `<div class="loca-level-emoji"><span>${escapeHtml(levelEmoji)}</span></div>`)
           + `</div>`
         const locMarker = new naverMaps.Marker({

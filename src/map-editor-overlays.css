@@ -3203,8 +3203,8 @@
   gap: 12px;
 }
 .home-profile-simple__emoji {
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3213,8 +3213,8 @@
   overflow: hidden;
 }
 .home-profile-simple__cloud {
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
 .home-profile-simple__info {
@@ -4707,7 +4707,7 @@
 
 /* 등급표 캐릭터 이미지 */
 .level-chart-item__cloud {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
