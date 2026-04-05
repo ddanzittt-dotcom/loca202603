@@ -23,6 +23,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
   const ignoreMapTapUntilRef = useRef(0)
   const lastFeatureTapRef = useRef({ featureId: null, at: 0 })
   const [mapReady, setMapReady] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(3) // 1=far, 2=mid, 3=close
 
   useImperativeHandle(ref, () => ({
     async capture() {
@@ -114,6 +115,9 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const s = zoomScale(zoom)
           containerRef.current?.style.setProperty("--map-scale", s)
           containerRef.current?.setAttribute("data-zoom", zoom < 12 ? "far" : "near")
+          // 3단계 줌 레벨
+          const newLevel = zoom < 13 ? 1 : zoom < 16 ? 2 : 3
+          if (!cancelled) setZoomLevel(newLevel)
         }
         naverMaps.Event.addListener(map, "zoom_changed", applyZoomScale)
         applyZoomScale()
@@ -174,27 +178,105 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         naverMaps.Event.addListener(target, "click", handleSelect)
       }
 
-      features.forEach((feature) => {
+      // ─── 클러스터링 (줌아웃/중간 줌에서만) ───
+      const pins = features.filter((f) => f.type === "pin" && f.lat && f.lng && !(f.lat === 0 && f.lng === 0))
+      const nonPins = features.filter((f) => f.type !== "pin")
+      const clusterDist = [40, 30, 0][zoomLevel - 1] // px 단위 거리
+
+      let clusteredPins = []
+      let clusters = []
+
+      if (clusterDist > 0 && pins.length > 1) {
+        // 좌표 → 화면 픽셀 변환
+        const projection = map.getProjection()
+        const pxPins = pins.map((p) => {
+          const pt = projection.fromCoordToOffset(toLatLng(p.lat, p.lng))
+          return { feature: p, x: pt.x, y: pt.y, clustered: false }
+        })
+
+        for (let i = 0; i < pxPins.length; i++) {
+          if (pxPins[i].clustered) continue
+          const group = [pxPins[i]]
+          pxPins[i].clustered = true
+          for (let j = i + 1; j < pxPins.length; j++) {
+            if (pxPins[j].clustered) continue
+            const dx = pxPins[i].x - pxPins[j].x
+            const dy = pxPins[i].y - pxPins[j].y
+            if (Math.sqrt(dx * dx + dy * dy) < clusterDist) {
+              group.push(pxPins[j])
+              pxPins[j].clustered = true
+            }
+          }
+          if (group.length === 1) {
+            clusteredPins.push(group[0].feature)
+          } else {
+            const avgLat = group.reduce((s, p) => s + p.feature.lat, 0) / group.length
+            const avgLng = group.reduce((s, p) => s + p.feature.lng, 0) / group.length
+            clusters.push({ lat: avgLat, lng: avgLng, count: group.length, features: group.map((g) => g.feature) })
+          }
+        }
+      } else {
+        clusteredPins = pins
+      }
+
+      // 클러스터 마커 렌더링
+      clusters.forEach((cluster) => {
+        const size = cluster.count <= 5 ? 26 : cluster.count <= 15 ? 30 : cluster.count <= 50 ? 34 : 38
+        const fontSize = cluster.count <= 5 ? 10 : cluster.count <= 15 ? 11 : cluster.count <= 50 ? 12 : 13
+        const marker = new naverMaps.Marker({
+          position: toLatLng(cluster.lat, cluster.lng),
+          map,
+          icon: {
+            content: `<div class="loca-cluster" style="width:${size}px;height:${size}px;font-size:${fontSize}px">${cluster.count}</div>`,
+            size: new naverMaps.Size(size, size),
+            anchor: new naverMaps.Point(size / 2, size / 2),
+          },
+        })
+        naverMaps.Event.addListener(marker, "click", () => {
+          // 클러스터 탭 → 줌인
+          const bounds = new naverMaps.LatLngBounds()
+          cluster.features.forEach((f) => bounds.extend(toLatLng(f.lat, f.lng)))
+          map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 })
+        })
+        layersRef.current.push(marker)
+      })
+
+      // 개별 핀 + 비핀 피처 렌더링
+      const renderFeatures = [...clusteredPins, ...nonPins]
+      renderFeatures.forEach((feature) => {
         if (feature.type === "pin") {
-          // 미설정 핀(0,0) 스킵 — 템플릿에서 생성 후 위치 미지정 상태
           if (feature.lat === 0 && feature.lng === 0) return
           const isSelected = feature.id === selectedFeatureId
           const isChecked = checkedInIds && checkedInIds.has(feature.id)
           const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
           const catId = feature.category || emojiToCategory(feature.emoji)
           const iconData = getPinIcon(catId)
-          const badgeHtml = `<div class="loca-pin-badge" style="background:${iconData.bg}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${iconData.color}" stroke="none"><path d="${iconData.path}"/></svg></div>`
-          const dotClass = isSelected ? "loca-pin-dot is-selected" : "loca-pin-dot"
-          const labelHtml = showLabels
+
+          // 줌 레벨별 핀 구성
+          const dotSizes = [8, 10, 14]
+          const dotBorders = [1.5, 2, 2.5]
+          const dotSize = dotSizes[zoomLevel - 1]
+          const dotBorder = dotBorders[zoomLevel - 1]
+          const showBadge = zoomLevel >= 2
+          const showPinLabel = zoomLevel === 3 && showLabels
+
+          const badgeHtml = showBadge
+            ? `<div class="loca-pin-badge" style="background:${iconData.bg}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${iconData.color}" stroke="none"><path d="${iconData.path}"/></svg></div>`
+            : ""
+          const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;${isSelected ? "border-color:#2D4A3E" : ""}`
+          const labelHtml = showPinLabel
             ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
             : ""
+          const markerSize = zoomLevel === 1 ? 20 : zoomLevel === 2 ? 30 : 40
+          const anchorY = zoomLevel === 1 ? 10 : zoomLevel === 2 ? 20 : 48
+
           const marker = new naverMaps.Marker({
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-pin-marker">${checkBadge}${badgeHtml}<div class="${dotClass}"></div>${labelHtml}</div>`,
-              size: new naverMaps.Size(40, 70),
-              anchor: new naverMaps.Point(20, 48),
+              content: `<div class="loca-pin-marker">${checkBadge}${badgeHtml}<div class="loca-pin-dot${isSelected ? " is-selected" : ""}" style="${dotStyle}"></div>${labelHtml}</div>`,
+              size: new naverMaps.Size(markerSize, markerSize + 30),
+              anchor: new naverMaps.Point(markerSize / 2, anchorY),
             },
           })
           bindFeatureSelection(marker, feature.id)
@@ -337,7 +419,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("네이버 지도 레이어 업데이트 실패:", e)
     }
-  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels])
+  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
 
   // Focus
   useEffect(() => {

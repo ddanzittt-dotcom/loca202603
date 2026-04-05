@@ -95,6 +95,23 @@
   transition: opacity 0.2s ease;
 }
 
+/* 클러스터 마커 */
+.loca-cluster {
+  border-radius: 50%;
+  background: #FF6B35;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.loca-cluster:active {
+  transform: scale(1.1);
+}
+
 /* 레거시 호환 */
 .loca-pin-emoji {
   display: flex;
