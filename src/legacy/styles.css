@@ -759,13 +759,7 @@ textarea {
   color: var(--primary);
 }
 .bottom-nav__item.is-active::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--primary);
+  display: none;
 }
 .bottom-nav__icon {
   font-size: 1.25rem;
