@@ -1,18 +1,25 @@
 <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="100" cy="125" rx="65" ry="42" fill="#fff"/>
-  <ellipse cx="62" cy="102" rx="36" ry="28" fill="#fff"/>
-  <ellipse cx="140" cy="104" rx="32" ry="26" fill="#fff"/>
-  <ellipse cx="100" cy="92" rx="38" ry="28" fill="#fff"/>
-  <ellipse cx="72" cy="76" rx="24" ry="17" fill="#fff"/>
-  <ellipse cx="125" cy="80" rx="20" ry="14" fill="#fff"/>
-  <rect x="48" y="58" width="32" height="20" rx="8" fill="#2D4A3E" transform="rotate(-10 64 68)"/>
-  <rect x="138" y="105" width="24" height="30" rx="6" fill="#FF6B35"/>
-  <line x1="138" y1="118" x2="162" y2="118" stroke="#D4836B" stroke-width="1.5"/>
-  <circle cx="84" cy="118" r="9" fill="#378ADD"/>
-  <circle cx="116" cy="118" r="9" fill="#378ADD"/>
-  <circle cx="87" cy="116" r="3" fill="#fff"/>
-  <circle cx="119" cy="116" r="3" fill="#fff"/>
-  <path d="M93 136 Q100 144 107 136" fill="none" stroke="#378ADD" stroke-width="2.5" stroke-linecap="round"/>
-  <ellipse cx="68" cy="130" rx="15" ry="7.5" fill="#FCCCC4" opacity=".4"/>
-  <ellipse cx="132" cy="130" rx="15" ry="7.5" fill="#FCCCC4" opacity=".4"/>
+  <!-- 구름 봉우리 5개 -->
+  <ellipse cx="100" cy="130" rx="65" ry="42" fill="#fff"/>
+  <ellipse cx="58" cy="108" rx="36" ry="28" fill="#fff"/>
+  <ellipse cx="142" cy="110" rx="32" ry="26" fill="#fff"/>
+  <ellipse cx="100" cy="95" rx="40" ry="30" fill="#fff"/>
+  <ellipse cx="72" cy="80" rx="24" ry="17" fill="#fff"/>
+  <ellipse cx="128" cy="82" rx="22" ry="16" fill="#fff"/>
+  <!-- 탐험 모자 (구름 위 중앙) -->
+  <path d="M80 68 Q100 48 120 68" fill="#2D4A3E"/>
+  <rect x="75" y="66" width="50" height="8" rx="3" fill="#2D4A3E"/>
+  <!-- 미니 가방 (우측) -->
+  <rect x="145" y="108" width="20" height="26" rx="5" fill="#FF6B35"/>
+  <line x1="145" y1="118" x2="165" y2="118" stroke="#D4836B" stroke-width="1.5"/>
+  <!-- 눈 -->
+  <circle cx="86" cy="120" r="8" fill="#378ADD"/>
+  <circle cx="114" cy="120" r="8" fill="#378ADD"/>
+  <circle cx="89" cy="118" r="3" fill="#fff"/>
+  <circle cx="117" cy="118" r="3" fill="#fff"/>
+  <!-- 미소 -->
+  <path d="M93 138 Q100 146 107 138" fill="none" stroke="#378ADD" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- 볼터치 -->
+  <ellipse cx="70" cy="132" rx="14" ry="7" fill="#FCCCC4" opacity=".4"/>
+  <ellipse cx="130" cy="132" rx="14" ry="7" fill="#FCCCC4" opacity=".4"/>
 </svg>
