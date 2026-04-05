@@ -77,68 +77,121 @@ export function MapPreview({ title, emojis, placeCount, theme, gradient, variant
 }
 
 // 핀 좌표 중심점 → 지역별 고유 단색
-const REGION_COLORS = [
-  { name: "서울", lat: 37.56, lng: 126.98, color: "#4F46E5" },  // 보라
-  { name: "경기", lat: 37.27, lng: 127.01, color: "#3B82F6" },  // 파랑
-  { name: "인천", lat: 37.45, lng: 126.70, color: "#06B6D4" },  // 시안
-  { name: "강원", lat: 37.87, lng: 128.20, color: "#10B981" },  // 초록
-  { name: "대전", lat: 36.35, lng: 127.38, color: "#F59E0B" },  // 노랑
-  { name: "충북", lat: 36.63, lng: 127.49, color: "#84CC16" },  // 라임
-  { name: "충남", lat: 36.50, lng: 126.80, color: "#14B8A6" },  // 틸
-  { name: "대구", lat: 35.87, lng: 128.60, color: "#EF4444" },  // 빨강
-  { name: "경북", lat: 36.25, lng: 128.96, color: "#F97316" },  // 주황
-  { name: "부산", lat: 35.18, lng: 129.07, color: "#EC4899" },  // 핑크
-  { name: "경남", lat: 35.23, lng: 128.68, color: "#E11D48" },  // 로즈
-  { name: "울산", lat: 35.54, lng: 129.31, color: "#F43F5E" },  // 코랄
-  { name: "광주", lat: 35.16, lng: 126.85, color: "#8B5CF6" },  // 바이올렛
-  { name: "전북", lat: 35.82, lng: 127.15, color: "#A855F7" },  // 퍼플
-  { name: "전남", lat: 34.81, lng: 126.46, color: "#6366F1" },  // 인디고
-  { name: "제주", lat: 33.49, lng: 126.53, color: "#0EA5E9" },  // 스카이
-  { name: "세종", lat: 36.48, lng: 127.26, color: "#22D3EE" },  // 라이트시안
+// 지역 기반 4단계 컬러 팔레트 [dark, mid, light, pale]
+const REGION_PALETTES = {
+  서울: ["#D4836B", "#D99580", "#E0A896", "#E8BCAD"],
+  경기: ["#C48B4C", "#D4A06A", "#E0B585", "#ECCAA0"],
+  인천: ["#C87F5A", "#D49572", "#E0AB8C", "#ECC2A8"],
+  대전: ["#7A9E6B", "#92B284", "#AAC49D", "#C2D6B8"],
+  세종: ["#6E9470", "#88AA89", "#A2BEA3", "#BCD3BD"],
+  충북: ["#8A9B5E", "#9FB078", "#B4C492", "#C9D6AE"],
+  충남: ["#7D9978", "#96AE91", "#AFC3AA", "#C8D8C4"],
+  광주: ["#5A9E91", "#74B2A5", "#90C4B8", "#ACD6CC"],
+  전북: ["#5B9485", "#76AA9C", "#92BEB2", "#AED2C8"],
+  전남: ["#4E8E8A", "#6AA5A0", "#88BAB6", "#A6D0CC"],
+  부산: ["#5B7EA5", "#7596B8", "#90AECA", "#ABC6DC"],
+  대구: ["#7A7BA5", "#9495B8", "#AEAFCA", "#C8C9DC"],
+  울산: ["#6B82A0", "#859AB4", "#9FB2C6", "#BACAD8"],
+  경북: ["#6E7A9E", "#8894B2", "#A3AEC5", "#BEC8D8"],
+  경남: ["#5E7E98", "#7896AE", "#94AEC2", "#B0C6D6"],
+  강원: ["#4A7A60", "#649478", "#80AE92", "#9CC8AC"],
+  제주: ["#C47A6E", "#D09488", "#DCAEA2", "#E8C8BE"],
+}
+
+const REGION_GEO = [
+  { name: "서울", lat: 37.56, lng: 126.98 },
+  { name: "경기", lat: 37.27, lng: 127.01 },
+  { name: "인천", lat: 37.45, lng: 126.70 },
+  { name: "강원", lat: 37.87, lng: 128.20 },
+  { name: "대전", lat: 36.35, lng: 127.38 },
+  { name: "충북", lat: 36.63, lng: 127.49 },
+  { name: "충남", lat: 36.50, lng: 126.80 },
+  { name: "대구", lat: 35.87, lng: 128.60 },
+  { name: "경북", lat: 36.25, lng: 128.96 },
+  { name: "부산", lat: 35.18, lng: 129.07 },
+  { name: "경남", lat: 35.23, lng: 128.68 },
+  { name: "울산", lat: 35.54, lng: 129.31 },
+  { name: "광주", lat: 35.16, lng: 126.85 },
+  { name: "전북", lat: 35.82, lng: 127.15 },
+  { name: "전남", lat: 34.81, lng: 126.46 },
+  { name: "제주", lat: 33.49, lng: 126.53 },
+  { name: "세종", lat: 36.48, lng: 127.26 },
 ]
 
-function locationColor(pins) {
-  const validPins = pins.filter((p) => p.lat && p.lng)
-  if (validPins.length === 0) return "#98A2B3" // 기본 회색
-
-  const avgLat = validPins.reduce((s, p) => s + p.lat, 0) / validPins.length
-  const avgLng = validPins.reduce((s, p) => s + p.lng, 0) / validPins.length
-
-  // 가장 가까운 지역 찾기
-  let closest = REGION_COLORS[0]
+function getRegionInfo(pins) {
+  const valid = pins.filter((p) => p.lat && p.lng)
+  if (valid.length === 0) return { name: "서울", palette: REGION_PALETTES["서울"] }
+  const avgLat = valid.reduce((s, p) => s + p.lat, 0) / valid.length
+  const avgLng = valid.reduce((s, p) => s + p.lng, 0) / valid.length
+  let closest = REGION_GEO[0]
   let minDist = Infinity
-  for (const region of REGION_COLORS) {
-    const dist = (region.lat - avgLat) ** 2 + (region.lng - avgLng) ** 2
-    if (dist < minDist) { minDist = dist; closest = region }
+  for (const r of REGION_GEO) {
+    const d = (r.lat - avgLat) ** 2 + (r.lng - avgLng) ** 2
+    if (d < minDist) { minDist = d; closest = r }
   }
-  return closest.color
+  return { name: closest.name, palette: REGION_PALETTES[closest.name] || REGION_PALETTES["서울"] }
+}
+
+function formatRelativeDate(dateStr) {
+  if (!dateStr) return ""
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
+  if (diff <= 0) return "오늘"
+  if (diff === 1) return "어제"
+  if (diff < 7) return `${diff}일 전`
+  if (diff < 30) return `${Math.floor(diff / 7)}주 전`
+  return `${Math.floor(diff / 30)}달 전`
 }
 
 export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
-  const pins = features.filter((feature) => feature.type === "pin")
-  const color = locationColor(pins)
+  const pins = features.filter((f) => f.type === "pin")
+  const routes = features.filter((f) => f.type === "route")
+  const areas = features.filter((f) => f.type === "area")
+  const region = getRegionInfo(pins)
+  const pal = region.palette // [dark, mid, light, pale]
 
-  const mapType = map.category === "event" ? "event map" : map.importedFrom ? "viewer" : "editor"
-  const badgeClass = mapType === "event map" ? "map-type-badge--event" : mapType === "viewer" ? "map-type-badge--viewer" : "map-type-badge--editor"
+  const isEvent = map.category === "event"
+  const cardType = isEvent ? "event" : "editor"
+  const lastMod = formatRelativeDate(map.updatedAt)
+
+  // blob 위치에 약간의 변주
+  const hash = (map.title || "").length % 4
+  const blobOffsets = [hash * 5, (hash + 1) * 4, (hash + 2) * 3]
 
   return (
-    <article className="map-card" onClick={() => onOpen(map.id)}>
-      <div className="map-card__preview" style={{ background: color }}>
-        <span className={`map-type-badge ${badgeClass}`}>{mapType}</span>
+    <article className="mc" onClick={() => onOpen(map.id)} style={{ background: pal[3] }}>
+      {/* Blobs */}
+      <div className="mc__blob" style={{ left: -15 + blobOffsets[0], bottom: -15, width: 160, height: 100, background: `${pal[0]}73` }} />
+      <div className="mc__blob" style={{ right: -10 + blobOffsets[1], top: -10, width: 130, height: 85, background: `${pal[3]}80` }} />
+      <div className="mc__blob" style={{ left: `${35 + blobOffsets[2]}%`, top: "30%", width: 90, height: 60, background: `${pal[1]}4D` }} />
+
+      {/* 좌상단: 지역 칩 */}
+      <div className="mc__region">
+        <span className="mc__region-dot" style={{ background: `${pal[0]}66` }} />
+        <span className="mc__region-label">{region.name}</span>
       </div>
-      <div className="map-card__body">
-        <div className="map-card__header">
-          <div className="map-card__info">
-            <h2>{map.title}</h2>
-            <span className="map-card__count">{pins.length}곳</span>
-          </div>
-          <div className="map-card__btns">
-            <button className="map-card__icon-btn" type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}><Pencil size={15} /></button>
-            {onDelete ? (
-              <button className="map-card__icon-btn map-card__icon-btn--del" type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}><Trash2 size={15} /></button>
-            ) : null}
-          </div>
+
+      {/* 우상단: 타입 뱃지 */}
+      <div className="mc__badges">
+        <span className="mc__badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
+          {isEvent ? "Event" : "Editor"}
+        </span>
+      </div>
+
+      {/* 하단 오버레이 */}
+      <div className="mc__bottom">
+        <p className="mc__title">{map.title}</p>
+        <div className="mc__meta">
+          <span><MapPin size={10} fill="#fff" stroke="#fff" /> {pins.length}</span>
+          <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1,8 4,3 7,6 9,2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> {routes.length}</span>
+          <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1" width="8" height="8" rx="2" stroke="#fff" strokeWidth="1" strokeDasharray="2 1.5"/></svg> {areas.length}</span>
+          <span className="mc__meta-sep">· {lastMod}</span>
         </div>
+      </div>
+
+      {/* 편집/삭제 (카드 외부에서 접근) */}
+      <div className="mc__actions">
+        <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}><Pencil size={12} color="#fff" /></button>
+        {onDelete ? <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}><Trash2 size={12} color="#fff" /></button> : null}
       </div>
     </article>
   )
