@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Settings, Upload, MapPin } from "lucide-react"
 import { BottomSheet } from "../components/ui"
 import { mapThemeGradient } from "../lib/appUtils"
 import { redeemInvitationCode } from "../lib/mapService"
@@ -17,7 +18,7 @@ function ProfileMapCard({ map, pinFeatures, onClick }) {
       </div>
       <div className="profile-map-card__body">
         <strong>{map.title}</strong>
-        <span>📍 {pinFeatures.length}</span>
+        <span><MapPin size={12} /> {pinFeatures.length}</span>
       </div>
     </button>
   )
@@ -43,8 +44,6 @@ export function ProfileScreen({
   onChangeCharacter,
   hasB2BAccess = false,
   onB2BAccessChange,
-  userStats,
-  souvenirs = [],
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editName, setEditName] = useState(user.name)
@@ -104,7 +103,7 @@ export function ProfileScreen({
               <div className="profile-page__name-row">
                 <strong>{user.name}</strong>
                 <button className="button button--primary profile-page__publish" type="button" onClick={onPublishOpen}>
-                  지도 올리기
+                  <Upload size={14} /> 지도 올리기
                 </button>
               </div>
               <span className="profile-hero__handle">{user.handle}</span>
@@ -112,7 +111,7 @@ export function ProfileScreen({
             </div>
           </div>
           <button className="icon-button profile-page__settings" type="button" onClick={handleOpenSettings} aria-label="설정">
-            ⚙️
+            <Settings size={18} />
           </button>
         </div>
 

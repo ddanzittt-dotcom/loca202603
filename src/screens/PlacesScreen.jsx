@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { Search as SearchIcon } from "lucide-react"
 import { EmptyState } from "../components/ui"
 import { featureSort } from "../lib/appUtils"
 
@@ -25,7 +26,7 @@ export function PlacesScreen({ maps, features, onOpenFeature }) {
       </div>
 
       <label className="search-box">
-        <span aria-hidden="true">🔎</span>
+        <SearchIcon size={16} aria-hidden="true" />
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름, 태그, 메모 검색" />
       </label>
 
