@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react"
 import { ArrowLeft, X, ChevronRight } from "lucide-react"
+import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
@@ -125,7 +126,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
           <div className="shared-viewer__selected">
             <div className="shared-viewer__selected-head">
               <div className="shared-viewer__selected-info">
-                <strong>{selectedFeature.emoji} {selectedFeature.title}</strong>
+                <strong>{(() => { const ic = getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)); return <><span className="sv-cat-icon" style={{background:ic.bg}}><svg width="12" height="12" viewBox="0 0 24 24" fill={ic.color} stroke="none"><path d={ic.path}/></svg></span>{selectedFeature.title}</> })()} </strong>
               </div>
               <button className="shared-viewer__close-btn" type="button" onClick={() => setSelectedId(null)}><X size={18} /></button>
             </div>

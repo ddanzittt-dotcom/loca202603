@@ -4721,3 +4721,19 @@
   object-fit: contain;
   display: block;
 }
+
+/* 요약 카드 아이콘 */
+.me-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.me-summary-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

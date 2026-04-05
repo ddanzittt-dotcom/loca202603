@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState, useRef } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MapPin } from "lucide-react"
+import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -309,8 +310,13 @@ export function MapEditorScreen({
           <article className="map-feature-summary">
             <div className="map-feature-summary__head">
               <div>
-                <strong>
-                  {selectedFeatureSummary.emoji} {selectedFeatureSummary.title}
+                <strong className="me-summary-title">
+                  {(() => {
+                    const catId = selectedFeatureSummary.category || emojiToCategory(selectedFeatureSummary.emoji)
+                    const iconData = getPinIcon(catId)
+                    return <span className="me-summary-icon" style={{ background: iconData.bg }}><svg width="14" height="14" viewBox="0 0 24 24" fill={iconData.color} stroke="none"><path d={iconData.path} /></svg></span>
+                  })()}
+                  {selectedFeatureSummary.title}
                 </strong>
                 <span>{formatFeatureMeta(selectedFeatureSummary)}</span>
               </div>
