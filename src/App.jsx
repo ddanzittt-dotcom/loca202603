@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Geolocation } from "@capacitor/geolocation"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { Bell } from "lucide-react"
 import { BottomNav, Toast } from "./components/ui"
 import {
   collections,
@@ -8,7 +8,6 @@ import {
   demoFeatures,
   demoMaps,
   featuresSeed,
-  followedSeed,
   mapsSeed,
   me,
   sharesSeed,
@@ -22,27 +21,12 @@ import {
   buildMapShareUrl,
   buildOwnPosts,
   buildSlugShareUrl,
-  createId,
   parseAppLocation,
   placeEmojis,
   themePalette,
 } from "./lib/appUtils"
-import { logEvent } from "./lib/analytics"
-import { getCurrentSession, onAuthStateChange, signOut } from "./lib/auth"
 import { hasSupabaseEnv } from "./lib/supabase"
-import {
-  checkB2BAccess as checkB2BAccessRecord,
-  createFeature as createFeatureRecord,
-  createMap as createMapRecord,
-  followUser as followUserRecord,
-  getMyAppData,
-  getProfile as getProfileRecord,
-  getPublishedMapBySlug,
-  publishMap as publishMapRecord,
-  unfollowUser as unfollowUserRecord,
-  updateProfile as updateProfileRecord,
-  friendlySupabaseError,
-} from "./lib/mapService"
+import { getPublishedMapBySlug } from "./lib/mapService"
 // 라우트별 코드 스플리팅 — 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
@@ -55,16 +39,13 @@ const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) 
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
-import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
+import { useFeatureEditing } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
+import { useAppSession } from "./hooks/useAppSession"
+import { useGamification } from "./hooks/useGamification"
+import { useGeolocation } from "./hooks/useGeolocation"
+import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
-import {
-  getGameProfile as fetchGameProfile,
-  checkAndAwardBadges,
-  computeLocalStats,
-  updateStreak,
-} from "./lib/gamificationService"
-import { getLevelForXp } from "./data/gamification"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
@@ -99,15 +80,12 @@ export default function App() {
   const [maps, setMaps] = useLocalStorageState("loca.mobile.maps", mapsSeed)
   const [features, setFeatures] = useLocalStorageState("loca.mobile.features", featuresSeed)
   const [shares, setShares] = useLocalStorageState("loca.mobile.shares", sharesSeed)
-  const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", followedSeed)
+  const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", [])
   const [communityPosts, setCommunityPosts] = useLocalStorageState("loca.mobile.communityPosts", communityPostsSeed)
   const [likedPosts, setLikedPosts] = useLocalStorageState("loca.mobile.likedPosts", [])
   const [communityMapFeatures, setCommunityMapFeatures] = useLocalStorageState("loca.mobile.communityMapFeatures", communityMapFeaturesSeed)
-  const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
-  const [authUser, setAuthUser] = useState(null)
-  const [hasB2BAccess, setHasB2BAccess] = useState(false)
   const [viewerProfile, setViewerProfile] = useLocalStorageState("loca.mobile.viewerProfile", me)
-  const [cloudLoading, setCloudLoading] = useState(false)
+
   const routeAtLoad = useMemo(() => {
     try {
       return parseAppLocation(window.location)
@@ -140,44 +118,34 @@ export default function App() {
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const [importSheetOpen, setImportSheetOpen] = useState(false)
   const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
-  const [myLocation, setMyLocation] = useState(null)
-  const watchIdRef = useRef(null)
-  const prevLocationRef = useRef(null)
+
   const isOnline = useOnlineStatus()
   const toast = useToast()
   const showToast = toast.show
+
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
   useEffect(() => {
     cleanupOrphanedMedia([...features, ...communityMapFeatures])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-  const readLocalImportData = useCallback(() => {
-    const readStored = (key) => {
-      try {
-        const raw = window.localStorage.getItem(key)
-        if (!raw) return { exists: false, value: [] }
-        return { exists: true, value: JSON.parse(raw) }
-      } catch {
-        return { exists: false, value: [] }
-      }
-    }
-    const storedMaps = readStored("loca.mobile.maps")
-    const storedFeatures = readStored("loca.mobile.features")
-    const storedShares = readStored("loca.mobile.shares")
-    const storedFollowed = readStored("loca.mobile.followed")
-    return {
-      maps: storedMaps.value,
-      features: storedFeatures.value,
-      shares: storedShares.value,
-      followed: storedFollowed.value,
-      hasAny:
-        (storedMaps.exists && storedMaps.value.length > 0) ||
-        (storedFeatures.exists && storedFeatures.value.length > 0) ||
-        (storedShares.exists && storedShares.value.length > 0) ||
-        (storedFollowed.exists && storedFollowed.value.length > 0),
-    }
-  }, [])
 
-  const cloudMode = hasSupabaseEnv && Boolean(authUser)
+  // --- Session / Auth ---
+
+  const {
+    authReady, authUser, cloudMode, cloudLoading,
+    hasB2BAccess, setHasB2BAccess,
+    gameProfile, setGameProfile,
+    readLocalImportData,
+    handleSignOut, importLocalDataToCloud,
+  } = useAppSession({
+    setMaps, setFeatures, setShares, setFollowed, setViewerProfile,
+    setActiveTab, setMapsView, setActiveMapSource, setActiveMapId,
+    setSelectedFeatureId, setSelectedFeatureSummaryId,
+    setFeatureSheet, setEditorMode, setDraftPoints,
+    setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef,
+    setSharedMapData, setShareEditorImage,
+    showToast, routeAtLoad,
+  })
+
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
   const requiresAuthForCurrentTab =
     activeTab === "profile" ||
@@ -185,6 +153,20 @@ export default function App() {
     (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
   const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
   const showPersonalLoading = hasSupabaseEnv && (!authReady || cloudLoading) && requiresAuthForCurrentTab
+
+  // --- Gamification ---
+
+  const { refreshGameProfile, userStats, levelEmoji, souvenirs } = useGamification({
+    cloudMode, authUser,
+    gameProfile, setGameProfile,
+    maps, features,
+  })
+
+  // --- Geolocation ---
+
+  const { myLocation, locateMe } = useGeolocation({ setFocusPoint, showToast })
+
+  // --- Derived data ---
 
   const usersById = useMemo(() => {
     const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
@@ -228,47 +210,6 @@ export default function App() {
     return [...fromCollections, ...fromPosts]
   }, [communityFeed])
 
-  // ─── 게이미피케이션 상태 ───
-  const [gameProfile, setGameProfile] = useState(null) // normalized { stats, badges, souvenirs }
-  const [recentReward, setRecentReward] = useState(null) // { type, xp, badge, ... }
-
-  // cloud mode: 서버 프로필 로드 / local mode: null
-  const refreshGameProfile = useCallback(async () => {
-    if (!cloudMode) { setGameProfile(null); return }
-    const profile = await fetchGameProfile()
-    if (profile) setGameProfile(profile)
-  }, [cloudMode])
-
-  // 초기 로드 + auth 전환 시
-  useEffect(() => {
-    refreshGameProfile()
-  }, [refreshGameProfile, authUser]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // userStats: 화면에 전달하는 통합 shape (cloud/local 무관하게 같은 형태)
-  const userStats = useMemo(() => {
-    if (cloudMode && gameProfile?.stats) {
-      return gameProfile.stats // 이미 camelCase normalize됨
-    }
-    // local fallback
-    return computeLocalStats({ maps, features })
-  }, [cloudMode, gameProfile, maps, features])
-
-  const levelEmoji = useMemo(() => getLevelForXp(userStats?.xp || 0).emoji, [userStats])
-
-  const userBadges = useMemo(() => gameProfile?.badges || [], [gameProfile])
-  const userBadgeIds = useMemo(() => userBadges.map((b) => b.badge_id), [userBadges])
-  const souvenirs = useMemo(() => gameProfile?.souvenirs || [], [gameProfile])
-
-  // 배지 자동 체크 + 부여 (서버 프로필 갱신 시)
-  useEffect(() => {
-    if (!cloudMode || !gameProfile?.stats) return
-    checkAndAwardBadges(userStats, userBadgeIds).then((newIds) => {
-      if (newIds.length > 0) {
-        refreshGameProfile() // 뱃지 반영된 프로필 다시 로드
-      }
-    })
-  }, [cloudMode, gameProfile, userStats, userBadgeIds, refreshGameProfile])
-
   const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
   const selectedUserPosts = useMemo(
     () => communityFeed.filter((post) => post.user.id === selectedUserId),
@@ -287,7 +228,6 @@ export default function App() {
   const unpublishedMaps = maps.filter((mapItem) => !shares.some((share) => share.mapId === mapItem.id))
   const shareUrl = useMemo(() => {
     if (!activeMap) return ""
-    // 발행된 지도(slug 있음) → 슬러그 URL, 아니면 → 인코딩 URL
     if (activeMap.slug && activeMap.isPublished) {
       return buildSlugShareUrl(activeMap.slug, "link")
     }
@@ -334,7 +274,6 @@ export default function App() {
     const bundle = await getPublishedMapBySlug(slugCode)
     if (!bundle) throw new Error("해당 코드의 지도를 찾을 수 없어요.")
     const { map: importedMap, features: importedFeatures } = bundle
-    // 이미 가져온 지도인지 확인
     if (maps.some((m) => m.id === importedMap.id)) {
       showToast("이미 목록에 있는 지도예요.")
       openMapEditor(importedMap.id)
@@ -364,67 +303,23 @@ export default function App() {
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
 
-  // --- Auth & Cloud ---
+  // --- Social / Profile ---
 
-  const loadCloudData = useCallback(async (user) => {
-    if (!hasSupabaseEnv || !user) return
-    setCloudLoading(true)
-    try {
-      const [appData, profile, b2bAccess] = await Promise.all([
-        getMyAppData(),
-        getProfileRecord(user.id),
-        checkB2BAccessRecord().catch(() => false),
-      ])
-      setHasB2BAccess(b2bAccess)
+  const {
+    handleUpdateProfile, toggleFollow, likePost, saveSharePlaceToMap,
+  } = useSocialProfile({
+    cloudMode, authUser,
+    followed, setFollowed,
+    likedPosts, setLikedPosts,
+    setShares, setCommunityPosts,
+    setViewerProfile,
+    setFeatures, setActiveTab, setMapsView, setActiveMapId, setActiveMapSource,
+    setSelectedFeatureId, setFeatureSheet, setEditorMode,
+    pendingSharePlace, setPendingSharePlace,
+    touchMap, showToast,
+  })
 
-      const nextProfile = {
-        id: user.id,
-        name: profile.nickname || user.user_metadata?.name || user.email?.split("@")[0] || "LOCA 사용자",
-        handle: profile.slug ? `@${profile.slug}` : `@${(profile.nickname || user.email?.split("@")[0] || "loca").toLowerCase().replace(/\s+/g, "_")}`,
-        emoji: profile.avatar_url || me.emoji,
-        bio: profile.bio || me.bio,
-        followers: 0,
-        following: appData.followed.length,
-        verified: false,
-        type: "creator",
-      }
-
-      // 클라우드가 비어있고 로컬에 데이터가 있으면 자동 마이그레이션 알림
-      const cloudEmpty = appData.maps.length === 0
-      const localData = readLocalImportData()
-      const hasLocalData = localData.hasAny && localData.maps.length > 0
-        && !localData.maps.every((m) => mapsSeed.some((s) => s.id === m.id))
-
-      setMaps(appData.maps)
-      setFeatures(appData.features)
-      setShares(appData.shares)
-      setFollowed(appData.followed)
-      setViewerProfile(nextProfile)
-
-      // 스트릭 + 서버 통계 갱신
-      updateStreak().catch(() => {})
-
-      if (cloudEmpty && hasLocalData) {
-        showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
-      }
-
-      setActiveMapId((current) => {
-        if (current && appData.maps.some((mapItem) => mapItem.id === current)) return current
-        return appData.maps[0]?.id ?? null
-      })
-      if (routeAtLoad?.type === "map" && appData.maps.some((mapItem) => mapItem.id === routeAtLoad.mapId)) {
-        setActiveTab("maps")
-        setMapsView("editor")
-        setActiveMapSource("local")
-        setActiveMapId(routeAtLoad.mapId)
-      }
-    } catch (error) {
-      console.error("Failed to load Supabase app data", error)
-      showToast("Supabase 데이터를 불러오지 못했어요.")
-    } finally {
-      setCloudLoading(false)
-    }
-  }, [readLocalImportData, routeAtLoad, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, showToast])
+  // --- Route effects ---
 
   useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
@@ -439,7 +334,6 @@ export default function App() {
   useEffect(() => {
     if (routeAtLoad?.type !== "slug" || !hasSupabaseEnv) return
     let isMounted = true
-    setCloudLoading(true)
     getPublishedMapBySlug(routeAtLoad.slug)
       .then((result) => {
         if (!isMounted) return
@@ -456,86 +350,17 @@ export default function App() {
       .catch(() => {
         if (isMounted) showToast("지도를 불러오지 못했어요.")
       })
-      .finally(() => {
-        if (isMounted) setCloudLoading(false)
-      })
     return () => { isMounted = false }
   }, [routeAtLoad, showToast])
 
-  const resetToLoggedOut = useCallback(() => {
-    setMaps(mapsSeed)
-    setFeatures(featuresSeed)
-    setShares(sharesSeed)
-    setFollowed(followedSeed)
-    setViewerProfile(me)
-    setHasB2BAccess(false)
-    setActiveTab("home")
-    setMapsView("list")
-    setActiveMapSource("local")
-    setActiveMapId(mapsSeed[0]?.id ?? null)
-    setSelectedFeatureId(null)
-    setSelectedFeatureSummaryId(null)
-    setFeatureSheet(null)
-    setEditorMode("browse")
-    setDraftPoints([])
-    setMapSheet(null)
-    setPublishSheet(null)
-    setSelectedUserId(null)
-    setSelectedPostRef(null)
-    setSharedMapData(null)
-    setShareEditorImage(null)
-    setGameProfile(null)
-    setRecentReward(null)
-  }, [setFeatures, setFollowed, setMaps, setShares, setViewerProfile])
-
-  useEffect(() => {
-    if (!hasSupabaseEnv) return undefined
-
-    let isMounted = true
-
-    getCurrentSession()
-      .then((session) => {
-        if (!isMounted) return
-        setAuthUser(session?.user ?? null)
-        setAuthReady(true)
-        if (session?.user) {
-          loadCloudData(session.user)
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to resolve initial auth session", error)
-        if (isMounted) setAuthReady(true)
-      })
-
-    const { data: subscription } = onAuthStateChange((user) => {
-      if (!isMounted) return
-      setAuthUser(user)
-      setAuthReady(true)
-      if (user) {
-        loadCloudData(user)
-      } else {
-        // 세션 만료 또는 외부 로그아웃 감지 시 상태 초기화
-        resetToLoggedOut()
-      }
-    })
-
-    return () => {
-      isMounted = false
-      subscription.subscription.unsubscribe()
-    }
-  }, [loadCloudData, resetToLoggedOut])
-
-  useEffect(() => {
-    if (activeMapSource !== "local") return
-    if (activeMapId && maps.some((mapItem) => mapItem.id === activeMapId)) return
-    if (mapsView === "editor" && maps.length === 0) {
+  // 로컬 모드에서 현재 activeMapId가 maps에 없으면 보정 (렌더 중 조건부 setState — React 공식 패턴)
+  if (activeMapSource === "local") {
+    if (mapsView === "editor" && maps.length === 0 && activeMapId) {
       setMapsView("list")
-      return
-    }
-    if (maps.length > 0) {
+    } else if (activeMapId && !maps.some((mapItem) => mapItem.id === activeMapId) && maps.length > 0) {
       setActiveMapId(maps[0].id)
     }
-  }, [activeMapId, activeMapSource, maps, mapsView])
+  }
 
   useEffect(() => {
     const nextPath = activeTab === "maps" && mapsView === "editor" && activeMapId
@@ -548,256 +373,6 @@ export default function App() {
       window.history.replaceState(null, "", nextPath)
     }
   }, [activeMapId, activeMapSource, activeTab, mapsView, sharedMapData])
-
-  // --- Profile & Social ---
-
-  const saveSharePlaceToMap = useCallback(async (targetMapId) => {
-    if (!pendingSharePlace || !targetMapId) return
-    const place = pendingSharePlace
-    if (place.lat != null && place.lng != null) {
-      const nextFeature = {
-        id: createId("feat"),
-        mapId: targetMapId,
-        type: "pin",
-        title: place.title || "공유 장소",
-        emoji: "\uD83D\uDCCD",
-        lat: place.lat,
-        lng: place.lng,
-        tags: [],
-        note: place.source !== "unknown" ? `${place.source} 에서 공유됨` : "",
-        highlight: false,
-        updatedAt: new Date().toISOString(),
-      }
-      if (cloudMode) {
-        try {
-          const created = await createFeatureRecord(targetMapId, nextFeature)
-          setFeatures((current) => [created, ...current])
-        } catch (error) {
-          console.error("Failed to create shared place pin", error)
-          showToast("장소를 저장하지 못했어요.")
-          return
-        }
-      } else {
-        setFeatures((current) => [nextFeature, ...current])
-      }
-      touchMap(targetMapId)
-      setPendingSharePlace(null)
-      setActiveTab("maps")
-      setMapsView("editor")
-      setActiveMapId(targetMapId)
-      setActiveMapSource("local")
-      setSelectedFeatureId(nextFeature.id)
-      setFeatureSheet(toEditableFeature(nextFeature))
-      setEditorMode("browse")
-      showToast("장소가 저장되었어요.")
-    } else {
-      setPendingSharePlace(null)
-      setActiveTab("maps")
-      setMapsView("editor")
-      setActiveMapId(targetMapId)
-      setActiveMapSource("local")
-      setEditorMode("pin")
-      showToast("지도를 탭해서 위치를 지정하세요")
-    }
-  }, [cloudMode, pendingSharePlace, setFeatures, showToast, touchMap])
-
-  const handleUpdateProfile = useCallback(async ({ name, bio, emoji }) => {
-    // optimistic update
-    setViewerProfile((prev) => ({
-      ...prev,
-      name: name ?? prev.name,
-      bio: bio ?? prev.bio,
-      emoji: emoji ?? prev.emoji,
-    }))
-
-    if (cloudMode && authUser) {
-      try {
-        await updateProfileRecord(authUser.id, {
-          nickname: name ?? undefined,
-          bio: bio ?? undefined,
-          avatar_url: emoji ?? undefined,
-        })
-      } catch (error) {
-        showToast(friendlySupabaseError(error))
-      }
-    }
-  }, [authUser, cloudMode, setViewerProfile, showToast])
-
-  const toggleFollow = async (userId) => {
-    const isFollowing = followed.includes(userId)
-    try {
-      if (cloudMode) {
-        if (isFollowing) await unfollowUserRecord(userId)
-        else await followUserRecord(userId)
-      }
-      logEvent("follow_toggle", { meta: { target_user_id: userId, action: isFollowing ? "unfollow" : "follow" } })
-      setFollowed((current) => (current.includes(userId) ? current.filter((id) => id !== userId) : [...current, userId]))
-    } catch (error) {
-      console.error("Failed to toggle follow", error)
-      showToast("팔로우 상태를 바꾸지 못했어요.")
-    }
-  }
-
-  const likePost = (source, postId) => {
-    const likeKey = `${source}:${postId}`
-    if (likedPosts.includes(likeKey)) {
-      showToast("이미 좋아요를 눌렀어요.")
-      return
-    }
-    setLikedPosts((current) => [...current, likeKey])
-    if (source === "own") {
-      return setShares((current) => current.map((share) => (share.id === postId ? { ...share, likes: share.likes + 1 } : share)))
-    }
-    setCommunityPosts((current) => current.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
-  }
-
-  const importLocalDataToCloud = useCallback(async () => {
-    if (!cloudMode) return showToast("먼저 로그인해 주세요.")
-    // 현재 시점의 localStorage를 읽어서 import
-    const localData = readLocalImportData()
-    if (!localData.hasAny) return showToast("이 기기에서 가져올 로컬 데이터가 없어요.")
-    if (!window.confirm("이 기기에 저장된 로컬 지도를 현재 계정으로 가져올까요?")) return
-
-    try {
-      const mapIdMap = new Map()
-
-      for (const localMap of localData.maps) {
-        const createdMap = await createMapRecord({
-          title: localMap.title,
-          description: localMap.description,
-          theme: localMap.theme,
-          visibility: localMap.visibility || "private",
-          tags: localMap.tags || [],
-        })
-        mapIdMap.set(localMap.id, createdMap)
-      }
-
-      for (const localFeature of localData.features) {
-        const targetMap = mapIdMap.get(localFeature.mapId)
-        if (!targetMap) continue
-        await createFeatureRecord(targetMap.id, {
-          ...localFeature,
-          mapId: targetMap.id,
-        })
-      }
-
-      for (const localShare of localData.shares) {
-        const targetMap = mapIdMap.get(localShare.mapId)
-        if (!targetMap) continue
-        await publishMapRecord(targetMap.id, {
-          caption: localShare.caption || "",
-        })
-      }
-
-      for (const userId of localData.followed) {
-        try {
-          await followUserRecord(userId)
-        } catch (error) {
-          console.warn("Skipping follow import", userId, error)
-        }
-      }
-
-      await loadCloudData(authUser)
-      showToast("이 기기의 로컬 데이터를 계정으로 가져왔어요.")
-    } catch (error) {
-      console.error("Failed to import local data", error)
-      showToast("로컬 데이터를 가져오지 못했어요.")
-    }
-  }, [authUser, cloudMode, loadCloudData, readLocalImportData, showToast])
-
-  const handleSignOut = useCallback(async () => {
-    try {
-      await signOut()
-      resetToLoggedOut()
-      showToast("로그아웃했어요.")
-    } catch (error) {
-      console.error("Failed to sign out", error)
-      showToast("로그아웃하지 못했어요.")
-    }
-  }, [resetToLoggedOut, showToast])
-
-  const calcBearing = useCallback((from, to) => {
-    const toRad = (d) => (d * Math.PI) / 180
-    const toDeg = (r) => (r * 180) / Math.PI
-    const dLng = toRad(to.lng - from.lng)
-    const y = Math.sin(dLng) * Math.cos(toRad(to.lat))
-    const x = Math.cos(toRad(from.lat)) * Math.sin(toRad(to.lat)) -
-      Math.sin(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.cos(dLng)
-    return (toDeg(Math.atan2(y, x)) + 360) % 360
-  }, [])
-
-  const handlePositionUpdate = useCallback((position) => {
-    const coords = { lat: position.coords.latitude, lng: position.coords.longitude }
-    const prev = prevLocationRef.current
-    let heading = myLocation?.heading ?? 0
-    if (position.coords.heading != null && !isNaN(position.coords.heading)) {
-      heading = position.coords.heading
-    } else if (prev) {
-      const dist = Math.abs(coords.lat - prev.lat) + Math.abs(coords.lng - prev.lng)
-      if (dist > 0.00005) {
-        heading = calcBearing(prev, coords)
-      }
-    }
-    prevLocationRef.current = coords
-    setMyLocation({ ...coords, heading })
-  }, [calcBearing, myLocation?.heading])
-
-  const locateMe = async () => {
-    // 이미 추적 중이면 위치로만 이동
-    if (watchIdRef.current != null && myLocation) {
-      setFocusPoint({ lat: myLocation.lat, lng: myLocation.lng, zoom: 16 })
-      showToast("현재 위치로 이동했어요.")
-      return
-    }
-    try {
-      // 첫 위치 가져오기
-      let firstCoords
-      try {
-        const permStatus = await Geolocation.checkPermissions()
-        if (permStatus.location === "denied") {
-          const req = await Geolocation.requestPermissions()
-          if (req.location === "denied") throw new Error("denied")
-        }
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 30000,
-        })
-        firstCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
-      } catch {
-        if (!navigator.geolocation) throw new Error("no-geo")
-        const position = await new Promise((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true, timeout: 10000, maximumAge: 30000,
-          })
-        )
-        firstCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
-      }
-      prevLocationRef.current = firstCoords
-      setMyLocation({ ...firstCoords, heading: 0 })
-      setFocusPoint({ ...firstCoords, zoom: 16 })
-      showToast("현재 위치로 이동했어요.")
-
-      // 연속 추적 시작
-      if (navigator.geolocation && watchIdRef.current == null) {
-        watchIdRef.current = navigator.geolocation.watchPosition(
-          handlePositionUpdate,
-          () => {},
-          { enableHighAccuracy: true, maximumAge: 5000 },
-        )
-      }
-    } catch {
-      showToast("위치를 가져올 수 없어요. 권한을 확인해주세요.")
-    }
-  }
-
-  // 컴포넌트 언마운트 시 watch 정리
-  useEffect(() => () => {
-    if (watchIdRef.current != null) {
-      navigator.geolocation?.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
-  }, [])
 
   // --- Header Config ---
 
@@ -830,18 +405,6 @@ export default function App() {
         onAction: () => setFitTrigger((value) => value + 1),
       }
     }
-    if (activeTab === "maps") {
-      return { subtitle: null, actionLabel: null, onAction: null }
-    }
-    if (activeTab === "profile") {
-      return { subtitle: null, actionLabel: null, onAction: null }
-    }
-    if (activeTab === "places") {
-      return { subtitle: null, actionLabel: null, onAction: null }
-    }
-    if (activeTab === "search") {
-      return { subtitle: null, actionLabel: null, onAction: null }
-    }
     return { subtitle: null, actionLabel: null, onAction: null }
   }, [activeMap, activeMapSource, activeTab, importSharedMapToLocal, mapsView])
 
@@ -872,11 +435,16 @@ export default function App() {
             <span className="top-bar__subtitle">{headerConfig.subtitle}</span>
           ) : null}
         </div>
-        {!(activeTab === "maps" && mapsView === "list") && headerConfig.actionLabel ? (
-          <button className={`button ${activeTab === "profile" ? "button--primary" : "button--ghost"}`} type="button" onClick={headerConfig.onAction}>
-            {headerConfig.actionLabel}
+        <div className="top-bar__actions">
+          {!(activeTab === "maps" && mapsView === "list") && headerConfig.actionLabel ? (
+            <button className={`button ${activeTab === "profile" ? "button--primary" : "button--ghost"}`} type="button" onClick={headerConfig.onAction}>
+              {headerConfig.actionLabel}
+            </button>
+          ) : null}
+          <button className="top-bar__noti-btn" type="button" aria-label="알림">
+            <Bell size={18} />
           </button>
-        ) : null}
+        </div>
       </header>
 
       <main className="content">
@@ -907,7 +475,6 @@ export default function App() {
             souvenirs={souvenirs}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
-            onOpenMaps={() => setActiveTab("maps")}
           />
         ) : null}
 

@@ -170,17 +170,24 @@ export function HomeScreen({
           {streak > 0 ? <span className="home-profile-simple__streak"><Flame size={13} /> {streak}일</span> : null}
         </div>
 
-        {earnedBadges.length > 0 || nextBadge ? (
-          <div className="home-profile-simple__badges">
+      </div>
+
+      {/* ─── 업적 배너 ─── */}
+      {earnedBadges.length > 0 || nextBadge ? (
+        <div className="home-achievement-banner">
+          <div className="home-achievement-banner__icon">
+            <Trophy size={18} />
+          </div>
+          <div className="home-achievement-banner__text">
             {earnedBadges.length > 0 ? (
-              <span className="home-profile-simple__badge-chip">{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name}</span>
+              <strong>{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name} 달성!</strong>
             ) : null}
             {nextBadge ? (
-              <span className="home-profile-simple__next">다음: {nextBadge.emoji} {nextBadge.desc}</span>
+              <span>다음 목표: {nextBadge.emoji} {nextBadge.desc}</span>
             ) : null}
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {/* ─── 수비니어 컬렉션 ─── */}
       {souvenirs.length > 0 ? (
@@ -206,26 +213,36 @@ export function HomeScreen({
         </div>
         {recommendedMaps.length > 0 ? (
           <div className="home-map-scroller">
-            {recommendedMaps.map((item) => (
-              <button
-                key={item.id}
-                className="rec-card"
-                type="button"
-                onClick={() => onOpenMap(item.mapId || item.id)}
-                style={{ "--rec-start": item.gradient?.[0] || "#667eea", "--rec-end": item.gradient?.[1] || "#764ba2" }}
-              >
-                <div className="rec-card__emoji-row">
-                  {(item.emojis || []).slice(0, 4).map((e, i) => (
-                    <span key={`${e}-${i}`}>{e}</span>
-                  ))}
-                </div>
-                <div className="rec-card__body">
-                  <strong className="rec-card__title">{item.title}</strong>
-                  {item.creator ? <span className="rec-card__creator">{item.creator}</span> : null}
-                  <span className="rec-card__count"><MapPin size={11} /> {item.placeCount || 0}</span>
-                </div>
-              </button>
-            ))}
+            {recommendedMaps.map((item) => {
+              const tags = (item.tags || []).slice(0, 2)
+              return (
+                <button
+                  key={item.id}
+                  className="rec-card"
+                  type="button"
+                  onClick={() => onOpenMap(item.mapId || item.id)}
+                  style={{ "--rec-start": item.gradient?.[0] || "#E1F5EE", "--rec-end": item.gradient?.[1] || "#FFF4EB" }}
+                >
+                  <div className="rec-card__minimap">
+                    {(item.emojis || []).slice(0, 5).map((e, i) => (
+                      <span key={`${e}-${i}`} className="rec-card__pin-dot" style={{ left: `${15 + i * 18}%`, top: `${20 + (i % 3) * 25}%` }} />
+                    ))}
+                  </div>
+                  <div className="rec-card__body">
+                    {tags.length > 0 ? (
+                      <div className="rec-card__tags">
+                        {tags.map((t) => <span key={t} className="rec-card__tag">{t}</span>)}
+                      </div>
+                    ) : null}
+                    <strong className="rec-card__title">{item.title}</strong>
+                    <div className="rec-card__meta">
+                      {item.creator ? <span>{item.creator}</span> : null}
+                      <span><MapPin size={11} /> {item.placeCount || 0}</span>
+                    </div>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         ) : (
           <div className="home-section__empty">아직 발행된 지도가 없어요</div>

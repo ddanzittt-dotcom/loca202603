@@ -26,23 +26,18 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
 const NAV_ICONS = { home: Home, maps: Map, places: MapPin, search: Search, profile: User }
 
 export function BottomNav({ activeTab, onChange }) {
-  const items = [
-    ["home", "홈"],
-    ["maps", "지도"],
-    ["places", "장소"],
-    ["search", "검색"],
-    ["profile", "프로필"],
-  ]
+  const items = ["home", "maps", "places", "search", "profile"]
 
   return (
     <nav className="bottom-nav">
-      {items.map(([id, label]) => {
+      {items.map((id) => {
         const Icon = NAV_ICONS[id]
         const isActive = activeTab === id
         return (
           <button key={id} className={`bottom-nav__item${isActive ? " is-active" : ""}`} type="button" onClick={() => onChange(id)}>
-            <span className="bottom-nav__icon"><Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} /></span>
-            <span className="bottom-nav__label">{label}</span>
+            <span className="bottom-nav__icon">
+              <Icon size={20} strokeWidth={isActive ? 2.4 : 1.5} fill={isActive ? "currentColor" : "none"} />
+            </span>
           </button>
         )
       })}
