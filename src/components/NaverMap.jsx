@@ -305,13 +305,34 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(hitArea, feature.id)
           layersRef.current.push(hitArea)
 
+          // 방향 화살표 (중간 지점마다)
+          if (feature.points.length >= 2) {
+            const step = Math.max(1, Math.floor(feature.points.length / 4))
+            for (let pi = step; pi < feature.points.length; pi += step) {
+              const [lng1, lat1] = feature.points[pi - 1]
+              const [lng2, lat2] = feature.points[pi]
+              const angle = Math.atan2(lat2 - lat1, lng2 - lng1) * (180 / Math.PI) - 90
+              const arrowMarker = new naverMaps.Marker({
+                position: toLatLng(lat2, lng2),
+                map,
+                icon: {
+                  content: `<div class="loca-route-arrow" style="transform:rotate(${angle}deg)"><svg width="10" height="10" viewBox="0 0 10 10" fill="#0F6E56" opacity="0.45"><polygon points="5,0 10,10 0,10"/></svg></div>`,
+                  size: new naverMaps.Size(10, 10),
+                  anchor: new naverMaps.Point(5, 5),
+                },
+              })
+              layersRef.current.push(arrowMarker)
+            }
+          }
+
+          // 경로 라벨
           const midpoint = feature.points[Math.floor(feature.points.length / 2)]
           if (showLabels && midpoint) {
             const routeLabel = new naverMaps.Marker({
               position: toLatLng(midpoint[1], midpoint[0]),
               map,
               icon: {
-                content: `<div class="loca-map-route-label"><span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span></div>`,
+                content: `<div class="loca-route-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg><span>${escapeHtml(feature.title)}</span></div>`,
                 anchor: new naverMaps.Point(0, 14),
               },
               clickable: true,
@@ -335,7 +356,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           // 거의 보이지 않는 넓은 히트 영역 (외곽선 클릭 감도 개선)
           const hitArea = new naverMaps.Polyline({
             path: [...pointsToPath(feature.points), pointsToPath(feature.points)[0]],
-            strokeColor: "#16A34A",
+            strokeColor: "#854F0B",
             strokeWeight: 24,
             strokeOpacity: 0.05,
             clickable: true,
@@ -351,14 +372,26 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             )
             return new naverMaps.LatLng(total.lat / pts.length, total.lng / pts.length)
           }
-          const centerPoint = getCenterPoint(feature.points)
-          if (showLabels && centerPoint) {
+          // 구역 라벨 — 상단 중앙 배치
+          const getTopCenter = (pts) => {
+            let minLat = Infinity, sumLng = 0
+            for (const [lng, lat] of pts) {
+              if (lat < minLat) minLat = lat
+              sumLng += lng
+            }
+            // 가장 위(남쪽이 작은 값) → 상단
+            let maxLat = -Infinity
+            for (const [, lat] of pts) { if (lat > maxLat) maxLat = lat }
+            return new naverMaps.LatLng(maxLat, sumLng / pts.length)
+          }
+          const topPoint = getTopCenter(feature.points)
+          if (showLabels && topPoint) {
             const areaLabel = new naverMaps.Marker({
-              position: centerPoint,
+              position: topPoint,
               map,
               icon: {
-                content: `<div class="loca-map-route-label"><span>${escapeHtml(feature.emoji)} ${escapeHtml(feature.title)}</span></div>`,
-                anchor: new naverMaps.Point(0, 14),
+                content: `<div class="loca-area-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span>${escapeHtml(feature.title)}</span></div>`,
+                anchor: new naverMaps.Point(40, 24),
               },
               clickable: true,
             })

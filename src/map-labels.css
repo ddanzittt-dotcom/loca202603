@@ -147,24 +147,63 @@
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
+/* 경로 라벨 */
+.loca-route-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+.loca-route-label span {
+  font-size: 9px;
+  font-weight: 500;
+  color: #0F6E56;
+}
+
+/* 경로 방향 화살표 */
+.loca-route-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* 구역 라벨 */
+.loca-area-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  white-space: nowrap;
+}
+.loca-area-label span {
+  font-size: 9px;
+  font-weight: 500;
+  color: #854F0B;
+}
+
+/* 레거시 호환 */
 .loca-map-route-label {
   background: transparent;
   border: 0;
 }
-
 .loca-map-route-label span {
-  align-items: center;
-  background: rgba(20, 27, 52, 0.91);
-  border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
-  color: #fff;
   display: inline-flex;
-  font-size: 0.72rem;
-  font-weight: 800;
-  min-height: 28px;
-  padding: 0 10px;
-  transform: translate(-50%, -50%) scale(var(--map-scale, 1));
-  transition: transform 0.15s ease-out;
+  align-items: center;
+  background: #fff;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  color: #1A1A1A;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
   white-space: nowrap;
 }
 
