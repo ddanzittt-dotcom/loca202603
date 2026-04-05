@@ -671,27 +671,27 @@
 }
 
 .map-place-card {
-  flex: 0 0 130px !important;
-  width: 130px !important;
-  min-width: 130px !important;
-  height: 42px;
+  flex: 0 0 auto;
+  min-width: 140px;
+  height: 44px;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4px 12px;
-  border: 1px solid rgba(20, 27, 52, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 0.5px solid rgba(0,0,0,0.05);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
 }
 
 .map-place-card.is-active {
-  border-color: #4f46e5;
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 14px rgba(99, 91, 255, 0.2);
+  border-color: #FF6B35;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(255,107,53,0.15);
 }
 
 .map-place-card__meta,
