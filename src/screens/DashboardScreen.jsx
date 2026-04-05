@@ -35,7 +35,7 @@ const DUMMY_TOP_FEATURES = [
 ]
 
 const DUMMY_CHANNELS = [
-  { source: "direct", label: "직접 접속", count: 423, pct: 33.9, color: "#635BFF" },
+  { source: "direct", label: "직접 접속", count: 423, pct: 33.9, color: "#4F46E5" },
   { source: "link", label: "링크 공유", count: 356, pct: 28.5, color: "#12B981" },
   { source: "kakao", label: "카카오톡", count: 287, pct: 23.0, color: "#F97316" },
   { source: "qr", label: "QR 코드", count: 181, pct: 14.5, color: "#EF4444" },
@@ -109,7 +109,7 @@ const PERIOD_OPTIONS = [
 
 // ─── 간이 바 차트 ───
 
-function SimpleBar({ value, max, color = "#635BFF", height = 20 }) {
+function SimpleBar({ value, max, color = "#4F46E5", height = 20 }) {
   const pct = max > 0 ? (value / max) * 100 : 0
   return (
     <div className="dash-bar" style={{ height }}>
@@ -118,7 +118,7 @@ function SimpleBar({ value, max, color = "#635BFF", height = 20 }) {
   )
 }
 
-function MiniBarChart({ data, valueKey, labelKey, color = "#635BFF", maxHeight = 80 }) {
+function MiniBarChart({ data, valueKey, labelKey, color = "#4F46E5", maxHeight = 80 }) {
   const maxVal = Math.max(...data.map((d) => d[valueKey]), 1)
   return (
     <div className="dash-mini-chart">
@@ -269,7 +269,7 @@ export function DashboardScreen({ map: mapProp, features, ownerMaps, onBack, onS
               {DUMMY_FUNNEL.map((step, i) => (
                 <div key={step.label} className="dash-funnel__step">
                   <div className="dash-funnel__bar-wrap">
-                    <SimpleBar value={step.pct} max={100} color={["#635BFF", "#12B981", "#F97316", "#EF4444"][i]} />
+                    <SimpleBar value={step.pct} max={100} color={["#4F46E5", "#12B981", "#F97316", "#EF4444"][i]} />
                   </div>
                   <div className="dash-funnel__info">
                     <strong>{step.label}</strong>
@@ -305,10 +305,10 @@ export function DashboardScreen({ map: mapProp, features, ownerMaps, onBack, onS
           <div className="dash-card">
             <h3 className="dash-card__title">일별 참여 추이</h3>
             <div className="dash-chart-legend">
-              <span className="dash-legend-dot" style={{ background: "#635BFF" }} /> 조회
+              <span className="dash-legend-dot" style={{ background: "#4F46E5" }} /> 조회
               <span className="dash-legend-dot" style={{ background: "#12B981" }} /> 체크인
             </div>
-            <MiniBarChart data={DUMMY_DAILY} valueKey="views" labelKey="date" color="#635BFF" />
+            <MiniBarChart data={DUMMY_DAILY} valueKey="views" labelKey="date" color="#4F46E5" />
           </div>
 
           {/* 시간대별 분포 */}
@@ -451,7 +451,7 @@ export function DashboardScreen({ map: mapProp, features, ownerMaps, onBack, onS
           <div className="dash-map-list">
             {(eventMaps.length > 0 ? eventMaps : [
               { id: "map-event-festival", title: "2026 성수 봄 축제", description: "성수동 일대 5곳을 방문하고 스탬프를 모아보세요!", theme: "#F97316", category: "event", config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true } },
-              { id: "map-event-campus", title: "서울대 캠퍼스 투어", description: "신입생 오리엔테이션 캠퍼스 스탬프 투어", theme: "#635BFF", category: "event", config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true } },
+              { id: "map-event-campus", title: "서울대 캠퍼스 투어", description: "신입생 오리엔테이션 캠퍼스 스탬프 투어", theme: "#4F46E5", category: "event", config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true } },
             ]).map((m) => {
               const isActive = m.id === map?.id
               const featureCount = (features || []).filter((f) => f.mapId === m.id).length

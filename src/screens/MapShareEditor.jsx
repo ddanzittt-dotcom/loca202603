@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react"
+import { X } from "lucide-react"
 import { Share } from "@capacitor/share"
 import QRCode from "qrcode"
 
@@ -116,7 +117,7 @@ const framePainters = {
     grad.addColorStop(1, "rgba(0,0,0,0.85)")
     ctx.fillStyle = grad
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    ctx.fillStyle = theme || "#635BFF"
+    ctx.fillStyle = theme || "#4F46E5"
     ctx.fillRect(80, FOOTER_Y - 10, 60, 5)
     ctx.fillStyle = "#fff"
     ctx.font = "bold 56px Pretendard, Noto Sans KR, sans-serif"
@@ -436,7 +437,7 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
   return (
     <div className="share-editor">
       <header className="share-editor__header">
-        <button className="share-editor__close" type="button" onClick={onClose}>✕</button>
+        <button className="share-editor__close" type="button" onClick={onClose}><X size={18} /></button>
         <strong className="share-editor__heading">이미지 공유</strong>
         <button className="share-editor__export" type="button" onClick={handleExport}>공유</button>
       </header>

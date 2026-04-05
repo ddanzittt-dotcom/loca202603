@@ -1,9 +1,8 @@
 ﻿import { useEffect, useMemo, useState, useRef } from "react"
+import { Search as SearchIcon, X } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { NaverMap } from "../components/NaverMap"
-import { AnnouncementSheet } from "../components/sheets/AnnouncementSheet"
-import { CollaboratorsSheet } from "../components/sheets/CollaboratorsSheet"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 
 const formatFeatureMeta = (feature) => {
@@ -34,8 +33,6 @@ export function MapEditorScreen({
   myLocation = null,
   characterStyle = "m3",
   levelEmoji = "🥚",
-  cloudMode = false,
-  isAdmin = false,
   onBack,
   onLocate,
   onSearchLocation,
@@ -52,13 +49,10 @@ export function MapEditorScreen({
   onAddMemo,
   onOpenShareEditor,
   onStripFeatureTap,
-  onOpenDashboard,
   showToast,
   shareUrl = "",
 }) {
   const isEventMap = map.category === "event"
-  const [announcementSheetOpen, setAnnouncementSheetOpen] = useState(false)
-  const [collaboratorsSheetOpen, setCollaboratorsSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -171,24 +165,7 @@ export function MapEditorScreen({
           <span className="map-editor__count">📍{pinCount} 🔀{routeCount} ⬡{areaCount}</span>
         ) : null}
         {isEventMap && !communityMode ? (
-          <>
-            {onOpenDashboard ? (
-              <button className="icon-button" type="button" onClick={onOpenDashboard} aria-label="대시보드" title="대시보드">
-                📊
-              </button>
-            ) : null}
-            {cloudMode && isAdmin ? (
-              <>
-                <button className="icon-button" type="button" onClick={() => setCollaboratorsSheetOpen(true)} aria-label="협업자 관리" title="협업자 관리">
-                  👥
-                </button>
-                <button className="icon-button" type="button" onClick={() => setAnnouncementSheetOpen(true)} aria-label="공지 관리" title="공지 관리">
-                  📢
-                </button>
-              </>
-            ) : null}
-            <span className="map-editor__event-badge">이벤트</span>
-          </>
+          <span className="map-editor__event-badge">이벤트</span>
         ) : null}
         {!communityMode ? (
           <button className="icon-button" type="button" onClick={() => setShareOpen(true)} aria-label="지도 공유하기">
@@ -368,7 +345,7 @@ export function MapEditorScreen({
           </div>
         ) : null}
         {!readOnly && isDrawing ? (
-          <button className="fab fab--cancel" type="button" onClick={onCancelDraft} aria-label="취소">✕</button>
+          <button className="fab fab--cancel" type="button" onClick={onCancelDraft} aria-label="취소"><X size={18} /></button>
         ) : null}
 
         {selectedFeatureSummary ? (
@@ -515,20 +492,6 @@ export function MapEditorScreen({
         ) : null}
 
       </div>
-
-      <CollaboratorsSheet
-        open={collaboratorsSheetOpen}
-        mapId={map.id}
-        onClose={() => setCollaboratorsSheetOpen(false)}
-        showToast={showToast}
-      />
-
-      <AnnouncementSheet
-        open={announcementSheetOpen}
-        mapId={map.id}
-        onClose={() => setAnnouncementSheetOpen(false)}
-        showToast={showToast}
-      />
 
       <ShareSheet
         open={shareOpen}

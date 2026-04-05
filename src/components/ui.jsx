@@ -1,4 +1,5 @@
 import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
+import { Home, Map, MapPin, Search, User, X, AlertTriangle, RefreshCw, Pencil, Trash2 } from "lucide-react"
 
 export function BottomSheet({ open, title, subtitle, onClose, children }) {
   if (!open) return null
@@ -13,7 +14,7 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
             {subtitle ? <p className="sheet__subtitle">{subtitle}</p> : null}
           </div>
           <button className="icon-button" type="button" onClick={onClose}>
-            ✕
+            <X size={18} />
           </button>
         </div>
         {children}
@@ -22,23 +23,29 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
   )
 }
 
+const NAV_ICONS = { home: Home, maps: Map, places: MapPin, search: Search, profile: User }
+
 export function BottomNav({ activeTab, onChange }) {
   const items = [
-    ["home", "⌂", "홈"],
-    ["maps", "🗺", "지도"],
-    ["places", "📍", "장소"],
-    ["search", "⌕", "검색"],
-    ["profile", "☺", "프로필"],
+    ["home", "홈"],
+    ["maps", "지도"],
+    ["places", "장소"],
+    ["search", "검색"],
+    ["profile", "프로필"],
   ]
 
   return (
     <nav className="bottom-nav">
-      {items.map(([id, icon, label]) => (
-        <button key={id} className={`bottom-nav__item${activeTab === id ? " is-active" : ""}`} type="button" onClick={() => onChange(id)}>
-          <span className="bottom-nav__icon">{icon}</span>
-          <span className="bottom-nav__label">{label}</span>
-        </button>
-      ))}
+      {items.map(([id, label]) => {
+        const Icon = NAV_ICONS[id]
+        const isActive = activeTab === id
+        return (
+          <button key={id} className={`bottom-nav__item${isActive ? " is-active" : ""}`} type="button" onClick={() => onChange(id)}>
+            <span className="bottom-nav__icon"><Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} /></span>
+            <span className="bottom-nav__label">{label}</span>
+          </button>
+        )
+      })}
     </nav>
   )
 }
@@ -68,7 +75,7 @@ export function MapPreview({ title, emojis, placeCount, theme, gradient, variant
           <strong>{title}</strong>
           <small>{caption || `${placeCount}개의 장소`}</small>
         </div>
-        <span className="map-preview__badge">📍 {placeCount}</span>
+        <span className="map-preview__badge"><MapPin size={13} /> {placeCount}</span>
       </div>
     </div>
   )
@@ -76,7 +83,7 @@ export function MapPreview({ title, emojis, placeCount, theme, gradient, variant
 
 // 핀 좌표 중심점 → 지역별 고유 단색
 const REGION_COLORS = [
-  { name: "서울", lat: 37.56, lng: 126.98, color: "#635BFF" },  // 보라
+  { name: "서울", lat: 37.56, lng: 126.98, color: "#4F46E5" },  // 보라
   { name: "경기", lat: 37.27, lng: 127.01, color: "#3B82F6" },  // 파랑
   { name: "인천", lat: 37.45, lng: 126.70, color: "#06B6D4" },  // 시안
   { name: "강원", lat: 37.87, lng: 128.20, color: "#10B981" },  // 초록
@@ -116,9 +123,14 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
   const pins = features.filter((feature) => feature.type === "pin")
   const color = locationColor(pins)
 
+  const mapType = map.category === "event" ? "event map" : map.importedFrom ? "viewer" : "editor"
+  const badgeClass = mapType === "event map" ? "map-type-badge--event" : mapType === "viewer" ? "map-type-badge--viewer" : "map-type-badge--editor"
+
   return (
     <article className="map-card" onClick={() => onOpen(map.id)}>
-      <div className="map-card__preview" style={{ background: color }} />
+      <div className="map-card__preview" style={{ background: color }}>
+        <span className={`map-type-badge ${badgeClass}`}>{mapType}</span>
+      </div>
       <div className="map-card__body">
         <div className="map-card__header">
           <div className="map-card__info">
@@ -126,9 +138,9 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
             <span className="map-card__count">{pins.length}곳</span>
           </div>
           <div className="map-card__btns">
-            <button className="map-card__icon-btn" type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}>✏️</button>
+            <button className="map-card__icon-btn" type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}><Pencil size={15} /></button>
             {onDelete ? (
-              <button className="map-card__icon-btn map-card__icon-btn--del" type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}>✕</button>
+              <button className="map-card__icon-btn map-card__icon-btn--del" type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}><Trash2 size={15} /></button>
             ) : null}
           </div>
         </div>
@@ -247,10 +259,11 @@ export function EmptyState({ icon = "📭", title, description, action, onAction
 export function ErrorCard({ message, onRetry }) {
   return (
     <article className="error-card">
+      <span className="error-card__icon"><AlertTriangle size={20} /></span>
       <strong>문제가 발생했어요</strong>
       <p>{message || "네트워크 연결을 확인해주세요."}</p>
       {onRetry ? (
-        <button className="button button--secondary" type="button" onClick={onRetry}>다시 시도</button>
+        <button className="button button--secondary" type="button" onClick={onRetry}><RefreshCw size={14} /> 다시 시도</button>
       ) : null}
     </article>
   )

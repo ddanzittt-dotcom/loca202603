@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Search as SearchIcon } from "lucide-react"
 import { UserRowCard, EmptyState } from "../components/ui"
 
 export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) {
@@ -39,7 +40,7 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
       </div>
 
       <div className="search-box" style={{ marginBottom: 14 }}>
-        <span aria-hidden="true">🔍</span>
+        <SearchIcon size={18} aria-hidden="true" />
         <input
           type="search"
           value={query}

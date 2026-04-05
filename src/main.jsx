@@ -19,7 +19,7 @@ registerServiceWorker()
 
 if (Capacitor.isNativePlatform()) {
   StatusBar.setStyle({ style: Style.Light }).catch(() => {})
-  StatusBar.setBackgroundColor({ color: "#635bff" }).catch(() => {})
+  StatusBar.setBackgroundColor({ color: "#4f46e5" }).catch(() => {})
   SplashScreen.hide().catch(() => {})
 }
 

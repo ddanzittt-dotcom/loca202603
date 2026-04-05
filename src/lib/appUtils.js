@@ -1,6 +1,6 @@
 import { gzipSync, gunzipSync } from "fflate"
 
-export const themePalette = ["#635BFF", "#12B981", "#F97316", "#EF4444", "#0EA5E9"]
+export const themePalette = ["#4F46E5", "#12B981", "#F97316", "#EF4444", "#0EA5E9"]
 export const placeEmojis = [
   "📍", "☕", "🍽️", "🌳", "🏖️", "🛍️",
   "🏠", "🏢", "🏫", "🏥", "⛪", "🏛️",

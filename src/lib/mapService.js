@@ -36,7 +36,7 @@ export function friendlySupabaseError(error) {
   return error.message || "알 수 없는 오류가 발생했어요."
 }
 
-const DEFAULT_MAP_THEME = "#635BFF"
+const DEFAULT_MAP_THEME = "#4F46E5"
 const DEFAULT_FEATURE_TITLE = "새 항목"
 
 function createSlugCandidate(value = "") {

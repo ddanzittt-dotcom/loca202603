@@ -112,7 +112,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const zoom = map.getZoom()
           const s = zoomScale(zoom)
           containerRef.current?.style.setProperty("--map-scale", s)
-          containerRef.current?.setAttribute("data-zoom", zoom < 15 ? "far" : "near")
+          containerRef.current?.setAttribute("data-zoom", zoom < 12 ? "far" : "near")
         }
         naverMaps.Event.addListener(map, "zoom_changed", applyZoomScale)
         applyZoomScale()
@@ -196,7 +196,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         } else if (feature.type === "route") {
           const polyline = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
-            strokeColor: feature.id === selectedFeatureId ? "#635BFF" : "#0EA5E9",
+            strokeColor: feature.id === selectedFeatureId ? "#4F46E5" : "#0EA5E9",
             strokeWeight: feature.id === selectedFeatureId ? 6 : 4,
             strokeOpacity: 1,
             clickable: true,
@@ -233,7 +233,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         } else if (feature.type === "area") {
           const polygon = new naverMaps.Polygon({
             paths: [pointsToPath(feature.points)],
-            strokeColor: feature.id === selectedFeatureId ? "#635BFF" : "#16A34A",
+            strokeColor: feature.id === selectedFeatureId ? "#4F46E5" : "#16A34A",
             strokeWeight: feature.id === selectedFeatureId ? 4 : 3,
             strokeOpacity: 1,
             fillColor: feature.id === selectedFeatureId ? "#8B5CF6" : "#22C55E",
@@ -336,11 +336,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     if (!map || !focusPoint || !naverMaps) return
     try {
       map.setCenter(new naverMaps.LatLng(focusPoint.lat, focusPoint.lng))
-      map.setZoom(focusPoint.zoom || 16)
+      map.setZoom(focusPoint.zoom || 15)
     } catch (e) {
       console.warn("네이버 지도 포커스 실패:", e)
     }
-  }, [focusPoint])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPoint?.lat, focusPoint?.lng])
 
   // fitBounds - focus on densest cluster
   useEffect(() => {
@@ -349,6 +350,14 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     if (!map || !naverMaps || !mapReady) return
     if (lastFitTriggerRef.current === fitTrigger) return
     lastFitTriggerRef.current = fitTrigger
+    // focusPoint가 있으면 fitBounds 대신 focusPoint 사용
+    if (focusPoint) {
+      try {
+        map.setCenter(new naverMaps.LatLng(focusPoint.lat, focusPoint.lng))
+        map.setZoom(focusPoint.zoom || 15)
+      } catch (e) { /* ignore */ }
+      return
+    }
     try {
       // Collect all coordinates (미설정 0,0 핀 제외)
       const coords = []

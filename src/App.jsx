@@ -32,7 +32,6 @@ import { getCurrentSession, onAuthStateChange, signOut } from "./lib/auth"
 import { hasSupabaseEnv } from "./lib/supabase"
 import {
   checkB2BAccess as checkB2BAccessRecord,
-  checkAdminRole,
   createFeature as createFeatureRecord,
   createMap as createMapRecord,
   followUser as followUserRecord,
@@ -54,7 +53,6 @@ const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => (
 const SearchScreen = lazy(() => import("./screens/SearchScreen").then((m) => ({ default: m.SearchScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
-const DashboardScreen = lazy(() => import("./screens/DashboardScreen").then((m) => ({ default: m.DashboardScreen })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing, toEditableFeature } from "./hooks/useFeatureEditing"
@@ -108,7 +106,6 @@ export default function App() {
   const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
   const [authUser, setAuthUser] = useState(null)
   const [hasB2BAccess, setHasB2BAccess] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
   const [viewerProfile, setViewerProfile] = useLocalStorageState("loca.mobile.viewerProfile", me)
   const [cloudLoading, setCloudLoading] = useState(false)
   const routeAtLoad = useMemo(() => {
@@ -193,7 +190,7 @@ export default function App() {
     const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
     return Object.fromEntries(mergedUsers.map((user) => [user.id, user]))
   }, [viewerProfile])
-  const communityMapMeta = useMemo(() => [{ id: "community-map", title: "모두의 지도", description: "모두가 함께 만드는 지도", theme: "#635bff", updatedAt: new Date().toISOString() }], [])
+  const communityMapMeta = useMemo(() => [{ id: "community-map", title: "모두의 지도", description: "모두가 함께 만드는 지도", theme: "#4f46e5", updatedAt: new Date().toISOString() }], [])
   const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
   const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
   const activeMapPool = activeMapSource === "community"
@@ -373,14 +370,12 @@ export default function App() {
     if (!hasSupabaseEnv || !user) return
     setCloudLoading(true)
     try {
-      const [appData, profile, b2bAccess, adminRole] = await Promise.all([
+      const [appData, profile, b2bAccess] = await Promise.all([
         getMyAppData(),
         getProfileRecord(user.id),
         checkB2BAccessRecord().catch(() => false),
-        checkAdminRole().catch(() => false),
       ])
       setHasB2BAccess(b2bAccess)
-      setIsAdmin(adminRole)
 
       const nextProfile = {
         id: user.id,
@@ -474,7 +469,6 @@ export default function App() {
     setFollowed(followedSeed)
     setViewerProfile(me)
     setHasB2BAccess(false)
-    setIsAdmin(false)
     setActiveTab("home")
     setMapsView("list")
     setActiveMapSource("local")
@@ -826,8 +820,8 @@ export default function App() {
       if (activeMapSource === "community") {
         return {
           subtitle: "모두의 지도",
-          actionLabel: "맞춤 보기",
-          onAction: () => setFitTrigger((value) => value + 1),
+          actionLabel: null,
+          onAction: null,
         }
       }
       return {
@@ -943,11 +937,25 @@ export default function App() {
               if (!window.confirm(`"${mapTitle}" 지도를 삭제할까요?`)) return
               deleteMapAction(mapId)
             }}
-            onOpenDashboard={() => setMapsView("dashboard")}
           />
         ) : null}
 
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap ? (
+        {/* 행사 지도 → participant shell (SharedMapViewer) */}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && activeMap.category === "event" ? (
+          <SharedMapViewer
+            map={activeMap}
+            features={activeFeatures}
+            onSaveToApp={null}
+            onBack={() => {
+              setMapsView("list")
+              resetEditorState()
+              setActiveMapSource("local")
+            }}
+          />
+        ) : null}
+
+        {/* 일반 지도 → MapEditorScreen */}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && activeMap.category !== "event" ? (
           <MapEditorScreen
             map={activeMap}
             features={activeFeatures}
@@ -961,8 +969,6 @@ export default function App() {
             readOnly={activeMapSource === "demo" || activeMapSource === "shared"}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
-            cloudMode={cloudMode}
-            isAdmin={isAdmin}
             shareUrl={shareUrl}
             showLabels={showMapLabels}
             characterStyle={characterStyle}
@@ -1007,23 +1013,7 @@ export default function App() {
               setSelectedFeatureId(null)
               setSelectedFeatureSummaryId(null)
             }}
-            onOpenDashboard={() => setMapsView("dashboard")}
             showToast={showToast}
-          />
-        ) : null}
-
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "dashboard" ? (
-          <DashboardScreen
-            map={activeMap}
-            features={activeFeatures}
-            ownerMaps={maps}
-            onBack={() => {
-              setMapsView("list")
-            }}
-            onSelectMap={(mapId) => {
-              setActiveMapId(mapId)
-              setActiveMapSource("local")
-            }}
           />
         ) : null}
 
@@ -1055,6 +1045,8 @@ export default function App() {
       </Suspense>
       </main>
 
+      {/* 행사 지도 참여 중에는 BottomNav 숨김 */}
+      {activeTab === "maps" && mapsView === "editor" && activeMap?.category === "event" ? null : (
       <BottomNav
         activeTab={activeTab}
         onChange={(nextTab) => {
@@ -1066,6 +1058,7 @@ export default function App() {
           }
         }}
       />
+      )}
 
       <MapFormSheet
         mapSheet={mapSheet}

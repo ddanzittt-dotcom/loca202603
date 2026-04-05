@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
+import { ArrowLeft, X } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
-import { getLevelProgress, getEarnedBadges, getNextEarnableBadge } from "../data/gamification"
+import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
 
 export function HomeScreen({
   recommendedMaps,
@@ -20,47 +21,91 @@ export function HomeScreen({
   const streak = userStats?.streak || 0
   const nickname = viewerProfile?.name || "탐험가"
 
+  // 내 위치
+  const [myLocation, setMyLocation] = useState(null)
+  const [mapFitTrigger, setMapFitTrigger] = useState(0)
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          setMapFitTrigger((t) => t + 1)
+        },
+        () => {},
+        { timeout: 5000 },
+      )
+    }
+  }, [])
+
   // 근처 이벤트 가져오기
   const [events, setEvents] = useState([])
   const [eventsLoading, setEventsLoading] = useState(true)
+  const [eventsNearby, setEventsNearby] = useState(false)
+  const [eventsRadiusKm, setEventsRadiusKm] = useState(null)
 
-  useEffect(() => {
-    let cancelled = false
+  // 이벤트 상세
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [eventDetail, setEventDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [overviewExpanded, setOverviewExpanded] = useState(false)
+  const [showEventList, setShowEventList] = useState(false)
+  const [showLevelChart, setShowLevelChart] = useState(false)
 
-    const SAMPLE_EVENTS = [
-      { id: "s1", title: "2026 서울 봄꽃축제", addr: "서울특별시 종로구 사직로 161", image: "", startDate: "20260401", endDate: "20260415", lat: 37.5711, lng: 126.9767 },
-      { id: "s2", title: "수원화성 문화제", addr: "경기도 수원시 팔달구 정조로 825", image: "", startDate: "20260405", endDate: "20260407", lat: 37.2866, lng: 127.0101 },
-      { id: "s3", title: "부산 해운대 모래축제", addr: "부산광역시 해운대구 해운대해변로 264", image: "", startDate: "20260410", endDate: "20260420", lat: 35.1587, lng: 129.1604 },
-      { id: "s4", title: "제주 유채꽃 페스티벌", addr: "제주특별자치도 서귀포시 표선면", image: "", startDate: "20260401", endDate: "20260430", lat: 33.3253, lng: 126.8428 },
-      { id: "s5", title: "경주 벚꽃 마라톤", addr: "경상북도 경주시 보문로 544-1", image: "", startDate: "20260412", endDate: "20260412", lat: 35.8428, lng: 129.2267 },
-    ]
-
-    async function fetchEvents(lat, lng) {
-      try {
-        const params = lat && lng ? `?lat=${lat}&lng=${lng}` : ""
-        const resp = await fetch(`/api/events${params}`)
-        const data = await resp.json()
-        const items = data.items || []
-        if (!cancelled) setEvents(items.length > 0 ? items : SAMPLE_EVENTS)
-      } catch {
-        if (!cancelled) setEvents(SAMPLE_EVENTS)
-      } finally {
-        if (!cancelled) setEventsLoading(false)
-      }
+  const doFetch = async (lat, lng) => {
+    setEventsLoading(true)
+    try {
+      const url = lat && lng
+        ? `/api/events?lat=${lat}&lng=${lng}&_t=${Date.now()}`
+        : `/api/events?_t=${Date.now()}`
+      const resp = await fetch(url, { cache: "no-store" })
+      const data = await resp.json()
+      setEvents(data.items?.length > 0 ? data.items : [])
+      setEventsRadiusKm(data.radiusKm || null)
+    } catch {
+      setEvents([])
+      setEventsRadiusKm(null)
     }
+    setEventsLoading(false)
+  }
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => fetchEvents(pos.coords.latitude, pos.coords.longitude),
-        () => fetchEvents(null, null),
-        { timeout: 5000 },
-      )
-    } else {
-      fetchEvents(null, null)
+  useEffect(() => { doFetch(null, null) }, [])
+
+  const loadNearbyEvents = () => {
+    const go = (lat, lng) => {
+      setEventsNearby(true)
+      doFetch(lat, lng)
     }
+    if (myLocation) return go(myLocation.lat, myLocation.lng)
+    if (!navigator.geolocation) return
+    setEventsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        go(pos.coords.latitude, pos.coords.longitude)
+      },
+      () => { setEventsLoading(false) },
+      { timeout: 8000 },
+    )
+  }
 
-    return () => { cancelled = true }
-  }, [])
+  const loadAllEvents = () => {
+    setEventsNearby(false)
+    doFetch(null, null)
+  }
+
+  const openEventDetail = async (event) => {
+    setSelectedEvent(event)
+    setEventDetail(null)
+    setDetailLoading(true)
+    setOverviewExpanded(false)
+    try {
+      const resp = await fetch(`/api/event-detail?contentId=${event.id}`)
+      const data = await resp.json()
+      if (data.detail) setEventDetail(data.detail)
+    } catch { /* 폴백: 기본 정보만 표시 */ }
+    setDetailLoading(false)
+  }
 
   // 날짜 포맷 (20260403 → 4.3)
   const formatEventDate = (dateStr) => {
@@ -68,102 +113,62 @@ export function HomeScreen({
     return `${parseInt(dateStr.slice(4, 6))}.${parseInt(dateStr.slice(6, 8))}`
   }
 
+  // 행사 상태 뱃지
+  const now = new Date()
+  const todayStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
+  const getEventStatus = (startDate, endDate) => {
+    if (!startDate || !endDate) return null
+    const todayNum = parseInt(todayStr)
+    const start = parseInt(startDate)
+    const end = parseInt(endDate)
+    if (todayNum >= start && todayNum <= end) return { label: "진행 중", className: "event-badge--active" }
+    if (start > todayNum) {
+      const s = new Date(parseInt(startDate.slice(0, 4)), parseInt(startDate.slice(4, 6)) - 1, parseInt(startDate.slice(6, 8)))
+      const diff = Math.ceil((s - now) / (1000 * 60 * 60 * 24))
+      return { label: `D-${diff}`, className: "event-badge--upcoming" }
+    }
+    return null
+  }
+
   return (
     <section className="screen screen--scroll">
-      {/* ─── 1. 탐험가 프로필 카드 (컴팩트) ─── */}
-      <div className="home-profile-card">
-        <div className="home-profile-card__row">
-          <span className="home-profile-card__level-emoji">{levelInfo.current.emoji}</span>
-          <div className="home-profile-card__info">
-            <div className="home-profile-card__name-line">
+      {/* ─── 1. 프로필 카드 ─── */}
+      <div className="home-profile-simple">
+        <div className="home-profile-simple__header">
+          <span className="home-profile-simple__emoji">{levelInfo.current.emoji}</span>
+          <div className="home-profile-simple__info">
+            <div className="home-profile-simple__top">
               <strong>{nickname}</strong>
-              <span className="home-profile-card__level-tag">{levelInfo.current.title}</span>
+              <span className="home-profile-simple__tag">{levelInfo.current.title}</span>
+              <button className="home-profile-simple__level-btn" type="button" onClick={() => setShowLevelChart(true)}>등급표</button>
             </div>
-            <div className="home-xp-bar">
-              <div className="home-xp-bar__track">
-                <div className="home-xp-bar__fill" style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} />
+            <div className="home-profile-simple__xp-row">
+              <div className="home-profile-simple__bar">
+                <div className="home-profile-simple__fill" style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} />
               </div>
-              <span className="home-xp-bar__label">
-                {levelInfo.next ? `${xp} / ${levelInfo.next.minXp} XP` : `${xp} XP ✦ MAX`}
-              </span>
+              <span className="home-profile-simple__xp">{levelInfo.next ? `${xp}/${levelInfo.next.minXp}` : `${xp} MAX`}</span>
             </div>
           </div>
         </div>
 
-        <div className="home-profile-card__bottom">
-          <div className="home-stats-row">
-            <span>📍{userStats?.pins || 0}</span>
-            <span>🎯{userStats?.checkins || 0}</span>
-            <span>🏅{userStats?.completions || 0}</span>
-            <span>🗺{userStats?.maps || 0}</span>
-            {streak > 0 ? <span className="home-stat--streak">🔥{streak}일</span> : null}
+        <div className="home-profile-simple__stats">
+          <span>📍 {userStats?.pins || 0}</span>
+          <span>🎯 {userStats?.checkins || 0}</span>
+          <span>🏅 {userStats?.completions || 0}</span>
+          <span>🗺 {userStats?.maps || 0}</span>
+          {streak > 0 ? <span className="home-profile-simple__streak">🔥 {streak}일</span> : null}
+        </div>
+
+        {earnedBadges.length > 0 || nextBadge ? (
+          <div className="home-profile-simple__badges">
+            {earnedBadges.length > 0 ? (
+              <span className="home-profile-simple__badge-chip">{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name}</span>
+            ) : null}
+            {nextBadge ? (
+              <span className="home-profile-simple__next">다음: {nextBadge.emoji} {nextBadge.desc}</span>
+            ) : null}
           </div>
-        </div>
-
-        {/* 최근 배지/수비니어 + 다음 목표 */}
-        <div className="home-reward-row">
-          {earnedBadges.length > 0 ? (
-            <span className="home-reward-chip">{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name}</span>
-          ) : souvenirs.length > 0 ? (
-            <span className="home-reward-chip">{souvenirs[0].meta?.emoji || "🏆"} {souvenirs[0].meta?.title || souvenirs[0].souvenir_code}</span>
-          ) : null}
-          {nextBadge ? (
-            <span className="home-next-goal">다음: {nextBadge.emoji} {nextBadge.desc}</span>
-          ) : null}
-        </div>
-
-        {/* 오늘의 성장 (매일 리셋) */}
-        {(() => {
-          const cap = userStats?.dailyCap || 30
-          const axes = [
-            { key: "creator", label: "제작", daily: userStats?.dailyCreator || 0, emoji: "🛠", color: "#635BFF" },
-            { key: "explorer", label: "탐험", daily: userStats?.dailyExplorer || 0, emoji: "🧭", color: "#10B981" },
-            { key: "influence", label: "영향력", daily: userStats?.dailyInfluence || 0, emoji: "📢", color: "#F97316" },
-            { key: "trust", label: "신뢰", daily: userStats?.dailyTrust || 0, emoji: "🤝", color: "#0EA5E9" },
-          ]
-          const quests = [
-            { axis: "creator", name: "지도 만들기", xp: 20 },
-            { axis: "creator", name: "핀 추가", xp: 5 },
-            { axis: "creator", name: "경로 추가", xp: 10 },
-            { axis: "explorer", name: "체크인", xp: 15 },
-            { axis: "explorer", name: "행사 완주", xp: 50 },
-            { axis: "explorer", name: "지도 가져오기", xp: 10 },
-            { axis: "influence", name: "지도 발행", xp: 30 },
-            { axis: "trust", name: "메모 보강", xp: 1 },
-            { axis: "trust", name: "설문 제출", xp: 5 },
-          ]
-          const dailyByKey = { creator: userStats?.dailyCreator || 0, explorer: userStats?.dailyExplorer || 0, influence: userStats?.dailyInfluence || 0, trust: userStats?.dailyTrust || 0 }
-          const todayTotal = axes.reduce((s, a) => s + a.daily, 0)
-
-          return (
-            <div className="home-spec-axes">
-              {axes.map((axis) => {
-                const pct = Math.min(100, Math.round((axis.daily / cap) * 100))
-                const done = axis.daily >= cap
-                return (
-                  <div key={axis.key} className={`home-spec-axis${done ? " is-done" : ""}`}>
-                    <span className="home-spec-axis__label">{axis.emoji} {axis.label}</span>
-                    <div className="home-spec-axis__bar">
-                      <div className="home-spec-axis__fill" style={{ width: `${pct}%`, background: axis.color }} />
-                    </div>
-                    <span className="home-spec-axis__pct">{done ? "✓" : `${axis.daily}/${cap}`}</span>
-                  </div>
-                )
-              })}
-              <div className="home-quest-row">
-                {quests.map((q) => {
-                  const done = dailyByKey[q.axis] >= cap
-                  return (
-                    <span key={q.name} className={`home-quest-chip${done ? " is-done" : ""}`}>
-                      {done ? "✓ " : ""}{q.name} +{q.xp}
-                    </span>
-                  )
-                })}
-              </div>
-              <span className="home-spec-daily-total">오늘 +{todayTotal} / {cap * 4} XP</span>
-            </div>
-          )
-        })()}
+        ) : null}
       </div>
 
       {/* ─── 수비니어 컬렉션 ─── */}
@@ -234,11 +239,13 @@ export function HomeScreen({
               selectedFeatureId={null}
               draftPoints={[]}
               draftMode="browse"
-              focusPoint={null}
-              fitTrigger={0}
+              focusPoint={myLocation}
+              fitTrigger={mapFitTrigger}
               onMapTap={undefined}
               onFeatureTap={() => {}}
               showLabels={true}
+              myLocation={myLocation}
+              levelEmoji={levelInfo.current.emoji}
             />
           </MapErrorBoundary>
         </div>
@@ -247,23 +254,75 @@ export function HomeScreen({
       {/* ─── 4. 내 근처 이벤트 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>🎪 내 근처 이벤트</h2>
+          <h2>🎪 {eventsNearby ? `내 근처 이벤트${eventsRadiusKm ? ` (${eventsRadiusKm}km)` : ""}` : "진행 중인 이벤트"}</h2>
+          <button className={`home-event-locate${eventsNearby ? " is-active" : ""}`} type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
+            📍 {eventsNearby ? "내 근처" : "내 위치"}
+          </button>
         </div>
         {eventsLoading ? (
           <div className="home-section__empty">이벤트를 불러오는 중...</div>
         ) : events.length === 0 ? (
-          <div className="home-section__empty">근처 진행 중인 이벤트가 없어요</div>
+          <div className="home-section__empty">{eventsNearby ? "100km 이내 진행 중인 이벤트가 없어요" : "진행 중인 이벤트가 없어요"}</div>
         ) : (
-          <div className="home-event-list">
+          <>
+            <div className="home-event-list">
+              {events.slice(0, 4).map((event) => (
+                <article key={event.id} className="event-card" onClick={() => openEventDetail(event)} style={{ cursor: "pointer" }}>
+                  {event.image ? (
+                    <div className="event-card__img" style={{ backgroundImage: `url(${event.image})` }} />
+                  ) : (
+                    <div className="event-card__img event-card__img--empty">🎪</div>
+                  )}
+                  <div className="event-card__body">
+                    <div className="event-card__title-row">
+                      <strong className="event-card__title">{event.title}</strong>
+                      {(() => {
+                        const status = getEventStatus(event.startDate, event.endDate)
+                        return status ? <span className={`event-badge ${status.className}`}>{status.label}</span> : null
+                      })()}
+                    </div>
+                    {event.startDate ? (
+                      <span className="event-card__date">
+                        {formatEventDate(event.startDate)}~{formatEventDate(event.endDate)}
+                      </span>
+                    ) : null}
+                    {event.addr ? <span className="event-card__addr">{event.distKm != null ? `${event.distKm}km · ` : ""}{event.addr}</span> : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+            {events.length > 4 ? (
+              <button className="home-event-more" type="button" onClick={() => setShowEventList(true)}>
+                더보기 ({events.length - 4}개)
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
+      {/* ─── 이벤트 전체 목록 화면 ─── */}
+      {showEventList ? (
+        <div className="event-list-screen">
+          <div className="event-list-screen__header">
+            <button className="event-list-screen__back" type="button" onClick={() => setShowEventList(false)}><ArrowLeft size={20} /></button>
+            <h2>🎪 이벤트 목록</h2>
+            <span className="event-list-screen__count">{events.length}건</span>
+          </div>
+          <div className="event-list-screen__body">
             {events.map((event) => (
-              <article key={event.id} className="event-card">
+              <article key={event.id} className="event-card" onClick={() => { setShowEventList(false); openEventDetail(event) }} style={{ cursor: "pointer" }}>
                 {event.image ? (
                   <div className="event-card__img" style={{ backgroundImage: `url(${event.image})` }} />
                 ) : (
                   <div className="event-card__img event-card__img--empty">🎪</div>
                 )}
                 <div className="event-card__body">
-                  <strong className="event-card__title">{event.title}</strong>
+                  <div className="event-card__title-row">
+                    <strong className="event-card__title">{event.title}</strong>
+                    {(() => {
+                      const status = getEventStatus(event.startDate, event.endDate)
+                      return status ? <span className={`event-badge ${status.className}`}>{status.label}</span> : null
+                    })()}
+                  </div>
                   {event.startDate ? (
                     <span className="event-card__date">
                       {formatEventDate(event.startDate)}~{formatEventDate(event.endDate)}
@@ -274,8 +333,160 @@ export function HomeScreen({
               </article>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      ) : null}
+
+      {/* ─── 등급표 모달 ─── */}
+      {showLevelChart ? (
+        <div className="level-chart-overlay" onClick={() => setShowLevelChart(false)}>
+          <div className="level-chart-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="level-chart-modal__header">
+              <h3>등급표</h3>
+              <button type="button" onClick={() => setShowLevelChart(false)}><X size={18} /></button>
+            </div>
+            <div className="level-chart-modal__list">
+              {LEVELS.map((lvl) => (
+                <div key={lvl.level} className={`level-chart-item${lvl.level === levelInfo.current.level ? " is-current" : ""}`}>
+                  <span className="level-chart-item__emoji">{lvl.emoji}</span>
+                  <div className="level-chart-item__info">
+                    <strong>Lv.{lvl.level} {lvl.title}</strong>
+                    <span>{lvl.minXp === 0 ? "시작" : `${lvl.minXp} XP`}</span>
+                  </div>
+                  {lvl.level === levelInfo.current.level ? <span className="level-chart-item__current">현재</span> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ─── 이벤트 상세 바텀시트 ─── */}
+      {selectedEvent ? (
+        <div className="event-detail-overlay" onClick={() => setSelectedEvent(null)}>
+          <div className="event-detail-sheet" onClick={(e) => e.stopPropagation()}>
+            <button className="event-detail-sheet__close" type="button" onClick={() => setSelectedEvent(null)}><X size={18} /></button>
+
+            {/* 이미지 */}
+            {(eventDetail?.image || selectedEvent.image) ? (
+              <div className="event-detail-sheet__hero" style={{ backgroundImage: `url(${eventDetail?.image || selectedEvent.image})` }} />
+            ) : (
+              <div className="event-detail-sheet__hero event-detail-sheet__hero--empty">🎪</div>
+            )}
+
+            <div className="event-detail-sheet__body">
+              <h2 className="event-detail-sheet__title">{eventDetail?.title || selectedEvent.title}</h2>
+
+              {detailLoading ? (
+                <p className="event-detail-sheet__loading">정보를 불러오는 중...</p>
+              ) : eventDetail ? (
+                <>
+                  {/* 기본 정보 */}
+                  <div className="event-detail-sheet__info-grid">
+                    {eventDetail.eventStartDate ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">📅 기간</span>
+                        <span>{formatEventDate(eventDetail.eventStartDate)} ~ {formatEventDate(eventDetail.eventEndDate)}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.eventPlace ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">📍 장소</span>
+                        <span>{eventDetail.eventPlace}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.addr ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">🗺 주소</span>
+                        <span>{eventDetail.addr} {eventDetail.addrDetail}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.playTime ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">⏰ 시간</span>
+                        <span>{eventDetail.playTime}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.useTimeFestival ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">💰 이용요금</span>
+                        <span>{eventDetail.useTimeFestival}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.ageLimit ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">👤 이용대상</span>
+                        <span>{eventDetail.ageLimit}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.sponsor ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">🏢 주최</span>
+                        <span>{eventDetail.sponsor}</span>
+                      </div>
+                    ) : null}
+                    {eventDetail.tel || eventDetail.sponsorTel ? (
+                      <div className="event-detail-sheet__info-row">
+                        <span className="event-detail-sheet__label">📞 연락처</span>
+                        <span>{eventDetail.tel || eventDetail.sponsorTel}</span>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* 프로그램 */}
+                  {eventDetail.program ? (
+                    <div className="event-detail-sheet__section">
+                      <h3>프로그램</h3>
+                      <p>{eventDetail.program}</p>
+                    </div>
+                  ) : null}
+
+                  {/* 개요 */}
+                  {eventDetail.overview ? (
+                    <div className="event-detail-sheet__section">
+                      <h3>소개</h3>
+                      <p className={overviewExpanded ? "" : "event-detail-sheet__overview-clamp"}>{eventDetail.overview}</p>
+                      {eventDetail.overview.length > 120 ? (
+                        <button className="event-detail-sheet__more-btn" type="button" onClick={() => setOverviewExpanded(!overviewExpanded)}>
+                          {overviewExpanded ? "접기" : "더보기"}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {/* 홈페이지 */}
+                  {eventDetail.homepage ? (
+                    <a className="event-detail-sheet__link" href={eventDetail.homepage} target="_blank" rel="noopener noreferrer">
+                      🔗 홈페이지 바로가기
+                    </a>
+                  ) : null}
+                </>
+              ) : (
+                /* API 실패 시 기본 정보 */
+                <div className="event-detail-sheet__info-grid">
+                  {selectedEvent.startDate ? (
+                    <div className="event-detail-sheet__info-row">
+                      <span className="event-detail-sheet__label">📅 기간</span>
+                      <span>{formatEventDate(selectedEvent.startDate)} ~ {formatEventDate(selectedEvent.endDate)}</span>
+                    </div>
+                  ) : null}
+                  {selectedEvent.addr ? (
+                    <div className="event-detail-sheet__info-row">
+                      <span className="event-detail-sheet__label">🗺 주소</span>
+                      <span>{selectedEvent.addr}</span>
+                    </div>
+                  ) : null}
+                  {selectedEvent.tel ? (
+                    <div className="event-detail-sheet__info-row">
+                      <span className="event-detail-sheet__label">📞 연락처</span>
+                      <span>{selectedEvent.tel}</span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
