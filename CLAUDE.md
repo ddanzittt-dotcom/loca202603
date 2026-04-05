@@ -320,9 +320,60 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key
 import('/src/lib/supabaseHealthCheck.js').then(m => m.runHealthCheck())
 ```
 
+### Sprint 5: participant/manager 역할 분리 + 행사 댓글 (2026-04-04)
+
+#### Phase 0 — 코드베이스 조사 + 구현 계획
+- 현재 행사 지도 구조를 participant/manager 관점으로 분석
+- 8단계 구현 계획 수립
+
+#### Phase 1 — 메인 앱 manager UI 제거
+- MapEditorScreen에서 📊대시보드/👥협업/📢공지 버튼 제거
+- isAdmin 상태, checkAdminRole(), DashboardScreen 제거
+- DashboardScreen 번들에서 tree-shaking 제거 (20.8KB 절감)
+
+#### Phase 2 — participant 행사 진입 분리
+- 행사 지도(category==='event') → SharedMapViewer로 분기 (MapEditorScreen 미사용)
+- 행사 참여 중 BottomNav 숨김 (몰입형)
+- SharedMapViewer에 onBack prop 추가
+
+#### Phase 3 — participant 행사 UI 재구성
+- 상단 헤더 카드 (행사명, 진행률, 다음 목표)
+- 하단 시트 (접힘: 다음 장소 / 펼침: 장소·공지·정보 탭)
+- 지도 컨트롤 최소화 (📋 FAB만)
+- 현재 목표 강조 (가장 가까운 미체크인 핀)
+- 댓글 타임스탬프 추가
+
+#### Phase 4 — 행사 댓글 백엔드
+- event_comments, event_comment_reports 테이블
+- create_event_comment, list_event_comments, report_event_comment RPC
+- 서버 기준 권한 검증 (comments_enabled, checked_in_only, guest)
+- 신고 3회 자동 reported 전환
+
+#### Phase 5 — participant 댓글 UI
+- 장소 카드 탭 (정보/댓글) 구조
+- 댓글 작성/수정/삭제/신고
+- pinned 댓글 상단 표시
+- checked_in_only 안내, 빈 상태 UI
+- 신고 사유 5종 선택 다이얼로그
+
+#### Phase 6 — 대시보드 댓글 관리 기반
+- loca-dashboard에 "댓글 관리" 탭 추가
+- commentService.js (댓글 CRUD + 통계 + 신고)
+- MapManagePage에 댓글 설정 섹션 추가
+
+#### Phase 7 — 대시보드 댓글 moderation 강화
+- 최근 활동 통계 (오늘/7일)
+- 일괄 선택 + 일괄 숨김/공개
+- 정책 설정 전용 탭 (maps.config 직접 read/write)
+- 댓글 본문 접기/펼치기
+
+#### Phase 8 — 문서화 + QA
+- docs/EVENT_MAP_ARCHITECTURE.md (역할 분리, 흐름, 데이터 구조, limitations)
+- docs/QA_CHECKLIST.md (13개 카테고리, 50+ 체크 항목)
+
 ## 다음 단계
-- 참여자 콘텐츠(메모) 열람/숨김 관리 UI (feature_memos.status 활용)
-- SharedMapViewer 실시간 갱신 (Supabase Realtime 또는 주기적 polling)
-- 대시보드 UI 구축 (별도 프로젝트, 명세: `참고자료/LOCA_대시보드_기능명세_v2.md`)
-- 엑셀/CSV 내보내기 (view_logs 쿼리 → SheetJS)
+- Supabase Realtime으로 댓글/체크인 실시간 갱신
+- 댓글 페이지네이션 (50+건 대응)
+- 메인 앱 ↔ 대시보드 SSO 연동
+- 엑셀/CSV 내보내기 (댓글 + view_logs)
 - 추가 이벤트 템플릿 (문화유산 투어, 캠퍼스 투어 등)

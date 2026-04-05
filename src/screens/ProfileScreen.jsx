@@ -363,15 +363,15 @@ export function ProfileScreen({
               <div className="settings-card">
                 <h2>테마</h2>
                 <div className="settings-theme-row">
-                  {themeModes.map(({ id, icon: Icon, label }) => (
+                  {themeModes.map((mode) => (
                     <button
-                      key={id}
-                      className={`settings-theme-btn${themeMode === id ? " is-active" : ""}`}
+                      key={mode.id}
+                      className={`settings-theme-btn${themeMode === mode.id ? " is-active" : ""}`}
                       type="button"
-                      onClick={() => handleThemeChange(id)}
+                      onClick={() => handleThemeChange(mode.id)}
                     >
-                      <Icon size={18} />
-                      <span>{label}</span>
+                      <mode.icon size={18} />
+                      <span>{mode.label}</span>
                     </button>
                   ))}
                 </div>
