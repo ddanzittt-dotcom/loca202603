@@ -146,7 +146,9 @@ export function HomeScreen({
       {/* ─── 1. 프로필 카드 ─── */}
       <div className="home-profile-simple">
         <div className="home-profile-simple__header">
-          <span className="home-profile-simple__emoji" style={{ background: levelInfo.current.bgColor || "#E6F1FB" }}>{levelInfo.current.emoji}</span>
+          <span className="home-profile-simple__emoji" style={{ background: levelInfo.current.bgColor || "#E6F1FB" }}>
+            <img src={levelInfo.current.icon} alt={levelInfo.current.cloudName} className="home-profile-simple__cloud" />
+          </span>
           <div className="home-profile-simple__info">
             <div className="home-profile-simple__top">
               <strong>{nickname}</strong>
@@ -273,7 +275,7 @@ export function HomeScreen({
               onFeatureTap={() => {}}
               showLabels={true}
               myLocation={myLocation}
-              levelEmoji={levelInfo.current.emoji}
+              levelEmoji={levelInfo.current.icon}
             />
           </MapErrorBoundary>
         </div>
@@ -378,7 +380,9 @@ export function HomeScreen({
                 const isLocked = lvl.level > levelInfo.current.level
                 return (
                   <div key={lvl.level} className={`level-chart-item${isCurrent ? " is-current" : ""}${isLocked ? " is-locked" : ""}`}>
-                    <span className="level-chart-item__emoji" style={{ background: lvl.bgColor }}>{lvl.emoji}</span>
+                    <span className="level-chart-item__emoji" style={{ background: lvl.bgColor }}>
+                      <img src={lvl.icon} alt={lvl.cloudName} className="level-chart-item__cloud" />
+                    </span>
                     <div className="level-chart-item__info">
                       <strong>Lv.{lvl.level} {lvl.cloudName || lvl.title}</strong>
                       <span>{lvl.title} · {lvl.minXp === 0 ? "시작" : `${lvl.minXp} XP`}</span>

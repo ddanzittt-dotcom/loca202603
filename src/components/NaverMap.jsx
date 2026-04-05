@@ -310,7 +310,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           + `<div class="loca-direction" style="transform:rotate(${h}deg)">`
           + `<div class="loca-dir-arrow"></div>`
           + `</div>`
-          + `<div class="loca-level-emoji"><span>${escapeHtml(levelEmoji)}</span></div>`
+          + `<div class="loca-level-emoji"><img src="${levelEmoji.startsWith("/") ? levelEmoji : ""}" alt="" style="width:24px;height:24px" onerror="this.style.display='none';this.nextSibling.style.display='inline'"/><span style="display:${levelEmoji.startsWith("/") ? "none" : "inline"}">${escapeHtml(levelEmoji)}</span></div>`
           + `</div>`
         const locMarker = new naverMaps.Marker({
           position: toLatLng(myLocation.lat, myLocation.lng),
