@@ -442,11 +442,8 @@ export default function App() {
       <main className="content">
       <Suspense fallback={<ScreenFallback />}>
         {showPersonalLoading ? (
-          <section className="screen screen--scroll">
-            <article className="empty-card">
-              <strong>내 지도를 불러오는 중이에요.</strong>
-              <p>Supabase 계정과 연결된 데이터를 확인하고 있어요.</p>
-            </article>
+          <section className="screen screen--scroll" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+            <div style={{ textAlign: "center", color: "#aaa", fontSize: 13 }}>불러오는 중...</div>
           </section>
         ) : null}
 
