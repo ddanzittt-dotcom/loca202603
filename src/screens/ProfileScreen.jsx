@@ -1,24 +1,64 @@
 import { useState, useEffect } from "react"
-import { Settings, Upload, MapPin, Moon, Sun, Monitor, Bell, BellOff, Ruler, Download, Trash2, Info, ChevronRight, ExternalLink, LogOut, UserCircle } from "lucide-react"
+import { Settings, Upload, MapPin, Moon, Sun, Monitor, Bell, BellOff, Ruler, Download, Trash2, Info, ChevronRight, ExternalLink, LogOut, UserCircle, Map as MapIcon } from "lucide-react"
 import { BottomSheet } from "../components/ui"
 import { mapThemeGradient } from "../lib/appUtils"
 import { redeemInvitationCode } from "../lib/mapService"
 
-function ProfileMapCard({ map, pinFeatures, onClick }) {
-  const [start, end] = mapThemeGradient(map.theme)
+// 아바타 색상 (이름 해시)
+function getAvatarColors(name) {
+  const palettes = [
+    { bg: "#E8BCAD", text: "#993C1D" },
+    { bg: "#ECCAA0", text: "#633806" },
+    { bg: "#C2D6B8", text: "#085041" },
+    { bg: "#ACD6CC", text: "#085041" },
+    { bg: "#ABC6DC", text: "#0C447C" },
+    { bg: "#C8C9DC", text: "#3D3E6B" },
+    { bg: "#E8C8BE", text: "#712B13" },
+    { bg: "#9CC8AC", text: "#085041" },
+  ]
+  let hash = 0
+  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return palettes[Math.abs(hash) % palettes.length]
+}
+
+function getInitials(name) {
+  if (!name) return "?"
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+// 미니 지도 카드 (갤러리용)
+const MINI_PALETTES = {
+  서울: ["#D4836B", "#D99580", "#E0A896", "#E8BCAD"],
+  경기: ["#C48B4C", "#D4A06A", "#E0B585", "#ECCAA0"],
+  강원: ["#4A7A60", "#649478", "#80AE92", "#9CC8AC"],
+  부산: ["#5B7EA5", "#7596B8", "#90AECA", "#ABC6DC"],
+  제주: ["#C47A6E", "#D09488", "#DCAEA2", "#E8C8BE"],
+}
+
+function ProfileMiniCard({ map, features, onClick }) {
+  const pins = features.filter((f) => f.type === "pin")
+  const routes = features.filter((f) => f.type === "route")
+  const areas = features.filter((f) => f.type === "area")
+  const pal = MINI_PALETTES["서울"] // fallback
+  const isEvent = map.category === "event"
+  const hash = (map.title || "").length % 3
 
   return (
-    <button className="profile-map-card" type="button" onClick={onClick}>
-      <div className="profile-map-card__preview" style={{ "--card-start": start, "--card-end": end }}>
-        <div className="profile-map-card__emojis">
-          {(pinFeatures.length > 0 ? pinFeatures.map((f) => f.emoji).slice(0, 4) : ["📍"]).map((emoji, i) => (
-            <span key={`${emoji}-${i}`}>{emoji}</span>
-          ))}
+    <button className="pf__mini-card" type="button" onClick={onClick} style={{ background: pal[3] }}>
+      <div className="pf__mini-blob" style={{ left: -8, bottom: -8, width: 60, height: 42, background: `${pal[1]}66` }} />
+      <div className="pf__mini-blob" style={{ right: -6 + hash * 3, top: -5, width: 50, height: 35, background: `${pal[3]}80` }} />
+      <span className="pf__mini-badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
+        {isEvent ? "Event" : "Editor"}
+      </span>
+      <div className="pf__mini-bottom">
+        <p className="pf__mini-title">{map.title}</p>
+        <div className="pf__mini-meta">
+          <span><MapPin size={7} fill="#fff" stroke="#fff" /> {pins.length}</span>
+          {routes.length > 0 ? <span>{routes.length} 경로</span> : null}
+          {areas.length > 0 ? <span>{areas.length} 구역</span> : null}
         </div>
-      </div>
-      <div className="profile-map-card__body">
-        <strong>{map.title}</strong>
-        <span><MapPin size={12} /> {pinFeatures.length}</span>
       </div>
     </button>
   )
@@ -201,50 +241,66 @@ export function ProfileScreen({
     { id: "info", icon: Info, label: "정보" },
   ]
 
+  const initials = getInitials(user.name)
+  const avatarColors = getAvatarColors(user.name)
+  const placeCount = features.length
+
   return (
     <section className="screen screen--scroll">
-      <div className="profile-page">
-        <div className="profile-page__topbar">
-          <div className="profile-page__header">
-            <div><span className="avatar avatar--xl"><span className="avatar__inner">{user.emoji}</span></span></div>
-            <div className="profile-page__body">
-              <div className="profile-page__name-row">
-                <strong>{user.name}</strong>
-                <button className="button button--primary profile-page__publish" type="button" onClick={onPublishOpen}>
-                  <Upload size={14} /> 지도 올리기
-                </button>
-              </div>
-              <span className="profile-hero__handle">{user.handle}</span>
-              <p>{user.bio}</p>
-            </div>
+      <div className="pf">
+        {/* 프로필 정보 */}
+        <div className="pf__info">
+          <div className="pf__avatar" style={{ background: avatarColors.bg }}>
+            <span style={{ color: avatarColors.text }}>{initials}</span>
           </div>
-          <button className="icon-button profile-page__settings" type="button" onClick={handleOpenSettings} aria-label="설정">
-            <Settings size={18} />
+          <div className="pf__info-body">
+            <div className="pf__name-row">
+              <span className="pf__name">{user.name}</span>
+              <span className="pf__level">Lv.2</span>
+            </div>
+            <p className="pf__handle">@{user.handle?.replace("@", "") || user.name}</p>
+          </div>
+          <button className="pf__settings-btn" type="button" onClick={handleOpenSettings} aria-label="설정">
+            <Settings size={18} color="#2D4A3E" />
           </button>
         </div>
 
-        <div className="stats-row profile-stats-row">
-          <article className="stat-card"><span className="stat-card__label">내 지도</span><strong className="stat-card__value">{maps.length}</strong></article>
-          <article className="stat-card"><span className="stat-card__label">공유</span><strong className="stat-card__value">{shares.length}</strong></article>
-          <article className="stat-card"><span className="stat-card__label">팔로우</span><strong className="stat-card__value">{followedCount}</strong></article>
+        {/* 바이오 */}
+        {user.bio ? <p className="pf__bio">{user.bio}</p> : null}
+
+        {/* 통계 */}
+        <div className="pf__stats">
+          <div className="pf__stat"><p className="pf__stat-value">{maps.length}</p><p className="pf__stat-label">지도</p></div>
+          <div className="pf__stat-divider" />
+          <div className="pf__stat"><p className="pf__stat-value">{placeCount}</p><p className="pf__stat-label">장소</p></div>
+          <div className="pf__stat-divider" />
+          <div className="pf__stat"><p className="pf__stat-value">0</p><p className="pf__stat-label">팔로워</p></div>
+          <div className="pf__stat-divider" />
+          <div className="pf__stat"><p className="pf__stat-value">{followedCount}</p><p className="pf__stat-label">팔로잉</p></div>
         </div>
 
+        {/* 액션 버튼 */}
+        <div className="pf__actions">
+          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 올리기</button>
+          <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenSettings}>프로필 편집</button>
+        </div>
+
+        {/* 지도 갤러리 */}
         {shares.length > 0 ? (
-          <div className="profile-map-grid">
+          <div className="pf__gallery">
             {shares.map((share) => {
               const map = maps.find((item) => item.id === share.mapId)
-              const mapFeatures = features.filter((item) => item.mapId === share.mapId && item.type === "pin")
+              const mapFeatures = features.filter((item) => item.mapId === share.mapId)
               if (!map) return null
-              return (
-                <ProfileMapCard key={share.id} map={map} pinFeatures={mapFeatures} onClick={() => onSelectPost("own", share.id)} />
-              )
+              return <ProfileMiniCard key={share.id} map={map} features={mapFeatures} onClick={() => onSelectPost("own", share.id)} />
             })}
           </div>
         ) : (
-          <article className="empty-card">
-            <strong>아직 프로필에 올린 지도가 없어요.</strong>
-            <p>지도를 하나 고르면 프로필에서 바로 보여줄 수 있어요.</p>
-          </article>
+          <div className="pf__empty">
+            <div className="pf__empty-icon"><MapIcon size={20} color="#FF6B35" /></div>
+            <p className="pf__empty-title">아직 만든 지도가 없어요</p>
+            <p className="pf__empty-desc">첫 번째 지도를 만들어보세요</p>
+          </div>
         )}
       </div>
 

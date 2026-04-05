@@ -4174,3 +4174,218 @@
   margin: 0;
   text-align: center;
 }
+
+/* ══════════════════════════════════════════
+   프로필 화면 (ProfileScreen) — pf-* 네임스페이스
+   ══════════════════════════════════════════ */
+.pf { padding: 0; }
+
+.pf__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0 0;
+}
+.pf__avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pf__avatar span {
+  font-size: 18px;
+  font-weight: 500;
+}
+.pf__info-body { flex: 1; min-width: 0; }
+.pf__name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pf__name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.pf__level {
+  background: #E1F5EE;
+  color: #085041;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 8px;
+}
+.pf__handle {
+  font-size: 10px;
+  color: #aaa;
+  margin: 2px 0 0;
+}
+.pf__settings-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pf__bio {
+  font-size: 11px;
+  color: #666;
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.pf__stats {
+  margin: 10px 0 0;
+  background: #fff;
+  border-radius: 12px;
+  display: flex;
+  border: 0.5px solid rgba(0,0,0,0.05);
+}
+.pf__stat {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+}
+.pf__stat-value {
+  font-size: 17px;
+  font-weight: 500;
+  color: #1A1A1A;
+  margin: 0;
+}
+.pf__stat-label {
+  font-size: 9px;
+  color: #aaa;
+  margin: 2px 0 0;
+}
+.pf__stat-divider {
+  width: 0.5px;
+  background: rgba(0,0,0,0.06);
+  align-self: stretch;
+}
+
+.pf__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pf__btn {
+  flex: 1;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 0;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+.pf__btn--primary {
+  background: #FF6B35;
+  color: #fff;
+}
+.pf__btn--secondary {
+  background: #fff;
+  color: #2D4A3E;
+  border: 0.5px solid rgba(45,74,62,0.2);
+}
+
+/* 지도 갤러리 */
+.pf__gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.pf__mini-card {
+  position: relative;
+  height: 145px;
+  border-radius: 11px;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.pf__mini-blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pf__mini-badge {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  font-size: 8px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 6px;
+  z-index: 1;
+}
+.pf__mini-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 7px 8px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.5));
+  z-index: 1;
+}
+.pf__mini-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: #fff;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf__mini-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+.pf__mini-meta span {
+  font-size: 7px;
+  color: rgba(255,255,255,0.7);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 빈 상태 */
+.pf__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 8px;
+}
+.pf__empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #FFF4EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pf__empty-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  margin: 0;
+}
+.pf__empty-desc {
+  font-size: 11px;
+  color: #aaa;
+  margin: 0;
+  text-align: center;
+}
