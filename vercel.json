@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "installCommand": "npm install --prefer-offline",
+  "installCommand": "npm install",
   "routes": [
     {
       "src": "/s/[^/]+",
