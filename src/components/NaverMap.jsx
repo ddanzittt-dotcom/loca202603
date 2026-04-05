@@ -343,12 +343,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         } else if (feature.type === "area") {
           const polygon = new naverMaps.Polygon({
             paths: [pointsToPath(feature.points)],
-            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "rgba(133,79,11,0.25)",
-            strokeWeight: 1.5,
-            strokeOpacity: 1,
+            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "#854F0B",
+            strokeWeight: feature.id === selectedFeatureId ? 3.5 : 2.5,
+            strokeOpacity: feature.id === selectedFeatureId ? 0.8 : 0.45,
             strokeStyle: "shortdash",
             fillColor: "#854F0B",
-            fillOpacity: feature.id === selectedFeatureId ? 0.12 : 0.06,
+            fillOpacity: feature.id === selectedFeatureId ? 0.15 : 0.08,
             map,
           })
           bindFeatureSelection(polygon, feature.id)

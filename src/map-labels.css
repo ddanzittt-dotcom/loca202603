@@ -81,18 +81,19 @@
 /* 이름 라벨 */
 .loca-pin-label {
   background: #fff;
-  border: 0.5px solid rgba(0,0,0,0.06);
+  border: 0.5px solid rgba(0,0,0,0.08);
   border-radius: 6px;
   color: #1A1A1A;
-  font-size: 9px;
-  font-weight: 500;
-  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
   white-space: nowrap;
-  max-width: 100px;
+  max-width: 110px;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
   transition: opacity 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 /* 클러스터 마커 */
@@ -153,14 +154,15 @@
   align-items: center;
   gap: 4px;
   background: #fff;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 6px;
-  border: 0.5px solid rgba(0,0,0,0.06);
+  border: 0.5px solid rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   white-space: nowrap;
 }
 .loca-route-label span {
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: #0F6E56;
 }
 
@@ -178,14 +180,15 @@
   align-items: center;
   gap: 4px;
   background: #fff;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 6px;
-  border: 0.5px solid rgba(0,0,0,0.06);
+  border: 0.5px solid rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   white-space: nowrap;
 }
 .loca-area-label span {
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 600;
   color: #854F0B;
 }
 
