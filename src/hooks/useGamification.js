@@ -29,7 +29,10 @@ export function useGamification({
     return computeLocalStats({ maps, features })
   }, [cloudMode, gameProfile, maps, features])
 
-  const levelEmoji = useMemo(() => getLevelForXp(userStats?.xp || 0).emoji, [userStats])
+  const levelEmoji = useMemo(() => {
+    const lvl = getLevelForXp(userStats?.xp || 0)
+    return lvl.icon || lvl.emoji
+  }, [userStats])
 
   const userBadges = useMemo(() => gameProfile?.badges || [], [gameProfile])
   const userBadgeIds = useMemo(() => userBadges.map((b) => b.badge_id), [userBadges])
