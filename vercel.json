@@ -2,9 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "rewrites": [
+  "installCommand": "npm install",
+  "routes": [
     {
-      "source": "/s/:slug",
+      "src": "/s/[^/]+",
       "has": [
         {
           "type": "header",
@@ -12,9 +13,10 @@
           "value": "(?i).*(kakaotalk|facebookexternalhit|facebot|twitterbot|slackbot|linkedinbot|discordbot|telegrambot|whatsapp|line/).*"
         }
       ],
-      "destination": "/api/og/:slug"
+      "dest": "/api/og/$0"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
     {

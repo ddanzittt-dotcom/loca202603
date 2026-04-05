@@ -15,6 +15,9 @@
     "cap:android": "npx cap open android",
     "cap:ios": "npx cap open ios"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
     "@capacitor/cli": "^8.2.0",
