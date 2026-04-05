@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
+import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 
 const getNaverMaps = () => window.naver?.maps ?? null
 
@@ -177,18 +178,23 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         if (feature.type === "pin") {
           // 미설정 핀(0,0) 스킵 — 템플릿에서 생성 후 위치 미지정 상태
           if (feature.lat === 0 && feature.lng === 0) return
+          const isSelected = feature.id === selectedFeatureId
+          const isChecked = checkedInIds && checkedInIds.has(feature.id)
+          const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
+          const catId = feature.category || emojiToCategory(feature.emoji)
+          const iconData = getPinIcon(catId)
+          const badgeHtml = `<div class="loca-pin-badge" style="background:${iconData.bg}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${iconData.color}" stroke="none"><path d="${iconData.path}"/></svg></div>`
+          const dotClass = isSelected ? "loca-pin-dot is-selected" : "loca-pin-dot"
           const labelHtml = showLabels
             ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
             : ""
-          const isChecked = checkedInIds && checkedInIds.has(feature.id)
-          const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
           const marker = new naverMaps.Marker({
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-pin-marker">${checkBadge}<div class="loca-pin-emoji"><span>${escapeHtml(feature.emoji || "📍")}</span></div>${labelHtml}</div>`,
-              size: new naverMaps.Size(40, 56),
-              anchor: new naverMaps.Point(20, 20),
+              content: `<div class="loca-pin-marker">${checkBadge}${badgeHtml}<div class="${dotClass}"></div>${labelHtml}</div>`,
+              size: new naverMaps.Size(40, 70),
+              anchor: new naverMaps.Point(20, 48),
             },
           })
           bindFeatureSelection(marker, feature.id)
@@ -196,18 +202,19 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         } else if (feature.type === "route") {
           const polyline = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
-            strokeColor: feature.id === selectedFeatureId ? "#4F46E5" : "#0EA5E9",
-            strokeWeight: feature.id === selectedFeatureId ? 6 : 4,
-            strokeOpacity: 1,
+            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "#0F6E56",
+            strokeWeight: feature.id === selectedFeatureId ? 4.5 : 3.5,
+            strokeOpacity: 0.5,
+            strokeLineCap: "round",
+            strokeLineJoin: "round",
             clickable: true,
             map,
           })
           bindFeatureSelection(polyline, feature.id)
           layersRef.current.push(polyline)
-          // 거의 보이지 않는 넓은 히트 영역 (위에 렌더링해야 클릭 감지됨)
           const hitArea = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
-            strokeColor: "#0EA5E9",
+            strokeColor: "#0F6E56",
             strokeWeight: 24,
             strokeOpacity: 0.05,
             clickable: true,
@@ -233,11 +240,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         } else if (feature.type === "area") {
           const polygon = new naverMaps.Polygon({
             paths: [pointsToPath(feature.points)],
-            strokeColor: feature.id === selectedFeatureId ? "#4F46E5" : "#16A34A",
-            strokeWeight: feature.id === selectedFeatureId ? 4 : 3,
+            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "rgba(133,79,11,0.25)",
+            strokeWeight: 1.5,
             strokeOpacity: 1,
-            fillColor: feature.id === selectedFeatureId ? "#8B5CF6" : "#22C55E",
-            fillOpacity: feature.id === selectedFeatureId ? 0.26 : 0.18,
+            strokeStyle: "shortdash",
+            fillColor: "#854F0B",
+            fillOpacity: feature.id === selectedFeatureId ? 0.12 : 0.06,
             map,
           })
           bindFeatureSelection(polygon, feature.id)

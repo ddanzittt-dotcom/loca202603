@@ -4599,20 +4599,32 @@
 .fd__location-empty p { font-size: 10px; color: #aaa; margin: 0 0 6px; }
 
 /* 아이콘 그리드 */
-.fd__icon-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 5px;
-  max-height: 99px;
+.fd__icon-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
-.fd__icon-btn {
-  width: 28px; height: 28px; border-radius: 7px; background: #f5f2ed; border: none;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px; cursor: pointer; transition: all 0.1s;
+.fd__icon-group-label {
+  font-size: 9px;
+  font-weight: 500;
+  color: #aaa;
+  margin-bottom: 2px;
+  display: block;
 }
-.fd__icon-btn.is-active { background: #FFF4EB; border: 1.5px solid #FF6B35; }
+.fd__icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.fd__icon-btn {
+  width: 36px; height: 36px; border-radius: 10px; background: #f5f2ed; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.1s; flex-shrink: 0;
+}
+.fd__icon-btn.is-active { border: 1.5px solid #FF6B35; }
 
 /* 버튼 */
 .fd__actions { display: flex; gap: 6px; }

@@ -2,6 +2,41 @@ import { useRef, useState } from "react"
 import { ImagePlus, X as XIcon, Mic } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
+import { PIN_ICON_GROUPS, emojiToCategory } from "../../data/pinIcons"
+
+function IconSelector({ selected, onSelect }) {
+  const selectedId = selected?.length <= 3 ? emojiToCategory(selected) : selected
+  return (
+    <div className="fd__icon-selector">
+      {PIN_ICON_GROUPS.map((group) => (
+        <div key={group.label} className="fd__icon-group">
+          <span className="fd__icon-group-label">{group.label}</span>
+          <div className="fd__icon-grid">
+            {group.icons.map((icon) => {
+              const bg = icon.bg || group.bg
+              const color = icon.color || group.color
+              const isActive = selectedId === icon.id
+              return (
+                <button
+                  key={icon.id}
+                  className={`fd__icon-btn${isActive ? " is-active" : ""}`}
+                  type="button"
+                  title={icon.name}
+                  style={{ background: isActive ? bg : "#f5f2ed" }}
+                  onClick={() => onSelect(icon.id)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill={isActive ? color : "#888"} stroke="none">
+                    <path d={icon.path} />
+                  </svg>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function FeatureDetailSheet({
   featureSheet,
@@ -75,9 +110,7 @@ export function FeatureDetailSheet({
                 <>
                   <label className="fd__field"><span className="fd__label">이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} /></label>
                   <label className="fd__field"><span className="fd__label">아이콘</span>
-                    <div className="fd__icon-grid">{featureEmojiChoices.map((emoji) => (
-                      <button key={emoji} className={`fd__icon-btn${featureSheet.emoji === emoji ? " is-active" : ""}`} type="button" onClick={() => setFeatureSheet((c) => ({ ...c, emoji }))}>{emoji}</button>
-                    ))}</div>
+                    <IconSelector selected={featureSheet.category || featureSheet.emoji} onSelect={(iconId) => setFeatureSheet((c) => ({ ...c, category: iconId }))} />
                   </label>
                   <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
                 </>
