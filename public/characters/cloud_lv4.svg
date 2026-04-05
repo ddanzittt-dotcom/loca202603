@@ -6,7 +6,7 @@
   <ellipse cx="72" cy="76" rx="24" ry="17" fill="#fff"/>
   <ellipse cx="125" cy="80" rx="20" ry="14" fill="#fff"/>
   <rect x="48" y="58" width="32" height="20" rx="8" fill="#2D4A3E" transform="rotate(-10 64 68)"/>
-  <rect x="130" cy="115" width="24" height="30" rx="6" fill="#FF6B35" x="138" y="105"/>
+  <rect x="138" y="105" width="24" height="30" rx="6" fill="#FF6B35"/>
   <line x1="138" y1="118" x2="162" y2="118" stroke="#D4836B" stroke-width="1.5"/>
   <circle cx="84" cy="118" r="9" fill="#378ADD"/>
   <circle cx="116" cy="118" r="9" fill="#378ADD"/>
