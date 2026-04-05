@@ -9,7 +9,7 @@ export function friendlySupabaseError(error) {
   const code = error.code || ""
 
   if (msg.includes("fetch") || msg.includes("network") || msg.includes("failed to fetch")) {
-    return "네트워크 연결��� 확인해주세요."
+    return "네트워크 연결을 확인해주세요."
   }
   if (code === "42501" || msg.includes("permission") || msg.includes("policy")) {
     return "이 작업을 수행할 권한이 없어요."

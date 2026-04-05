@@ -95,9 +95,6 @@ export function PlacesScreen({ maps, features, onOpenFeature }) {
           {filteredFeatures.map((feature, idx) => {
             const map = maps.find((item) => item.id === feature.mapId)
             const badge = TYPE_LABEL[feature.type] || TYPE_LABEL.pin
-            const sub = feature.type === "route"
-              ? `${map?.title || ""} · ${feature.note || ""}`
-              : `${map?.title || ""} · ${feature.note || ""}`
             return (
               <button key={feature.id} className={`pl-item${idx < filteredFeatures.length - 1 ? " pl-item--border" : ""}`} type="button" onClick={() => onOpenFeature(feature.id)}>
                 {TYPE_ICON[feature.type] || TYPE_ICON.pin}

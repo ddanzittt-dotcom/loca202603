@@ -4,6 +4,7 @@ import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
+import { getFeatureCenter } from "../lib/appUtils"
 import { useEventMapData, formatDistance } from "../hooks/useEventMapData"
 import { useEventComments } from "../hooks/useEventComments"
 
@@ -19,16 +20,6 @@ function timeAgo(dateStr) {
   if (hrs < 24) return `${hrs}시간 전`
   const days = Math.floor(hrs / 24)
   return `${days}일 전`
-}
-
-function getFeatureCenter(feature) {
-  if (feature.type === "pin") return { lat: feature.lat, lng: feature.lng, zoom: 16 }
-  if (!feature.points?.length) return null
-  const total = feature.points.reduce(
-    (acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }),
-    { lat: 0, lng: 0 },
-  )
-  return { lat: total.lat / feature.points.length, lng: total.lng / feature.points.length, zoom: 15 }
 }
 
 export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {

@@ -23,24 +23,26 @@ export function formatDistance(m) {
 }
 
 export function useEventMapData({ map, features, config, isEventMap, showViewerToast }) {
-  // ─── 체크인 상태 ───
-  const [checkedInIds, setCheckedInIds] = useState(() => {
-    if (!isEventMap) return new Set()
+  // ─── 체크인 상태 (Array 기반 — Set은 useMemo 파생) ───
+  const [checkedInList, setCheckedInList] = useState(() => {
+    if (!isEventMap) return []
     try {
       const stored = sessionStorage.getItem(`loca_checkins_${map.id}`)
-      return stored ? new Set(JSON.parse(stored)) : new Set()
-    } catch { return new Set() }
+      return stored ? JSON.parse(stored) : []
+    } catch { return [] }
   })
+  const checkedInIds = useMemo(() => new Set(checkedInList), [checkedInList])
 
   // 서버 체크인 동기화
   useEffect(() => {
     if (!isEventMap || !hasSupabaseEnv || !map.id) return
     getMyCheckins(map.id).then((rows) => {
       if (rows.length > 0) {
-        const serverIds = new Set(rows.map((r) => r.feature_id))
-        setCheckedInIds((prev) => {
-          const merged = new Set([...prev, ...serverIds])
-          sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify([...merged]))
+        const serverIds = rows.map((r) => r.feature_id)
+        setCheckedInList((prev) => {
+          const merged = [...new Set([...prev, ...serverIds])]
+          if (merged.length === prev.length && merged.every((id, i) => id === prev[i])) return prev
+          sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify(merged))
           return merged
         })
       }
@@ -86,7 +88,7 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
   // ─── 진행률 ───
   const pins = features.filter((f) => f.type === "pin")
   const totalCheckpoints = pins.length
-  const checkedCount = checkedInIds.size
+  const checkedCount = checkedInList.length
   const isCompleted = totalCheckpoints > 0 && checkedCount >= totalCheckpoints
   const progressPct = totalCheckpoints > 0 ? Math.round((checkedCount / totalCheckpoints) * 100) : 0
 
@@ -191,14 +193,13 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
 
   // ─── 체크인 액션 ───
   const handleCheckin = useCallback(async (featureId) => {
-    if (checkedInIds.has(featureId)) return
+    if (checkedInList.includes(featureId)) return
     const sessionId = sessionStorage.getItem("loca_session_id") || null
     const proofMeta = { lat: userPos?.lat || null, lng: userPos?.lng || null, accuracy: userPos?.accuracy || null }
 
-    const next = new Set(checkedInIds)
-    next.add(featureId)
-    setCheckedInIds(next)
-    sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify([...next]))
+    const next = [...checkedInList, featureId]
+    setCheckedInList(next)
+    sessionStorage.setItem(`loca_checkins_${map.id}`, JSON.stringify(next))
 
     if (hasSupabaseEnv && map.id) {
       const feat = features.find((f) => f.id === featureId)
@@ -239,7 +240,7 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
     } else {
       showViewerToast("체크인 완료!")
     }
-  }, [checkedInIds, config, features, map.id, map.title, showViewerToast, userPos])
+  }, [checkedInList, config, features, map.id, map.title, showViewerToast, userPos])
 
   // ─── 설문 제출 ───
   const handleSurveySubmit = useCallback(async () => {

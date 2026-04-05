@@ -437,3 +437,18 @@ export function buildCommunityPosts(posts, usersById) {
     })
     .filter(Boolean)
 }
+
+export function getFeatureCenter(feature) {
+  if (!feature) return null
+  if (feature.type === "pin") return { lat: feature.lat, lng: feature.lng, zoom: 16 }
+  if (!feature.points?.length) return null
+  const total = feature.points.reduce(
+    (acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }),
+    { lat: 0, lng: 0 },
+  )
+  return {
+    lat: total.lat / feature.points.length,
+    lng: total.lng / feature.points.length,
+    zoom: 15,
+  }
+}

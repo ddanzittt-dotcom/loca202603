@@ -150,7 +150,6 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
   const pal = region.palette // [dark, mid, light, pale]
 
   const isEvent = map.category === "event"
-  const cardType = isEvent ? "event" : "editor"
   const lastMod = formatRelativeDate(map.updatedAt)
 
   // blob 위치에 약간의 변주
