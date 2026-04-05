@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, X } from "lucide-react"
+import { ArrowLeft, X, MapPin, Target, Medal, Map as MapIcon, Flame, Navigation, ChevronRight, Trophy } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { NaverMap } from "../components/NaverMap"
 import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
@@ -11,7 +11,6 @@ export function HomeScreen({
   onOpenCommunityEditor,
   userStats,
   viewerProfile,
-  onOpenMaps,
   souvenirs = [],
 }) {
   const xp = userStats?.xp || 0
@@ -52,29 +51,37 @@ export function HomeScreen({
   const [showEventList, setShowEventList] = useState(false)
   const [showLevelChart, setShowLevelChart] = useState(false)
 
-  const doFetch = async (lat, lng) => {
-    setEventsLoading(true)
-    try {
-      const url = lat && lng
-        ? `/api/events?lat=${lat}&lng=${lng}&_t=${Date.now()}`
-        : `/api/events?_t=${Date.now()}`
-      const resp = await fetch(url, { cache: "no-store" })
-      const data = await resp.json()
-      setEvents(data.items?.length > 0 ? data.items : [])
-      setEventsRadiusKm(data.radiusKm || null)
-    } catch {
-      setEvents([])
-      setEventsRadiusKm(null)
-    }
-    setEventsLoading(false)
+  const applyFetchResult = (data) => {
+    setEvents(data.items?.length > 0 ? data.items : [])
+    setEventsRadiusKm(data.radiusKm || null)
   }
 
-  useEffect(() => { doFetch(null, null) }, [])
+  const fetchEvents = async (lat, lng) => {
+    const url = lat && lng
+      ? `/api/events?lat=${lat}&lng=${lng}&_t=${Date.now()}`
+      : `/api/events?_t=${Date.now()}`
+    const resp = await fetch(url, { cache: "no-store" })
+    return resp.json()
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    // eventsLoading 초기값이 true이므로 여기서 재설정 불필요
+    fetchEvents(null, null)
+      .then((data) => { if (!cancelled) applyFetchResult(data) })
+      .catch(() => { if (!cancelled) { setEvents([]); setEventsRadiusKm(null) } })
+      .finally(() => { if (!cancelled) setEventsLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const loadNearbyEvents = () => {
     const go = (lat, lng) => {
       setEventsNearby(true)
-      doFetch(lat, lng)
+      setEventsLoading(true)
+      fetchEvents(lat, lng)
+        .then(applyFetchResult)
+        .catch(() => { setEvents([]); setEventsRadiusKm(null) })
+        .finally(() => setEventsLoading(false))
     }
     if (myLocation) return go(myLocation.lat, myLocation.lng)
     if (!navigator.geolocation) return
@@ -91,7 +98,11 @@ export function HomeScreen({
 
   const loadAllEvents = () => {
     setEventsNearby(false)
-    doFetch(null, null)
+    setEventsLoading(true)
+    fetchEvents(null, null)
+      .then(applyFetchResult)
+      .catch(() => { setEvents([]); setEventsRadiusKm(null) })
+      .finally(() => setEventsLoading(false))
   }
 
   const openEventDetail = async (event) => {
@@ -152,11 +163,11 @@ export function HomeScreen({
         </div>
 
         <div className="home-profile-simple__stats">
-          <span>📍 {userStats?.pins || 0}</span>
-          <span>🎯 {userStats?.checkins || 0}</span>
-          <span>🏅 {userStats?.completions || 0}</span>
-          <span>🗺 {userStats?.maps || 0}</span>
-          {streak > 0 ? <span className="home-profile-simple__streak">🔥 {streak}일</span> : null}
+          <span><MapPin size={13} /> {userStats?.pins || 0}</span>
+          <span><Target size={13} /> {userStats?.checkins || 0}</span>
+          <span><Medal size={13} /> {userStats?.completions || 0}</span>
+          <span><MapIcon size={13} /> {userStats?.maps || 0}</span>
+          {streak > 0 ? <span className="home-profile-simple__streak"><Flame size={13} /> {streak}일</span> : null}
         </div>
 
         {earnedBadges.length > 0 || nextBadge ? (
@@ -175,7 +186,7 @@ export function HomeScreen({
       {souvenirs.length > 0 ? (
         <div className="home-section">
           <div className="home-section__head">
-            <h2>🏆 수비니어</h2>
+            <h2>수비니어</h2>
           </div>
           <div className="home-souvenir-row">
             {souvenirs.map((s) => (
@@ -191,7 +202,7 @@ export function HomeScreen({
       {/* ─── 2. 인기 지도 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>🔥 인기 지도</h2>
+          <h2>인기 지도</h2>
         </div>
         {recommendedMaps.length > 0 ? (
           <div className="home-map-scroller">
@@ -211,7 +222,7 @@ export function HomeScreen({
                 <div className="rec-card__body">
                   <strong className="rec-card__title">{item.title}</strong>
                   {item.creator ? <span className="rec-card__creator">{item.creator}</span> : null}
-                  <span className="rec-card__count">📍 {item.placeCount || 0}</span>
+                  <span className="rec-card__count"><MapPin size={11} /> {item.placeCount || 0}</span>
                 </div>
               </button>
             ))}
@@ -225,11 +236,11 @@ export function HomeScreen({
       <div className="home-section">
         <div className="home-section__head">
           <div>
-            <h2>🗺 모두의 지도</h2>
+            <h2>모두의 지도</h2>
             <p className="home-section__desc">나만 아는 장소를 공유하고, 다른 사람의 추천도 만나보세요!</p>
           </div>
           <button className="home-section__link" type="button" onClick={onOpenCommunityEditor}>
-            참여 →
+            참여하기 <ChevronRight size={14} />
           </button>
         </div>
         <div className="home-community-map">
@@ -254,9 +265,9 @@ export function HomeScreen({
       {/* ─── 4. 내 근처 이벤트 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>🎪 {eventsNearby ? `내 근처 이벤트${eventsRadiusKm ? ` (${eventsRadiusKm}km)` : ""}` : "진행 중인 이벤트"}</h2>
+          <h2>{eventsNearby ? `내 근처 이벤트${eventsRadiusKm ? ` (${eventsRadiusKm}km)` : ""}` : "진행 중인 이벤트"}</h2>
           <button className={`home-event-locate${eventsNearby ? " is-active" : ""}`} type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
-            📍 {eventsNearby ? "내 근처" : "내 위치"}
+            <Navigation size={12} /> {eventsNearby ? "내 근처" : "내 위치"}
           </button>
         </div>
         {eventsLoading ? (
@@ -304,7 +315,7 @@ export function HomeScreen({
         <div className="event-list-screen">
           <div className="event-list-screen__header">
             <button className="event-list-screen__back" type="button" onClick={() => setShowEventList(false)}><ArrowLeft size={20} /></button>
-            <h2>🎪 이벤트 목록</h2>
+            <h2>이벤트 목록</h2>
             <span className="event-list-screen__count">{events.length}건</span>
           </div>
           <div className="event-list-screen__body">

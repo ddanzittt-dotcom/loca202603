@@ -1607,6 +1607,9 @@
 }
 
 .home-event-locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 5px 12px;
   border: 1px solid var(--line, #f3f4f6);
   border-radius: 8px;
@@ -1937,11 +1940,14 @@
   border: none;
   background: none;
   color: var(--primary, #4f46e5);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .home-section__empty {
@@ -2989,13 +2995,21 @@
 }
 .home-profile-simple__stats {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid var(--line, #f3f4f6);
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-secondary, #374151);
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+}
+.home-profile-simple__stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.home-profile-simple__stats svg {
+  opacity: 0.6;
 }
 .home-profile-simple__streak {
   color: #f97316;

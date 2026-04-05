@@ -1,12 +1,11 @@
 :root {
   color-scheme: light;
   font-family:
-    Inter,
+    "Pretendard Variable",
+    Pretendard,
     -apple-system,
     BlinkMacSystemFont,
-    Apple SD Gothic Neo,
-    Noto Sans KR,
-    Segoe UI,
+    system-ui,
     sans-serif;
   background: #fafafa;
   color: #111827;
