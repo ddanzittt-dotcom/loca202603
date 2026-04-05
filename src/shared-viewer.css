@@ -1458,3 +1458,13 @@
   gap: 8px;
   margin-top: 12px;
 }
+
+/* 카테고리 아이콘 (이모지 교체) */
+.sv-cat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 4px;
+  flex-shrink: 0;
+}

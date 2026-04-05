@@ -221,7 +221,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
         <div className="sv-event__spot-card">
           <div className="sv-event__spot-head">
             <div className="sv-event__spot-info">
-              <span className="sv-event__spot-emoji">{selectedFeature.emoji}</span>
+              <span className="sv-event__spot-emoji">{(() => { const ic = getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)); return <span className="sv-cat-icon" style={{ background: ic.bg }}><svg width="16" height="16" viewBox="0 0 24 24" fill={ic.color} stroke="none"><path d={ic.path} /></svg></span> })()}</span>
               <div>
                 <strong>{selectedFeature.title}</strong>
                 {pinDistances[selectedFeature.id] != null ? (
@@ -377,7 +377,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                 </div>
               ) : nextSpot ? (
                 <button className="sv-event__next-spot" type="button" onClick={goToNextSpot}>
-                  <span className="sv-event__next-emoji">{nextSpot.emoji}</span>
+                  <span className="sv-event__next-emoji">{(() => { const ic = getPinIcon(nextSpot.category || emojiToCategory(nextSpot.emoji)); return <span className="sv-cat-icon" style={{ background: ic.bg }}><svg width="14" height="14" viewBox="0 0 24 24" fill={ic.color} stroke="none"><path d={ic.path} /></svg></span> })()}</span>
                   <div className="sv-event__next-info">
                     <span className="sv-event__next-label">다음 장소</span>
                     <strong>{nextSpot.title}</strong>
@@ -428,7 +428,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                           type="button"
                           onClick={() => handleSpotTap(f)}
                         >
-                          <span className="sv-event__spot-row-emoji">{f.emoji}</span>
+                          <span className="sv-event__spot-row-emoji">{(() => { const ic = getPinIcon(f.category || emojiToCategory(f.emoji)); return <span className="sv-cat-icon" style={{ background: ic.bg }}><svg width="12" height="12" viewBox="0 0 24 24" fill={ic.color} stroke="none"><path d={ic.path} /></svg></span> })()}</span>
                           <div className="sv-event__spot-row-info">
                             <strong>{f.title}</strong>
                             {dist != null ? <span>{formatDistance(dist)}</span> : null}
