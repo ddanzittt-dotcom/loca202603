@@ -45,6 +45,37 @@
   --space-item: 12px;
   --space-tight: 6px;
 }
+/* ── Dark Mode ── */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface-soft: #1e1e2e;
+  --surface-muted: #252525;
+  --text: #f0f0f0;
+  --text-secondary: #d1d5db;
+  --muted: #9ca3af;
+  --line: #2a2a2a;
+  --primary: #818cf8;
+  --primary-strong: #6366f1;
+  --primary-light: #1e1b4b;
+  --accent: #fb923c;
+  --accent-light: #431407;
+  --danger: #f87171;
+  --success: #34d399;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+[data-theme="dark"] .app-shell { background: var(--bg); }
+[data-theme="dark"] .top-bar { background: rgba(15, 15, 15, 0.92); border-bottom-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .bottom-nav { background: rgba(15, 15, 15, 0.94); border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .sheet { background: var(--surface); box-shadow: 0 -8px 30px rgba(0,0,0,0.5); }
+[data-theme="dark"] .sheet-backdrop { background: rgba(0,0,0,0.6); }
+[data-theme="dark"] input, [data-theme="dark"] textarea { background: var(--surface-muted); border-color: var(--line); color: var(--text); }
+[data-theme="dark"] .toast { background: #e5e7ebeb; color: #111827; }
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;

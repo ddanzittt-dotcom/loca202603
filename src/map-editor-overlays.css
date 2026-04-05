@@ -1018,6 +1018,140 @@
   gap: 12px;
 }
 
+/* ── 설정 탭 네비게이션 ── */
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  background: var(--surface-muted, #f5f5f5);
+  border-radius: var(--radius-md, 12px);
+}
+.settings-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 4px;
+  border: none;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--muted, #6b7280);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.settings-tab.is-active {
+  background: var(--surface, #fff);
+  color: var(--text, #111827);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
+}
+
+/* ── 테마 선택 행 ── */
+.settings-theme-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.settings-theme-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1.5px solid var(--line, #f3f4f6);
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface, #fff);
+  color: var(--muted, #6b7280);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.settings-theme-btn.is-active {
+  border-color: var(--primary, #4f46e5);
+  color: var(--primary, #4f46e5);
+  background: var(--primary-light, #eef2ff);
+}
+
+/* ── 토글 행 ── */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line, #f3f4f6);
+}
+.settings-toggle-row:last-child {
+  border-bottom: none;
+}
+.settings-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text, #111827);
+}
+.settings-toggle-row input[type="checkbox"] {
+  width: 40px;
+  height: 22px;
+  accent-color: var(--primary, #4f46e5);
+  cursor: pointer;
+}
+
+/* ── 링크 리스트 ── */
+.settings-link-list {
+  display: flex;
+  flex-direction: column;
+}
+.settings-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border: none;
+  background: none;
+  border-bottom: 1px solid var(--line, #f3f4f6);
+  color: var(--text, #111827);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+.settings-link-row:last-child {
+  border-bottom: none;
+}
+.settings-link-row svg {
+  color: var(--muted, #6b7280);
+}
+
+/* ── 설정 카드 보조 텍스트 ── */
+.settings-card__email {
+  font-size: 0.8rem;
+  color: var(--muted, #6b7280);
+  margin: 0 0 8px;
+}
+.settings-card__version {
+  font-size: 0.75rem;
+  color: var(--muted, #6b7280);
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.settings-card__success {
+  color: var(--success, #10b981);
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+.settings-card__error {
+  color: var(--danger, #ef4444);
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
 .settings-category-list {
   display: flex;
   flex-direction: column;
