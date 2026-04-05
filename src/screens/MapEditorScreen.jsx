@@ -85,19 +85,13 @@ export function MapEditorScreen({
       const query = trimmedSearchQuery
       setSearching(true)
 
-      // Naver geocode (주소 검색)
+      // 네이버 geocode (한국 주소)
       const tryNaver = () =>
         new Promise((resolve) => {
           const naverMaps = window.naver?.maps
-          if (!naverMaps?.Service) {
-            resolve([])
-            return
-          }
+          if (!naverMaps?.Service) { resolve([]); return }
           naverMaps.Service.geocode({ query }, (status, response) => {
-            if (status !== naverMaps.Service.Status.OK || !response.v2) {
-              resolve([])
-              return
-            }
+            if (status !== naverMaps.Service.Status.OK || !response.v2) { resolve([]); return }
             resolve(
               (response.v2.addresses || []).slice(0, 5).map((addr, i) => ({
                 id: `naver-${i}`,
@@ -110,32 +104,44 @@ export function MapEditorScreen({
           })
         })
 
-      // Nominatim 폴백 (장소명 검색)
-      const tryNominatim = () =>
-        fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=ko&q=${encodeURIComponent(query)}`,
-          { signal: controller.signal },
-        )
-          .then((r) => r.json())
-          .then((data) =>
-            (Array.isArray(data) ? data : []).map((r, i) => ({
-              id: `osm-${i}`,
-              roadAddress: (r.display_name || "").split(",")[0],
-              jibunAddress: r.display_name || "",
-              lat: Number(r.lat),
-              lng: Number(r.lon),
-            })),
+      // Google Places (글로벌 — 해외 + 한국 보완)
+      const tryGoogle = () =>
+        new Promise((resolve) => {
+          const googleKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
+          if (!googleKey) { resolve([]); return }
+          fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleKey}&language=ko`,
+            { signal: controller.signal },
           )
-          .catch(() => [])
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.status !== "OK" || !data.results) { resolve([]); return }
+              resolve(
+                data.results.slice(0, 5).map((r, i) => ({
+                  id: `google-${i}`,
+                  roadAddress: r.formatted_address?.split(",")[0] || "",
+                  jibunAddress: r.formatted_address || "",
+                  lat: r.geometry.location.lat,
+                  lng: r.geometry.location.lng,
+                })),
+              )
+            })
+            .catch(() => resolve([]))
+        })
 
-      Promise.all([tryNaver(), tryNominatim()]).then(([naverResults, osmResults]) => {
+      Promise.all([tryNaver(), tryGoogle()]).then(([naverResults, googleResults]) => {
         if (cancelled || controller.signal.aborted) return
-        // 한글이 포함된 검색어면 네이버 우선, 아니면 Nominatim 우선
+        // 한글 검색어면 네이버 우선, 그 외 Google 우선
         const hasKorean = /[가-힣]/.test(query)
-        const primary = hasKorean ? naverResults : osmResults
-        const secondary = hasKorean ? osmResults : naverResults
-        const merged = primary.length > 0 ? primary : secondary
-        setSearchResults(merged)
+        const primary = hasKorean ? naverResults : googleResults
+        const secondary = hasKorean ? googleResults : naverResults
+        // 중복 제거 (같은 좌표 0.001도 이내)
+        const merged = [...primary]
+        for (const s of secondary) {
+          const isDuplicate = merged.some((p) => Math.abs(p.lat - s.lat) < 0.001 && Math.abs(p.lng - s.lng) < 0.001)
+          if (!isDuplicate) merged.push(s)
+        }
+        setSearchResults(merged.slice(0, 7))
         setSearchOpen(true)
         setSearching(false)
       })
