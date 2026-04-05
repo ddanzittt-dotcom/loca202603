@@ -166,7 +166,7 @@ export function useMapCRUD({
       console.error("Failed to save map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, mapSheet, openMapEditor, setFeatures, setMapSheet, setMaps, showToast])
+  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, setShares, showToast, refreshGameProfile])
 
   const deleteMap = useCallback(async (directMapId) => {
     const targetId = directMapId || mapSheet?.id
@@ -266,7 +266,7 @@ export function useMapCRUD({
       console.error("Failed to import shared map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, setFeatures, setMaps, sharedMapData, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger])
+  }, [cloudMode, setFeatures, setMaps, sharedMapData, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger, refreshGameProfile])
 
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
@@ -299,7 +299,7 @@ export function useMapCRUD({
       console.error("Failed to publish map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, setShares, shares, showToast])
+  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, setShares, shares, showToast, refreshGameProfile])
 
   const unpublish = useCallback(async (postId) => {
     try {

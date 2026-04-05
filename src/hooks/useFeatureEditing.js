@@ -177,7 +177,7 @@ export function useFeatureEditing({
     }
     setFeatureSheet((c) => toEditableFeature(mergeFeatureMedia(nextFeature, c)))
     showToast("정보를 저장했어요.")
-  }, [activeMapSource, cloudMode, featureSheet, setCommunityMapFeatures, setFeatureSheet, setFeatures, setMaps, showToast, touchMap])
+  }, [activeMapSource, cloudMode, featureSheet, setCommunityMapFeatures, setFeatureSheet, setFeatures, setMaps, showToast, touchMap, checkCompletionMilestone])
 
   const deleteFeature = useCallback(async () => {
     if (!featureSheet?.id || !window.confirm("이 항목을 삭제할까요?")) return
