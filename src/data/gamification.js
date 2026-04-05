@@ -2,14 +2,18 @@
 // 서버 authoritative: XP/레벨/배지는 서버(gamificationService.js)가 source of truth
 // 이 파일은 카탈로그 정의 + local fallback 전용
 
-// ─── 레벨 정의 ───
+// ─── 뭉게 (Cloud Puff) 10단계 레벨 정의 ───
 export const LEVELS = [
-  { level: 1, title: "새싹 탐험가",    emoji: "🥚", minXp: 0 },
-  { level: 2, title: "동네 산책러",    emoji: "🐣", minXp: 50 },
-  { level: 3, title: "길 찾는 사람",   emoji: "🐥", minXp: 200 },
-  { level: 4, title: "지도 제작자",    emoji: "🦊", minXp: 500 },
-  { level: 5, title: "로컬 큐레이터",  emoji: "🦁", minXp: 1200 },
-  { level: 6, title: "마스터 탐험가",  emoji: "🐉", minXp: 3000 },
+  { level: 1,  title: "씨앗 탐험가",    emoji: "☁️",  minXp: 0,    cloudName: "아기 뭉게",   bgColor: "#E6F1FB", badgeBg: "#E6F1FB", badgeText: "#0C447C" },
+  { level: 2,  title: "새싹 탐험가",    emoji: "☁️",  minXp: 30,   cloudName: "맑은 뭉게",   bgColor: "#E6F1FB", badgeBg: "#E6F1FB", badgeText: "#0C447C" },
+  { level: 3,  title: "꼬마 탐험가",    emoji: "🌸",  minXp: 100,  cloudName: "꽃 뭉게",     bgColor: "#FFF4EB", badgeBg: "#E6F1FB", badgeText: "#0C447C" },
+  { level: 4,  title: "동네 탐험가",    emoji: "🎒",  minXp: 300,  cloudName: "탐험 뭉게",   bgColor: "#E1F5EE", badgeBg: "#E1F5EE", badgeText: "#085041" },
+  { level: 5,  title: "거리 탐험가",    emoji: "🧭",  minXp: 700,  cloudName: "모험 뭉게",   bgColor: "#FAEEDA", badgeBg: "#E1F5EE", badgeText: "#085041" },
+  { level: 6,  title: "로컬 가이드",    emoji: "🌅",  minXp: 1500, cloudName: "노을 뭉게",   bgColor: "#FFF4EB", badgeBg: "#FFF4EB", badgeText: "#993C1D" },
+  { level: 7,  title: "에디터",         emoji: "🌙",  minXp: 3000, cloudName: "밤하늘 뭉게", bgColor: "#EEEDFE", badgeBg: "#EEEDFE", badgeText: "#3C3489" },
+  { level: 8,  title: "시니어 에디터",   emoji: "👑",  minXp: 5000, cloudName: "황금 뭉게",   bgColor: "#FAEEDA", badgeBg: "#FAEEDA", badgeText: "#633806" },
+  { level: 9,  title: "마스터 에디터",   emoji: "🌊",  minXp: 8000, cloudName: "오로라 뭉게", bgColor: "#E1F5EE", badgeBg: "#E1F5EE", badgeText: "#085041" },
+  { level: 10, title: "레전드",         emoji: "✨",  minXp: 15000, cloudName: "레전드 뭉게", bgColor: "linear-gradient(135deg, #FF6B35, #2D4A3E)", badgeBg: "#2D4A3E", badgeText: "#EF9F27" },
 ]
 
 // ─── XP 획득 기준 (참고용 — 서버 record_map_action RPC가 실제 값을 결정) ───

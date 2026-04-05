@@ -146,11 +146,11 @@ export function HomeScreen({
       {/* ─── 1. 프로필 카드 ─── */}
       <div className="home-profile-simple">
         <div className="home-profile-simple__header">
-          <span className="home-profile-simple__emoji">{levelInfo.current.emoji}</span>
+          <span className="home-profile-simple__emoji" style={{ background: levelInfo.current.bgColor || "#E6F1FB" }}>{levelInfo.current.emoji}</span>
           <div className="home-profile-simple__info">
             <div className="home-profile-simple__top">
               <strong>{nickname}</strong>
-              <span className="home-profile-simple__tag">{levelInfo.current.title}</span>
+              <span className="home-profile-simple__tag" style={{ background: levelInfo.current.badgeBg, color: levelInfo.current.badgeText }}>{levelInfo.current.title}</span>
               <button className="home-profile-simple__level-btn" type="button" onClick={() => setShowLevelChart(true)}>등급표</button>
             </div>
             <div className="home-profile-simple__xp-row">
@@ -373,16 +373,20 @@ export function HomeScreen({
               <button type="button" onClick={() => setShowLevelChart(false)}><X size={18} /></button>
             </div>
             <div className="level-chart-modal__list">
-              {LEVELS.map((lvl) => (
-                <div key={lvl.level} className={`level-chart-item${lvl.level === levelInfo.current.level ? " is-current" : ""}`}>
-                  <span className="level-chart-item__emoji">{lvl.emoji}</span>
-                  <div className="level-chart-item__info">
-                    <strong>Lv.{lvl.level} {lvl.title}</strong>
-                    <span>{lvl.minXp === 0 ? "시작" : `${lvl.minXp} XP`}</span>
+              {LEVELS.map((lvl) => {
+                const isCurrent = lvl.level === levelInfo.current.level
+                const isLocked = lvl.level > levelInfo.current.level
+                return (
+                  <div key={lvl.level} className={`level-chart-item${isCurrent ? " is-current" : ""}${isLocked ? " is-locked" : ""}`}>
+                    <span className="level-chart-item__emoji" style={{ background: lvl.bgColor }}>{lvl.emoji}</span>
+                    <div className="level-chart-item__info">
+                      <strong>Lv.{lvl.level} {lvl.cloudName || lvl.title}</strong>
+                      <span>{lvl.title} · {lvl.minXp === 0 ? "시작" : `${lvl.minXp} XP`}</span>
+                    </div>
+                    {isCurrent ? <span className="level-chart-item__current">현재</span> : null}
                   </div>
-                  {lvl.level === levelInfo.current.level ? <span className="level-chart-item__current">현재</span> : null}
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
