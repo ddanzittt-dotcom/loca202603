@@ -314,7 +314,7 @@ export function MapEditorScreen({
                   {(() => {
                     const catId = selectedFeatureSummary.category || emojiToCategory(selectedFeatureSummary.emoji)
                     const iconData = getPinIcon(catId)
-                    return <span className="me-summary-icon" style={{ background: iconData.bg }}><svg width="14" height="14" viewBox="0 0 24 24" fill={iconData.color} stroke="none"><path d={iconData.path} /></svg></span>
+                    return <span className="me-summary-icon" style={{ background: iconData.bg }}><img src={`/icons/pins/${catId}.svg`} width="14" height="14" alt="" /></span>
                   })()}
                   {selectedFeatureSummary.title}
                 </strong>

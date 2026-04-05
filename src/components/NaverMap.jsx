@@ -261,7 +261,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const showPinLabel = zoomLevel === 3 && showLabels
 
           const badgeHtml = showBadge
-            ? `<div class="loca-pin-badge" style="background:${iconData.bg}"><svg width="12" height="12" viewBox="0 0 24 24" fill="${iconData.color}" stroke="none"><path d="${iconData.path}"/></svg></div>`
+            ? `<div class="loca-pin-badge" style="background:${iconData.bg}"><img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/></div>`
             : ""
           const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;${isSelected ? "border-color:#2D4A3E" : ""}`
           const labelHtml = showPinLabel

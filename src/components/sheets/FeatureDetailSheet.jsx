@@ -25,9 +25,7 @@ function IconSelector({ selected, onSelect }) {
                   style={{ background: bg }}
                   onClick={() => onSelect(icon.id)}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={color} stroke="none">
-                    <path d={icon.path} />
-                  </svg>
+                  <img src={`/icons/pins/${icon.id}.svg`} alt={icon.name} width="16" height="16" />
                 </button>
               )
             })}

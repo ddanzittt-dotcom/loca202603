@@ -95,6 +95,7 @@ export const ALL_PIN_ICONS = PIN_ICON_GROUPS.flatMap((group) =>
     bg: icon.bg || group.bg,
     color: icon.color || group.color,
     group: group.label,
+    src: `/icons/pins/${icon.id}.svg`,
   })),
 )
 
