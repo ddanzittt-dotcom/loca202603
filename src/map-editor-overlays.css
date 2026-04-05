@@ -4389,3 +4389,159 @@
   margin: 0;
   text-align: center;
 }
+
+/* ══════════════════════════════════════════
+   지도 편집 화면 — me-* 네임스페이스
+   ══════════════════════════════════════════ */
+
+/* 지도 바 */
+.me-bar {
+  padding: 2px 14px 6px;
+  background: rgba(250,245,238,0.95);
+}
+.me-bar__card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0.5px solid rgba(0,0,0,0.05);
+}
+.me-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.me-bar__back {
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+.me-bar__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.me-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.me-bar__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.me-bar__divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(0,0,0,0.08);
+}
+.me-bar__share {
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+/* FAB 그룹 */
+.me-fabs {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 5;
+}
+.me-fab {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.me-fab--label {
+  font-size: 7px;
+  font-weight: 500;
+  color: #aaa;
+}
+.me-fab--label.is-active {
+  background: #FF6B35;
+  border-color: #FF6B35;
+}
+.me-fab--label.is-active span {
+  color: #fff;
+}
+.me-fab--pin.is-active {
+  border: 1.5px solid #FF6B35;
+}
+.me-fab--route.is-active {
+  border: 1.5px solid #0F6E56;
+}
+.me-fab--area.is-active {
+  border: 1.5px solid #854F0B;
+}
+
+/* 필터 칩 타입별 활성 색상 */
+.map-filter-chip.is-active[data-type="pin"] {
+  background: #FFF4EB;
+  color: #993C1D;
+}
+.map-filter-chip.is-active[data-type="route"] {
+  background: #E1F5EE;
+  color: #085041;
+}
+.map-filter-chip.is-active[data-type="area"] {
+  background: #FAEEDA;
+  color: #633806;
+}
+
+/* 장소 카드 스트립 아이콘 */
+.me-strip-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.me-strip-icon--pin { background: #FFF4EB; }
+.me-strip-icon--route { background: #E1F5EE; }
+.me-strip-icon--area { background: #FAEEDA; }
+.me-strip-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.me-strip-info strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: #1A1A1A;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.me-strip-info span {
+  font-size: 9px;
+  color: #aaa;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useRef } from "react"
-import { Search as SearchIcon, X } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MapPin } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { NaverMap } from "../components/NaverMap"
@@ -150,30 +150,37 @@ export function MapEditorScreen({
 
   return (
     <section className="map-editor">
-      <header className="map-editor__header">
-        <button className="icon-button" type="button" onClick={onBack} aria-label="뒤로 가기">
-          ←
-        </button>
-        <div className="map-editor__title-wrap">
-          <strong>{map.title}</strong>
+      {/* ─── 지도 바 ─── */}
+      <div className="me-bar">
+        <div className="me-bar__card">
+          <div className="me-bar__left">
+            <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로 가기">
+              <ArrowLeft size={16} color="#2D4A3E" />
+            </button>
+            <span className="me-bar__name">{map.title}</span>
+          </div>
+          <div className="me-bar__right">
+            {!hideCount ? (
+              <>
+                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg> {pinCount}</span>
+                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg> {routeCount}</span>
+                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> {areaCount}</span>
+                <span className="me-bar__divider" />
+              </>
+            ) : null}
+            {!communityMode ? (
+              <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유">
+                <Link2 size={16} color="#2D4A3E" />
+              </button>
+            ) : null}
+          </div>
         </div>
-        {!hideCount ? (
-          <span className="map-editor__count">📍{pinCount} 🔀{routeCount} ⬡{areaCount}</span>
-        ) : null}
-        {isEventMap && !communityMode ? (
-          <span className="map-editor__event-badge">이벤트</span>
-        ) : null}
-        {!communityMode ? (
-          <button className="icon-button" type="button" onClick={() => setShareOpen(true)} aria-label="지도 공유하기">
-            🔗
-          </button>
-        ) : null}
-      </header>
+      </div>
 
       <div className="map-editor__canvas-wrap">
         <div className="map-search-box">
           <div className="map-search-box__bar">
-            <span aria-hidden="true">🔍</span>
+            <SearchIcon size={13} color="#aaa" />
             <input
               type="search"
               value={searchQuery}
@@ -246,50 +253,26 @@ export function MapEditorScreen({
           />
         </MapErrorBoundary>
 
-        <div className="map-editor__floating-actions">
-          <button className="fab fab--stacked fab--text-only" type="button" onClick={onLocate} aria-label="현재 위치" title="현재 위치">
-            <span className="fab__label">내위치</span>
+        <div className="me-fabs">
+          <button className="me-fab" type="button" onClick={onLocate} aria-label="현재 위치">
+            <Navigation size={16} color="#2D4A3E" />
           </button>
-          <button
-            className={`fab fab--stacked fab--text-only fab--label-toggle${showLabels ? " is-active" : ""}`}
-            type="button"
-            onClick={onToggleLabels}
-            aria-label={showLabels ? "이름 숨기기" : "이름 보기"}
-            title={showLabels ? "이름 숨기기" : "이름 보기"}
-          >
-            <span className="fab__label">{showLabels ? "이름 ON" : "이름 OFF"}</span>
+          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="이름 토글">
+            <span>이름</span>
           </button>
           {!readOnly ? (
-            <button
-              className={`fab fab--stacked${editorMode === "pin" ? " is-active" : ""}`}
-              type="button"
-              onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")}
-              aria-label="핀 추가"
-              title="핀 추가"
-            >
-              <span>📍</span>
+            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="핀 추가">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button
-              className={`fab fab--stacked${editorMode === "route" ? " is-active" : ""}`}
-              type="button"
-              onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")}
-              aria-label="경로 추가"
-              title="경로 추가"
-            >
-              <span>🔀</span>
+            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="경로 추가">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button
-              className={`fab fab--stacked${editorMode === "area" ? " is-active" : ""}`}
-              type="button"
-              onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")}
-              aria-label="범위 추가"
-              title="범위 추가"
-            >
-              <span>⬡</span>
+            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="범위 추가">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
             </button>
           ) : null}
         </div>
@@ -326,7 +309,7 @@ export function MapEditorScreen({
                 <span>{formatFeatureMeta(selectedFeatureSummary)}</span>
               </div>
               <button className="icon-button map-feature-summary__close" type="button" onClick={onCloseFeatureSummary} aria-label="요약 닫기">
-                ×
+                <X size={16} />
               </button>
             </div>
             <p>{summarizeFeatureNote(selectedFeatureSummary)}</p>
@@ -450,8 +433,15 @@ export function MapEditorScreen({
                     onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                     onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                   >
-                    <span className="map-place-card__meta">{feature.type === "route" ? "경로" : feature.type === "area" ? "범위" : "장소"}</span>
-                    <strong>{feature.emoji} {feature.title}</strong>
+                    <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
+                      {feature.type === "pin" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg> :
+                       feature.type === "route" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg> :
+                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>}
+                    </div>
+                    <div className="me-strip-info">
+                      <strong>{feature.title}</strong>
+                      <span>{feature.note || ""}</span>
+                    </div>
                   </div>
                 ))}
               </div>
