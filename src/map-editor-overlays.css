@@ -3315,10 +3315,7 @@
   outline: 1.5px solid #FF6B35;
 }
 .level-chart-item.is-locked {
-  opacity: 0.4;
-}
-.level-chart-item.is-locked .level-chart-item__emoji {
-  filter: grayscale(1);
+  opacity: 0.75;
 }
 .level-chart-item__emoji {
   width: 44px;
