@@ -8,9 +8,9 @@ function IconSelector({ selected, onSelect }) {
   const selectedId = selected?.length <= 3 ? emojiToCategory(selected) : selected
   return (
     <div className="fd__icon-selector">
-      {PIN_ICON_GROUPS.map((group) => (
+      {PIN_ICON_GROUPS.map((group, gi) => (
         <div key={group.label} className="fd__icon-group">
-          <span className="fd__icon-group-label">{group.label}</span>
+          <span className="fd__icon-group-label" style={gi === 0 ? { marginTop: 6 } : { marginTop: 10 }}>{group.label}</span>
           <div className="fd__icon-grid">
             {group.icons.map((icon) => {
               const bg = icon.bg || group.bg
@@ -22,10 +22,10 @@ function IconSelector({ selected, onSelect }) {
                   className={`fd__icon-btn${isActive ? " is-active" : ""}`}
                   type="button"
                   title={icon.name}
-                  style={{ background: isActive ? bg : "#f5f2ed" }}
+                  style={{ background: bg }}
                   onClick={() => onSelect(icon.id)}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill={isActive ? color : "#888"} stroke="none">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={color} stroke="none">
                     <path d={icon.path} />
                   </svg>
                 </button>

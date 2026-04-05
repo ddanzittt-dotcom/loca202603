@@ -4611,7 +4611,7 @@
   font-size: 9px;
   font-weight: 500;
   color: #aaa;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   display: block;
 }
 .fd__icon-grid {
@@ -4620,11 +4620,11 @@
   gap: 5px;
 }
 .fd__icon-btn {
-  width: 36px; height: 36px; border-radius: 10px; background: #f5f2ed; border: none;
+  width: 36px; height: 36px; border-radius: 10px; border: 1.5px solid transparent;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.1s; flex-shrink: 0;
 }
-.fd__icon-btn.is-active { border: 1.5px solid #FF6B35; }
+.fd__icon-btn.is-active { border-color: #FF6B35; }
 
 /* 버튼 */
 .fd__actions { display: flex; gap: 6px; }
