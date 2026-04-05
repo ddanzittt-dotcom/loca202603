@@ -4737,3 +4737,56 @@
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* 태그 입력 (칩 형태) */
+.fd__tag-input {
+  background: #FAF5EE;
+  border-radius: 10px;
+  padding: 6px 8px;
+  min-height: 36px;
+}
+.fd__tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.fd__tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  border-radius: 6px;
+  padding: 2px 6px 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #1A1A1A;
+  white-space: nowrap;
+}
+.fd__tag-chip-x {
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: none;
+  color: #aaa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.fd__tag-text {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 10px;
+  color: #1A1A1A;
+  min-width: 60px;
+  flex: 1;
+  padding: 2px 0;
+  font-family: inherit;
+}
+.fd__tag-text::placeholder {
+  color: #aaa;
+}

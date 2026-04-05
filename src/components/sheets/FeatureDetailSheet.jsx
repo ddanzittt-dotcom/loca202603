@@ -4,6 +4,53 @@ import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
 import { PIN_ICON_GROUPS, emojiToCategory } from "../../data/pinIcons"
 
+function TagInput({ tags, onChange }) {
+  const [inputVal, setInputVal] = useState("")
+  const tagList = (tags || "").split(",").map((t) => t.trim()).filter(Boolean)
+
+  const addTag = (text) => {
+    const trimmed = text.trim().replace(/^#/, "")
+    if (!trimmed || tagList.includes(trimmed)) return
+    onChange([...tagList, trimmed].join(", "))
+    setInputVal("")
+  }
+
+  const removeTag = (idx) => {
+    onChange(tagList.filter((_, i) => i !== idx).join(", "))
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault()
+      addTag(inputVal)
+    }
+    if (e.key === "Backspace" && !inputVal && tagList.length > 0) {
+      removeTag(tagList.length - 1)
+    }
+  }
+
+  return (
+    <div className="fd__tag-input">
+      <div className="fd__tag-chips">
+        {tagList.map((tag, i) => (
+          <span key={`${tag}-${i}`} className="fd__tag-chip">
+            #{tag}
+            <button type="button" className="fd__tag-chip-x" onClick={() => removeTag(i)}><XIcon size={10} /></button>
+          </span>
+        ))}
+        <input
+          className="fd__tag-text"
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => { if (inputVal.trim()) addTag(inputVal) }}
+          placeholder={tagList.length === 0 ? "태그 입력 후 Enter" : ""}
+        />
+      </div>
+    </div>
+  )
+}
+
 function IconSelector({ selected, onSelect }) {
   const selectedId = selected?.length <= 3 ? emojiToCategory(selected) : selected
   return (
@@ -182,7 +229,9 @@ export function FeatureDetailSheet({
 
                       <label className="fd__field"><span className="fd__label">내용</span><textarea className="fd__textarea" rows="2" value={featureSheet.note} onChange={(e) => setFeatureSheet((c) => ({ ...c, note: e.target.value }))} placeholder="장소에 대한 설명이나 기록" /></label>
 
-                      <label className="fd__field"><span className="fd__label">태그</span><input className="fd__input" value={featureSheet.tagsText} onChange={(e) => setFeatureSheet((c) => ({ ...c, tagsText: e.target.value }))} placeholder="쉼표로 구분해서 입력" /></label>
+                      <div className="fd__field"><span className="fd__label">태그</span>
+                        <TagInput tags={featureSheet.tagsText} onChange={(val) => setFeatureSheet((c) => ({ ...c, tagsText: val }))} />
+                      </div>
 
                       <div className="fd__field"><span className="fd__label">아이콘</span>
                         <IconSelector selected={featureSheet.category || featureSheet.emoji} onSelect={(iconId) => setFeatureSheet((c) => ({ ...c, category: iconId }))} />
