@@ -4790,3 +4790,10 @@
 .fd__tag-text::placeholder {
   color: #aaa;
 }
+
+/* 위치 좌표 보조 텍스트 */
+.fd__location-coords {
+  font-size: 8px;
+  color: #aaa;
+  margin: 1px 0 0;
+}

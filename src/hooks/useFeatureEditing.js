@@ -23,6 +23,56 @@ const getFeatureDefaultEmoji = (type) => {
 
 import { getFeatureCenter } from "../lib/appUtils"
 
+// 좌표 → 주소 역지오코딩 (한국=네이버, 해외=Google)
+function isKoreaCoord(lat, lng) {
+  return lat >= 33 && lat <= 39 && lng >= 124 && lng <= 132
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    if (isKoreaCoord(lat, lng)) {
+      // 네이버 Reverse Geocode
+      const naverMaps = window.naver?.maps
+      if (naverMaps?.Service) {
+        return new Promise((resolve) => {
+          naverMaps.Service.reverseGeocode(
+            { coords: new naverMaps.LatLng(lat, lng), orders: "roadaddr,addr" },
+            (status, response) => {
+              if (status !== naverMaps.Service.Status.OK || !response.v2?.results?.length) {
+                resolve(null)
+                return
+              }
+              const result = response.v2.results[0]
+              const region = result.region || {}
+              const land = result.land || {}
+              const area1 = region.area1?.name || ""
+              const area2 = region.area2?.name || ""
+              const area3 = region.area3?.name || ""
+              const roadName = land.name || ""
+              const roadNum = land.number1 || ""
+              if (roadName) {
+                resolve({ address: `${area1} ${area2} ${roadName} ${roadNum}`.trim(), province: area1, district: area2 })
+              } else {
+                resolve({ address: `${area1} ${area2} ${area3}`.trim(), province: area1, district: area2 })
+              }
+            },
+          )
+        })
+      }
+    }
+    // Google Reverse Geocode (해외 + 네이버 폴백)
+    const googleKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
+    if (googleKey) {
+      const resp = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleKey}&language=ko`)
+      const data = await resp.json()
+      if (data.status === "OK" && data.results?.length) {
+        return { address: data.results[0].formatted_address || "", province: "", district: "" }
+      }
+    }
+  } catch { /* 실패 시 null */ }
+  return null
+}
+
 // 두 좌표 간 거리 (km) — haversine
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
@@ -346,7 +396,21 @@ export function useFeatureEditing({
       setEditorMode("browse")
       setSelectedFeatureId(nextFeature.id)
       setFeatureSheet(toEditableFeature(nextFeature))
-      return showToast("핀을 추가했어요.")
+      showToast("핀을 추가했어요.")
+
+      // 비동기 역지오코딩 — 주소 자동 채움
+      reverseGeocode(sc.lat, sc.lng).then((geo) => {
+        if (!geo) return
+        const updateFn = (current) =>
+          current.map((f) => f.id === nextFeature.id ? { ...f, address: geo.address, province: geo.province, district: geo.district } : f)
+        if (activeMapSource === "community") {
+          setCommunityMapFeatures(updateFn)
+        } else {
+          setFeatures(updateFn)
+        }
+        setFeatureSheet((c) => c && c.id === nextFeature.id ? { ...c, address: geo.address } : c)
+      })
+      return
     }
     if (editorMode === "route" || editorMode === "area") {
       setDraftPoints((current) => [...current, [sc.lng, sc.lat]])

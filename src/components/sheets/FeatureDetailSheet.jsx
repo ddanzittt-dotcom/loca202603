@@ -219,7 +219,8 @@ export function FeatureDetailSheet({
                           ) : (
                             <div className="fd__location">
                               <div className="fd__location-info">
-                                <p className="fd__location-addr">{featureSheet.lat.toFixed(6)}, {featureSheet.lng.toFixed(6)}</p>
+                                <p className="fd__location-addr">{featureSheet.address || "주소를 불러오는 중..."}</p>
+                                <p className="fd__location-coords">{featureSheet.lat.toFixed(6)}, {featureSheet.lng.toFixed(6)}</p>
                               </div>
                               {onRelocatePin ? <button className="fd__location-change" type="button" onClick={() => onRelocatePin(featureSheet.id)}>변경</button> : null}
                             </div>
