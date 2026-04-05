@@ -355,7 +355,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
       try {
         map.setCenter(new naverMaps.LatLng(focusPoint.lat, focusPoint.lng))
         map.setZoom(focusPoint.zoom || 15)
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
       return
     }
     try {

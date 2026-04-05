@@ -255,15 +255,15 @@ export function ProfileScreen({
       >
         {/* 설정 탭 네비게이션 */}
         <div className="settings-tabs">
-          {settingsTabs.map(({ id, icon: Icon, label }) => (
+          {settingsTabs.map((tab) => (
             <button
-              key={id}
-              className={`settings-tab${settingsTab === id ? " is-active" : ""}`}
+              key={tab.id}
+              className={`settings-tab${settingsTab === tab.id ? " is-active" : ""}`}
               type="button"
-              onClick={() => setSettingsTab(id)}
+              onClick={() => setSettingsTab(tab.id)}
             >
-              <Icon size={16} />
-              <span>{label}</span>
+              <tab.icon size={16} />
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>

@@ -146,7 +146,7 @@ const FALLBACK_MAP = {
   config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true },
 }
 
-export function DashboardScreen({ map: mapProp, features, ownerMaps, onBack, onSelectMap, onOpenAnnouncements }) {
+export function DashboardScreen({ map: mapProp, features, ownerMaps, onBack, onSelectMap }) {
   const map = mapProp || FALLBACK_MAP
   const [period, setPeriod] = useState("all")
   const [activeSection, setActiveSection] = useState("overview") // overview | maps | announcements
