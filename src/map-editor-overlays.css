@@ -4545,3 +4545,141 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ══════════════════════════════════════════
+   장소 상세 시트 — fd-* 네임스페이스
+   ══════════════════════════════════════════ */
+.fd { display: flex; flex-direction: column; gap: 12px; }
+.fd__author { font-size: 10px; color: #aaa; }
+
+/* 탭바 */
+.fd__tabs { display: flex; border-bottom: 0.5px solid rgba(0,0,0,0.06); margin-bottom: 4px; }
+.fd__tab {
+  flex: 1; text-align: center; padding: 8px 0; border: none; background: none;
+  font-size: 12px; font-weight: 400; color: #aaa; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.12s;
+}
+.fd__tab.is-active { color: #1A1A1A; font-weight: 500; border-bottom-color: #FF6B35; }
+
+/* 필드 */
+.fd__field { display: flex; flex-direction: column; gap: 4px; }
+.fd__label { font-size: 10px; font-weight: 500; color: #aaa; }
+.fd__input {
+  background: #FAF5EE; border: none; border-radius: 8px; padding: 8px 10px;
+  font-size: 11px; font-weight: 500; color: #1A1A1A; font-family: inherit; outline: none;
+}
+.fd__input:focus { box-shadow: 0 0 0 1.5px #FF6B3540; }
+.fd__textarea {
+  background: #FAF5EE; border: none; border-radius: 8px; padding: 8px 10px;
+  font-size: 11px; color: #1A1A1A; resize: none; font-family: inherit; outline: none;
+  width: 100%;
+}
+.fd__textarea:focus { box-shadow: 0 0 0 1.5px #FF6B3540; }
+
+/* 위치 */
+.fd__location { display: flex; gap: 6px; align-items: center; }
+.fd__location-info { flex: 1; background: #FAF5EE; border-radius: 8px; padding: 8px 10px; }
+.fd__location-addr { font-size: 10px; font-weight: 500; color: #1A1A1A; margin: 0; }
+.fd__location-change {
+  font-size: 9px; color: #2D4A3E; font-weight: 500;
+  background: #fff; padding: 5px 8px; border-radius: 7;
+  border: 0.5px solid rgba(45,74,62,0.15); cursor: pointer;
+}
+.fd__location-empty p { font-size: 10px; color: #aaa; margin: 0 0 6px; }
+
+/* 아이콘 그리드 */
+.fd__icon-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.fd__icon-btn {
+  width: 28px; height: 28px; border-radius: 7px; background: #f5f2ed; border: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer; transition: all 0.1s;
+}
+.fd__icon-btn.is-active { background: #FFF4EB; border: 1.5px solid #FF6B35; }
+
+/* 버튼 */
+.fd__actions { display: flex; gap: 6px; }
+.fd__btn {
+  flex: 1; text-align: center; font-size: 10px; font-weight: 500;
+  padding: 7px 0; border-radius: 8px; border: none; cursor: pointer;
+}
+.fd__btn--del { background: #fff; color: #E24B4A; border: 0.5px solid rgba(226,75,74,0.2); }
+.fd__btn--save { background: #FF6B35; color: #fff; }
+.fd__btn--sm { flex: none; padding: 3px 10px; border-radius: 6px; font-size: 9px; }
+
+/* 읽기 전용 */
+.fd__readonly { display: flex; flex-direction: column; gap: 4px; }
+.fd__readonly-emoji { font-size: 1.5rem; }
+.fd__readonly strong { font-size: 14px; font-weight: 500; color: #1A1A1A; }
+.fd__readonly p { font-size: 11px; color: #666; margin: 0; line-height: 1.4; }
+.fd__readonly-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.fd__tag { font-size: 9px; color: #aaa; background: #f5f2ed; padding: 2px 7px; border-radius: 6px; }
+
+/* 기록 탭 섹션 */
+.fd__records-tab { display: flex; flex-direction: column; gap: 14px; }
+.fd__rec-section { display: flex; flex-direction: column; gap: 6px; }
+.fd__sec-label { font-size: 11px; font-weight: 500; color: #1A1A1A; }
+
+/* 사진 */
+.fd__photo-row { display: flex; gap: 5px; overflow-x: auto; }
+.fd__photo-upload {
+  width: 56px; height: 56px; border-radius: 8px; flex-shrink: 0;
+  background: #FAF5EE; border: 1px dashed rgba(0,0,0,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #aaa; cursor: pointer;
+}
+
+/* 녹음 */
+.fd__record-btn {
+  background: #FAF5EE; border: none; border-radius: 8px; padding: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  font-size: 10px; color: #FF6B35; font-weight: 500; cursor: pointer;
+}
+.fd__record-btn.is-recording { background: #FFF4EB; }
+
+/* 메모 입력 */
+.fd__memo-input-box {
+  background: #FAF5EE; border-radius: 8px; padding: 8px 10px;
+  display: flex; gap: 6px; align-items: flex-start;
+}
+.fd__memo-textarea {
+  flex: 1; border: none; background: transparent; resize: none;
+  font-size: 11px; color: #1A1A1A; font-family: inherit; outline: none;
+}
+
+/* 메모 리스트 */
+.fd__memo-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.fd__memo-empty { font-size: 10px; color: #aaa; text-align: center; padding: 12px 0; margin: 0; }
+.fd__memo-item {
+  background: #fff; border-radius: 7px; padding: 7px 9px;
+  border: 0.5px solid rgba(0,0,0,0.04);
+}
+.fd__memo-user { font-size: 10px; font-weight: 600; color: #1A1A1A; display: block; margin-bottom: 2px; }
+.fd__memo-text { font-size: 10px; color: #666; margin: 0; line-height: 1.4; }
+.fd__memo-date { font-size: 7px; color: #aaa; display: block; margin-top: 2px; }
+.fd__memo-photos { display: flex; gap: 3px; margin-top: 4px; }
+.fd__memo-photo { width: 48px; height: 48px; border-radius: 5px; object-fit: cover; }
+
+/* 커뮤니티 댓글 입력 */
+.fd__comments { margin-top: 8px; }
+.fd__comment-box {
+  background: #fff; border: 0.5px solid rgba(0,0,0,0.06); border-radius: 10px; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.fd__comment-input {
+  border: none; resize: none; font-size: 11px; color: #1A1A1A;
+  font-family: inherit; outline: none; background: transparent;
+}
+.fd__comment-photos { display: flex; gap: 4px; }
+.fd__comment-thumb { position: relative; width: 48px; height: 48px; border-radius: 6px; overflow: hidden; }
+.fd__comment-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.fd__comment-thumb-x {
+  position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%;
+  border: none; background: rgba(0,0,0,0.5); color: #fff;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.fd__comment-bar { display: flex; align-items: center; justify-content: space-between; }
+.fd__photo-btn {
+  width: 32px; height: 32px; border-radius: 7px; border: none;
+  background: #FAF5EE; color: #aaa; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.fd__photo-btn:disabled { opacity: 0.4; }
