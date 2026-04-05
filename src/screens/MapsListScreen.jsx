@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react"
+import { Plus, Download, Search as SearchIcon } from "lucide-react"
 import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
 
-export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, onDelete, onOpenDashboard, loading = false }) {
+export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, onDelete, loading = false }) {
   const [query, setQuery] = useState("")
 
-  const filteredMaps = useMemo(() => {
+  const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return maps.filter((map) =>
       normalized
@@ -21,17 +22,17 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
         </div>
         <div className="section-head__actions">
           <button className="button button--ghost" type="button" onClick={onImport}>
-            가져오기
+            <Download size={15} /> 가져오기
           </button>
           <button className="button button--primary" type="button" onClick={onCreate}>
-            + 새 지도
+            <Plus size={15} /> 새 지도
           </button>
         </div>
       </div>
 
       {maps.length > 3 ? (
         <label className="search-box">
-          <span aria-hidden="true">⌕</span>
+          <SearchIcon size={16} aria-hidden="true" />
           <input
             type="search"
             value={query}
@@ -52,14 +53,14 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
             action="새 지도 만들기"
             onAction={onCreate}
           />
-        ) : filteredMaps.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon="🔍"
             title="검색 결과가 없어요"
             description="다른 단어로 다시 찾아보세요."
           />
         ) : (
-          filteredMaps.map((map) => (
+          filtered.map((map) => (
             <MapCard
               key={map.id}
               map={map}
