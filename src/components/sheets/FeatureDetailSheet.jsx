@@ -185,9 +185,7 @@ export function FeatureDetailSheet({
                       <label className="fd__field"><span className="fd__label">태그</span><input className="fd__input" value={featureSheet.tagsText} onChange={(e) => setFeatureSheet((c) => ({ ...c, tagsText: e.target.value }))} placeholder="쉼표로 구분해서 입력" /></label>
 
                       <div className="fd__field"><span className="fd__label">아이콘</span>
-                        <div className="fd__icon-grid">{featureEmojiChoices.map((emoji) => (
-                          <button key={emoji} className={`fd__icon-btn${featureSheet.emoji === emoji ? " is-active" : ""}`} type="button" onClick={() => setFeatureSheet((c) => ({ ...c, emoji }))}>{emoji}</button>
-                        ))}</div>
+                        <IconSelector selected={featureSheet.category || featureSheet.emoji} onSelect={(iconId) => setFeatureSheet((c) => ({ ...c, category: iconId }))} />
                       </div>
 
                       <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
