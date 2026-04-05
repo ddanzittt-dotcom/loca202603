@@ -3321,14 +3321,14 @@
   filter: grayscale(1);
 }
 .level-chart-item__emoji {
-  font-size: 1.4rem;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .level-chart-item__info {
   flex: 1;
@@ -4707,7 +4707,8 @@
 
 /* 등급표 캐릭터 이미지 */
 .level-chart-item__cloud {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
+  display: block;
 }
