@@ -2,7 +2,7 @@
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MapPin } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
-import { NaverMap } from "../components/NaverMap"
+import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 
 const formatFeatureMeta = (feature) => {

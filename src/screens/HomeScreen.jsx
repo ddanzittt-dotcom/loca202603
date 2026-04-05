@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, X, MapPin, Target, Medal, Map as MapIcon, Flame, Navigation, ChevronRight, Trophy } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
-import { NaverMap } from "../components/NaverMap"
+import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
 
 export function HomeScreen({

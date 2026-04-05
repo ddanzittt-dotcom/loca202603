@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from "react"
 import { ArrowLeft, X, ChevronRight } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
-import { NaverMap } from "../components/NaverMap"
+import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
