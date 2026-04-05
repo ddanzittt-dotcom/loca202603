@@ -4588,7 +4588,14 @@
 .fd__location-empty p { font-size: 10px; color: #aaa; margin: 0 0 6px; }
 
 /* 아이콘 그리드 */
-.fd__icon-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.fd__icon-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  max-height: 99px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
 .fd__icon-btn {
   width: 28px; height: 28px; border-radius: 7px; background: #f5f2ed; border: none;
   display: flex; align-items: center; justify-content: center;
