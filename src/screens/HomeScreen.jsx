@@ -256,10 +256,10 @@ export function HomeScreen({
         <div className="home-section__head">
           <div>
             <h2>모두의 지도</h2>
-            <p className="home-section__desc">나만 아는 장소를 공유하고, 다른 사람의 추천도 만나보세요!</p>
+            <p className="home-section__desc">내 근처 추천 장소를 공유해보세요</p>
           </div>
-          <button className="home-section__link" type="button" onClick={onOpenCommunityEditor}>
-            참여하기 <ChevronRight size={14} />
+          <button className="home-section__cta" type="button" onClick={onOpenCommunityEditor}>
+            참여하기
           </button>
         </div>
         <div className="home-community-map">

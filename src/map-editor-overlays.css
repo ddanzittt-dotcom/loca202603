@@ -2203,15 +2203,28 @@
 .home-section__link {
   border: none;
   background: none;
-  color: var(--primary, #4f46e5);
+  color: var(--primary, #FF6B35);
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 2px;
+}
+
+.home-section__cta {
+  border: none;
+  background: #FF6B35;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .home-section__empty {
