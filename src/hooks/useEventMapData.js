@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { hasSupabaseEnv } from "../lib/supabase"
-import { logEvent, setUtmSource } from "../lib/analytics"
+import { logEvent, setUtmSource, markMapViewed } from "../lib/analytics"
 import { getActiveAnnouncements, submitSurveyResponse } from "../lib/mapService"
 import { submitEventCheckin, getMyCheckins, awardSouvenir, submitSurveyReward } from "../lib/gamificationService"
 
@@ -184,11 +184,14 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
   }, [])
 
   // ─── 지도 조회 이벤트 로깅 ───
+  // markMapViewed()로 동일 세션+map_id 조합의 중복 기록을 방지한다.
   useEffect(() => {
     if (!hasSupabaseEnv || !map.id) return
     const utmSource = new URLSearchParams(window.location.search).get("utm_source") || "direct"
     setUtmSource(utmSource)
-    logEvent("map_view", { map_id: map.id, referrer: utmSource, source: utmSource })
+    if (markMapViewed(map.id)) {
+      logEvent("map_view", { map_id: map.id, referrer: utmSource, source: utmSource })
+    }
   }, [map.id])
 
   // ─── 체크인 액션 ───
@@ -263,6 +266,8 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
     try {
       if (hasSupabaseEnv && map.id) {
         await submitSurveyResponse(map.id, surveyData)
+        // survey_submit 이벤트를 view_logs에도 기록하여 참여 퍼널 집계에 활용
+        logEvent("survey_submit", { map_id: map.id, meta: { rating: surveyRating } })
         const reward = await submitSurveyReward({ mapId: map.id })
         if (reward?.xp_delta) showViewerToast(`설문 완료! +${reward.xp_delta} XP`)
         else showViewerToast("설문을 제출했어요!")

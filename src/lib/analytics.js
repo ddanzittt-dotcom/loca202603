@@ -3,6 +3,28 @@ import { supabase, hasSupabaseEnv } from "./supabase"
 const QUEUE_KEY = "loca.event_queue"
 const MAX_RETRY = 5
 
+// ─── 대시보드 지표에 필요한 이벤트 타입 정의 ───
+// 대시보드 집계 기준과 일치해야 한다.
+// unique_visits, total_views  ← map_view
+// pin_click_rate              ← feature_click / map_view
+// checkin_rate                ← checkin (DISTINCT session) / map_view (DISTINCT session)
+// completion_rate             ← completion / checkin (DISTINCT session)
+// qr_share                   ← source='qr' / total map_view
+// avg_satisfaction            ← survey_responses.rating AVG (별도 테이블)
+// survey_count               ← survey_responses COUNT (별도 테이블)
+export const EVENT_TYPES = {
+  MAP_VIEW: "map_view",
+  FEATURE_CLICK: "feature_click",
+  CHECKIN: "checkin",
+  COMPLETION: "completion",
+  SURVEY_SUBMIT: "survey_submit",  // view_logs에도 기록하여 퍼널 일관성 확보
+  FEATURE_CREATE: "feature_create",
+  MAP_PUBLISH: "map_publish",
+  MAP_UNPUBLISH: "map_unpublish",
+  MAP_IMPORT: "map_import",
+  FOLLOW_TOGGLE: "follow_toggle",
+}
+
 /**
  * 브라우저 세션 ID를 반환한다.
  * sessionStorage에 저장되므로 탭을 닫으면 리셋된다.
@@ -23,6 +45,7 @@ const UTM_KEY = "loca_utm_source"
 /**
  * 세션의 utm_source를 저장한다.
  * SharedMapViewer 마운트 시 한 번 호출되며, 이후 모든 이벤트에 자동 포함된다.
+ * 유입 채널: "qr" | "kakao" | "link" | "direct"
  */
 export function setUtmSource(source) {
   if (!source) return
@@ -35,6 +58,23 @@ export function setUtmSource(source) {
  */
 export function getUtmSource() {
   return sessionStorage.getItem(UTM_KEY) || null
+}
+
+// ─── map_view 중복 방지 ───
+// 동일 세션 내 같은 map_id로 map_view가 여러 번 발화되지 않도록 한다.
+// React 리렌더/StrictMode/useEffect 재실행으로 인한 중복을 방지.
+const _viewedMaps = new Set()
+
+/**
+ * 해당 map_id에 대해 이미 map_view를 기록했는지 확인한다.
+ * 첫 호출이면 true를 반환하고 내부에 기록한다.
+ */
+export function markMapViewed(mapId) {
+  if (!mapId) return false
+  const key = `${getSessionId()}:${mapId}`
+  if (_viewedMaps.has(key)) return false
+  _viewedMaps.add(key)
+  return true
 }
 
 // ─── 이벤트 큐 (오프라인 대응) ───
@@ -78,6 +118,16 @@ async function sendEvent(row) {
   if (error) throw error
 }
 
+/**
+ * view_logs 행을 구성한다.
+ * 모든 이벤트는 아래 필드를 포함한다:
+ * - map_id: 지도 ID (nullable — follow_toggle 등은 null)
+ * - viewer_id: 로그인한 사용자 ID (nullable)
+ * - session_id: 브라우저 세션 ID (항상 포함)
+ * - event_type: 이벤트 유형 (EVENT_TYPES 참조)
+ * - source: 유입 채널 (qr | kakao | link | direct)
+ * - meta: JSONB 부가 데이터 (feature_id, feature_type, utm_source 등)
+ */
 function buildRow(eventType, payload, viewerId) {
   const sessionUtm = getUtmSource()
   const source = payload.source || payload.referrer || sessionUtm || "direct"
@@ -131,24 +181,23 @@ export async function flushEventQueue() {
     try {
       const row = buildRow(item.eventType, item.payload, viewerId)
       await sendEvent(row)
-      // 전송 성공 → 큐에서 제거 (remaining에 넣지 않음)
     } catch {
       item.retryCount = (item.retryCount || 0) + 1
       if (item.retryCount < MAX_RETRY) {
         remaining.push(item)
       }
-      // MAX_RETRY 초과 시 버림
     }
   }
 
   writeQueue(remaining)
-
-  // flush 완료 — 디버그 로그 제거됨
 }
 
 /**
  * 이벤트를 view_logs에 기록한다.
  * 오프라인이거나 전송 실패 시 로컬 큐에 저장한다.
+ *
+ * @param {string} eventType - EVENT_TYPES 중 하나
+ * @param {object} payload - { map_id, feature_id?, source?, referrer?, meta?: {} }
  */
 export async function logEvent(eventType, payload = {}) {
   if (!hasSupabaseEnv || !supabase) return
