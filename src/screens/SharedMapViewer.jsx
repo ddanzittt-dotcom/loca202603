@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react"
-import { X, Bell } from "lucide-react"
+import { X, Bell, ArrowLeft } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -358,7 +358,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
         {/* Map area */}
         <div className="lw-map">
           <MapErrorBoundary>
-            <NaverMap features={features} selectedFeatureId={selectedId} draftPoints={[]} draftMode="browse" focusPoint={focusPoint} fitTrigger={fitTrigger} onFeatureTap={handleFeatureSelect} showLabels />
+            <NaverMap features={features} selectedFeatureId={selectedId} draftPoints={[]} draftMode="browse" focusPoint={focusPoint} fitTrigger={fitTrigger} onFeatureTap={handleFeatureSelect} showLabels mapCategory={map.category} />
           </MapErrorBoundary>
 
           {/* Pin tap card */}
@@ -402,14 +402,13 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
         {/* Top frame (corporate branding) */}
         <div className="lw-ci-top">
           {onBack ? (
-            <button type="button" onClick={onBack} className="lw-ci-logo" style={{ border: 'none', cursor: 'pointer', padding: 0 }}>
-              {orgLogo ? <img src={orgLogo} alt="" /> : orgName.slice(0, 2)}
+            <button type="button" onClick={onBack} className="lw-back-btn" aria-label="뒤로가기">
+              <ArrowLeft size={20} />
             </button>
-          ) : (
-            <div className="lw-ci-logo">
-              {orgLogo ? <img src={orgLogo} alt="" /> : orgName.slice(0, 2)}
-            </div>
-          )}
+          ) : null}
+          <div className="lw-ci-logo">
+            {orgLogo ? <img src={orgLogo} alt="" /> : orgName.slice(0, 2)}
+          </div>
           <div className="lw-ci-info">
             <span className="lw-ci-title">{map.title}</span>
             <span className="lw-ci-org">
@@ -493,6 +492,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                 onFeatureTap={handleFeatureSelect}
                 showLabels
                 checkedInIds={config.checkin_enabled ? checkedInIds : null}
+                mapCategory={map.category}
               />
             </MapErrorBoundary>
 

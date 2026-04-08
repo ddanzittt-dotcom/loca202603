@@ -179,6 +179,23 @@
   flex-shrink: 0;
 }
 
+.lw-back-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.lw-back-btn:active {
+  background: rgba(255,255,255,0.35);
+}
+
 .lw-ci-logo {
   width: 32px;
   height: 32px;
