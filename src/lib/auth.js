@@ -8,10 +8,20 @@ const ALLOWED_ORIGINS = [
   "http://127.0.0.1:5173",
   "http://127.0.0.1:4173",
   "capacitor://localhost",
+  "com.ddanzittt.loca://",
 ]
+
+function isNativeApp() {
+  return typeof window !== "undefined" && (
+    window.location.origin === "capacitor://localhost" ||
+    window.location.origin === "http://localhost" ||
+    window.Capacitor?.isNativePlatform?.()
+  )
+}
 
 function getDefaultRedirectTo() {
   if (typeof window === "undefined") return undefined
+  if (isNativeApp()) return "com.ddanzittt.loca://"
   const origin = window.location.origin
   if (ALLOWED_ORIGINS.includes(origin)) return origin
   if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return origin

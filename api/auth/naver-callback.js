@@ -20,11 +20,29 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "server env not configured" })
   }
 
+  // CSRF 검증: state 내 csrf 토큰과 쿠키의 csrf 토큰 비교
   let redirectTo = "https://loca.ddanzittt.com"
   try {
     const parsed = JSON.parse(Buffer.from(state, "base64url").toString())
     if (parsed.redirect_to) redirectTo = parsed.redirect_to
-  } catch { /* 기본값 사용 */ }
+
+    // 쿠키에서 csrf 토큰 추출
+    const cookies = Object.fromEntries(
+      (req.headers.cookie || "").split(";").map((c) => {
+        const [k, ...v] = c.trim().split("=")
+        return [k, v.join("=")]
+      }),
+    )
+    const cookieCsrf = cookies.naver_csrf
+    if (!parsed.csrf || !cookieCsrf || parsed.csrf !== cookieCsrf) {
+      // csrf 쿠키 삭제
+      res.setHeader("Set-Cookie", "naver_csrf=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Max-Age=0")
+      return res.status(403).json({ error: "CSRF 검증 실패 — 다시 로그인해주세요." })
+    }
+  } catch { /* state 파싱 실패 시 기본값 사용 */ }
+
+  // csrf 쿠키 소비 (일회용)
+  res.setHeader("Set-Cookie", "naver_csrf=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Max-Age=0")
 
   const origin = new URL(req.url, `https://${req.headers.host}`).origin
   const callbackUrl = `${origin}/api/auth/naver-callback`

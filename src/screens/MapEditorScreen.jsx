@@ -53,7 +53,6 @@ export function MapEditorScreen({
   showToast,
   shareUrl = "",
 }) {
-  const isEventMap = map.category === "event"
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)

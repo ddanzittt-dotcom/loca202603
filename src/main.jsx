@@ -9,6 +9,11 @@ import "./legacy/styles.css"
 import App from "./App"
 import { registerServiceWorker } from "./registerServiceWorker"
 
+// 네이버 지도 API 키를 환경변수에서 주입 (index.html의 loadNaverMap에서 참조)
+if (import.meta.env.VITE_NAVER_MAP_KEY) {
+  window.__NAVER_MAP_KEY = import.meta.env.VITE_NAVER_MAP_KEY
+}
+
 // 첫 실행 시에만 시드 데이터 주입 — 기존 사용자 데이터는 절대 삭제하지 않음
 if (!localStorage.getItem("loca.mobile.maps")) {
   // maps 키 자체가 없으면 완전 첫 실행 → useLocalStorageState가 sampleData seed를 자동 저장

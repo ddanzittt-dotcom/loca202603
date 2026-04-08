@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react"
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react"
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || ""
 
@@ -37,7 +37,8 @@ export const GoogleMap = forwardRef(function GoogleMap({
   const myLocMarkerRef = useRef(null)
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
-  onMapTapRef.current = onMapTap
+
+  useEffect(() => { onMapTapRef.current = onMapTap }, [onMapTap])
 
   // 초기화
   useEffect(() => {

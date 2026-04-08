@@ -6,9 +6,15 @@ const STORE_NAME = "blobs"
 const DB_VERSION = 1
 
 let dbPromise = null
+let persistRequested = false
 
 export function initMediaDB() {
   if (dbPromise) return dbPromise
+  // 브라우저에 영구 저장 권한 요청 (한 번만)
+  if (!persistRequested && navigator.storage?.persist) {
+    persistRequested = true
+    navigator.storage.persist().catch(() => {})
+  }
   dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
     request.onupgradeneeded = () => {

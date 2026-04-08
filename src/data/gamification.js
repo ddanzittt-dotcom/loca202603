@@ -100,6 +100,12 @@ export function computeStatsFromLocal({ maps, features, checkins, completions, m
   const routes = features.filter((f) => f.type === "route").length
   const areas = features.filter((f) => f.type === "area").length
 
+  // records = memos + photos + voices (모든 feature에서 합산)
+  let totalRecords = 0
+  for (const f of features) {
+    totalRecords += (f.memos?.length || 0) + (f.photos?.length || 0) + (f.voices?.length || 0)
+  }
+
   const stats = {
     maps: maps.length,
     pins,
@@ -108,6 +114,7 @@ export function computeStatsFromLocal({ maps, features, checkins, completions, m
     checkins: checkins || 0,
     completions: completions || 0,
     memos: memos || 0,
+    records: totalRecords,
     imports: imports || 0,
     publishes: publishes || 0,
     streak: streak || 0,

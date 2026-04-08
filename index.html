@@ -43,7 +43,8 @@
         if (window.__naverMapLoading) return;
         window.__naverMapLoading = true;
         var s = document.createElement('script');
-        s.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=x5bkbkzlrw&submodules=geocoder';
+        var naverKey = window.__NAVER_MAP_KEY || 'x5bkbkzlrw';
+        s.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + naverKey + '&submodules=geocoder';
         s.onload = function() {
           // Poll for auth completion (SDK nullifies naver.maps on auth failure)
           var attempts = 0;

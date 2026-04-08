@@ -42,6 +42,7 @@ function normalizeGameProfile(raw) {
       checkins: s.checkins || 0,
       completions: s.completions || 0,
       memos: s.memos || 0,
+      records: s.records || 0,
       imports: s.imports || 0,
       publishes: s.publishes || 0,
       streak: s.streak_days ?? s.streak ?? 0,

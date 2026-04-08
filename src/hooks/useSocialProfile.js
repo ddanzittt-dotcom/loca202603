@@ -4,6 +4,7 @@ import {
   followUser as followUserRecord,
   unfollowUser as unfollowUserRecord,
   updateProfile as updateProfileRecord,
+  incrementLike as incrementLikeRecord,
   friendlySupabaseError,
 } from "../lib/mapService"
 import { createId } from "../lib/appUtils"
@@ -21,21 +22,27 @@ export function useSocialProfile({
   pendingSharePlace, setPendingSharePlace,
   touchMap, showToast,
 }) {
-  const handleUpdateProfile = useCallback(async ({ name, bio, emoji }) => {
+  const handleUpdateProfile = useCallback(async ({ name, bio, emoji, avatarUrl, handle, link }) => {
     setViewerProfile((prev) => ({
       ...prev,
       name: name ?? prev.name,
       bio: bio ?? prev.bio,
       emoji: emoji ?? prev.emoji,
+      avatarUrl: avatarUrl !== undefined ? avatarUrl : prev.avatarUrl,
+      handle: handle != null ? (handle.startsWith("@") ? handle : `@${handle}`) : prev.handle,
+      link: link !== undefined ? link : prev.link,
     }))
 
     if (cloudMode && authUser) {
       try {
-        await updateProfileRecord(authUser.id, {
-          nickname: name ?? undefined,
-          bio: bio ?? undefined,
-          avatar_url: emoji ?? undefined,
-        })
+        const updates = {}
+        if (name != null) updates.nickname = name
+        if (bio != null) updates.bio = bio
+        if (avatarUrl != null) updates.avatar_url = avatarUrl
+        else if (emoji != null) updates.avatar_url = emoji
+        if (handle != null) updates.slug = handle.replace(/^@/, "").toLowerCase().replace(/\s+/g, "_")
+        if (link !== undefined) updates.link = link
+        await updateProfileRecord(authUser.id, updates)
       } catch (error) {
         showToast(friendlySupabaseError(error))
       }
@@ -57,7 +64,7 @@ export function useSocialProfile({
     }
   }
 
-  const likePost = (source, postId) => {
+  const likePost = async (source, postId, mapId) => {
     const likeKey = `${source}:${postId}`
     if (likedPosts.includes(likeKey)) {
       showToast("이미 좋아요를 눌렀어요.")
@@ -65,9 +72,19 @@ export function useSocialProfile({
     }
     setLikedPosts((current) => [...current, likeKey])
     if (source === "own") {
-      return setShares((current) => current.map((share) => (share.id === postId ? { ...share, likes: share.likes + 1 } : share)))
+      setShares((current) => current.map((share) => (share.id === postId ? { ...share, likes: share.likes + 1 } : share)))
+    } else {
+      setCommunityPosts((current) => current.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
     }
-    setCommunityPosts((current) => current.map((post) => (post.id === postId ? { ...post, likes: post.likes + 1 } : post)))
+    // DB 저장 (클라우드 모드)
+    if (cloudMode && mapId) {
+      try {
+        await incrementLikeRecord(mapId)
+        logEvent("map_like", { map_id: mapId })
+      } catch {
+        // DB 실패해도 로컬은 이미 반영 — 무시
+      }
+    }
   }
 
   const saveSharePlaceToMap = useCallback(async (targetMapId) => {

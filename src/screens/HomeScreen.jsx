@@ -1,8 +1,31 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, X, MapPin, Target, Medal, Map as MapIcon, Flame, Navigation, ChevronRight, Trophy } from "lucide-react"
+import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Trophy } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
+
+function formatCount(n) {
+  if (n < 10000) return n.toString()
+  if (n < 100000) return `${Math.floor(n / 10000)}만`
+  return "10만+"
+}
+
+function HeroStatItem({ value, label, tip, isLast, activeTooltip, index, onTap }) {
+  return (
+    <button
+      type="button"
+      className={`hero-stat${isLast ? " hero-stat--last" : ""}`}
+      onClick={() => onTap(index)}
+    >
+      <span className={`hero-stat__num${activeTooltip === index ? " is-active" : ""}`}>{formatCount(value)}</span>
+      <span className="hero-stat__label">{label}</span>
+      <span className={`hero-stat__tip${activeTooltip === index ? " is-visible" : ""}`}>
+        {tip}
+        <span className="hero-stat__tip-arrow" />
+      </span>
+    </button>
+  )
+}
 
 export function HomeScreen({
   recommendedMaps,
@@ -12,13 +35,28 @@ export function HomeScreen({
   userStats,
   viewerProfile,
   souvenirs = [],
+  maps = [],
+  features = [],
+  followedCount = 0,
 }) {
   const xp = userStats?.xp || 0
   const levelInfo = useMemo(() => getLevelProgress(xp), [xp])
   const earnedBadges = useMemo(() => getEarnedBadges(userStats || {}), [userStats])
   const nextBadge = useMemo(() => getNextEarnableBadge(userStats || {}), [userStats])
-  const streak = userStats?.streak || 0
   const nickname = viewerProfile?.name || "탐험가"
+
+  // 히어로 카드 통계
+  const placeCount = features.length
+  const mapCount = maps.length
+  const recordCount = userStats?.records || userStats?.memos || 0
+  const followerCount = viewerProfile?.followers || 0
+  const followingCount = followedCount
+
+  // 히어로 카드 툴팁
+  const [activeTooltip, setActiveTooltip] = useState(null)
+  const handleStatTap = (index) => {
+    setActiveTooltip(activeTooltip === index ? null : index)
+  }
 
   // 내 위치
   const [myLocation, setMyLocation] = useState(null)
@@ -111,7 +149,8 @@ export function HomeScreen({
     setDetailLoading(true)
     setOverviewExpanded(false)
     try {
-      const resp = await fetch(`/api/event-detail?contentId=${event.id}`)
+      const typeParam = event.contentTypeId ? `&contentTypeId=${event.contentTypeId}` : ""
+      const resp = await fetch(`/api/event-detail?contentId=${event.id}${typeParam}`)
       const data = await resp.json()
       if (data.detail) setEventDetail(data.detail)
     } catch { /* 폴백: 기본 정보만 표시 */ }
@@ -143,35 +182,46 @@ export function HomeScreen({
 
   return (
     <section className="screen screen--scroll">
-      {/* ─── 1. 프로필 카드 ─── */}
-      <div className="home-profile-simple">
-        <div className="home-profile-simple__header">
-          <span className="home-profile-simple__emoji" style={{ background: levelInfo.current.bgColor || "#E6F1FB" }}>
-            <img src={levelInfo.current.icon} alt={levelInfo.current.cloudName} className="home-profile-simple__cloud" />
-          </span>
-          <div className="home-profile-simple__info">
-            <div className="home-profile-simple__top">
-              <strong>{nickname}</strong>
-              <span className="home-profile-simple__tag" style={{ background: levelInfo.current.badgeBg, color: levelInfo.current.badgeText }}>{levelInfo.current.title}</span>
-              <button className="home-profile-simple__level-btn" type="button" onClick={() => setShowLevelChart(true)}>등급표</button>
+      {/* ─── 1. 히어로 카드 ─── */}
+      <div className="hero-card" onClick={() => setActiveTooltip(null)} role="presentation">
+        {/* blob 장식 */}
+        <span className="hero-card__blob hero-card__blob--tr" />
+        <span className="hero-card__blob hero-card__blob--bl" />
+
+        {/* 캐릭터 */}
+        <div className="hero-card__avatar" style={{ background: levelInfo.current.bgColor || "#E6F1FB" }}>
+          <img src={levelInfo.current.icon} alt={levelInfo.current.cloudName} className="hero-card__cloud" />
+        </div>
+
+        {/* 정보 */}
+        <div className="hero-card__info">
+          {/* Row 1: 이름 + 레벨 + 등급표 */}
+          <div className="hero-card__row1">
+            <span className="hero-card__name">{nickname}</span>
+            <span className="hero-card__lv">Lv.{levelInfo.current.level}</span>
+            <button className="hero-card__grade-btn" type="button" onClick={(e) => { e.stopPropagation(); setShowLevelChart(true) }}>등급표</button>
+          </div>
+
+          {/* Row 2: 등급명 + 프로그레스 + XP */}
+          <div className="hero-card__row2">
+            <span className="hero-card__title">{levelInfo.current.title}</span>
+            <div className="hero-card__bar">
+              <div className="hero-card__bar-fill" style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} />
             </div>
-            <div className="home-profile-simple__xp-row">
-              <div className="home-profile-simple__bar">
-                <div className="home-profile-simple__fill" style={{ width: `${Math.round(levelInfo.progress * 100)}%` }} />
-              </div>
-              <span className="home-profile-simple__xp">{levelInfo.next ? `${xp}/${levelInfo.next.minXp}` : `${xp} MAX`}</span>
-            </div>
+            <span className="hero-card__xp">
+              {xp}<span className="hero-card__xp-max">/{levelInfo.next ? levelInfo.next.minXp : "MAX"}</span>
+            </span>
+          </div>
+
+          {/* Row 3: 통계 5칸 */}
+          <div className="hero-card__stats" onClick={(e) => e.stopPropagation()} role="presentation">
+            <HeroStatItem value={placeCount} label="장소" tip="핀, 경로, 구역 등 맵핑한 장소 수" index={0} activeTooltip={activeTooltip} onTap={handleStatTap} />
+            <HeroStatItem value={mapCount} label="지도" tip="내가 만든 지도 개수" index={1} activeTooltip={activeTooltip} onTap={handleStatTap} />
+            <HeroStatItem value={recordCount} label="기록" tip="사진, 메모, 음성 등 남긴 기록 수" index={2} activeTooltip={activeTooltip} onTap={handleStatTap} />
+            <HeroStatItem value={followerCount} label="팔로워" tip="나를 팔로우하는 사람 수" index={3} activeTooltip={activeTooltip} onTap={handleStatTap} />
+            <HeroStatItem value={followingCount} label="팔로잉" tip="내가 팔로우하는 사람 수" index={4} activeTooltip={activeTooltip} onTap={handleStatTap} isLast />
           </div>
         </div>
-
-        <div className="home-profile-simple__stats">
-          <span><MapPin size={13} /> {userStats?.pins || 0}</span>
-          <span><Target size={13} /> {userStats?.checkins || 0}</span>
-          <span><Medal size={13} /> {userStats?.completions || 0}</span>
-          <span><MapIcon size={13} /> {userStats?.maps || 0}</span>
-          {streak > 0 ? <span className="home-profile-simple__streak"><Flame size={13} /> {streak}일</span> : null}
-        </div>
-
       </div>
 
       {/* ─── 업적 배너 ─── */}
@@ -292,7 +342,7 @@ export function HomeScreen({
         {eventsLoading ? (
           <div className="home-section__empty">이벤트를 불러오는 중...</div>
         ) : events.length === 0 ? (
-          <div className="home-section__empty">{eventsNearby ? "100km 이내 진행 중인 이벤트가 없어요" : "진행 중인 이벤트가 없어요"}</div>
+          <div className="home-section__empty">{eventsNearby ? "100km 이내 진행 중인 행사가 없어요" : "진행 중인 행사가 없어요"}</div>
         ) : (
           <>
             <div className="home-event-list">

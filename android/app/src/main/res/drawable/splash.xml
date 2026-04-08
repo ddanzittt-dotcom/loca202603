@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 딥그린 배경 -->
+    <item android:drawable="@color/loca_deep_green" />
+
+    <!-- 우상단 blob: SVG cx=980 cy=480 r=200 → 화면 우측 상단 1/4 -->
+    <item
+        android:right="-60dp"
+        android:top="100dp">
+        <shape android:shape="oval">
+            <size android:width="180dp" android:height="180dp" />
+            <solid android:color="#05FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- 좌하단 blob: SVG cx=100 cy=1400 r=140 → 화면 좌측 하단 3/4 -->
+    <item
+        android:left="-40dp"
+        android:bottom="120dp">
+        <shape android:shape="oval">
+            <size android:width="130dp" android:height="130dp" />
+            <solid android:color="#08FFFFFF" />
+        </shape>
+    </item>
+
+    <!-- 중앙 핀 심볼 -->
+    <item android:gravity="center">
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_pin_symbol" />
+    </item>
+</layer-list>

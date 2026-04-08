@@ -1,55 +1,149 @@
-import { Avatar, BottomSheet, MapPreview } from "../ui"
+import { BottomSheet } from "../ui"
+import { MapPin } from "lucide-react"
 
-export function PostDetailSheet({ post, onClose, onLike, onOpenMap, onUnpublish }) {
+const REGION_PALETTES = {
+  서울: ["#D4836B", "#D99580", "#E0A896", "#E8BCAD"],
+  경기: ["#C48B4C", "#D4A06A", "#E0B585", "#ECCAA0"],
+  강원: ["#4A7A60", "#649478", "#80AE92", "#9CC8AC"],
+  부산: ["#5B7EA5", "#7596B8", "#90AECA", "#ABC6DC"],
+  제주: ["#C47A6E", "#D09488", "#DCAEA2", "#E8C8BE"],
+}
+
+function getInitials(name) {
+  if (!name) return "?"
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+function getAvatarColors(name) {
+  const palettes = [
+    { bg: "#E8BCAD", text: "#993C1D" },
+    { bg: "#ECCAA0", text: "#633806" },
+    { bg: "#C2D6B8", text: "#085041" },
+    { bg: "#ACD6CC", text: "#085041" },
+    { bg: "#ABC6DC", text: "#0C447C" },
+  ]
+  let hash = 0
+  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return palettes[Math.abs(hash) % palettes.length]
+}
+
+function getTagColor(tag) {
+  const mintTags = ["도보", "산책", "여행", "바다", "공원"]
+  if (mintTags.some((m) => tag.includes(m))) return { bg: "#E1F5EE", text: "#085041" }
+  return { bg: "#FFF4EB", text: "#993C1D" }
+}
+
+export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSave, isFollowing, onToggleFollow, mapFeatures }) {
+  const isOwn = post?.source === "own"
+  const pins = mapFeatures ? mapFeatures.filter((f) => f.type === "pin") : []
+  const routes = mapFeatures ? mapFeatures.filter((f) => f.type === "route") : []
+  const isEvent = post?.category === "event"
+  const avatarColors = post ? getAvatarColors(post.user?.name) : { bg: "#E8BCAD", text: "#993C1D" }
+  const initials = post ? getInitials(post.user?.name) : "?"
+
   return (
     <BottomSheet
       open={Boolean(post)}
       title={post?.title || "게시물"}
-      subtitle="피드 게시물 상세 화면입니다."
+      subtitle="지도 상세"
       onClose={onClose}
     >
       {post ? (
         <div className="post-detail-sheet">
-          <div className="feed-card__header">
-            <div className="feed-card__author">
-              <Avatar user={post.user} size="md" ring={post.user.id !== "me"} />
-              <span className="feed-card__author-meta">
-                <strong>
-                  {post.user.name}
-                  {post.user.verified ? <span className="verified-badge">?</span> : null}
-                </strong>
-                <small>{post.user.handle} · {post.date}</small>
-              </span>
+          {/* 작성자 정보 */}
+          <div className="pds__author">
+            <div className="pds__avatar" style={{ background: avatarColors.bg }}>
+              <span style={{ color: avatarColors.text }}>{initials}</span>
+            </div>
+            <div className="pds__author-body">
+              <p className="pds__author-name">{post.user.name}</p>
+              <p className="pds__author-handle">{post.user.handle || `@${post.user.name}`} · {post.date}</p>
+            </div>
+            {!isOwn && !isFollowing ? (
+              <button className="pds__follow-btn" type="button" onClick={() => onToggleFollow(post.user.id)}>
+                + 팔로우
+              </button>
+            ) : null}
+          </div>
+
+          {/* 지역 컬러 blob 지도 카드 */}
+          <div className="pds__map-card" style={{ background: "#DDE8D5" }}>
+            <div className="pds__blob" style={{ left: -12, bottom: -12, width: 100, height: 70, background: "rgba(100,148,120,.3)" }} />
+            <div className="pds__blob" style={{ right: -10, top: -8, width: 80, height: 55, background: "rgba(156,200,172,.4)" }} />
+            <div className="pds__blob" style={{ left: "35%", top: "28%", width: 60, height: 40, background: "rgba(128,174,146,.25)" }} />
+            <div className="pds__region-chip">서울 · 성동구</div>
+            <div className="pds__type-badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
+              {isEvent ? "Event" : "Editor"}
+            </div>
+            <div className="pds__card-footer">
+              <p className="pds__card-title">{post.title}</p>
+              <div className="pds__card-counts">
+                <span className="pds__count-item">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/></svg>
+                  {pins.length || post.placeCount}
+                </span>
+                {routes.length > 0 ? (
+                  <span className="pds__count-item">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                    {routes.length}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
-          <MapPreview title={post.title} emojis={post.emojis} placeCount={post.placeCount} gradient={post.gradient} theme={post.theme} variant="large" caption={post.description} />
-          <div className="post-detail-sheet__meta">
-            <button className="icon-link" type="button" onClick={() => onLike(post.source, post.id)}>
-              좋아요 {post.likes}
-            </button>
-            <span className="icon-link icon-link--static">저장 {post.saves}</span>
-            <span className="icon-link icon-link--static">장소 {post.placeCount}</span>
-          </div>
-          <p className="feed-card__caption">
-            <strong>{post.title}</strong> {post.caption}
-          </p>
-          <div className="chips-row chips-row--compact">
-            {post.tags.map((tag) => (
-              <span className="chip chip--small" key={tag}>
-                #{tag}
-              </span>
-            ))}
-          </div>
-          {post.source === "own" ? (
-            <div className="sheet-actions">
-              <button className="button button--secondary" type="button" onClick={() => onOpenMap(post.mapId)}>
-                지도 열기
-              </button>
-              <button className="button button--danger" type="button" onClick={() => onUnpublish(post.id)}>
-                공유 해제
-              </button>
+
+          {/* 설명 */}
+          <p className="pds__description">{post.description || post.caption}</p>
+
+          {/* 태그 칩 */}
+          {post.tags && post.tags.length > 0 ? (
+            <div className="pds__tags">
+              {post.tags.map((tag) => {
+                const color = getTagColor(tag)
+                return (
+                  <span key={tag} className="pds__tag" style={{ background: color.bg, color: color.text }}>
+                    {tag}
+                  </span>
+                )
+              })}
             </div>
           ) : null}
+
+          {/* 장소 미리보기 */}
+          {pins.length > 0 ? (
+            <div className="pds__places">
+              <p className="pds__places-title">장소 미리보기</p>
+              <div className="pds__places-scroll">
+                {pins.slice(0, 6).map((pin) => (
+                  <div key={pin.id} className="pds__place-card">
+                    <div className="pds__place-header">
+                      <MapPin size={10} fill="#FF6B35" stroke="none" />
+                      <span className="pds__place-name">{pin.title || "장소"}</span>
+                    </div>
+                    <p className="pds__place-address">{pin.address || "주소 없음"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* 액션 버튼 */}
+          <div className="pds__actions">
+            <button className="pds__btn pds__btn--primary" type="button" onClick={() => onOpenMap(post.mapId)}>
+              지도 열기
+            </button>
+            {isOwn ? (
+              <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onUnpublish(post.id)}>
+                공유 해제
+              </button>
+            ) : (
+              <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onSave(post.id)}>
+                저장하기
+              </button>
+            )}
+          </div>
         </div>
       ) : null}
     </BottomSheet>

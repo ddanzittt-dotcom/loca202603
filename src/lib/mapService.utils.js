@@ -33,13 +33,15 @@ export const DEFAULT_MAP_THEME = "#4F46E5"
 export const DEFAULT_FEATURE_TITLE = "새 항목"
 
 export function createSlugCandidate(value = "") {
-  return value
+  const slug = value
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-_가-힣]/g, "")
+    .replace(/[^a-z0-9-_\uAC00-\uD7AF\u3131-\u318E]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
+  // slug가 비어있으면 랜덤 ID 생성
+  return slug || `map-${Date.now().toString(36)}`
 }
 
 export function getDefaultEmoji(type) {

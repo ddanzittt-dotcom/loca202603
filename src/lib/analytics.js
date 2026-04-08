@@ -15,9 +15,16 @@ const MAX_RETRY = 5
 export const EVENT_TYPES = {
   MAP_VIEW: "map_view",
   FEATURE_CLICK: "feature_click",
+  FEATURE_VIEW: "feature_view",
+  FEATURE_VIEW_END: "feature_view_end",
   CHECKIN: "checkin",
   COMPLETION: "completion",
-  SURVEY_SUBMIT: "survey_submit",  // view_logs에도 기록하여 퍼널 일관성 확보
+  QR_SCAN: "qr_scan",
+  SESSION_END: "session_end",
+  SHARE_CLICK: "share_click",
+  MAP_SAVE: "map_save",
+  ANNOUNCEMENT_VIEW: "announcement_view",
+  SURVEY_SUBMIT: "survey_submit",
   FEATURE_CREATE: "feature_create",
   MAP_PUBLISH: "map_publish",
   MAP_UNPUBLISH: "map_unpublish",
@@ -28,6 +35,7 @@ export const EVENT_TYPES = {
 /**
  * 브라우저 세션 ID를 반환한다.
  * sessionStorage에 저장되므로 탭을 닫으면 리셋된다.
+ * 단일 세션(탭) 내 이벤트 상관관계 추적용.
  */
 export function getSessionId() {
   const key = "loca_session_id"
@@ -35,6 +43,23 @@ export function getSessionId() {
   if (!id) {
     id = crypto.randomUUID()
     sessionStorage.setItem(key, id)
+  }
+  return id
+}
+
+/**
+ * 영구 방문자 ID를 반환한다.
+ * localStorage에 저장되므로 브라우저를 닫아도 유지된다.
+ * 재방문 추적 및 유니크 방문자 카운트에 사용.
+ */
+export function getVisitorId() {
+  const key = "loca_visitor_id"
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = typeof crypto?.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    localStorage.setItem(key, id)
   }
   return id
 }
@@ -136,6 +161,7 @@ function buildRow(eventType, payload, viewerId) {
     ...(payload.feature_id ? { feature_id: payload.feature_id } : {}),
     ...(payload.referrer ? { referrer: payload.referrer } : {}),
     utm_source: source,
+    visitor_id: getVisitorId(),
   }
   return {
     map_id: payload.map_id || null,

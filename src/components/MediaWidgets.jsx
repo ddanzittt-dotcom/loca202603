@@ -17,21 +17,40 @@ function PhotoViewer({ src, onClose }) {
 
 export function MediaPhoto({ mediaId, localId, date, onDelete, cloudUrl }) {
   const [localSrc, setLocalSrc] = useState(null)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   useEffect(() => {
     if (cloudUrl) return
     let url = null
-    // localId가 있으면 원래 IndexedDB key로 먼저 시도
-    const key = localId || mediaId
-    getMedia(key).then((blob) => {
-      if (blob) {
-        url = URL.createObjectURL(blob)
-        setLocalSrc(url)
+    let cancelled = false
+    const tryLoad = async () => {
+      // localId → mediaId 순으로 시도
+      for (const key of [localId, mediaId].filter(Boolean)) {
+        try {
+          const blob = await getMedia(key)
+          if (blob && !cancelled) {
+            url = URL.createObjectURL(blob)
+            setLocalSrc(url)
+            return
+          }
+        } catch { /* continue */ }
       }
-    })
-    return () => { if (url) URL.revokeObjectURL(url) }
+      if (!cancelled) setLoadFailed(true)
+    }
+    tryLoad()
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
   }, [mediaId, localId, cloudUrl])
   const src = cloudUrl || localSrc
+  if (!src && loadFailed) {
+    return (
+      <div className="feature-photo-thumb-wrap">
+        <div className="feature-photo-thumb feature-photo-thumb--lost">
+          <span>사진 손실</span>
+        </div>
+        {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
+      </div>
+    )
+  }
   if (!src) return null
   const formattedDate = date ? new Date(date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) : ""
   return (

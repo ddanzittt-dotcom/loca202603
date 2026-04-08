@@ -82,6 +82,8 @@ export function formatFeedDate(value) {
 
 export function mapThemeGradient(theme) {
   switch (theme) {
+    case "#635BFF":
+      return ["#2D4A3E", "#3D6B56"]
     case "#12B981":
       return ["#43e97b", "#38f9d7"]
     case "#F97316":
@@ -91,7 +93,7 @@ export function mapThemeGradient(theme) {
     case "#0EA5E9":
       return ["#93c5fd", "#0ea5e9"]
     default:
-      return ["#667eea", "#764ba2"]
+      return ["#FF9B6B", "#FF6B35"]
   }
 }
 
@@ -423,6 +425,7 @@ export function buildOwnPosts(shares, maps, features, me) {
         emojis: relatedFeatures.filter((item) => item.type === "pin").map((item) => item.emoji),
         theme: map.theme,
         gradient: null,
+        category: map.category,
       }
     })
     .filter(Boolean)

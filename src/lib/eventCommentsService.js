@@ -68,13 +68,16 @@ function normalizeComment(row) {
 export async function createEventComment(mapId, featureId, body, authorName = null) {
   const sb = requireSupabase()
   const sessionId = getSessionId()
-  const { data, error } = await sb.rpc("create_event_comment", {
-    p_map_id: mapId,
-    p_feature_id: featureId,
-    p_body: body,
-    p_session_id: sessionId,
-    p_author_name: authorName,
-  })
+  // rate-limited 래퍼 우선 시도 → 실패 시 기존 RPC 폴백
+  let data, error
+  const rpcParams = { p_map_id: mapId, p_feature_id: featureId, p_body: body, p_author_name: authorName }
+  ;({ data, error } = await sb.rpc("create_event_comment_safe", rpcParams))
+  if (error?.code === "42883") {
+    // 래퍼 함수 미존재 → 기존 RPC 폴백
+    ;({ data, error } = await sb.rpc("create_event_comment", {
+      ...rpcParams, p_session_id: sessionId,
+    }))
+  }
   if (error) throw error
   const result = typeof data === "string" ? JSON.parse(data) : data
   if (result.error) {
@@ -84,6 +87,7 @@ export async function createEventComment(mapId, featureId, body, authorName = nu
       checkin_required: "체크인 후 댓글을 남길 수 있어요.",
       no_identity: "사용자 정보를 확인할 수 없어요.",
       map_not_found: "지도를 찾을 수 없어요.",
+      rate_limited: "댓글 작성이 너무 빠릅니다. 잠시 후 다시 시도해주세요.",
     }
     throw new Error(msg[result.error] || result.error)
   }

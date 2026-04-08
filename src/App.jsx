@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { Bell } from "lucide-react"
 import { BottomNav, Toast } from "./components/ui"
+import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
+import { useNotifications } from "./hooks/useNotifications"
 import {
   collections,
   communityMapFeaturesSeed,
@@ -158,6 +160,19 @@ export default function App() {
 
   const { myLocation, locateMe } = useGeolocation({ setFocusPoint, showToast })
 
+  // --- Notifications ---
+
+  const [notiPanelOpen, setNotiPanelOpen] = useState(false)
+  const {
+    notifications: notiList,
+    hasUnread: notiHasUnread,
+    bannerItem: notiBanner,
+    dismissBanner: notiDismissBanner,
+    markRead: notiMarkRead,
+    markAllRead: notiMarkAllRead,
+    removeItem: notiRemove,
+  } = useNotifications()
+
   // --- Derived data ---
 
   const usersById = useMemo(() => {
@@ -220,7 +235,7 @@ export default function App() {
   const unpublishedMaps = maps.filter((mapItem) => !shares.some((share) => share.mapId === mapItem.id))
   const shareUrl = useMemo(() => {
     if (!activeMap) return ""
-    if (activeMap.slug && activeMap.isPublished) {
+    if (activeMap.slug) {
       return buildSlugShareUrl(activeMap.slug, "link")
     }
     return buildMapShareUrl(activeMap, activeFeatures)
@@ -290,7 +305,7 @@ export default function App() {
     setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
-    maps, features, refreshGameProfile, myLocation,
+    maps, features, refreshGameProfile, myLocation, setFocusPoint,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
@@ -380,8 +395,8 @@ export default function App() {
       if (activeMapSource === "demo") {
         return {
           subtitle: activeMap ? `${activeMap.title} · 둘러보기` : "지도 보기",
-          actionLabel: "맞춤 보기",
-          onAction: () => setFitTrigger((value) => value + 1),
+          actionLabel: null,
+          onAction: null,
         }
       }
       if (activeMapSource === "community") {
@@ -393,8 +408,8 @@ export default function App() {
       }
       return {
         subtitle: activeMap ? `${activeMap.title} · 편집 중` : "지도 편집",
-        actionLabel: "맞춤 보기",
-        onAction: () => setFitTrigger((value) => value + 1),
+        actionLabel: null,
+        onAction: null,
       }
     }
     return { subtitle: null, actionLabel: null, onAction: null }
@@ -433,11 +448,38 @@ export default function App() {
               {headerConfig.actionLabel}
             </button>
           ) : null}
-          <button className="top-bar__noti-btn" type="button" aria-label="알림">
-            <Bell size={18} />
-          </button>
+          {!(activeTab === "maps" && mapsView === "editor") ? (
+            <button
+              className="top-bar__noti-btn"
+              type="button"
+              aria-label="알림"
+              onClick={() => setNotiPanelOpen(true)}
+            >
+              <Bell size={18} />
+              {notiHasUnread && <span className="top-bar__noti-dot" />}
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {/* 인앱 배너 */}
+      <NotificationBanner
+        notification={notiBanner}
+        onTap={() => { notiDismissBanner(); setNotiPanelOpen(true) }}
+        onDismiss={notiDismissBanner}
+      />
+
+      {/* 알림 풀스크린 */}
+      {notiPanelOpen && (
+        <NotificationPanel
+          notifications={notiList}
+          onMarkRead={notiMarkRead}
+          onMarkAllRead={notiMarkAllRead}
+          onRemove={notiRemove}
+          onClose={() => setNotiPanelOpen(false)}
+          onTap={() => setNotiPanelOpen(false)}
+        />
+      )}
 
       <main className="content">
       <Suspense fallback={<ScreenFallback />}>
@@ -462,6 +504,9 @@ export default function App() {
             userStats={userStats}
             viewerProfile={viewerProfile}
             souvenirs={souvenirs}
+            maps={maps}
+            features={features}
+            followedCount={followed.length}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
           />
@@ -629,7 +674,7 @@ export default function App() {
         features={features} publishMap={publishMap}
         selectedUser={selectedUser} selectedUserPosts={selectedUserPosts} followed={followed}
         setSelectedUserId={setSelectedUserId} toggleFollow={toggleFollow} setSelectedPostRef={setSelectedPostRef}
-        selectedPost={selectedPost} likePost={likePost} openMapEditor={openMapEditor} unpublish={unpublish}
+        selectedPost={selectedPost} openMapEditor={openMapEditor} unpublish={unpublish} savePost={likePost}
         shareEditorImage={shareEditorImage} setShareEditorImage={setShareEditorImage}
         activeMap={activeMap} activeFeatures={activeFeatures} shareUrl={shareUrl} showToast={showToast}
         pendingSharePlace={pendingSharePlace} setPendingSharePlace={setPendingSharePlace}

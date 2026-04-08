@@ -97,28 +97,31 @@ export function useMapCRUD({
             config: mapSheet.config || {},
           })
 
-          // 행사지도는 자동 발행
-          if (mapSheet.category === "event") {
+          // 모든 지도 자동 발행 (unlisted: slug 생성만, 프로필에는 안 올림)
+          try {
+            const { map: publishedMap } = await publishMapRecord(nextMap.id, {
+              caption: "",
+              title: mapSheet.title.trim(),
+              visibility: "unlisted",
+            })
+            setMaps((current) => [publishedMap, ...current])
+          } catch (publishErr) {
+            console.warn("자동 발행 실패, slug 직접 조회 시도:", publishErr)
+            // maps 테이블에 slug가 저장되었을 수 있으므로 다시 조회
             try {
-              const { map: publishedMap, publication } = await publishMapRecord(nextMap.id, {
-                caption: "",
-                title: mapSheet.title.trim(),
-              })
-              setMaps((current) => [publishedMap, ...current])
-              setShares((current) => [publication, ...current])
-              logEvent("map_publish", { map_id: nextMap.id })
+              const { getMapBundle } = await import("../lib/mapService.read")
+              const bundle = await getMapBundle(nextMap.id)
+              setMaps((current) => [bundle.map, ...current])
             } catch {
-              // 발행 실패해도 지도 생성은 유지
+              // 조회도 실패하면 원본 사용
               setMaps((current) => [nextMap, ...current])
             }
-          } else {
-            setMaps((current) => [nextMap, ...current])
           }
 
           setMapSheet(null)
           openMapEditor(nextMap.id)
           recordMapAction({ actionType: "map_create", eventKey: `map:${nextMap.id}`, mapId: nextMap.id }).then(() => refreshGameProfile?.()).catch(() => {})
-          return showToast(mapSheet.category === "event" ? "행사지도가 생성되고 발행되었어요." : "지도를 만들었어요.")
+          return showToast("지도를 만들었어요.")
         }
 
         const nextMapId = createId("map")
@@ -271,7 +274,7 @@ export function useMapCRUD({
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
     if (!effectiveMapId) return showToast("올릴 지도를 먼저 선택해 주세요.")
-    if (shares.some((share) => share.mapId === effectiveMapId)) return showToast("이미 프로필에 올라간 지도예요.")
+    if (shares.some((share) => share.mapId === effectiveMapId && share.visibility === "public")) return showToast("이미 프로필에 올라간 지도예요.")
     const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
     if (mapFeatureCount === 0) return showToast("장소를 추가해야 프로필에 올릴 수 있어요.")
     const caption = publishSheet?.caption?.trim() || ""
@@ -282,6 +285,7 @@ export function useMapCRUD({
         const { map: publishedMap, publication } = await publishMapRecord(effectiveMapId, {
           caption,
           title: mapItem?.title,
+          visibility: "public",
         })
         setMaps((current) => current.map((item) => (item.id === effectiveMapId ? publishedMap : item)))
         setShares((current) => [publication, ...current])

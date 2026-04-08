@@ -61,7 +61,6 @@ function IconSelector({ selected, onSelect }) {
           <div className="fd__icon-grid">
             {group.icons.map((icon) => {
               const bg = icon.bg || group.bg
-              const color = icon.color || group.color
               const isActive = selectedId === icon.id
               return (
                 <button
@@ -87,7 +86,6 @@ export function FeatureDetailSheet({
   featureSheet,
   setFeatureSheet,
   activeMapSource,
-  featureEmojiChoices,
   onClose,
   onSave,
   onDelete,

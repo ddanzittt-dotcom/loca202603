@@ -86,7 +86,7 @@ export async function getMyAppData() {
   const user = await requireUser()
   const supabase = requireSupabase()
 
-  const [mapsRes, followsRes] = await Promise.all([
+  const [mapsRes, followsRes, followersRes] = await Promise.all([
     supabase
       .from("maps")
       .select("*")
@@ -96,10 +96,15 @@ export async function getMyAppData() {
       .from("follows")
       .select("following_id")
       .eq("follower_id", user.id),
+    supabase
+      .from("follows")
+      .select("follower_id", { count: "exact", head: true })
+      .eq("following_id", user.id),
   ])
 
   if (mapsRes.error) throw mapsRes.error
   if (followsRes.error) throw followsRes.error
+  // followersRes 에러는 무시 — followerCount 0으로 폴백
 
   const mapRows = mapsRes.data || []
   const mapIds = mapRows.map((row) => row.id)
@@ -119,6 +124,7 @@ export async function getMyAppData() {
     features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
     shares: publicationRows.map((row) => normalizePublication(row)),
     followed: (followsRes.data || []).map((row) => row.following_id),
+    followerCount: followersRes.count ?? 0,
   }
 }
 
@@ -203,6 +209,38 @@ export async function getProfileBySlug(slug) {
   const { data, error } = await supabase.from("profiles").select("*").eq("slug", slug).single()
   if (error) throw error
   return data
+}
+
+/**
+ * 프로필 검색 — nickname 또는 slug로 검색.
+ * 최대 20명. 본인은 제외.
+ */
+export async function searchProfiles(query) {
+  const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  const myId = user?.id
+
+  const trimmed = query.trim()
+  if (!trimmed) return []
+
+  // slug 정확 매치 또는 nickname ilike
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, nickname, avatar_url, bio, slug")
+    .or(`nickname.ilike.%${trimmed}%,slug.ilike.%${trimmed}%`)
+    .limit(20)
+
+  if (error) throw error
+
+  return (data || [])
+    .filter((p) => p.id !== myId)
+    .map((p) => ({
+      id: p.id,
+      name: p.nickname || "LOCA 사용자",
+      handle: p.slug ? `@${p.slug}` : "",
+      emoji: p.avatar_url || "😊",
+      bio: p.bio || "",
+    }))
 }
 
 export async function getFollowingIds(userId) {

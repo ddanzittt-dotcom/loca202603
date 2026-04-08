@@ -28,6 +28,22 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
 
+            <!-- OAuth 딥링크 (Supabase Auth 콜백) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.ddanzittt.loca" />
+            </intent-filter>
+
+            <!-- HTTPS 딥링크 (웹 도메인 공유 URL) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="loca202603.vercel.app" android:pathPrefix="/s/" />
+            </intent-filter>
+
         </activity>
 
         <provider

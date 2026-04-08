@@ -185,12 +185,41 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
 
   // ─── 지도 조회 이벤트 로깅 ───
   // markMapViewed()로 동일 세션+map_id 조합의 중복 기록을 방지한다.
+  const enterTimeRef = useRef(null)
   useEffect(() => {
     if (!hasSupabaseEnv || !map.id) return
     const utmSource = new URLSearchParams(window.location.search).get("utm_source") || "direct"
     setUtmSource(utmSource)
     if (markMapViewed(map.id)) {
       logEvent("map_view", { map_id: map.id, referrer: utmSource, source: utmSource })
+      if (utmSource === "qr") {
+        logEvent("qr_scan", { map_id: map.id, source: "qr" })
+      }
+    }
+    enterTimeRef.current = Date.now()
+  }, [map.id])
+
+  // ─── 체류시간 추적 (session_end) ───
+  useEffect(() => {
+    if (!hasSupabaseEnv || !map.id) return
+    const sendSessionEnd = () => {
+      if (!enterTimeRef.current) return
+      const duration = Date.now() - enterTimeRef.current
+      if (duration > 1000) {
+        logEvent("session_end", { map_id: map.id, meta: { duration_ms: duration } })
+      }
+      enterTimeRef.current = null
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") sendSessionEnd()
+      else if (!enterTimeRef.current) enterTimeRef.current = Date.now()
+    }
+    window.addEventListener("beforeunload", sendSessionEnd)
+    document.addEventListener("visibilitychange", handleVisibility)
+    return () => {
+      sendSessionEnd()
+      window.removeEventListener("beforeunload", sendSessionEnd)
+      document.removeEventListener("visibilitychange", handleVisibility)
     }
   }, [map.id])
 

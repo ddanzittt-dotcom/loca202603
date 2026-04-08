@@ -32,6 +32,7 @@ export {
   searchUsersForInvite,
   checkCollaboratorAccess,
   checkAdminRole,
+  searchProfiles,
 } from "./mapService.read"
 
 // write
@@ -45,9 +46,11 @@ export {
   addFeatureMemo,
   createMediaRecord,
   deleteMediaRecord,
+  uploadAvatar,
   updateProfile,
   followUser,
   unfollowUser,
+  incrementLike,
   getCollaborators,
   addCollaborator,
   removeCollaborator,

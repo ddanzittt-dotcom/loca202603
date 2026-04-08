@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react"
-import { Search as SearchIcon, MapPin as LocationIcon, Star, Users, ChevronRight } from "lucide-react"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { Search as SearchIcon, MapPin as LocationIcon, Star, Users } from "lucide-react"
+import { hasSupabaseEnv } from "../lib/supabase"
 
 // 자동 태그 색상 그룹
 const TAG_STYLES = {
@@ -46,10 +47,13 @@ function getAvatarColors(name) {
 
 export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) {
   const [query, setQuery] = useState("")
+  const [cloudResults, setCloudResults] = useState([])
+  const [searching, setSearching] = useState(false)
 
   const trimmed = query.trim().toLowerCase()
 
-  const filtered = useMemo(() => {
+  // 로컬 검색 (데모/오프라인 폴백)
+  const localFiltered = useMemo(() => {
     if (!trimmed) return []
     const exactId = []
     const nameMatch = []
@@ -65,6 +69,35 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
     return [...exactId, ...nameMatch, ...handleMatch]
   }, [users, trimmed])
 
+  // 클라우드 검색 (디바운스 300ms)
+  const searchCloud = useCallback(async (q) => {
+    if (!hasSupabaseEnv || !q.trim()) {
+      setCloudResults([])
+      return
+    }
+    setSearching(true)
+    try {
+      const { searchProfiles } = await import("../lib/mapService")
+      const results = await searchProfiles(q.trim())
+      setCloudResults(results)
+    } catch {
+      setCloudResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!trimmed) {
+      setCloudResults([])
+      return
+    }
+    const timer = setTimeout(() => searchCloud(trimmed), 300)
+    return () => clearTimeout(timer)
+  }, [trimmed, searchCloud])
+
+  // 클라우드 결과 우선, 없으면 로컬 폴백
+  const filtered = hasSupabaseEnv ? cloudResults : localFiltered
   const isSearching = trimmed.length > 0
   const recommendedUsers = users.slice(0, 5)
   const nearbyUsers = users.slice(0, 3)
@@ -84,7 +117,11 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
       </div>
 
       {/* ─── 검색 결과 ─── */}
-      {isSearching ? (
+      {isSearching && searching ? (
+        <div className="sr-empty">
+          <p className="sr-empty__desc">검색 중...</p>
+        </div>
+      ) : isSearching ? (
         filtered.length > 0 ? (
           <div className="sr-list-card">
             {filtered.map((user, idx) => (

@@ -5,15 +5,15 @@
   "bundledWebRuntime": false,
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000,
+      "launchShowDuration": 1500,
       "launchAutoHide": true,
-      "backgroundColor": "#635bff",
+      "backgroundColor": "#2D4A3E",
       "showSpinner": false,
       "launchFadeOutDuration": 300
     },
     "StatusBar": {
       "style": "LIGHT",
-      "backgroundColor": "#635bff"
+      "backgroundColor": "#2D4A3E"
     }
   },
   "ios": {

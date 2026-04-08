@@ -1,15 +1,26 @@
 import { useEffect, useRef, useState, useCallback } from "react"
 import QRCode from "qrcode"
 import { BottomSheet } from "../ui"
+import { logEvent } from "../../lib/analytics"
 
 const QR_PREVIEW_SIZE = 200
 const QR_DOWNLOAD_SIZE = 1024
 const QR_LOGO_EMOJI = "📍"
 
+function getCleanShareUrl(shareUrl) {
+  if (!shareUrl) return ""
+  try {
+    const url = new URL(shareUrl)
+    url.searchParams.delete("utm_source")
+    return url.toString()
+  } catch {
+    return shareUrl.replace(/[?&]utm_source=[^&]+/, "")
+  }
+}
+
 function generateHighResQr(shareUrl, mapTitle) {
   return new Promise((resolve, reject) => {
     const qrCanvas = document.createElement("canvas")
-    // High error correction to allow logo overlay
     QRCode.toCanvas(qrCanvas, shareUrl, {
       width: QR_DOWNLOAD_SIZE,
       margin: 2,
@@ -17,28 +28,24 @@ function generateHighResQr(shareUrl, mapTitle) {
       color: { dark: "#000000", light: "#ffffff" },
     })
       .then(() => {
-        // Draw logo emoji in center
         const qrCtx = qrCanvas.getContext("2d")
         const logoSize = Math.round(QR_DOWNLOAD_SIZE * 0.15)
         const cx = QR_DOWNLOAD_SIZE / 2
         const cy = QR_DOWNLOAD_SIZE / 2
-        // White circle background
         qrCtx.fillStyle = "#ffffff"
         qrCtx.beginPath()
         qrCtx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         qrCtx.fill()
-        // Emoji
         qrCtx.font = `${logoSize}px serif`
         qrCtx.textAlign = "center"
         qrCtx.textBaseline = "middle"
         qrCtx.fillText(QR_LOGO_EMOJI, cx, cy)
 
-        // Create final canvas with title + URL below QR
+        // 최종 캔버스: QR + 타이틀만 (URL 제거)
         const padding = 80
         const titleHeight = 60
-        const urlHeight = 40
         const gap = 24
-        const totalH = padding + QR_DOWNLOAD_SIZE + gap + titleHeight + gap + urlHeight + padding
+        const totalH = padding + QR_DOWNLOAD_SIZE + gap + titleHeight + padding
         const totalW = QR_DOWNLOAD_SIZE + padding * 2
 
         const finalCanvas = document.createElement("canvas")
@@ -46,14 +53,10 @@ function generateHighResQr(shareUrl, mapTitle) {
         finalCanvas.height = totalH
         const ctx = finalCanvas.getContext("2d")
 
-        // White background
         ctx.fillStyle = "#ffffff"
         ctx.fillRect(0, 0, totalW, totalH)
-
-        // Draw QR
         ctx.drawImage(qrCanvas, padding, padding, QR_DOWNLOAD_SIZE, QR_DOWNLOAD_SIZE)
 
-        // Draw map title
         const titleY = padding + QR_DOWNLOAD_SIZE + gap + titleHeight / 2
         ctx.fillStyle = "#101828"
         ctx.font = "bold 48px Pretendard, Noto Sans KR, sans-serif"
@@ -61,13 +64,6 @@ function generateHighResQr(shareUrl, mapTitle) {
         ctx.textBaseline = "middle"
         ctx.fillText(mapTitle || "LOCA", totalW / 2, titleY, QR_DOWNLOAD_SIZE)
 
-        // Draw URL text
-        const urlY = titleY + titleHeight / 2 + gap + urlHeight / 2
-        ctx.fillStyle = "#667085"
-        ctx.font = "28px Pretendard, Noto Sans KR, sans-serif"
-        ctx.fillText(shareUrl, totalW / 2, urlY, QR_DOWNLOAD_SIZE)
-
-        // "LOCA" branding at bottom-right
         ctx.fillStyle = "#b0b8c9"
         ctx.font = "bold 24px Pretendard, Noto Sans KR, sans-serif"
         ctx.textAlign = "right"
@@ -84,10 +80,38 @@ function sanitizeFilename(str) {
   return (str || "LOCA").replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 80)
 }
 
+// 카카오 SDK 초기화
+function ensureKakaoSdk() {
+  return new Promise((resolve) => {
+    if (window.Kakao?.Share) {
+      if (!window.Kakao.isInitialized()) {
+        const key = import.meta.env.VITE_KAKAO_JS_KEY
+        if (key) window.Kakao.init(key)
+      }
+      resolve(true)
+      return
+    }
+    // SDK 동적 로드
+    const key = import.meta.env.VITE_KAKAO_JS_KEY
+    if (!key) { resolve(false); return }
+
+    const script = document.createElement("script")
+    script.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
+    script.onload = () => {
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        window.Kakao.init(key)
+      }
+      resolve(!!window.Kakao?.Share)
+    }
+    script.onerror = () => resolve(false)
+    document.head.appendChild(script)
+  })
+}
+
 export function ShareSheet({
   open,
   map,
-  shareUrl,
+  shareUrl: rawShareUrl,
   onClose,
   onOpenImageShare,
   capturing,
@@ -95,38 +119,25 @@ export function ShareSheet({
 }) {
   const qrPreviewRef = useRef(null)
   const [copied, setCopied] = useState(false)
-  const [codeCopied, setCodeCopied] = useState(false)
 
-  const handleCopyCode = useCallback(async () => {
-    const slug = map?.slug
-    if (!slug) {
-      if (showToast) showToast("발행된 지도만 코드를 복사할 수 있어요.")
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(slug)
-      setCodeCopied(true)
-      if (showToast) showToast("공유 코드가 복사되었어요!")
-      setTimeout(() => setCodeCopied(false), 2000)
-    } catch {
-      if (showToast) showToast("클립보드 복사에 실패했어요.")
-      else prompt("공유 코드:", slug)
-    }
-  }, [map, showToast])
+  // 발행된 지도: slug가 있으면 발행된 것
+  const cleanUrl = getCleanShareUrl(rawShareUrl)
+
+  // QR용 URL: 공유 URL이 있으면 QR 생성
+  const qrUrl = cleanUrl || null
 
   // Generate QR preview
   useEffect(() => {
-    if (!open || !shareUrl) return
+    if (!open || !qrUrl) return
     const canvas = qrPreviewRef.current
     if (!canvas) return
-    QRCode.toCanvas(canvas, shareUrl, {
+    QRCode.toCanvas(canvas, qrUrl, {
       width: QR_PREVIEW_SIZE,
       margin: 2,
       errorCorrectionLevel: "H",
       color: { dark: "#000000", light: "#ffffff" },
     })
       .then(() => {
-        // Draw logo on preview too
         const ctx = canvas.getContext("2d")
         const logoSize = Math.round(QR_PREVIEW_SIZE * 0.15)
         const cx = QR_PREVIEW_SIZE / 2
@@ -143,40 +154,39 @@ export function ShareSheet({
       .catch(() => {
         if (showToast) showToast("QR 코드를 만들지 못했어요.")
       })
-  }, [open, shareUrl, showToast])
+  }, [open, qrUrl, showToast])
 
   const handleCopyUrl = useCallback(async () => {
-    if (!shareUrl) return
-    // Add utm_source=link
-    const urlToCopy = shareUrl.includes("utm_source")
-      ? shareUrl.replace(/utm_source=[^&]+/, "utm_source=link")
-      : shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=link"
+    if (!cleanUrl) return
     try {
-      await navigator.clipboard.writeText(urlToCopy)
+      await navigator.clipboard.writeText(cleanUrl)
+      logEvent("share_click", { map_id: map?.id, meta: { method: "link" } })
       setCopied(true)
       if (showToast) showToast("링크가 복사되었어요!")
       setTimeout(() => setCopied(false), 2000)
     } catch {
       if (showToast) showToast("클립보드 복사에 실패했어요.")
-      else prompt("복사하세요:", urlToCopy)
+      else prompt("복사하세요:", cleanUrl)
     }
-  }, [shareUrl, showToast])
+  }, [cleanUrl, showToast, map])
 
-  const handleKakaoShare = useCallback(() => {
-    if (!shareUrl) return
-    const kakaoUrl = shareUrl.includes("utm_source")
-      ? shareUrl.replace(/utm_source=[^&]+/, "utm_source=kakao")
-      : shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
+  const handleKakaoShare = useCallback(async () => {
+    if (!cleanUrl) return
+    logEvent("share_click", { map_id: map?.id, meta: { method: "kakao" } })
 
-    // Try Kakao SDK if available
-    if (window.Kakao?.Share) {
+    const sdkReady = await ensureKakaoSdk()
+    if (sdkReady && window.Kakao?.Share) {
       try {
+        const kakaoUrl = cleanUrl + (cleanUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
+        const ogImageUrl = `https://loca202603.vercel.app/api/og-image/${encodeURIComponent(map?.slug || "loca")}`
         window.Kakao.Share.sendDefault({
           objectType: "feed",
           content: {
             title: map?.title || "LOCA 지도",
-            description: `${map?.title || "LOCA"} 지도를 열어보세요.`,
-            imageUrl: `${window.location.origin}/api/og-image/${map?.slug || "loca"}`,
+            description: map?.description || `${map?.title || "LOCA"} 지도를 열어보세요.`,
+            imageUrl: ogImageUrl,
+            imageWidth: 800,
+            imageHeight: 400,
             link: { mobileWebUrl: kakaoUrl, webUrl: kakaoUrl },
           },
           buttons: [
@@ -185,27 +195,23 @@ export function ShareSheet({
         })
         return
       } catch {
-        // fallback below
+        // fallback
       }
     }
-    // Fallback: copy URL with kakao source
-    navigator.clipboard.writeText(kakaoUrl).then(
-      () => {
-        if (showToast) showToast("카카오톡에 붙여넣기 하세요!")
-      },
-      () => {
-        prompt("카카오톡에 붙여넣으세요:", kakaoUrl)
-      },
-    )
-  }, [shareUrl, map, showToast])
+    // 카카오 SDK 없으면 클립보드 복사 후 안내
+    try {
+      await navigator.clipboard.writeText(cleanUrl)
+      if (showToast) showToast("링크가 복사되었어요. 카카오톡에 붙여넣기 하세요!")
+    } catch {
+      prompt("카카오톡에 붙여넣으세요:", cleanUrl)
+    }
+  }, [cleanUrl, map, showToast])
 
   const handleQrDownload = useCallback(async () => {
-    if (!shareUrl) return
-    const qrUrl = shareUrl.includes("utm_source")
-      ? shareUrl.replace(/utm_source=[^&]+/, "utm_source=qr")
-      : shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=qr"
+    if (!qrUrl) return
+    logEvent("share_click", { map_id: map?.id, meta: { method: "qr" } })
     try {
-      const canvas = await generateHighResQr(qrUrl, map?.title, map?.slug)
+      const canvas = await generateHighResQr(qrUrl, map?.title)
       canvas.toBlob((blob) => {
         if (!blob) return
         const url = URL.createObjectURL(blob)
@@ -219,14 +225,12 @@ export function ShareSheet({
     } catch {
       if (showToast) showToast("QR 다운로드에 실패했어요.")
     }
-  }, [shareUrl, map, showToast])
-
-  const showQr = shareUrl && shareUrl.length > 0 && shareUrl.length <= 2500
+  }, [qrUrl, map, showToast])
 
   return (
     <BottomSheet open={open} title="지도 공유하기" onClose={onClose}>
       <div className="share-sheet">
-        {showQr ? (
+        {qrUrl ? (
           <div className="share-sheet__qr-section">
             <canvas
               ref={qrPreviewRef}
@@ -242,9 +246,7 @@ export function ShareSheet({
               인쇄용 QR 다운로드 (1024px)
             </button>
           </div>
-        ) : (
-          <p className="share-sheet__hint">URL이 길어서 QR 코드를 생성할 수 없어요.</p>
-        )}
+        ) : null}
 
         <div className="share-sheet__actions">
           <button
@@ -274,27 +276,6 @@ export function ShareSheet({
             <span className="share-sheet__action-icon">🖼️</span>
             <span className="share-sheet__action-label">{capturing ? "캡처 중..." : "이미지 공유"}</span>
           </button>
-
-          {map?.slug ? (
-            <button
-              className="share-sheet__action-btn share-sheet__action-btn--code"
-              type="button"
-              onClick={handleCopyCode}
-            >
-              <span className="share-sheet__action-icon">📋</span>
-              <span className="share-sheet__action-label">{codeCopied ? "복사됨!" : "코드 복사"}</span>
-            </button>
-          ) : null}
-        </div>
-
-        <div className="share-sheet__url-row">
-          <input
-            className="share-sheet__url-input"
-            type="text"
-            value={shareUrl}
-            readOnly
-            onClick={(e) => e.target.select()}
-          />
         </div>
       </div>
     </BottomSheet>

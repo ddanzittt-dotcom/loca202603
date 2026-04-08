@@ -122,6 +122,7 @@ export function useFeatureEditing({
   features,
   refreshGameProfile,
   myLocation,
+  setFocusPoint,
 }) {
   const focusFeature = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
@@ -142,7 +143,11 @@ export function useFeatureEditing({
     if (!feature) return
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId])
+    const center = getFeatureCenter(feature)
+    if (center && setFocusPoint && (center.lat !== 0 || center.lng !== 0)) {
+      setFocusPoint({ lat: center.lat, lng: center.lng, zoom: 16 })
+    }
+  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId, setFocusPoint])
 
   const openFeatureDetail = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)

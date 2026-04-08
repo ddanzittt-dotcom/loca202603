@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="80dp"
+    android:height="100dp"
+    android:viewportWidth="160"
+    android:viewportHeight="200">
+    <!-- 원: cx=80 cy=56 r=56 stroke=14 (SVG 비율 기준) -->
+    <path
+        android:strokeColor="#FAF5EE"
+        android:strokeWidth="14"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M80,70m-56,0a56,56 0,1,1 112,0a56,56 0,1,1 -112,0"/>
+    <!-- 오렌지 점: r=20 -->
+    <path
+        android:fillColor="#FF6B35"
+        android:pathData="M80,70m-20,0a20,20 0,1,1 40,0a20,20 0,1,1 -40,0"/>
+    <!-- 세로 선: y1=126 y2=200 stroke=12 -->
+    <path
+        android:strokeColor="#FAF5EE"
+        android:strokeWidth="12"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M80,126L80,194"/>
+</vector>

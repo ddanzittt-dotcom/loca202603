@@ -365,13 +365,6 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(hitArea, feature.id)
           layersRef.current.push(hitArea)
 
-          const getCenterPoint = (pts) => {
-            const total = pts.reduce(
-              (acc, [lng, lat]) => ({ lat: acc.lat + lat, lng: acc.lng + lng }),
-              { lat: 0, lng: 0 },
-            )
-            return new naverMaps.LatLng(total.lat / pts.length, total.lng / pts.length)
-          }
           // 구역 라벨 — 상단 중앙 배치
           const getTopCenter = (pts) => {
             let minLat = Infinity, sumLng = 0

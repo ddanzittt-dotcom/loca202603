@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#2D4A3E</color>
+    <color name="colorPrimaryDark">#1E332B</color>
+    <color name="colorAccent">#FF6B35</color>
+    <color name="loca_deep_green">#FF2D4A3E</color>
+    <color name="loca_cream">#FFFAF5EE</color>
+    <color name="loca_orange">#FFFF6B35</color>
+    <color name="loca_cream_30">#4DFAF5EE</color>
+</resources>

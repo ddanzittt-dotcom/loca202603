@@ -184,6 +184,16 @@ export async function deleteMediaRecord(mediaId) {
 
 // ─── Profile ───
 
+export async function uploadAvatar(userId, file) {
+  const supabase = requireSupabase()
+  const ext = (file.name || "avatar.jpg").split(".").pop() || "jpg"
+  const path = `avatars/${userId}_${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from("media").getPublicUrl(path)
+  return data.publicUrl
+}
+
 export async function updateProfile(userId, updates = {}) {
   const user = await requireUser()
   if (user.id !== userId) throw new Error("자신의 프로필만 수정할 수 있습니다.")
@@ -227,6 +237,33 @@ export async function unfollowUser(targetUserId) {
     .eq("following_id", targetUserId)
 
   if (error) throw error
+}
+
+// ─── Likes ───
+
+/**
+ * 발행 지도 좋아요 증가.
+ * map_publications.likes_count를 +1 increment한다.
+ * publicationId는 map_publications.id (또는 map_id로 조회).
+ */
+export async function incrementLike(mapId) {
+  const supabase = requireSupabase()
+  // map_publications에서 map_id로 찾아서 likes_count +1
+  const { data: pub, error: findErr } = await supabase
+    .from("map_publications")
+    .select("id, likes_count")
+    .eq("map_id", mapId)
+    .single()
+
+  if (findErr || !pub) return null
+
+  const { error } = await supabase
+    .from("map_publications")
+    .update({ likes_count: (pub.likes_count || 0) + 1 })
+    .eq("id", pub.id)
+
+  if (error) throw error
+  return { likesCount: (pub.likes_count || 0) + 1 }
 }
 
 // ─── Collaborators ───

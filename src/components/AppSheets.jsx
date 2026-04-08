@@ -27,7 +27,7 @@ export function AppSheets({
   // UserProfileSheet
   selectedUser, selectedUserPosts, followed, setSelectedUserId, toggleFollow, setSelectedPostRef,
   // PostDetailSheet
-  selectedPost, likePost, openMapEditor, unpublish,
+  selectedPost, openMapEditor, unpublish, savePost,
   // MapShareEditor
   shareEditorImage, setShareEditorImage, activeMap, activeFeatures, shareUrl, showToast,
   // SharePlaceSheet
@@ -91,9 +91,12 @@ export function AppSheets({
       <PostDetailSheet
         post={selectedPost}
         onClose={() => setSelectedPostRef(null)}
-        onLike={likePost}
         onOpenMap={(mapId) => { setSelectedPostRef(null); openMapEditor(mapId) }}
         onUnpublish={unpublish}
+        onSave={savePost}
+        isFollowing={selectedPost?.user ? followed.includes(selectedPost.user.id) : false}
+        onToggleFollow={toggleFollow}
+        mapFeatures={selectedPost ? features.filter((f) => f.mapId === selectedPost.mapId) : []}
       />
 
       {shareEditorImage ? (
