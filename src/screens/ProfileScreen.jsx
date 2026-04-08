@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Settings, MapPin, Moon, Sun, Monitor, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon } from "lucide-react"
 import { BottomSheet } from "../components/ui"
-import { uploadAvatar } from "../lib/mapService"
 
 // 아바타 색상 (이름 해시)
 function getAvatarColors(name) {
@@ -117,7 +116,6 @@ export function ProfileScreen({
   const [editBio, setEditBio] = useState("")
   const [editLink, setEditLink] = useState("")
   const [editAvatarPreview, setEditAvatarPreview] = useState(null)
-  const [editAvatarFile, setEditAvatarFile] = useState(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -186,25 +184,44 @@ export function ProfileScreen({
     setEditBio(user.bio || "")
     setEditLink(user.link || "")
     setEditAvatarPreview(user.avatarUrl || null)
-    setEditAvatarFile(null)
     setEditOpen(true)
   }
 
-  const handlePhotoSelect = (e) => {
+  // 이미지를 canvas로 리사이즈하여 작은 data URL로 변환
+  const resizeImage = (file, maxSize = 256) => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        let w = img.width
+        let h = img.height
+        if (w > h) { h = Math.round((h / w) * maxSize); w = maxSize }
+        else { w = Math.round((w / h) * maxSize); h = maxSize }
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext("2d")
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL("image/jpeg", 0.85))
+      }
+      img.onerror = () => resolve(null)
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert("5MB 이하의 이미지만 업로드할 수 있어요.")
+    if (file.size > 10 * 1024 * 1024) {
+      alert("10MB 이하의 이미지만 업로드할 수 있어요.")
       return
     }
-    setEditAvatarFile(file)
-    const reader = new FileReader()
-    reader.onload = (ev) => setEditAvatarPreview(ev.target.result)
-    reader.readAsDataURL(file)
+    const resized = await resizeImage(file)
+    if (resized) {
+      setEditAvatarPreview(resized)
+    }
   }
 
   const handleRemovePhoto = () => {
-    setEditAvatarFile(null)
     setEditAvatarPreview(null)
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
@@ -212,18 +229,12 @@ export function ProfileScreen({
   const handleSaveProfile = async () => {
     setSaving(true)
     try {
-      let avatarUrl = editAvatarPreview
-      // 새 파일이 있고 클라우드 모드면 Supabase에 업로드
-      if (editAvatarFile && cloudMode) {
-        avatarUrl = await uploadAvatar(user.id, editAvatarFile)
-      }
-
       onUpdateProfile({
         name: editName.trim() || user.name,
         bio: editBio,
         handle: editHandle,
         link: editLink,
-        avatarUrl: avatarUrl || null,
+        avatarUrl: editAvatarPreview || null,
       })
       setEditOpen(false)
     } catch (error) {
