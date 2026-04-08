@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react"
-import { X, Bell, ArrowLeft } from "lucide-react"
+import { X, Bell, ArrowLeft, Share2, LocateFixed } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -10,6 +10,9 @@ import { useEventMapData, formatDistance } from "../hooks/useEventMapData"
 import { useEventComments } from "../hooks/useEventComments"
 import { useNotifications } from "../hooks/useNotifications"
 import { NotificationPanel, NotificationBanner } from "../components/NotificationPanel"
+import { SurveyPopup } from "../components/viewer/SurveyPopup"
+import { ReportDialog } from "../components/viewer/ReportDialog"
+import { SpotComments } from "../components/viewer/SpotComments"
 
 const DEFAULT_CHECKIN_RADIUS_M = 50
 
@@ -26,18 +29,6 @@ function AnnouncementViewTracker({ mapId, announcements, dismissed }) {
     })
   }, [mapId, announcements, dismissed])
   return null
-}
-
-function timeAgo(dateStr) {
-  if (!dateStr) return ""
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return "방금"
-  if (mins < 60) return `${mins}분 전`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}시간 전`
-  const days = Math.floor(hrs / 24)
-  return `${days}일 전`
 }
 
 // Pin SVG icon for save button
@@ -102,7 +93,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
 
   // ─── 이벤트 데이터 + 액션 ───
   const {
-    checkedInIds, handleCheckin, pinDistances,
+    checkedInIds, handleCheckin, pinDistances, userPos,
     totalCheckpoints, checkedCount, isCompleted, progressPct, nextSpot,
     announcements, announcementDismissed, setAnnouncementDismissed,
     surveyOpen, setSurveyOpen, surveyRating, setSurveyRating,
@@ -116,6 +107,79 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
     reportTarget, setReportTarget, commentsEnabled, canComment,
     handleAddComment, handleEditComment, handleDeleteComment, handleReport,
   } = useEventComments({ mapId: map.id, selectedId, isEventMap, config, checkedInIds, showViewerToast })
+
+  // ─── 공유 ───
+  const [shareOpen, setShareOpen] = useState(false)
+  const shareUrl = useMemo(() => {
+    if (map.slug) return `${window.location.origin}/s/${map.slug}`
+    return window.location.href
+  }, [map.slug])
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      logEvent("share_click", { map_id: map.id, meta: { method: "link" } })
+      showViewerToast("링크가 복사되었어요!")
+    } catch {
+      prompt("복사하세요:", shareUrl)
+    }
+    setShareOpen(false)
+  }, [shareUrl, map.id, showViewerToast])
+
+  const handleKakaoShare = useCallback(async () => {
+    logEvent("share_click", { map_id: map.id, meta: { method: "kakao" } })
+    const kakaoUrl = shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
+
+    // 카카오 SDK 로드
+    const sdkReady = await new Promise((resolve) => {
+      if (window.Kakao?.Share) {
+        if (!window.Kakao.isInitialized()) {
+          const key = import.meta.env.VITE_KAKAO_JS_KEY
+          if (key) window.Kakao.init(key)
+        }
+        resolve(true)
+        return
+      }
+      const key = import.meta.env.VITE_KAKAO_JS_KEY
+      if (!key) { resolve(false); return }
+      const s = document.createElement("script")
+      s.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
+      s.onload = () => {
+        if (window.Kakao && !window.Kakao.isInitialized()) window.Kakao.init(key)
+        resolve(!!window.Kakao?.Share)
+      }
+      s.onerror = () => resolve(false)
+      document.head.appendChild(s)
+    })
+
+    if (sdkReady && window.Kakao?.Share) {
+      try {
+        const ogImageUrl = `${window.location.origin}/api/og-image/${encodeURIComponent(map.slug || "loca")}`
+        window.Kakao.Share.sendDefault({
+          objectType: "feed",
+          content: {
+            title: map.title || "LOCA 지도",
+            description: map.description || `${map.title || "LOCA"} 지도를 열어보세요.`,
+            imageUrl: ogImageUrl,
+            imageWidth: 800,
+            imageHeight: 400,
+            link: { mobileWebUrl: kakaoUrl, webUrl: kakaoUrl },
+          },
+          buttons: [{ title: "지도 열기", link: { mobileWebUrl: kakaoUrl, webUrl: kakaoUrl } }],
+        })
+        setShareOpen(false)
+        return
+      } catch { /* fallback */ }
+    }
+    // 카카오 SDK 없으면 클립보드 복사
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      showViewerToast("링크가 복사되었어요. 카카오톡에 붙여넣기 하세요!")
+    } catch {
+      prompt("카카오톡에 붙여넣으세요:", shareUrl)
+    }
+    setShareOpen(false)
+  }, [shareUrl, map, showViewerToast])
 
   // ─── 알림 ───
   const [notiPanelOpen, setNotiPanelOpen] = useState(false)
@@ -140,6 +204,69 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
   })
 
   const selectedFeature = selectedId ? features.find((f) => f.id === selectedId) : null
+
+  // ─── GPS 위치 ───
+  const [localUserPos, setLocalUserPos] = useState(null)
+  const [locating, setLocating] = useState(false)
+  const currentUserPos = userPos || localUserPos
+
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      showViewerToast("위치 서비스를 사용할 수 없어요")
+      return
+    }
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        setLocalUserPos(loc)
+        setFocusPoint(loc)
+        setLocating(false)
+        showViewerToast("현재 위치를 찾았어요")
+      },
+      () => {
+        setLocating(false)
+        showViewerToast("위치를 가져올 수 없어요. 위치 권한을 확인해주세요.")
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    )
+  }, [showViewerToast])
+
+  // ─── 도보 길찾기 ───
+  const [walkRoute, setWalkRoute] = useState(null)
+  const [walkInfo, setWalkInfo] = useState(null) // { distance, duration }
+  const [walkLoading, setWalkLoading] = useState(false)
+
+  const handleWalkNavigate = useCallback(async (feature) => {
+    if (!currentUserPos || !feature) return
+    setWalkLoading(true)
+    setWalkRoute(null)
+    setWalkInfo(null)
+    try {
+      const start = `${currentUserPos.lng},${currentUserPos.lat}`
+      const goal = `${feature.lng},${feature.lat}`
+      const res = await fetch(`/api/directions/walk?start=${start}&goal=${goal}`)
+      const data = await res.json()
+      if (!res.ok || !data.path) {
+        console.warn("[walk] API 실패:", data)
+        showViewerToast(data.error || "경로를 찾을 수 없어요")
+        return
+      }
+      setWalkRoute(data.path)
+      setWalkInfo({ distance: data.distance, duration: data.duration })
+      logEvent("walk_navigate_app", { map_id: map.id, meta: { feature_id: feature.id } })
+    } catch {
+      showViewerToast("도보 경로 조회에 실패했어요")
+    } finally {
+      setWalkLoading(false)
+    }
+  }, [currentUserPos, map.id, showViewerToast])
+
+  // 핀 선택 변경 시 경로 초기화
+  useEffect(() => {
+    setWalkRoute(null)
+    setWalkInfo(null)
+  }, [selectedId])
 
   // Extract unique categories from features
   const uniqueCategories = useMemo(() => {
@@ -358,22 +485,42 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
         {/* Map area */}
         <div className="lw-map">
           <MapErrorBoundary>
-            <NaverMap features={features} selectedFeatureId={selectedId} draftPoints={[]} draftMode="browse" focusPoint={focusPoint} fitTrigger={fitTrigger} onFeatureTap={handleFeatureSelect} showLabels mapCategory={map.category} />
+            <NaverMap features={features} selectedFeatureId={selectedId} draftPoints={[]} draftMode="browse" focusPoint={focusPoint} fitTrigger={fitTrigger} onFeatureTap={handleFeatureSelect} showLabels mapCategory={map.category} walkRoute={walkRoute} />
           </MapErrorBoundary>
+
+          {/* 내 위치 버튼 */}
+          <button type="button" className="lw-locate-btn" onClick={handleLocateMe} disabled={locating} aria-label="내 위치">
+            <LocateFixed size={18} />
+          </button>
 
           {/* Pin tap card */}
           {selectedFeature ? (
             <div className="lw-pin-card">
-              <div className="lw-pin-card__icon" style={{ background: getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)).bg }}>
-                <img src={`/icons/pins/${selectedFeature.category || emojiToCategory(selectedFeature.emoji)}.svg`} width="16" height="16" alt="" />
+              <div className="lw-pin-card__top">
+                <div className="lw-pin-card__icon" style={{ background: getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)).bg }}>
+                  <img src={`/icons/pins/${selectedFeature.category || emojiToCategory(selectedFeature.emoji)}.svg`} width="16" height="16" alt="" />
+                </div>
+                <div className="lw-pin-card__info">
+                  <span className="lw-pin-card__name">{selectedFeature.title}</span>
+                  <span className="lw-pin-card__region">{selectedFeature.note || getRegionText(selectedFeature)}</span>
+                </div>
+                <div className="lw-pin-card__actions">
+                  {walkInfo ? (
+                    <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="lw-route-btn"
+                    disabled={walkLoading || !currentUserPos}
+                    onClick={() => handleWalkNavigate(selectedFeature)}
+                  >
+                    {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
+                  </button>
+                  <button className="lw-pin-card__close" type="button" onClick={() => setSelectedId(null)}>
+                    <X size={16} strokeWidth={1.5} />
+                  </button>
+                </div>
               </div>
-              <div className="lw-pin-card__info">
-                <span className="lw-pin-card__name">{selectedFeature.title}</span>
-                <span className="lw-pin-card__region">{selectedFeature.note || getRegionText(selectedFeature)}</span>
-              </div>
-              <button className="lw-pin-card__close" type="button" onClick={() => setSelectedId(null)}>
-                <X size={16} strokeWidth={1.5} />
-              </button>
             </div>
           ) : null}
 
@@ -420,6 +567,14 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
             <button
               className="lw-noti-btn"
               type="button"
+              aria-label="공유"
+              onClick={() => setShareOpen((v) => !v)}
+            >
+              <Share2 size={14} />
+            </button>
+            <button
+              className="lw-noti-btn"
+              type="button"
               aria-label="알림"
               onClick={() => setNotiPanelOpen((v) => !v)}
             >
@@ -427,6 +582,23 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
               {notiHasUnread && <span className="lw-noti-dot" style={{ borderColor: ciMainColor }} />}
             </button>
           </div>
+
+          {/* 공유 드롭다운 */}
+          {shareOpen && (
+            <>
+              <div className="lw-share-overlay" onClick={() => setShareOpen(false)} />
+              <div className="lw-share-dropdown">
+                <button type="button" className="lw-share-item" onClick={handleCopyLink}>
+                  <span className="lw-share-icon">🔗</span>
+                  <span>링크 복사</span>
+                </button>
+                <button type="button" className="lw-share-item lw-share-item--kakao" onClick={handleKakaoShare}>
+                  <span className="lw-share-icon">💬</span>
+                  <span>카카오톡</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Inner content area */}
@@ -493,8 +665,14 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                 showLabels
                 checkedInIds={config.checkin_enabled ? checkedInIds : null}
                 mapCategory={map.category}
+                walkRoute={walkRoute}
               />
             </MapErrorBoundary>
+
+            {/* 내 위치 버튼 */}
+            <button type="button" className="lw-locate-btn" onClick={handleLocateMe} disabled={locating} aria-label="내 위치">
+              <LocateFixed size={18} />
+            </button>
 
             {/* Pin tap card (event) — with checkin + tabs */}
             {selectedFeature ? (
@@ -505,11 +683,19 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                   </div>
                   <div className="lw-spot-detail__info">
                     <span className="lw-spot-detail__name">{selectedFeature.title}</span>
-                    {pinDistances[selectedFeature.id] != null ? (
-                      <span className="lw-spot-detail__dist">{formatDistance(pinDistances[selectedFeature.id])}</span>
-                    ) : null}
                   </div>
                   <div className="lw-spot-detail__actions">
+                    {walkInfo ? (
+                      <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="lw-route-btn"
+                      disabled={walkLoading || !currentUserPos}
+                      onClick={() => handleWalkNavigate(selectedFeature)}
+                    >
+                      {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
+                    </button>
                     {renderCheckinBtn(selectedFeature)}
                     <button className="lw-spot-detail__close" type="button" onClick={() => setSelectedId(null)}>
                       <X size={16} strokeWidth={1.5} />
@@ -534,89 +720,21 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
                         {selectedFeature.tags.map((tag) => <span key={tag} className="chip chip--small">#{tag}</span>)}
                       </div>
                     ) : null}
+
                   </div>
                 ) : null}
 
                 {/* Comments tab */}
                 {spotTab === "comments" ? (
-                  <div className="lw-spot-body">
-                    {commentsEnabled ? (
-                      canComment ? (
-                        <div className="lw-comment-input">
-                          <input
-                            type="text"
-                            placeholder="이 장소에 대한 댓글을 남겨보세요..."
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") handleAddComment() }}
-                            disabled={commentLoading}
-                          />
-                          <button type="button" onClick={handleAddComment} disabled={!commentText.trim() || commentLoading}>등록</button>
-                        </div>
-                      ) : (
-                        <div className="lw-comment-locked">
-                          체크인 후 댓글을 남길 수 있어요.
-                        </div>
-                      )
-                    ) : null}
-
-                    {comments.length > 0 ? (
-                      <div className="lw-comment-list">
-                        {comments.map((c) => {
-                          const isMine = myKey && c.participantKey === myKey
-                          const isEditing = editingId === c.id
-                          return (
-                            <div key={c.id} className={`lw-comment${c.isPinned ? " is-pinned" : ""}`}>
-                              {c.isPinned ? <span className="lw-comment__pin">📌</span> : null}
-                              <div className="lw-comment__main">
-                                <div className="lw-comment__meta">
-                                  <strong>{c.authorName}</strong>
-                                  <time>{timeAgo(c.createdAt)}</time>
-                                </div>
-                                {isEditing ? (
-                                  <div className="lw-comment-edit">
-                                    <input
-                                      type="text"
-                                      value={editText}
-                                      onChange={(e) => setEditText(e.target.value)}
-                                      onKeyDown={(e) => { if (e.key === "Enter") handleEditComment() }}
-                                      autoFocus
-                                    />
-                                    <div className="lw-comment-edit-actions">
-                                      <button type="button" onClick={handleEditComment}>저장</button>
-                                      <button type="button" onClick={() => setEditingId(null)}>취소</button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p>{c.body}</p>
-                                )}
-                              </div>
-                              {!isEditing ? (
-                                <div className="lw-comment__actions">
-                                  {isMine ? (
-                                    <>
-                                      {config.allow_comment_edit !== false ? (
-                                        <button type="button" onClick={() => { setEditingId(c.id); setEditText(c.body) }} title="수정">수정</button>
-                                      ) : null}
-                                      {config.allow_comment_delete !== false ? (
-                                        <button type="button" onClick={() => handleDeleteComment(c.id)} title="삭제">삭제</button>
-                                      ) : null}
-                                    </>
-                                  ) : (
-                                    <button type="button" onClick={() => setReportTarget(c.id)} title="신고">신고</button>
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="lw-comment-empty">
-                        {commentsEnabled ? "아직 댓글이 없어요. 첫 댓글을 남겨보세요!" : "댓글이 비활성화되어 있어요."}
-                      </div>
-                    )}
-                  </div>
+                  <SpotComments
+                    comments={comments} commentText={commentText} setCommentText={setCommentText}
+                    commentLoading={commentLoading} myKey={myKey}
+                    editingId={editingId} setEditingId={setEditingId}
+                    editText={editText} setEditText={setEditText}
+                    commentsEnabled={commentsEnabled} canComment={canComment} config={config}
+                    onAddComment={handleAddComment} onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment} onReport={setReportTarget}
+                  />
                 ) : null}
               </div>
             ) : null}
@@ -687,43 +805,16 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
 
       {/* Report dialog */}
       {reportTarget ? (
-        <div className="lw-report-overlay">
-          <div className="lw-report">
-            <h4>댓글 신고</h4>
-            <p>사유를 선택해주세요.</p>
-            <div className="lw-report__options">
-              {[
-                { value: "spam", label: "스팸/광고" },
-                { value: "offensive", label: "욕설/혐오" },
-                { value: "inappropriate", label: "부적절한 내용" },
-                { value: "misinformation", label: "허위 정보" },
-                { value: "other", label: "기타" },
-              ].map((opt) => (
-                <button key={opt.value} type="button" onClick={() => handleReport(opt.value)}>{opt.label}</button>
-              ))}
-            </div>
-            <button className="lw-report__cancel" type="button" onClick={() => setReportTarget(null)}>취소</button>
-          </div>
-        </div>
+        <ReportDialog onReport={handleReport} onClose={() => setReportTarget(null)} />
       ) : null}
 
       {/* Survey popup */}
       {surveyOpen ? (
-        <div className="lw-survey-overlay">
-          <div className="lw-survey">
-            <h3>축하해요! 설문에 참여해주세요</h3>
-            <div className="lw-survey__stars">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button key={star} type="button" className={`lw-star${surveyRating >= star ? " is-active" : ""}`} onClick={() => setSurveyRating(star)}>★</button>
-              ))}
-            </div>
-            <textarea className="lw-survey__comment" rows={2} value={surveyComment} onChange={(e) => setSurveyComment(e.target.value)} placeholder="한줄 후기를 남겨주세요 (선택)" />
-            <div className="lw-survey__actions">
-              <button className="button button--ghost" type="button" onClick={() => setSurveyOpen(false)}>건너뛰기</button>
-              <button className="button button--primary" type="button" onClick={handleSurveySubmit} disabled={surveyRating === 0}>제출</button>
-            </div>
-          </div>
-        </div>
+        <SurveyPopup
+          rating={surveyRating} setRating={setSurveyRating}
+          comment={surveyComment} setComment={setSurveyComment}
+          onSubmit={handleSurveySubmit} onClose={() => setSurveyOpen(false)}
+        />
       ) : null}
 
       <NotificationBanner

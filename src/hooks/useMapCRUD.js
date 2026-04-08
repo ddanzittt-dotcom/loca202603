@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import { createId } from "../lib/appUtils"
-import { deleteMedia, deleteMediaFromCloud } from "../lib/mediaStore"
 import { logEvent } from "../lib/analytics"
+import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import { friendlySupabaseError } from "../lib/mapService"
 import {
   createMap as createMapRecord,
@@ -182,20 +182,7 @@ export function useMapCRUD({
       }
       const mapFeatures = features.filter((f) => f.mapId === targetId)
       for (const f of mapFeatures) {
-        for (const p of (f.photos || [])) {
-          try { await deleteMedia(p.id) } catch { /* ignore */ }
-          if (p.localId) try { await deleteMedia(p.localId) } catch { /* ignore */ }
-          if (cloudMode && (p.storagePath || p.url)) {
-            deleteMediaFromCloud(p.id, "photos", p.storagePath || null)
-          }
-        }
-        for (const v of (f.voices || [])) {
-          try { await deleteMedia(v.id) } catch { /* ignore */ }
-          if (v.localId) try { await deleteMedia(v.localId) } catch { /* ignore */ }
-          if (cloudMode && (v.storagePath || v.url)) {
-            deleteMediaFromCloud(v.id, "voices", v.storagePath || null)
-          }
-        }
+        await cleanupFeatureMedia(f, cloudMode, false)
       }
       setMaps((current) => current.filter((mapItem) => mapItem.id !== targetId))
       setFeatures((current) => current.filter((feature) => feature.mapId !== targetId))

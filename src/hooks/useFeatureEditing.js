@@ -1,13 +1,12 @@
 import { useCallback, useRef } from "react"
 import { createId, tagsToText, sanitizePoints, sanitizeCoord } from "../lib/appUtils"
-import { deleteMedia, deleteMediaFromCloud } from "../lib/mediaStore"
 import { logEvent } from "../lib/analytics"
+import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import {
   addFeatureMemo as addFeatureMemoRecord,
   createFeature as createFeatureRecord,
   updateFeature as updateFeatureRecord,
   deleteFeature as deleteFeatureRecord,
-  deleteMediaRecord,
 } from "../lib/mapService"
 import { recordMapAction } from "../lib/gamificationService"
 import { getMapCompletionSnapshot } from "../lib/mapCompletion"
@@ -249,22 +248,7 @@ export function useFeatureEditing({
       setFeatures((current) => current.filter((feature) => feature.id !== featureSheet.id))
       touchMap(featureSheet.mapId)
     }
-    for (const photo of (featureSheet.photos || [])) {
-      try { await deleteMedia(photo.id) } catch { /* ignore */ }
-      if (photo.localId) try { await deleteMedia(photo.localId) } catch { /* ignore */ }
-      if (cloudMode && (photo.storagePath || photo.url)) {
-        deleteMediaRecord(photo.id).catch(() => null)
-        deleteMediaFromCloud(photo.id, "photos", photo.storagePath || null)
-      }
-    }
-    for (const voice of (featureSheet.voices || [])) {
-      try { await deleteMedia(voice.id) } catch { /* ignore */ }
-      if (voice.localId) try { await deleteMedia(voice.localId) } catch { /* ignore */ }
-      if (cloudMode && (voice.storagePath || voice.url)) {
-        deleteMediaRecord(voice.id).catch(() => null)
-        deleteMediaFromCloud(voice.id, "voices", voice.storagePath || null)
-      }
-    }
+    await cleanupFeatureMedia(featureSheet, cloudMode)
     setFeatureSheet(null)
     setSelectedFeatureId(null)
     setSelectedFeatureSummaryId(null)

@@ -1,5 +1,6 @@
 import { BottomSheet } from "../ui"
 import { MapPin } from "lucide-react"
+import { Avatar } from "../Avatar"
 
 const REGION_PALETTES = {
   서울: ["#D4836B", "#D99580", "#E0A896", "#E8BCAD"],
@@ -7,26 +8,6 @@ const REGION_PALETTES = {
   강원: ["#4A7A60", "#649478", "#80AE92", "#9CC8AC"],
   부산: ["#5B7EA5", "#7596B8", "#90AECA", "#ABC6DC"],
   제주: ["#C47A6E", "#D09488", "#DCAEA2", "#E8C8BE"],
-}
-
-function getInitials(name) {
-  if (!name) return "?"
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
-
-function getAvatarColors(name) {
-  const palettes = [
-    { bg: "#E8BCAD", text: "#993C1D" },
-    { bg: "#ECCAA0", text: "#633806" },
-    { bg: "#C2D6B8", text: "#085041" },
-    { bg: "#ACD6CC", text: "#085041" },
-    { bg: "#ABC6DC", text: "#0C447C" },
-  ]
-  let hash = 0
-  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return palettes[Math.abs(hash) % palettes.length]
 }
 
 function getTagColor(tag) {
@@ -40,8 +21,6 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSave,
   const pins = mapFeatures ? mapFeatures.filter((f) => f.type === "pin") : []
   const routes = mapFeatures ? mapFeatures.filter((f) => f.type === "route") : []
   const isEvent = post?.category === "event"
-  const avatarColors = post ? getAvatarColors(post.user?.name) : { bg: "#E8BCAD", text: "#993C1D" }
-  const initials = post ? getInitials(post.user?.name) : "?"
 
   return (
     <BottomSheet
@@ -54,9 +33,7 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSave,
         <div className="post-detail-sheet">
           {/* 작성자 정보 */}
           <div className="pds__author">
-            <div className="pds__avatar" style={{ background: avatarColors.bg }}>
-              <span style={{ color: avatarColors.text }}>{initials}</span>
-            </div>
+            <Avatar name={post.user?.name} size={36} className="pds__avatar" />
             <div className="pds__author-body">
               <p className="pds__author-name">{post.user.name}</p>
               <p className="pds__author-handle">{post.user.handle || `@${post.user.name}`} · {post.date}</p>

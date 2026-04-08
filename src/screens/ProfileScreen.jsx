@@ -1,30 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Settings, MapPin, Moon, Sun, Monitor, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon } from "lucide-react"
 import { BottomSheet } from "../components/ui"
-
-// 아바타 색상 (이름 해시)
-function getAvatarColors(name) {
-  const palettes = [
-    { bg: "#E8BCAD", text: "#993C1D" },
-    { bg: "#ECCAA0", text: "#633806" },
-    { bg: "#C2D6B8", text: "#085041" },
-    { bg: "#ACD6CC", text: "#085041" },
-    { bg: "#ABC6DC", text: "#0C447C" },
-    { bg: "#C8C9DC", text: "#3D3E6B" },
-    { bg: "#E8C8BE", text: "#712B13" },
-    { bg: "#9CC8AC", text: "#085041" },
-  ]
-  let hash = 0
-  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return palettes[Math.abs(hash) % palettes.length]
-}
-
-function getInitials(name) {
-  if (!name) return "?"
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
+import { Avatar } from "../components/Avatar"
+import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 
 // 미니 지도 카드 (갤러리용)
 const MINI_PALETTES = {
@@ -251,8 +229,6 @@ export function ProfileScreen({
     { id: "system", icon: Monitor, label: "시스템" },
   ]
 
-  const initials = getInitials(user.name)
-  const avatarColors = getAvatarColors(user.name)
   const placeCount = features.length
 
   // 프로필 편집 화면
@@ -357,13 +333,7 @@ export function ProfileScreen({
       <div className="pf">
         {/* 프로필 정보 */}
         <div className="pf__info">
-          <div className="pf__avatar" style={{ background: user.avatarUrl ? "transparent" : avatarColors.bg }}>
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="pf__avatar-img" />
-            ) : (
-              <span style={{ color: avatarColors.text }}>{initials}</span>
-            )}
-          </div>
+          <Avatar name={user.name} avatarUrl={user.avatarUrl} size={68} className="pf__avatar" />
           <div className="pf__info-body">
             <div className="pf__name-row">
               <span className="pf__name">{user.name}</span>

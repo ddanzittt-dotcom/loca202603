@@ -1,20 +1,13 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { Search as SearchIcon, MapPin as LocationIcon, Star, Users } from "lucide-react"
 import { hasSupabaseEnv } from "../lib/supabase"
+import { Avatar } from "../components/Avatar"
 
 // 자동 태그 색상 그룹
 const TAG_STYLES = {
   warm:  { bg: "#FFF4EB", color: "#993C1D" },
   amber: { bg: "#FAEEDA", color: "#633806" },
   mint:  { bg: "#E1F5EE", color: "#085041" },
-}
-
-// 이모지 → 이니셜 추출
-function getInitials(name) {
-  if (!name) return "?"
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
 }
 
 // 간단한 자동 태그 (bio 기반)
@@ -26,23 +19,6 @@ function getAutoTag(user) {
   if (bio.includes("여행") || bio.includes("투어")) return { text: "여행 스팟", group: "mint" }
   if (bio.includes("전시") || bio.includes("갤러리")) return { text: "전시 큐레이터", group: "warm" }
   return { text: "동네 탐험가", group: "warm" }
-}
-
-// 아바타 색상 (이름 기반 해시)
-function getAvatarColors(name) {
-  const palettes = [
-    { bg: "#E8BCAD", text: "#D4836B" },
-    { bg: "#ECCAA0", text: "#C48B4C" },
-    { bg: "#C2D6B8", text: "#7A9E6B" },
-    { bg: "#ACD6CC", text: "#5A9E91" },
-    { bg: "#ABC6DC", text: "#5B7EA5" },
-    { bg: "#C8C9DC", text: "#7A7BA5" },
-    { bg: "#E8C8BE", text: "#C47A6E" },
-    { bg: "#9CC8AC", text: "#4A7A60" },
-  ]
-  let hash = 0
-  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return palettes[Math.abs(hash) % palettes.length]
 }
 
 export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) {
@@ -190,16 +166,12 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
 
 // 에디터 카드 (3열 그리드)
 function EditorCard({ user, isFollowed, onToggleFollow, onSelect }) {
-  const initials = getInitials(user.name)
   const tag = getAutoTag(user)
   const tagStyle = TAG_STYLES[tag.group]
-  const avatar = getAvatarColors(user.name)
 
   return (
     <div className="sr-editor-card" onClick={() => onSelect(user.id)}>
-      <div className="sr-editor-card__avatar" style={{ background: avatar.bg }}>
-        <span style={{ color: avatar.text }}>{initials}</span>
-      </div>
+      <Avatar name={user.name} size={44} className="sr-editor-card__avatar" />
       <p className="sr-editor-card__name">{user.name}</p>
       <p className="sr-editor-card__meta">{user.handle}</p>
       <span className="sr-editor-card__tag" style={{ background: tagStyle.bg, color: tagStyle.color }}>{tag.text}</span>
@@ -212,16 +184,12 @@ function EditorCard({ user, isFollowed, onToggleFollow, onSelect }) {
 
 // 에디터 리스트 아이템
 function EditorListItem({ user, isFollowed, onToggleFollow, onSelect, isLast }) {
-  const initials = getInitials(user.name)
   const tag = getAutoTag(user)
   const tagStyle = TAG_STYLES[tag.group]
-  const avatar = getAvatarColors(user.name)
 
   return (
     <button className={`sr-list-item${isLast ? "" : " sr-list-item--border"}`} type="button" onClick={() => onSelect(user.id)}>
-      <div className="sr-list-item__avatar" style={{ background: avatar.bg }}>
-        <span style={{ color: avatar.text }}>{initials}</span>
-      </div>
+      <Avatar name={user.name} size={36} className="sr-list-item__avatar" />
       <div className="sr-list-item__info">
         <div className="sr-list-item__name-row">
           <span className="sr-list-item__name">{user.name}</span>
