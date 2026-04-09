@@ -8,12 +8,12 @@ export default async function handler(req, res) {
 
   const apiKey = (process.env.TOUR_API_KEY || "").trim()
   if (!apiKey) {
-    return res.status(200).json({ detail: null, error: "TOUR_API_KEY not configured" })
+    return res.status(500).json({ detail: null, error: "TOUR_API_KEY not configured" })
   }
 
   const { contentId, contentTypeId: rawTypeId } = req.query
   if (!contentId) {
-    return res.status(200).json({ detail: null, error: "contentId is required" })
+    return res.status(400).json({ detail: null, error: "contentId is required" })
   }
 
   const contentTypeId = parseInt(rawTypeId, 10) || 15
@@ -88,6 +88,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ detail })
   } catch (error) {
-    return res.status(200).json({ detail: null, error: error.message || "Failed to fetch detail" })
+    return res.status(502).json({ detail: null, error: error.message || "Failed to fetch detail" })
   }
 }

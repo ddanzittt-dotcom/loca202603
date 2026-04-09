@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Trophy } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -80,11 +80,15 @@ export function HomeScreen({
   const [eventsLoading, setEventsLoading] = useState(true)
   const [eventsNearby, setEventsNearby] = useState(false)
   const [eventsRadiusKm, setEventsRadiusKm] = useState(null)
+  const [eventsError, setEventsError] = useState("")
+  const eventsRequestRef = useRef(0)
 
   // 이벤트 상세
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [eventDetail, setEventDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState("")
+  const detailAbortRef = useRef(null)
   const [overviewExpanded, setOverviewExpanded] = useState(false)
   const [showEventList, setShowEventList] = useState(false)
   const [showLevelChart, setShowLevelChart] = useState(false)
@@ -92,6 +96,12 @@ export function HomeScreen({
   const applyFetchResult = (data) => {
     setEvents(data.items?.length > 0 ? data.items : [])
     setEventsRadiusKm(data.radiusKm || null)
+    setEventsError("")
+  }
+
+  const getApiErrorMessage = (error, fallbackMessage) => {
+    if (typeof error?.message === "string" && error.message.trim()) return error.message
+    return fallbackMessage
   }
 
   const fetchEvents = async (lat, lng) => {
@@ -99,27 +109,54 @@ export function HomeScreen({
       ? `/api/events?lat=${lat}&lng=${lng}&_t=${Date.now()}`
       : `/api/events?_t=${Date.now()}`
     const resp = await fetch(url, { cache: "no-store" })
-    return resp.json()
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      throw new Error(typeof data?.error === "string" ? data.error : "이벤트를 불러오지 못했어요.")
+    }
+    return data
   }
 
   useEffect(() => {
     let cancelled = false
+    const requestId = ++eventsRequestRef.current
     // eventsLoading 초기값이 true이므로 여기서 재설정 불필요
     fetchEvents(null, null)
-      .then((data) => { if (!cancelled) applyFetchResult(data) })
-      .catch(() => { if (!cancelled) { setEvents([]); setEventsRadiusKm(null) } })
-      .finally(() => { if (!cancelled) setEventsLoading(false) })
+      .then((data) => {
+        if (!cancelled && requestId === eventsRequestRef.current) applyFetchResult(data)
+      })
+      .catch((error) => {
+        if (!cancelled && requestId === eventsRequestRef.current) {
+          setEvents([])
+          setEventsRadiusKm(null)
+          setEventsError(getApiErrorMessage(error, "이벤트를 불러오지 못했어요."))
+        }
+      })
+      .finally(() => {
+        if (!cancelled && requestId === eventsRequestRef.current) setEventsLoading(false)
+      })
     return () => { cancelled = true }
   }, [])
 
   const loadNearbyEvents = () => {
     const go = (lat, lng) => {
+      const requestId = ++eventsRequestRef.current
       setEventsNearby(true)
       setEventsLoading(true)
+      setEventsError("")
       fetchEvents(lat, lng)
-        .then(applyFetchResult)
-        .catch(() => { setEvents([]); setEventsRadiusKm(null) })
-        .finally(() => setEventsLoading(false))
+        .then((data) => {
+          if (requestId === eventsRequestRef.current) applyFetchResult(data)
+        })
+        .catch((error) => {
+          if (requestId === eventsRequestRef.current) {
+            setEvents([])
+            setEventsRadiusKm(null)
+            setEventsError(getApiErrorMessage(error, "근처 이벤트를 불러오지 못했어요."))
+          }
+        })
+        .finally(() => {
+          if (requestId === eventsRequestRef.current) setEventsLoading(false)
+        })
     }
     if (myLocation) return go(myLocation.lat, myLocation.lng)
     if (!navigator.geolocation) return
@@ -129,35 +166,73 @@ export function HomeScreen({
         setMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
         go(pos.coords.latitude, pos.coords.longitude)
       },
-      () => { setEventsLoading(false) },
+      () => {
+        setEventsLoading(false)
+        setEventsError("위치 권한이 없어 근처 이벤트를 불러오지 못했어요.")
+      },
       { timeout: 8000 },
     )
   }
 
   const loadAllEvents = () => {
+    const requestId = ++eventsRequestRef.current
     setEventsNearby(false)
     setEventsLoading(true)
+    setEventsError("")
     fetchEvents(null, null)
-      .then(applyFetchResult)
-      .catch(() => { setEvents([]); setEventsRadiusKm(null) })
-      .finally(() => setEventsLoading(false))
+      .then((data) => {
+        if (requestId === eventsRequestRef.current) applyFetchResult(data)
+      })
+      .catch((error) => {
+        if (requestId === eventsRequestRef.current) {
+          setEvents([])
+          setEventsRadiusKm(null)
+          setEventsError(getApiErrorMessage(error, "이벤트를 불러오지 못했어요."))
+        }
+      })
+      .finally(() => {
+        if (requestId === eventsRequestRef.current) setEventsLoading(false)
+      })
   }
 
   const openEventDetail = async (event) => {
+    detailAbortRef.current?.abort?.()
+    const controller = new AbortController()
+    detailAbortRef.current = controller
     setSelectedEvent(event)
     setEventDetail(null)
     setDetailLoading(true)
+    setDetailError("")
     setOverviewExpanded(false)
     try {
       const typeParam = event.contentTypeId ? `&contentTypeId=${event.contentTypeId}` : ""
-      const resp = await fetch(`/api/event-detail?contentId=${event.id}${typeParam}`)
-      const data = await resp.json()
+      const resp = await fetch(`/api/event-detail?contentId=${event.id}${typeParam}`, { signal: controller.signal })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "상세 정보를 불러오지 못했어요.")
+      }
+      if (detailAbortRef.current !== controller) return
       if (data.detail) setEventDetail(data.detail)
-    } catch { /* 폴백: 기본 정보만 표시 */ }
-    setDetailLoading(false)
+      else setDetailError("상세 정보가 비어 있어 기본 정보만 보여줄게요.")
+    } catch (error) {
+      if (error?.name === "AbortError") return
+      if (detailAbortRef.current === controller) {
+        setDetailError(getApiErrorMessage(error, "상세 정보를 불러오지 못했어요."))
+      }
+    } finally {
+      if (detailAbortRef.current === controller) {
+        setDetailLoading(false)
+        detailAbortRef.current = null
+      }
+    }
   }
 
   // 날짜 포맷 (20260403 → 4.3)
+  // Detail request cleanup on unmount.
+  useEffect(() => () => {
+    detailAbortRef.current?.abort?.()
+  }, [])
+
   const formatEventDate = (dateStr) => {
     if (!dateStr || dateStr.length !== 8) return ""
     return `${parseInt(dateStr.slice(4, 6))}.${parseInt(dateStr.slice(6, 8))}`
@@ -341,6 +416,13 @@ export function HomeScreen({
         </div>
         {eventsLoading ? (
           <div className="home-section__empty">이벤트를 불러오는 중...</div>
+        ) : eventsError ? (
+          <div className="home-section__empty">
+            <p>{eventsError}</p>
+            <button className="button button--ghost" type="button" onClick={eventsNearby ? loadNearbyEvents : loadAllEvents}>
+              다시 시도
+            </button>
+          </div>
         ) : events.length === 0 ? (
           <div className="home-section__empty">{eventsNearby ? "100km 이내 진행 중인 행사가 없어요" : "진행 중인 행사가 없어요"}</div>
         ) : (
@@ -464,6 +546,8 @@ export function HomeScreen({
 
               {detailLoading ? (
                 <p className="event-detail-sheet__loading">정보를 불러오는 중...</p>
+              ) : detailError ? (
+                <p className="event-detail-sheet__loading">{detailError}</p>
               ) : eventDetail ? (
                 <>
                   {/* 기본 정보 */}

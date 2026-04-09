@@ -50,7 +50,8 @@ describe("createSlugCandidate", () => {
     expect(createSlugCandidate("test!@#$map")).toBe("testmap")
   })
   it("빈 문자열", () => {
-    expect(createSlugCandidate("")).toBe("")
+    const candidate = createSlugCandidate("")
+    expect(candidate).toMatch(/^map-[a-z0-9]+$/)
   })
 })
 

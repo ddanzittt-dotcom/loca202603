@@ -69,7 +69,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
     })
 
     return () => { cancelled = true }
-  }, [])
+  }, [focusPoint, myLocation])
 
   // 피처 렌더링
   useEffect(() => {

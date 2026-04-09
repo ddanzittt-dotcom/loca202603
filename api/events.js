@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
   const apiKey = (process.env.TOUR_API_KEY || "").trim()
   if (!apiKey) {
-    return res.status(200).json({ items: [], error: "TOUR_API_KEY not configured" })
+    return res.status(500).json({ items: [], error: "TOUR_API_KEY not configured" })
   }
 
   const { lat, lng } = req.query
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
 
     let data
     try { data = JSON.parse(text) } catch {
-      return res.status(200).json({ items: [], error: `Invalid response from TourAPI: ${text.slice(0, 200)}` })
+      return res.status(502).json({ items: [], error: `Invalid response from TourAPI: ${text.slice(0, 200)}` })
     }
 
     const rawItems = data?.response?.body?.items?.item || []
@@ -85,6 +85,6 @@ export default async function handler(req, res) {
     // 위치 없음: 최신순 30개
     return res.status(200).json({ items: active.slice(0, 30) })
   } catch (error) {
-    return res.status(200).json({ items: [], error: `${error.name}: ${error.message}` })
+    return res.status(502).json({ items: [], error: `${error.name}: ${error.message}` })
   }
 }

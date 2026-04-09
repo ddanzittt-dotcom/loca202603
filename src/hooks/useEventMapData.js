@@ -5,6 +5,17 @@ import { getActiveAnnouncements, submitSurveyResponse } from "../lib/mapService"
 import { submitEventCheckin, getMyCheckins, awardSouvenir, submitSurveyReward } from "../lib/gamificationService"
 
 const DEFAULT_CHECKIN_RADIUS_M = 50
+const CHECKIN_QUEUE_KEY = "loca.checkin_queue"
+
+function enqueueCheckinForSync(item) {
+  try {
+    const queue = JSON.parse(localStorage.getItem(CHECKIN_QUEUE_KEY) || "[]")
+    queue.push({ ...item, timestamp: new Date().toISOString() })
+    localStorage.setItem(CHECKIN_QUEUE_KEY, JSON.stringify(queue))
+  } catch {
+    // ignore
+  }
+}
 
 export function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000
@@ -134,11 +145,12 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
   const [surveySubmitted, setSurveySubmitted] = useState(false)
   const [surveyTriggered, setSurveyTriggered] = useState(false)
 
-  // 완주 시 설문 자동 트리거 (렌더 중 조건부 setState)
-  if (isEventMap && isCompleted && config.survey_enabled && !surveySubmitted && !surveyTriggered) {
+  // Auto-open survey once when completion conditions are met.
+  useEffect(() => {
+    if (!isEventMap || !isCompleted || !config.survey_enabled || surveySubmitted || surveyTriggered) return
     setSurveyTriggered(true)
     setSurveyOpen(true)
-  }
+  }, [config.survey_enabled, isCompleted, isEventMap, surveySubmitted, surveyTriggered])
 
   // ─── 오프라인 큐 flush ───
   useEffect(() => {
@@ -164,18 +176,25 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
   useEffect(() => {
     const flushCheckinQueue = async () => {
       if (!hasSupabaseEnv) return
-      const key = "loca.checkin_queue"
       try {
-        const queue = JSON.parse(localStorage.getItem(key) || "[]")
+        const queue = JSON.parse(localStorage.getItem(CHECKIN_QUEUE_KEY) || "[]")
         if (queue.length === 0) return
         const remaining = []
         for (const item of queue) {
           try {
-            await submitEventCheckin({ mapId: item.mapId, featureId: item.featureId, sessionId: item.sessionId, proofMeta: item.proofMeta })
-          } catch { remaining.push(item) }
+            const result = await submitEventCheckin({
+              mapId: item.mapId,
+              featureId: item.featureId,
+              sessionId: item.sessionId,
+              proofMeta: item.proofMeta,
+            })
+            if (!result) throw new Error("checkin sync failed")
+          } catch {
+            remaining.push(item)
+          }
         }
-        if (remaining.length === 0) localStorage.removeItem(key)
-        else localStorage.setItem(key, JSON.stringify(remaining))
+        if (remaining.length === 0) localStorage.removeItem(CHECKIN_QUEUE_KEY)
+        else localStorage.setItem(CHECKIN_QUEUE_KEY, JSON.stringify(remaining))
       } catch { /* ignore */ }
     }
     window.addEventListener("online", flushCheckinQueue)
@@ -241,6 +260,7 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
     if (hasSupabaseEnv && map.id && navigator.onLine) {
       try {
         const result = await submitEventCheckin({ mapId: map.id, featureId, sessionId, proofMeta })
+        if (!result) throw new Error("checkin sync failed")
         if (result?.completed) {
           logEvent("completion", { map_id: map.id })
           if (config.souvenir_enabled !== false) {
@@ -259,15 +279,11 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
           showViewerToast("체크인 완료!")
         }
       } catch {
-        showViewerToast("체크인 완료!")
+        enqueueCheckinForSync({ mapId: map.id, featureId, sessionId, proofMeta })
+        showViewerToast("체크인 기록을 임시 저장했어요. 온라인 상태에서 자동 동기화됩니다.")
       }
     } else if (hasSupabaseEnv && map.id && !navigator.onLine) {
-      try {
-        const key = "loca.checkin_queue"
-        const queue = JSON.parse(localStorage.getItem(key) || "[]")
-        queue.push({ mapId: map.id, featureId, sessionId, proofMeta, timestamp: new Date().toISOString() })
-        localStorage.setItem(key, JSON.stringify(queue))
-      } catch { /* ignore */ }
+      enqueueCheckinForSync({ mapId: map.id, featureId, sessionId, proofMeta })
       showViewerToast("오프라인 체크인! 온라인 시 자동 동기화됩니다.")
     } else {
       showViewerToast("체크인 완료!")
@@ -315,6 +331,7 @@ export function useEventMapData({ map, features, config, isEventMap, showViewerT
     checkedInIds,
     handleCheckin,
     pinDistances,
+    userPos,
     // 진행률
     totalCheckpoints,
     checkedCount,
