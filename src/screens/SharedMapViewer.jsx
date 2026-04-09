@@ -6,6 +6,7 @@ import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
+import { saveMap as saveMapRecord } from "../lib/mapService"
 import { useEventMapData, formatDistance } from "../hooks/useEventMapData"
 import { useEventComments } from "../hooks/useEventComments"
 import { useNotifications } from "../hooks/useNotifications"
@@ -41,15 +42,16 @@ function PinSvg() {
 }
 
 // Save button component
-function SaveButton({ onClick, isEvent }) {
+function SaveButton({ onClick, isEvent, loading = false }) {
   return (
     <button
       className={`lw-save-btn${isEvent ? " lw-save-btn--event" : ""}`}
       type="button"
       onClick={onClick}
+      disabled={loading}
     >
       <PinSvg />
-      <span className="lw-save-btn__text">loca에 저장</span>
+      <span className="lw-save-btn__text">{loading ? "저장 중..." : "loca에 저장"}</span>
     </button>
   )
 }
@@ -72,7 +74,7 @@ function getRegionText(feature) {
   return parts.join(" ") || ""
 }
 
-export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
+export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToApp = false }) {
   const [selectedId, setSelectedId] = useState(null)
   const [fitTrigger] = useState(1)
   const [focusPoint, setFocusPoint] = useState(null)
@@ -334,10 +336,18 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
     setFocusPoint(getFeatureCenter(nextSpot))
   }, [nextSpot, handleFeatureSelect])
 
-  const handleSave = useCallback(() => {
-    if (hasSupabaseEnv && map.id) logEvent("map_save", { map_id: map.id })
+  const handleSave = useCallback(async () => {
+    if (savingToApp || !onSaveToApp) return
+    if (hasSupabaseEnv && map.id) {
+      logEvent("map_save", { map_id: map.id })
+      try {
+        await saveMapRecord(map.id, { source: "viewer_save" })
+      } catch {
+        // Do not block save UX when save conversion sync fails.
+      }
+    }
     onSaveToApp()
-  }, [map.id, onSaveToApp])
+  }, [map.id, onSaveToApp, savingToApp])
 
   // 체크인 버튼 렌더 헬퍼
   const renderCheckinBtn = (feature, size = "normal") => {
@@ -470,7 +480,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
             <span className="lw-hero__sep">·</span>
             <span className="lw-hero__author">@{map.authorName || "user"}</span>
             <span className="lw-hero__row1-right">
-              {onSaveToApp ? <SaveButton onClick={handleSave} isEvent={false} /> : null}
+              {onSaveToApp ? <SaveButton onClick={handleSave} isEvent={false} loading={savingToApp} /> : null}
             </span>
           </div>
           <div className="lw-hero__title">{map.title}</div>
@@ -563,7 +573,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack }) {
             </span>
           </div>
           <div className="lw-ci-actions">
-            {onSaveToApp ? <SaveButton onClick={handleSave} isEvent /> : null}
+            {onSaveToApp ? <SaveButton onClick={handleSave} isEvent loading={savingToApp} /> : null}
             <button
               className="lw-noti-btn"
               type="button"

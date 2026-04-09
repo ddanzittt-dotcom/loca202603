@@ -150,6 +150,7 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
   const pal = region.palette // [dark, mid, light, pale]
 
   const isEvent = map.category === "event"
+  const isPublished = Boolean(map.isPublished || map.visibility === "public" || map.visibility === "unlisted")
   const lastMod = formatRelativeDate(map.updatedAt)
 
   // blob 위치에 약간의 변주
@@ -173,6 +174,9 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
       <div className="mc__badges">
         <span className="mc__badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
           {isEvent ? "Event" : "Editor"}
+        </span>
+        <span className={`mc__badge ${isPublished ? "mc__badge--published" : "mc__badge--draft"}`}>
+          {isPublished ? "발행됨" : "저장용"}
         </span>
       </div>
 

@@ -22,7 +22,7 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
         </div>
         <div className="section-head__actions">
           <button className="button button--ghost" type="button" onClick={onImport}>
-            <Download size={15} /> 가져오기
+            <Download size={15} /> 발행 불러오기
           </button>
           <button className="button button--primary" type="button" onClick={onCreate}>
             <Plus size={15} /> 새 지도
@@ -49,7 +49,7 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
           <EmptyState
             icon="🗺"
             title="첫 번째 지도를 만들어보세요"
-            description="나만의 장소를 기록하고 공유할 수 있어요."
+            description="나만의 장소를 기록하고 필요하면 발행할 수 있어요."
             action="새 지도 만들기"
             onAction={onCreate}
           />

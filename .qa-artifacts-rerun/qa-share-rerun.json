@@ -1,0 +1,100 @@
+[
+  {
+    "name": "small_android",
+    "viewport": {
+      "width": 360,
+      "height": 640
+    },
+    "map": {
+      "topBtns": [
+        {
+          "w": 44,
+          "h": 44
+        },
+        {
+          "w": 44,
+          "h": 44
+        }
+      ],
+      "collisions": {
+        "navList": false,
+        "navFilter": false,
+        "listFabs": false
+      }
+    },
+    "share": {
+      "actionButtons": [
+        {
+          "w": 96,
+          "h": 67.796875
+        },
+        {
+          "w": 96,
+          "h": 67.796875
+        },
+        {
+          "w": 96,
+          "h": 67.796875
+        }
+      ],
+      "hintVisible": true,
+      "qr": {
+        "w": 200,
+        "h": 200
+      },
+      "sheet": {
+        "clientHeight": 511,
+        "scrollHeight": 511
+      }
+    }
+  },
+  {
+    "name": "tiny",
+    "viewport": {
+      "width": 320,
+      "height": 568
+    },
+    "map": {
+      "topBtns": [
+        {
+          "w": 44,
+          "h": 44
+        },
+        {
+          "w": 44,
+          "h": 44
+        }
+      ],
+      "collisions": {
+        "navList": false,
+        "navFilter": false,
+        "listFabs": false
+      }
+    },
+    "share": {
+      "actionButtons": [
+        {
+          "w": 82.65625,
+          "h": 62.796875
+        },
+        {
+          "w": 82.671875,
+          "h": 62.796875
+        },
+        {
+          "w": 82.671875,
+          "h": 62.796875
+        }
+      ],
+      "hintVisible": false,
+      "qr": {
+        "w": 200,
+        "h": 200
+      },
+      "sheet": {
+        "clientHeight": 450,
+        "scrollHeight": 450
+      }
+    }
+  }
+]

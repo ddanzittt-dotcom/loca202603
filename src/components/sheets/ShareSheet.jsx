@@ -41,7 +41,6 @@ function generateHighResQr(shareUrl, mapTitle) {
         qrCtx.textBaseline = "middle"
         qrCtx.fillText(QR_LOGO_EMOJI, cx, cy)
 
-        // 최종 캔버스: QR + 타이틀만 (URL 제거)
         const padding = 80
         const titleHeight = 60
         const gap = 24
@@ -80,7 +79,6 @@ function sanitizeFilename(str) {
   return (str || "LOCA").replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").slice(0, 80)
 }
 
-// 카카오 SDK 초기화
 function ensureKakaoSdk() {
   return new Promise((resolve) => {
     if (window.Kakao?.Share) {
@@ -91,9 +89,12 @@ function ensureKakaoSdk() {
       resolve(true)
       return
     }
-    // SDK 동적 로드
+
     const key = import.meta.env.VITE_KAKAO_JS_KEY
-    if (!key) { resolve(false); return }
+    if (!key) {
+      resolve(false)
+      return
+    }
 
     const script = document.createElement("script")
     script.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"
@@ -101,7 +102,7 @@ function ensureKakaoSdk() {
       if (window.Kakao && !window.Kakao.isInitialized()) {
         window.Kakao.init(key)
       }
-      resolve(!!window.Kakao?.Share)
+      resolve(Boolean(window.Kakao?.Share))
     }
     script.onerror = () => resolve(false)
     document.head.appendChild(script)
@@ -119,14 +120,13 @@ export function ShareSheet({
 }) {
   const qrPreviewRef = useRef(null)
   const [copied, setCopied] = useState(false)
+  const [copying, setCopying] = useState(false)
+  const [kakaoSharing, setKakaoSharing] = useState(false)
+  const [qrDownloading, setQrDownloading] = useState(false)
 
-  // 발행된 지도: slug가 있으면 발행된 것
   const cleanUrl = getCleanShareUrl(rawShareUrl)
-
-  // QR용 URL: 공유 URL이 있으면 QR 생성
   const qrUrl = cleanUrl || null
 
-  // Generate QR preview
   useEffect(() => {
     if (!open || !qrUrl) return
     const canvas = qrPreviewRef.current
@@ -152,38 +152,51 @@ export function ShareSheet({
         ctx.fillText(QR_LOGO_EMOJI, cx, cy)
       })
       .catch(() => {
-        if (showToast) showToast("QR 코드를 만들지 못했어요.")
+        showToast?.("QR 코드를 만들지 못했어요.")
       })
   }, [open, qrUrl, showToast])
 
+  useEffect(() => {
+    if (!open) {
+      setCopied(false)
+      setCopying(false)
+      setKakaoSharing(false)
+      setQrDownloading(false)
+    }
+  }, [open])
+
   const handleCopyUrl = useCallback(async () => {
-    if (!cleanUrl) return
+    if (!cleanUrl || copying) return
+    setCopying(true)
     try {
       await navigator.clipboard.writeText(cleanUrl)
       logEvent("share_click", { map_id: map?.id, meta: { method: "link" } })
       setCopied(true)
-      if (showToast) showToast("링크가 복사되었어요!")
-      setTimeout(() => setCopied(false), 2000)
+      showToast?.("링크를 복사했어요!")
+      setTimeout(() => setCopied(false), 1800)
     } catch {
       if (showToast) showToast("클립보드 복사에 실패했어요.")
       else prompt("복사하세요:", cleanUrl)
+    } finally {
+      setCopying(false)
     }
-  }, [cleanUrl, showToast, map])
+  }, [cleanUrl, copying, map?.id, showToast])
 
   const handleKakaoShare = useCallback(async () => {
-    if (!cleanUrl) return
+    if (!cleanUrl || kakaoSharing) return
+    setKakaoSharing(true)
     logEvent("share_click", { map_id: map?.id, meta: { method: "kakao" } })
 
-    const sdkReady = await ensureKakaoSdk()
-    if (sdkReady && window.Kakao?.Share) {
-      try {
+    try {
+      const sdkReady = await ensureKakaoSdk()
+      if (sdkReady && window.Kakao?.Share) {
         const kakaoUrl = cleanUrl + (cleanUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
         const ogImageUrl = `https://loca202603.vercel.app/api/og-image/${encodeURIComponent(map?.slug || "loca")}`
         window.Kakao.Share.sendDefault({
           objectType: "feed",
           content: {
             title: map?.title || "LOCA 지도",
-            description: map?.description || `${map?.title || "LOCA"} 지도를 열어보세요.`,
+            description: map?.description || `${map?.title || "LOCA"} 지도를 확인해보세요.`,
             imageUrl: ogImageUrl,
             imageWidth: 800,
             imageHeight: 400,
@@ -194,21 +207,20 @@ export function ShareSheet({
           ],
         })
         return
-      } catch {
-        // fallback
       }
-    }
-    // 카카오 SDK 없으면 클립보드 복사 후 안내
-    try {
+
       await navigator.clipboard.writeText(cleanUrl)
-      if (showToast) showToast("링크가 복사되었어요. 카카오톡에 붙여넣기 하세요!")
+      showToast?.("링크를 복사했어요. 카카오톡에 붙여넣어 공유해 주세요.")
     } catch {
       prompt("카카오톡에 붙여넣으세요:", cleanUrl)
+    } finally {
+      setKakaoSharing(false)
     }
-  }, [cleanUrl, map, showToast])
+  }, [cleanUrl, kakaoSharing, map, showToast])
 
   const handleQrDownload = useCallback(async () => {
-    if (!qrUrl) return
+    if (!qrUrl || qrDownloading) return
+    setQrDownloading(true)
     logEvent("share_click", { map_id: map?.id, meta: { method: "qr" } })
     try {
       const canvas = await generateHighResQr(qrUrl, map?.title)
@@ -221,15 +233,21 @@ export function ShareSheet({
         a.click()
         URL.revokeObjectURL(url)
       }, "image/png")
-      if (showToast) showToast("QR 코드가 저장되었어요!")
+      showToast?.("QR 코드가 다운로드됐어요.")
     } catch {
-      if (showToast) showToast("QR 다운로드에 실패했어요.")
+      showToast?.("QR 다운로드에 실패했어요.")
+    } finally {
+      setQrDownloading(false)
     }
-  }, [qrUrl, map, showToast])
+  }, [map?.id, map?.slug, map?.title, qrDownloading, qrUrl, showToast])
 
   return (
-    <BottomSheet open={open} title="지도 공유하기" onClose={onClose}>
+    <BottomSheet open={open} title="발행 링크 공유" onClose={onClose}>
       <div className="share-sheet">
+        <p className="share-sheet__hint">
+          링크를 전달하면 상대가 지도를 바로 열고, 내 라이브러리로 저장할 수 있어요.
+        </p>
+
         {qrUrl ? (
           <div className="share-sheet__qr-section">
             <canvas
@@ -242,8 +260,9 @@ export function ShareSheet({
               className="button button--ghost share-sheet__qr-download-btn"
               type="button"
               onClick={handleQrDownload}
+              disabled={qrDownloading}
             >
-              인쇄용 QR 다운로드 (1024px)
+              {qrDownloading ? "QR 생성 중..." : "고해상도 QR 다운로드 (1024px)"}
             </button>
           </div>
         ) : null}
@@ -253,18 +272,22 @@ export function ShareSheet({
             className="share-sheet__action-btn share-sheet__action-btn--copy"
             type="button"
             onClick={handleCopyUrl}
+            disabled={!cleanUrl || copying}
           >
             <span className="share-sheet__action-icon">🔗</span>
-            <span className="share-sheet__action-label">{copied ? "복사됨!" : "링크 복사"}</span>
+            <span className="share-sheet__action-label">
+              {copying ? "복사 중..." : copied ? "복사 완료" : "링크 복사"}
+            </span>
           </button>
 
           <button
             className="share-sheet__action-btn share-sheet__action-btn--kakao"
             type="button"
             onClick={handleKakaoShare}
+            disabled={!cleanUrl || kakaoSharing}
           >
             <span className="share-sheet__action-icon">💬</span>
-            <span className="share-sheet__action-label">카카오톡</span>
+            <span className="share-sheet__action-label">{kakaoSharing ? "준비 중..." : "카카오톡"}</span>
           </button>
 
           <button

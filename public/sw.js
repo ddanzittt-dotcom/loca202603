@@ -19,8 +19,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event
 
-  // API 요청, Supabase, analytics는 캐시하지 않음
-  if (request.url.includes("/api/") || request.url.includes("supabase")) return
+  // API, Supabase, 외부 CDN, 네이버 지도 등은 캐시하지 않음
+  if (
+    request.url.includes("/api/") ||
+    request.url.includes("supabase") ||
+    !request.url.startsWith(self.location.origin)
+  ) return
 
   // navigation (HTML) — network-first, 오프라인 시 캐시 fallback
   if (request.mode === "navigate") {

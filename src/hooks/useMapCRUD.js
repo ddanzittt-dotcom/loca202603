@@ -10,6 +10,7 @@ import {
   createFeature as createFeatureRecord,
   publishMap as publishMapRecord,
   unpublishMap as unpublishMapRecord,
+  linkMapLineage as linkMapLineageRecord,
 } from "../lib/mapService"
 import { recordMapAction } from "../lib/gamificationService"
 
@@ -97,26 +98,7 @@ export function useMapCRUD({
             config: mapSheet.config || {},
           })
 
-          // 모든 지도 자동 발행 (unlisted: slug 생성만, 프로필에는 안 올림)
-          try {
-            const { map: publishedMap } = await publishMapRecord(nextMap.id, {
-              caption: "",
-              title: mapSheet.title.trim(),
-              visibility: "unlisted",
-            })
-            setMaps((current) => [publishedMap, ...current])
-          } catch (publishErr) {
-            console.warn("자동 발행 실패, slug 직접 조회 시도:", publishErr)
-            // maps 테이블에 slug가 저장되었을 수 있으므로 다시 조회
-            try {
-              const { getMapBundle } = await import("../lib/mapService.read")
-              const bundle = await getMapBundle(nextMap.id)
-              setMaps((current) => [bundle.map, ...current])
-            } catch {
-              // 조회도 실패하면 원본 사용
-              setMaps((current) => [nextMap, ...current])
-            }
-          }
+          setMaps((current) => [nextMap, ...current])
 
           setMapSheet(null)
           openMapEditor(nextMap.id)
@@ -169,7 +151,7 @@ export function useMapCRUD({
       console.error("Failed to save map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, setShares, showToast, refreshGameProfile])
+  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, showToast, refreshGameProfile])
 
   const deleteMap = useCallback(async (directMapId) => {
     const targetId = directMapId || mapSheet?.id
@@ -197,38 +179,48 @@ export function useMapCRUD({
     }
   }, [cloudMode, features, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
 
-  const importSharedMapToLocal = useCallback(async () => {
-    if (!sharedMapData) return
+  const importMapBundleToLocal = useCallback(async (bundle, options = {}) => {
+    if (!bundle?.map) return
+    const sourceMap = bundle.map
+    const sourceFeatures = Array.isArray(bundle.features) ? bundle.features : []
+    const toastMessage = options.toastMessage || "발행 지도를 내 라이브러리에 저장했어요."
 
     try {
-      if (cloudMode) {
-        const nextMap = await createMapRecord({
-          title: sharedMapData.map.title,
-          description: sharedMapData.map.description,
-          theme: sharedMapData.map.theme,
-        })
-        const createdFeatures = await Promise.all(
-          sharedMapData.features.map((feature) =>
-            createFeatureRecord(nextMap.id, {
-              ...feature,
-              mapId: nextMap.id,
-            }),
-          ),
-        )
-        nextMap.importedFrom = sharedMapData.map.creatorHandle || sharedMapData.map.title
-        setMaps((current) => [nextMap, ...current])
-        setFeatures((current) => [...createdFeatures, ...current])
-        setActiveMapId(nextMap.id)
-      } else {
+        if (cloudMode) {
+          const nextMap = await createMapRecord({
+            title: sourceMap.title,
+            description: sourceMap.description,
+            theme: sourceMap.theme,
+            category: sourceMap.category || "personal",
+            config: sourceMap.config || {},
+          })
+          const createdFeatures = await Promise.all(
+            sourceFeatures.map((feature) =>
+              createFeatureRecord(nextMap.id, {
+                ...feature,
+                mapId: nextMap.id,
+              }),
+            ),
+          )
+          try {
+            await linkMapLineageRecord(sourceMap.id, nextMap.id, "import")
+          } catch (lineageError) {
+            console.warn("Failed to persist map lineage", lineageError)
+          }
+          nextMap.importedFrom = sourceMap.creatorHandle || sourceMap.title
+          setMaps((current) => [nextMap, ...current])
+          setFeatures((current) => [...createdFeatures, ...current])
+          setActiveMapId(nextMap.id)
+        } else {
         const nextMapId = createId("map")
         const updatedAt = new Date().toISOString()
         const nextMap = {
-          ...sharedMapData.map,
+          ...sourceMap,
           id: nextMapId,
           updatedAt,
-          importedFrom: sharedMapData.map.creatorHandle || sharedMapData.map.title,
+          importedFrom: sourceMap.creatorHandle || sourceMap.title,
         }
-        const nextFeatures = sharedMapData.features.map((feature) => ({
+        const nextFeatures = sourceFeatures.map((feature) => ({
           ...feature,
           id: createId("feat"),
           mapId: nextMapId,
@@ -239,8 +231,8 @@ export function useMapCRUD({
         setActiveMapId(nextMapId)
       }
 
-      logEvent("map_import", { map_id: sharedMapData.map.id, meta: { feature_count: sharedMapData.features?.length || 0 } })
-      if (cloudMode) recordMapAction({ actionType: "map_import", eventKey: `import:${sharedMapData.map.id}`, mapId: sharedMapData.map.id }).then(() => refreshGameProfile?.()).catch(() => {})
+      logEvent("map_import", { map_id: sourceMap.id, meta: { feature_count: sourceFeatures.length || 0 } })
+      if (cloudMode) recordMapAction({ actionType: "map_import", eventKey: `import:${sourceMap.id}`, mapId: sourceMap.id }).then(() => refreshGameProfile?.()).catch(() => {})
       setSharedMapData(null)
       setActiveTab("maps")
       setActiveMapSource("local")
@@ -251,19 +243,24 @@ export function useMapCRUD({
       setEditorMode("browse")
       setDraftPoints([])
       setFitTrigger((value) => value + 1)
-      showToast("공유 지도를 내 지도로 저장했어요.")
+      showToast(toastMessage)
     } catch (error) {
       console.error("Failed to import shared map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, setFeatures, setMaps, sharedMapData, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger, refreshGameProfile])
+    }, [cloudMode, setFeatures, setMaps, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger, refreshGameProfile])
+
+  const importSharedMapToLocal = useCallback(async () => {
+    if (!sharedMapData) return
+    await importMapBundleToLocal(sharedMapData, { toastMessage: "발행 지도를 내 라이브러리에 저장했어요." })
+  }, [importMapBundleToLocal, sharedMapData])
 
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
-    if (!effectiveMapId) return showToast("올릴 지도를 먼저 선택해 주세요.")
-    if (shares.some((share) => share.mapId === effectiveMapId && share.visibility === "public")) return showToast("이미 프로필에 올라간 지도예요.")
+    if (!effectiveMapId) return showToast("발행할 지도를 먼저 선택해 주세요.")
+    if (shares.some((share) => share.mapId === effectiveMapId && share.visibility === "public")) return showToast("이미 쇼케이스에 발행된 지도예요.")
     const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
-    if (mapFeatureCount === 0) return showToast("장소를 추가해야 프로필에 올릴 수 있어요.")
+    if (mapFeatureCount === 0) return showToast("장소를 추가해야 발행할 수 있어요.")
     const caption = publishSheet?.caption?.trim() || ""
 
     try {
@@ -285,7 +282,7 @@ export function useMapCRUD({
       logEvent("map_publish", { map_id: effectiveMapId })
       if (cloudMode) recordMapAction({ actionType: "map_publish", eventKey: `publish:${effectiveMapId}`, mapId: effectiveMapId }).then(() => refreshGameProfile?.()).catch(() => {})
       setPublishSheet(null)
-      showToast("프로필 그리드에 지도를 올렸어요.")
+      showToast("쇼케이스에 지도를 발행했어요.")
     } catch (error) {
       console.error("Failed to publish map", error)
       showToast(friendlySupabaseError(error))
@@ -304,7 +301,7 @@ export function useMapCRUD({
       logEvent("map_unpublish", { map_id: targetShareForLog?.mapId })
       setShares((current) => current.filter((share) => share.id !== postId))
       setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
-      showToast("공유를 해제했어요.")
+      showToast("지도 발행을 중단했어요.")
     } catch (error) {
       console.error("Failed to unpublish map", error)
       showToast(friendlySupabaseError(error))
@@ -355,6 +352,7 @@ export function useMapCRUD({
     openCommunityMapEditor,
     saveMapSheet,
     deleteMap,
+    importMapBundleToLocal,
     importSharedMapToLocal,
     publishMap,
     unpublish,

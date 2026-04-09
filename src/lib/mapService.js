@@ -54,12 +54,15 @@ export {
   getCollaborators,
   addCollaborator,
   removeCollaborator,
+  linkMapLineage,
 } from "./mapService.write"
 
 // publish / announcements / B2B / gamification / survey
 export {
   publishMap,
   unpublishMap,
+  saveMap,
+  unsaveMap,
   redeemInvitationCode,
   checkB2BAccess,
   getActiveAnnouncements,

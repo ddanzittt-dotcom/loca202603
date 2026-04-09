@@ -10,12 +10,21 @@ function timeAgo(dateStr) {
   return `${days}일 전`
 }
 
+function getLockedMessage(config) {
+  if (config?.checkin_required_for_comment) {
+    return "이 장소를 체크인하면 댓글을 남길 수 있어요."
+  }
+  return "현재 댓글 작성이 제한되어 있어요."
+}
+
 export function SpotComments({
   comments, commentText, setCommentText, commentLoading,
   myKey, editingId, setEditingId, editText, setEditText,
   commentsEnabled, canComment, config,
   onAddComment, onEditComment, onDeleteComment, onReport,
 }) {
+  const lockedMessage = getLockedMessage(config)
+
   return (
     <div className="lw-spot-body">
       {commentsEnabled ? (
@@ -23,17 +32,19 @@ export function SpotComments({
           <div className="lw-comment-input">
             <input
               type="text"
-              placeholder="이 장소에 대한 댓글을 남겨보세요..."
+              placeholder="이 장소에 대한 후기를 남겨보세요."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") onAddComment() }}
               disabled={commentLoading}
             />
-            <button type="button" onClick={onAddComment} disabled={!commentText.trim() || commentLoading}>등록</button>
+            <button type="button" onClick={onAddComment} disabled={!commentText.trim() || commentLoading}>
+              등록
+            </button>
           </div>
         ) : (
           <div className="lw-comment-locked">
-            체크인 후 댓글을 남길 수 있어요.
+            {lockedMessage}
           </div>
         )
       ) : null}
@@ -49,6 +60,7 @@ export function SpotComments({
                 <div className="lw-comment__main">
                   <div className="lw-comment__meta">
                     <strong>{c.authorName}</strong>
+                    {isMine ? <span className="lw-comment__mine">내 댓글</span> : null}
                     <time>{timeAgo(c.createdAt)}</time>
                   </div>
                   {isEditing ? (
@@ -91,7 +103,7 @@ export function SpotComments({
         </div>
       ) : (
         <div className="lw-comment-empty">
-          {commentsEnabled ? "아직 댓글이 없어요. 첫 댓글을 남겨보세요!" : "댓글이 비활성화되어 있어요."}
+          {commentsEnabled ? "아직 댓글이 없어요. 첫 댓글을 남겨보세요." : "댓글 기능이 비활성화되어 있어요."}
         </div>
       )}
     </div>

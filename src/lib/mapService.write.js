@@ -309,3 +309,16 @@ export async function removeCollaborator(collaboratorId) {
 
   if (error) throw error
 }
+
+// ─── Lineage ───
+
+export async function linkMapLineage(parentMapId, childMapId, relationType = "import") {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("link_map_lineage", {
+    p_parent_map_id: parentMapId,
+    p_child_map_id: childMapId,
+    p_relation_type: relationType,
+  })
+  if (error) throw error
+  return typeof data === "string" ? JSON.parse(data) : data
+}

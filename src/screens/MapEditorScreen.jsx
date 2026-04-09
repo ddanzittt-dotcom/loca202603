@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef } from "react"
+﻿import { useEffect, useState, useRef, useCallback } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MapPin } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -69,10 +69,71 @@ export function MapEditorScreen({
   const trimmedSearchQuery = searchQuery.trim()
   const recentMemos = selectedFeatureSummary?.memos || []
 
+  // ─── 도보 경로 ───
+  const [walkRoute, setWalkRoute] = useState(null)
+  const [walkInfo, setWalkInfo] = useState(null)
+  const [walkLoading, setWalkLoading] = useState(false)
+
+  const handleWalkNavigate = useCallback(async () => {
+    if (!myLocation || !selectedFeatureSummary) return
+    const feat = selectedFeatureSummary
+    if (!feat.lat || !feat.lng) return
+    setWalkLoading(true)
+    setWalkRoute(null)
+    setWalkInfo(null)
+    try {
+      const start = `${myLocation.lng},${myLocation.lat}`
+      const goal = `${feat.lng},${feat.lat}`
+      const res = await fetch(`/api/directions/walk?start=${start}&goal=${goal}`)
+      const data = await res.json()
+      if (!res.ok || !data.path) {
+        showToast?.(data.error || "경로를 찾을 수 없어요")
+        return
+      }
+      setWalkRoute(data.path)
+      setWalkInfo({ distance: data.distance, duration: data.duration })
+    } catch {
+      showToast?.("도보 경로 조회에 실패했어요")
+    } finally {
+      setWalkLoading(false)
+    }
+  }, [myLocation, selectedFeatureSummary, showToast])
+
+  // 핀 선택 변경 시 경로 초기화
+  useEffect(() => {
+    setWalkRoute(null)
+    setWalkInfo(null)
+  }, [selectedFeatureId])
+
   const pinCount = features.filter((feature) => feature.type === "pin").length
   const routeCount = features.filter((feature) => feature.type === "route").length
   const areaCount = features.filter((feature) => feature.type === "area").length
   const isDrawing = editorMode === "route" || editorMode === "area"
+  const editorGuide = !readOnly ? (() => {
+    if (editorMode === "pin") {
+      return { title: "핀 추가 모드", description: "지도를 탭하면 핀이 즉시 생성됩니다." }
+    }
+    if (editorMode === "route") {
+      return {
+        title: "경로 생성 모드",
+        description: draftPoints.length > 0
+          ? `${draftPoints.length}개 지점을 선택했어요. 우측 하단 저장 버튼으로 완료하세요.`
+          : "지도에서 순서대로 지점을 탭해 경로를 그리세요.",
+      }
+    }
+    if (editorMode === "area") {
+      return {
+        title: "영역 생성 모드",
+        description: draftPoints.length > 0
+          ? `${draftPoints.length}개 꼭짓점을 선택했어요. 3개 이상 선택 후 저장하세요.`
+          : "영역의 꼭짓점을 순서대로 탭해 경계를 만드세요.",
+      }
+    }
+    if (editorMode === "relocate") {
+      return { title: "위치 이동 모드", description: "지도를 탭해 핀의 새 위치를 지정하세요." }
+    }
+    return null
+  })() : null
 
   const visibleFeatures = activeFilter === "all" ? features : features.filter((feature) => feature.type === activeFilter)
 
@@ -256,6 +317,8 @@ export function MapEditorScreen({
             myLocation={myLocation}
             characterStyle={characterStyle}
             levelEmoji={levelEmoji}
+            mapCategory={map?.category}
+            walkRoute={walkRoute}
           />
         </MapErrorBoundary>
 
@@ -282,6 +345,13 @@ export function MapEditorScreen({
             </button>
           ) : null}
         </div>
+
+        {editorGuide ? (
+          <div className={`editor-mode-guide editor-mode-guide--${editorMode}`}>
+            <strong>{editorGuide.title}</strong>
+            <span>{editorGuide.description}</span>
+          </div>
+        ) : null}
 
         {editorMode === "relocate" ? (
           <div className="draft-bar draft-bar--compact draft-bar--relocate">
@@ -319,6 +389,21 @@ export function MapEditorScreen({
                 </strong>
                 <span>{formatFeatureMeta(selectedFeatureSummary)}</span>
               </div>
+              {selectedFeatureSummary.type === "pin" ? (
+                <>
+                  {walkInfo ? (
+                    <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="lw-route-btn"
+                    disabled={walkLoading || !myLocation}
+                    onClick={handleWalkNavigate}
+                  >
+                    {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
+                  </button>
+                </>
+              ) : null}
               <button className="icon-button map-feature-summary__close" type="button" onClick={onCloseFeatureSummary} aria-label="요약 닫기">
                 <X size={16} />
               </button>

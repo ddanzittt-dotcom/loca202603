@@ -1,0 +1,30 @@
+{
+  "before": {
+    "screen": {
+      "clientHeight": 293,
+      "scrollHeight": 699,
+      "scrollTop": 0,
+      "top": 67,
+      "bottom": 360
+    },
+    "submit": {
+      "top": 424,
+      "bottom": 468
+    },
+    "submitVisibleInScreen": false
+  },
+  "afterScroll": {
+    "screen": {
+      "clientHeight": 293,
+      "scrollHeight": 699,
+      "scrollTop": 406,
+      "top": 67,
+      "bottom": 360
+    },
+    "submit": {
+      "top": 18,
+      "bottom": 62
+    },
+    "submitVisibleInScreen": false
+  }
+}

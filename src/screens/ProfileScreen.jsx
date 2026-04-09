@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react"
-import { Settings, MapPin, Moon, Sun, Monitor, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon } from "lucide-react"
+import { Settings, MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon } from "lucide-react"
 import { BottomSheet } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
+import { buildLegalDocumentUrl } from "../lib/appUtils"
 
 // 미니 지도 카드 (갤러리용)
 const MINI_PALETTES = {
@@ -42,7 +43,7 @@ function ProfileMiniCard({ map, features, onClick }) {
 
 // 테마 모드 관리
 function getThemeMode() {
-  return localStorage.getItem("loca.themeMode") || "system"
+  return localStorage.getItem("loca.themeMode") || "light"
 }
 
 function applyThemeMode(mode) {
@@ -53,11 +54,7 @@ function applyThemeMode(mode) {
   } else if (mode === "light") {
     root.removeAttribute("data-theme")
   } else {
-    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      root.setAttribute("data-theme", "dark")
-    } else {
-      root.removeAttribute("data-theme")
-    }
+    root.removeAttribute("data-theme")
   }
 }
 
@@ -116,6 +113,10 @@ export function ProfileScreen({
     const next = { ...appSettings, [key]: value }
     setAppSettings(next)
     saveAppSettings(next)
+  }
+
+  const openNewWindow = (url) => {
+    window.open(url, "_blank", "noopener,noreferrer")
   }
 
   const handleOpenSettings = () => {
@@ -226,7 +227,6 @@ export function ProfileScreen({
   const themeModes = [
     { id: "light", icon: Sun, label: "라이트" },
     { id: "dark", icon: Moon, label: "다크" },
-    { id: "system", icon: Monitor, label: "시스템" },
   ]
 
   const placeCount = features.length
@@ -370,7 +370,7 @@ export function ProfileScreen({
 
         {/* 액션 버튼 */}
         <div className="pf__actions">
-          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 올리기</button>
+          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 발행</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
@@ -388,7 +388,7 @@ export function ProfileScreen({
           <div className="pf__empty">
             <div className="pf__empty-icon"><MapIcon size={20} color="#FF6B35" /></div>
             <p className="pf__empty-title">아직 만든 지도가 없어요</p>
-            <p className="pf__empty-desc">첫 번째 지도를 만들어보세요</p>
+            <p className="pf__empty-desc">첫 지도를 만들고 쇼케이스에 발행해보세요</p>
           </div>
         )}
       </div>
@@ -482,11 +482,19 @@ export function ProfileScreen({
           {/* 정보 */}
           <div className="settings-card">
             <div className="settings-link-list">
-              <button className="settings-link-row" type="button" onClick={() => window.open("https://loca202603.vercel.app/terms", "_blank")}>
+              <button
+                className="settings-link-row"
+                type="button"
+                onClick={() => openNewWindow(buildLegalDocumentUrl("terms"))}
+              >
                 <span>이용약관</span>
                 <ExternalLink size={14} />
               </button>
-              <button className="settings-link-row" type="button" onClick={() => window.open("https://loca202603.vercel.app/privacy", "_blank")}>
+              <button
+                className="settings-link-row"
+                type="button"
+                onClick={() => openNewWindow(buildLegalDocumentUrl("privacy"))}
+              >
                 <span>개인정보처리방침</span>
                 <ExternalLink size={14} />
               </button>

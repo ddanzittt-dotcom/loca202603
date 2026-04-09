@@ -714,13 +714,24 @@ textarea {
   bottom: 0;
   z-index: 1300;
   width: min(480px, 100%);
-  max-height: min(82vh, 720px);
+  max-height: min(88vh, 720px);
   transform: translate(-50%);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   background: var(--surface);
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
   padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
   overflow: auto;
+}
+
+@media (max-height: 700px) {
+  .sheet {
+    max-height: min(92vh, 720px);
+    padding: 8px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .sheet__header {
+    margin-bottom: 12px;
+  }
 }
 .sheet__handle {
   width: 54px;

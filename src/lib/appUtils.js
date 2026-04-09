@@ -12,6 +12,13 @@ export const placeEmojis = [
   "🌸", "🌺", "🌻", "🍁", "❄️", "🌙",
 ]
 
+const ENV_PUBLIC_WEB_ORIGIN =
+  typeof import.meta !== "undefined" && import.meta?.env?.VITE_PUBLIC_WEB_ORIGIN
+    ? `${import.meta.env.VITE_PUBLIC_WEB_ORIGIN}`.trim()
+    : ""
+
+export const DEFAULT_PUBLIC_WEB_ORIGIN = ENV_PUBLIC_WEB_ORIGIN || "https://loca202603.vercel.app"
+
 export function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`
 }
@@ -157,7 +164,7 @@ export function createMapSharePayload(map, features) {
     exportedAt: new Date().toISOString(),
     map: {
       id: map.id,
-      title: map.title || "공유 지도",
+      title: map.title || "발행 지도",
       description: map.description || "",
       theme: map.theme || themePalette[0],
       updatedAt: map.updatedAt || new Date().toISOString(),
@@ -207,7 +214,7 @@ export function parseMapSharePayload(encodedPayload) {
   const mapId = payload.map.id || createId("shared")
   const normalizedMap = {
     id: mapId,
-    title: payload.map.title || "공유 지도",
+    title: payload.map.title || "발행 지도",
     description: payload.map.description || "",
     theme: payload.map.theme || themePalette[0],
     updatedAt: payload.map.updatedAt || payload.exportedAt || new Date().toISOString(),
@@ -238,10 +245,7 @@ export function buildMapSharePath(map, features) {
 }
 
 export function buildMapShareUrl(map, features, origin = window.location.origin) {
-  let safeOrigin = origin
-  if (!safeOrigin.startsWith("https://") && !safeOrigin.startsWith("http://localhost")) {
-    safeOrigin = safeOrigin.replace(/^http:/, "https:")
-  }
+  const safeOrigin = resolvePublicWebOrigin(origin)
   return `${safeOrigin}${buildMapSharePath(map, features)}`
 }
 
@@ -253,11 +257,34 @@ export function buildMapShareUrl(map, features, origin = window.location.origin)
  */
 export function buildSlugShareUrl(slug, source = "link", origin = window.location.origin) {
   if (!slug) return ""
-  let safeOrigin = origin
-  if (!safeOrigin.startsWith("https://") && !safeOrigin.startsWith("http://localhost")) {
-    safeOrigin = safeOrigin.replace(/^http:/, "https:")
-  }
+  const safeOrigin = resolvePublicWebOrigin(origin)
   return `${safeOrigin}/s/${encodeURIComponent(slug)}?utm_source=${source}`
+}
+
+/**
+ * 웹 공유/외부 링크에 사용할 안전한 origin을 결정한다.
+ * - https는 그대로 사용
+ * - localhost/127.0.0.1(http)는 개발 편의를 위해 그대로 사용
+ * - 일반 http는 https로 승격
+ * - capacitor/file 등 비표준 스킴은 공개 웹 도메인으로 fallback
+ */
+export function resolvePublicWebOrigin(origin = window.location.origin, fallbackOrigin = DEFAULT_PUBLIC_WEB_ORIGIN) {
+  const rawOrigin = `${origin || ""}`.trim().replace(/\/+$/u, "")
+  const safeFallback = `${fallbackOrigin || DEFAULT_PUBLIC_WEB_ORIGIN}`.trim().replace(/\/+$/u, "") || DEFAULT_PUBLIC_WEB_ORIGIN
+
+  if (!rawOrigin) return safeFallback
+  if (rawOrigin.startsWith("https://")) return rawOrigin
+
+  const isLocalDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/iu.test(rawOrigin)
+  if (isLocalDevOrigin) return rawOrigin
+  if (rawOrigin.startsWith("http://")) return `https://${rawOrigin.slice("http://".length)}`
+
+  return safeFallback
+}
+
+export function buildLegalDocumentUrl(type = "terms", origin = window.location.origin) {
+  const path = type === "privacy" ? "/legal/privacy.html" : "/legal/terms.html"
+  return `${resolvePublicWebOrigin(origin)}${path}`
 }
 
 export function parseSharedMapUrl(text) {

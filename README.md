@@ -55,7 +55,8 @@ On this Windows machine, use `npm.cmd` in PowerShell if `npm` is blocked by exec
 
 1. Copy `.env.example` to `.env`
 2. Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-3. Run `supabase/loca_v1_schema.sql` in the Supabase SQL editor
+3. Set `VITE_PUBLIC_WEB_ORIGIN` to your production web domain (e.g. `https://loca.example.com`)
+4. Run `supabase/loca_v1_schema.sql` in the Supabase SQL editor
 
 ### Important
 

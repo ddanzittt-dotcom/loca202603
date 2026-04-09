@@ -1,0 +1,138 @@
+{
+  "map": {
+    "viewport": {
+      "w": 320,
+      "h": 568
+    },
+    "overflowX": 0,
+    "shareBtns": [],
+    "topBtns": [
+      {
+        "w": 40,
+        "h": 40
+      },
+      {
+        "w": 40,
+        "h": 40
+      }
+    ],
+    "collisions": {
+      "navList": false,
+      "navFilter": false,
+      "listFabs": false
+    },
+    "rects": {
+      "nav": {
+        "left": 0,
+        "top": 507,
+        "right": 320,
+        "bottom": 568,
+        "width": 320,
+        "height": 61
+      },
+      "list": {
+        "left": 24,
+        "top": 453,
+        "right": 98.734375,
+        "bottom": 487,
+        "width": 74.734375,
+        "height": 34
+      },
+      "filter": {
+        "left": 24,
+        "top": 405,
+        "right": 79.328125,
+        "bottom": 439,
+        "width": 55.328125,
+        "height": 34
+      },
+      "fabs": {
+        "left": 254,
+        "top": 268,
+        "right": 298,
+        "bottom": 364,
+        "width": 44,
+        "height": 96
+      },
+      "sheet": null
+    }
+  },
+  "share": {
+    "viewport": {
+      "w": 320,
+      "h": 568
+    },
+    "overflowX": 0,
+    "shareBtns": [
+      {
+        "w": 72.625,
+        "h": 79
+      },
+      {
+        "w": 72.640625,
+        "h": 79
+      },
+      {
+        "w": 74.734375,
+        "h": 79
+      }
+    ],
+    "topBtns": [
+      {
+        "w": 40,
+        "h": 40
+      },
+      {
+        "w": 40,
+        "h": 40
+      }
+    ],
+    "collisions": {
+      "navList": false,
+      "navFilter": false,
+      "listFabs": false
+    },
+    "rects": {
+      "nav": {
+        "left": 0,
+        "top": 507,
+        "right": 320,
+        "bottom": 568,
+        "width": 320,
+        "height": 61
+      },
+      "list": {
+        "left": 24,
+        "top": 453,
+        "right": 98.734375,
+        "bottom": 487,
+        "width": 74.734375,
+        "height": 34
+      },
+      "filter": {
+        "left": 24,
+        "top": 405,
+        "right": 79.328125,
+        "bottom": 439,
+        "width": 55.328125,
+        "height": 34
+      },
+      "fabs": {
+        "left": 254,
+        "top": 268,
+        "right": 298,
+        "bottom": 364,
+        "width": 44,
+        "height": 96
+      },
+      "sheet": {
+        "left": 0,
+        "top": 102.25,
+        "right": 320,
+        "bottom": 568,
+        "width": 320,
+        "height": 465.75
+      }
+    }
+  }
+}

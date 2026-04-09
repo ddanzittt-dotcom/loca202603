@@ -1,21 +1,30 @@
 import { BottomSheet } from "../ui"
 import { Check } from "lucide-react"
 
-export function PublishSheet({ publishSheet, setPublishSheet, unpublishedMaps, features, onPublish, onClose }) {
+export function PublishSheet({ publishSheet, setPublishSheet, unpublishedMaps, features, onPublish, onClose, publishing = false }) {
+  const selectedMap = unpublishedMaps.find((mapItem) => mapItem.id === publishSheet?.selectedMapId) || null
+  const selectedMapFeatures = selectedMap ? features.filter((f) => f.mapId === selectedMap.id) : []
+  const canSubmit = Boolean(selectedMap) && selectedMapFeatures.length > 0 && !publishing
+
   return (
     <BottomSheet
       open={Boolean(publishSheet)}
-      title="지도 올리기"
-      subtitle="프로필에 공유할 지도를 선택하세요"
+      title="지도 발행"
+      subtitle="쇼케이스에 노출할 지도를 선택하세요"
       onClose={onClose}
     >
       {unpublishedMaps.length === 0 ? (
         <article className="empty-card">
-          <strong>추가로 올릴 지도가 없어요.</strong>
-          <p>새 지도를 만들거나 기존 게시물을 공유 해제해보세요.</p>
+          <strong>지금 발행할 지도가 없어요.</strong>
+          <p>새 지도를 만들거나 발행 중인 지도를 중단해보세요.</p>
         </article>
       ) : (
         <div className="form-stack">
+          <article className="empty-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
+            <strong>발행용 지도와 저장용 지도는 다르게 동작해요.</strong>
+            <p>발행하면 프로필/링크/QR로 외부에 노출됩니다. 저장용으로만 둘 지도는 발행하지 않아도 됩니다.</p>
+          </article>
+
           <div className="card-list">
             {unpublishedMaps.map((mapItem) => {
               const mapFeatures = features.filter((f) => f.mapId === mapItem.id)
@@ -81,8 +90,8 @@ export function PublishSheet({ publishSheet, setPublishSheet, unpublishedMaps, f
             <button className="pds__btn pds__btn--secondary" type="button" onClick={onClose}>
               닫기
             </button>
-            <button className="pds__btn pds__btn--primary" type="button" onClick={onPublish}>
-              프로필에 올리기
+            <button className="pds__btn pds__btn--primary" type="button" disabled={!canSubmit} onClick={onPublish}>
+              {publishing ? "발행 중..." : "지금 발행하기"}
             </button>
           </div>
         </div>

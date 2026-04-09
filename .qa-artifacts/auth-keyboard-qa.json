@@ -1,0 +1,149 @@
+{
+  "before": {
+    "label": "before",
+    "viewport": {
+      "w": 360,
+      "h": 640
+    },
+    "email": {
+      "left": 37,
+      "top": 284,
+      "right": 323,
+      "bottom": 328,
+      "width": 286,
+      "height": 44
+    },
+    "password": {
+      "left": 37,
+      "top": 366,
+      "right": 323,
+      "bottom": 410,
+      "width": 286,
+      "height": 44
+    },
+    "submit": {
+      "left": 37,
+      "top": 424,
+      "right": 323,
+      "bottom": 468,
+      "width": 286,
+      "height": 44
+    },
+    "bottomNav": {
+      "left": 0,
+      "top": 579,
+      "right": 360,
+      "bottom": 640,
+      "width": 360,
+      "height": 61
+    },
+    "visibility": {
+      "emailInView": true,
+      "passwordInView": true,
+      "submitInView": true
+    },
+    "collisions": {
+      "submitVsNav": false,
+      "passwordVsNav": false
+    },
+    "scrollY": 0
+  },
+  "emailFocus": {
+    "label": "email_focus_keyboard_sim",
+    "viewport": {
+      "w": 360,
+      "h": 420
+    },
+    "email": {
+      "left": 37,
+      "top": 284,
+      "right": 323,
+      "bottom": 328,
+      "width": 286,
+      "height": 44
+    },
+    "password": {
+      "left": 37,
+      "top": 366,
+      "right": 323,
+      "bottom": 410,
+      "width": 286,
+      "height": 44
+    },
+    "submit": {
+      "left": 37,
+      "top": 424,
+      "right": 323,
+      "bottom": 468,
+      "width": 286,
+      "height": 44
+    },
+    "bottomNav": {
+      "left": 0,
+      "top": 359,
+      "right": 360,
+      "bottom": 420,
+      "width": 360,
+      "height": 61
+    },
+    "visibility": {
+      "emailInView": true,
+      "passwordInView": true,
+      "submitInView": false
+    },
+    "collisions": {
+      "submitVsNav": false,
+      "passwordVsNav": true
+    },
+    "scrollY": 0
+  },
+  "passFocus": {
+    "label": "password_focus_keyboard_sim",
+    "viewport": {
+      "w": 360,
+      "h": 420
+    },
+    "email": {
+      "left": 37,
+      "top": 109,
+      "right": 323,
+      "bottom": 153,
+      "width": 286,
+      "height": 44
+    },
+    "password": {
+      "left": 37,
+      "top": 191,
+      "right": 323,
+      "bottom": 235,
+      "width": 286,
+      "height": 44
+    },
+    "submit": {
+      "left": 37,
+      "top": 249,
+      "right": 323,
+      "bottom": 293,
+      "width": 286,
+      "height": 44
+    },
+    "bottomNav": {
+      "left": 0,
+      "top": 359,
+      "right": 360,
+      "bottom": 420,
+      "width": 360,
+      "height": 61
+    },
+    "visibility": {
+      "emailInView": true,
+      "passwordInView": true,
+      "submitInView": true
+    },
+    "collisions": {
+      "submitVsNav": false,
+      "passwordVsNav": false
+    },
+    "scrollY": 0
+  }
+}

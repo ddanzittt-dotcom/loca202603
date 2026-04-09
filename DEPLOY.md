@@ -41,8 +41,9 @@ Vercel Dashboard → Project → Settings → Environment Variables:
 |-----|-------|------|
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Production, Preview |
 | `VITE_SUPABASE_ANON_KEY` | `your-public-anon-key` | Production, Preview |
+| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.your-domain.com` | Production, Preview |
 
-**주의:** `VITE_` 접두사가 있어야 클라이언트에서 접근 가능합니다. anon key는 공개 키이므로 노출되어도 괜찮습니다 (RLS가 보안 담당).
+**주의:** `VITE_` 접두사가 있어야 클라이언트에서 접근 가능합니다. anon key는 공개 키이므로 노출되어도 괜찮습니다 (RLS가 보안 담당). `VITE_PUBLIC_WEB_ORIGIN`은 공유 링크/약관 링크 기준 도메인으로 사용됩니다.
 
 ### 3. 배포
 
@@ -106,6 +107,7 @@ Netlify Dashboard → Site → Site configuration → Environment variables:
 |-----|-------|
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `your-public-anon-key` |
+| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.your-domain.com` |
 
 ### 3. 배포
 

@@ -1,0 +1,176 @@
+[
+  {
+    "scenario": "small_android",
+    "viewport": {
+      "name": "small_android",
+      "width": 360,
+      "height": 640
+    },
+    "mapData": {
+      "nav": {
+        "left": 0,
+        "top": 579,
+        "right": 360,
+        "bottom": 640,
+        "width": 360,
+        "height": 61
+      },
+      "list": {
+        "left": 24,
+        "top": 525,
+        "right": 98.734375,
+        "bottom": 559,
+        "width": 74.734375,
+        "height": 34
+      },
+      "filter": {
+        "left": 24,
+        "top": 477,
+        "right": 79.328125,
+        "bottom": 511,
+        "width": 55.328125,
+        "height": 34
+      },
+      "fabs": {
+        "left": 294,
+        "top": 306,
+        "right": 338,
+        "bottom": 402,
+        "width": 44,
+        "height": 96
+      },
+      "topButtons": [
+        {
+          "w": 44,
+          "h": 44
+        },
+        {
+          "w": 44,
+          "h": 44
+        }
+      ],
+      "collisions": {
+        "navList": false,
+        "navFilter": false,
+        "listFabs": false
+      }
+    },
+    "shareData": {
+      "actionButtons": [
+        {
+          "w": 96,
+          "h": 67.796875
+        },
+        {
+          "w": 96,
+          "h": 67.796875
+        },
+        {
+          "w": 96,
+          "h": 67.796875
+        }
+      ],
+      "sheet": {
+        "scrollTop": 0,
+        "clientHeight": 511,
+        "scrollHeight": 511
+      },
+      "hintVisible": true,
+      "qrRect": {
+        "left": 80,
+        "top": 272.203125,
+        "right": 280,
+        "bottom": 472.203125,
+        "width": 200,
+        "height": 200
+      }
+    }
+  },
+  {
+    "scenario": "tiny",
+    "viewport": {
+      "name": "tiny",
+      "width": 320,
+      "height": 568
+    },
+    "mapData": {
+      "nav": {
+        "left": 0,
+        "top": 507,
+        "right": 320,
+        "bottom": 568,
+        "width": 320,
+        "height": 61
+      },
+      "list": {
+        "left": 24,
+        "top": 453,
+        "right": 98.734375,
+        "bottom": 487,
+        "width": 74.734375,
+        "height": 34
+      },
+      "filter": {
+        "left": 24,
+        "top": 405,
+        "right": 79.328125,
+        "bottom": 439,
+        "width": 55.328125,
+        "height": 34
+      },
+      "fabs": {
+        "left": 254,
+        "top": 270,
+        "right": 298,
+        "bottom": 366,
+        "width": 44,
+        "height": 96
+      },
+      "topButtons": [
+        {
+          "w": 44,
+          "h": 44
+        },
+        {
+          "w": 44,
+          "h": 44
+        }
+      ],
+      "collisions": {
+        "navList": false,
+        "navFilter": false,
+        "listFabs": false
+      }
+    },
+    "shareData": {
+      "actionButtons": [
+        {
+          "w": 82.65625,
+          "h": 62.796875
+        },
+        {
+          "w": 82.671875,
+          "h": 62.796875
+        },
+        {
+          "w": 82.671875,
+          "h": 62.796875
+        }
+      ],
+      "sheet": {
+        "scrollTop": 0,
+        "clientHeight": 450,
+        "scrollHeight": 450
+      },
+      "hintVisible": false,
+      "qrRect": {
+        "left": 60,
+        "top": 209.203125,
+        "right": 260,
+        "bottom": 409.203125,
+        "width": 200,
+        "height": 200
+      }
+    }
+  }
+]

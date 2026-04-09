@@ -14,14 +14,19 @@ const zoomScale = (zoom) => {
   return Math.max(0.3, Math.min(s, 1.4))
 }
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null }, ref) {
+const LOCA_DARK_STYLE_ID = "90019b0b-7cdc-4f96-baa6-438d871a37d5"
+
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null, mapCategory = null, walkRoute = null }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
+  const walkRouteLineRef = useRef(null)
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
   const ignoreMapTapUntilRef = useRef(0)
   const lastFeatureTapRef = useRef({ featureId: null, at: 0 })
+  const mapCategoryRef = useRef(mapCategory)
+  mapCategoryRef.current = mapCategory
   const [mapReady, setMapReady] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3) // 1=far, 2=mid, 3=close
 
@@ -97,7 +102,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         return
       }
       try {
-        const map = new naverMaps.Map(containerRef.current, {
+        const mapOptions = {
           center: new naverMaps.LatLng(37.544, 127.056),
           zoom: 14,
           zoomControl: false,
@@ -105,7 +110,12 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           logoControl: true,
           logoControlOptions: { position: naverMaps.Position.BOTTOM_LEFT },
           mapDataControl: false,
-        })
+        }
+        if (mapCategoryRef.current === "event") {
+          mapOptions.gl = true
+          mapOptions.customStyleId = LOCA_DARK_STYLE_ID
+        }
+        const map = new naverMaps.Map(containerRef.current, mapOptions)
         naverMaps.Event.addListener(map, "click", (e) => {
           if (Date.now() < ignoreMapTapUntilRef.current) return
           onMapTapRef.current?.({ lat: e.coord.lat(), lng: e.coord.lng() })
@@ -524,13 +534,36 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("네이버 지도 fitBounds 실패:", e)
     }
-  }, [draftPoints, features, fitTrigger, mapReady])
+  }, [draftPoints, features, fitTrigger, focusPoint, mapReady])
 
   // fit on first ready
   useEffect(() => {
     if (!mapReady) return
     lastFitTriggerRef.current = 0
   }, [mapReady])
+
+  // Walk route polyline
+  useEffect(() => {
+    if (walkRouteLineRef.current) {
+      walkRouteLineRef.current.setMap(null)
+      walkRouteLineRef.current = null
+    }
+    const map = mapRef.current
+    const naverMaps = getNaverMaps()
+    if (!map || !naverMaps || !walkRoute?.length) return
+
+    const path = walkRoute.map(([lng, lat]) => new naverMaps.LatLng(lat, lng))
+    walkRouteLineRef.current = new naverMaps.Polyline({
+      map,
+      path,
+      strokeColor: "#FF6B35",
+      strokeWeight: 4,
+      strokeOpacity: 0.8,
+      strokeStyle: "shortdash",
+      strokeLineCap: "round",
+      strokeLineJoin: "round",
+    })
+  }, [walkRoute, mapReady])
 
   return (
     <div className={`map-canvas map-canvas--${draftMode || "browse"}`} style={{ position: "relative" }}>

@@ -119,12 +119,45 @@ export default function App() {
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const [importSheetOpen, setImportSheetOpen] = useState(false)
   const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
+  const [publishSubmitting, setPublishSubmitting] = useState(false)
+  const [savingPostMapId, setSavingPostMapId] = useState(null)
+  const [savingSharedMap, setSavingSharedMap] = useState(false)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
 
   const isOnline = useOnlineStatus()
   const toast = useToast()
   const showToast = toast.show
 
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
+  useEffect(() => {
+    const isEditableElement = (el) => {
+      if (!(el instanceof HTMLElement)) return false
+      const tag = el.tagName
+      return tag === "INPUT" || tag === "TEXTAREA" || el.isContentEditable
+    }
+
+    const detectKeyboard = () => {
+      const compactScreen = window.innerWidth <= 900
+      const focusedInput = isEditableElement(document.activeElement)
+      const vv = window.visualViewport
+      const viewportShrunk = Boolean(vv && vv.height < window.innerHeight * 0.82)
+      setKeyboardVisible(compactScreen && (focusedInput || viewportShrunk))
+    }
+
+    const handleFocusChange = () => window.setTimeout(detectKeyboard, 30)
+    detectKeyboard()
+    document.addEventListener("focusin", handleFocusChange)
+    document.addEventListener("focusout", handleFocusChange)
+    window.addEventListener("resize", detectKeyboard)
+    window.visualViewport?.addEventListener("resize", detectKeyboard)
+    return () => {
+      document.removeEventListener("focusin", handleFocusChange)
+      document.removeEventListener("focusout", handleFocusChange)
+      window.removeEventListener("resize", detectKeyboard)
+      window.visualViewport?.removeEventListener("resize", detectKeyboard)
+    }
+  }, [])
+
   useEffect(() => {
     cleanupOrphanedMedia([...features, ...communityMapFeatures])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,7 +303,7 @@ export default function App() {
     touchMap, resetEditorState,
     openMapEditor, openDemoMap, openCommunityMapEditor,
     saveMapSheet, deleteMap: deleteMapAction,
-    importSharedMapToLocal, publishMap, unpublish,
+    importSharedMapToLocal, importMapBundleToLocal, publishMap, unpublish,
     openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
     maps, setMaps, features, setFeatures, shares, setShares,
@@ -289,13 +322,13 @@ export default function App() {
     if (!bundle) throw new Error("해당 코드의 지도를 찾을 수 없어요.")
     const { map: importedMap, features: importedFeatures } = bundle
     if (maps.some((m) => m.id === importedMap.id)) {
-      showToast("이미 목록에 있는 지도예요.")
+      showToast("이미 라이브러리에 있는 지도예요.")
       openMapEditor(importedMap.id)
       return
     }
     setMaps((prev) => [importedMap, ...prev])
     setFeatures((prev) => [...prev, ...importedFeatures])
-    showToast(`"${importedMap.title}" 지도를 가져왔어요!`)
+    showToast(`"${importedMap.title}" 지도를 라이브러리에 불러왔어요!`)
     openMapEditor(importedMap.id)
   }, [maps, setMaps, setFeatures, showToast, openMapEditor])
 
@@ -320,7 +353,7 @@ export default function App() {
   // --- Social / Profile ---
 
   const {
-    handleUpdateProfile, toggleFollow, likePost, saveSharePlaceToMap,
+    handleUpdateProfile, toggleFollow, saveSharePlaceToMap,
   } = useSocialProfile({
     cloudMode, authUser,
     followed, setFollowed,
@@ -332,6 +365,88 @@ export default function App() {
     pendingSharePlace, setPendingSharePlace,
     touchMap, showToast,
   })
+
+  const hasUnsavedEditorDraft = activeTab === "maps"
+    && mapsView === "editor"
+    && activeMapSource === "local"
+    && activeMap?.category !== "event"
+    && (draftPoints.length > 0 || ["pin", "route", "area", "relocate"].includes(editorMode))
+
+  const confirmDiscardEditorDraft = useCallback(() => {
+    if (!hasUnsavedEditorDraft) return true
+    return window.confirm("작성 중인 내용이 저장되지 않습니다. 이동할까요?")
+  }, [hasUnsavedEditorDraft])
+
+  const handleMapEditorBack = useCallback(() => {
+    if (!confirmDiscardEditorDraft()) return
+    if (activeMapSource === "community" || activeMapSource === "shared") {
+      setActiveTab("home")
+    }
+    if (activeMapSource === "shared") {
+      setSharedMapData(null)
+      setActiveMapId(maps[0]?.id ?? null)
+    }
+    setMapsView("list")
+    resetEditorState()
+    setActiveMapSource("local")
+  }, [activeMapSource, confirmDiscardEditorDraft, maps, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
+
+  const handleBottomNavChange = useCallback((nextTab) => {
+    if (nextTab !== activeTab && !confirmDiscardEditorDraft()) return
+    handleTabChange(nextTab)
+    if (nextTab !== "maps" && activeMapSource === "shared") {
+      setSharedMapData(null)
+      setActiveMapSource("local")
+      setActiveMapId(maps[0]?.id ?? null)
+    }
+  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps])
+
+  const handleSavePostMap = useCallback(async (post) => {
+    if (!post?.mapId) return
+    if (savingPostMapId === post.mapId) return
+    if (maps.some((mapItem) => mapItem.id === post.mapId)) {
+      showToast("이미 내 라이브러리에 있는 지도예요.")
+      setSelectedPostRef(null)
+      openMapEditor(post.mapId)
+      return
+    }
+    if (!hasSupabaseEnv) {
+      showToast("이 지도는 온라인 상태에서만 저장할 수 있어요.")
+      return
+    }
+    try {
+      setSavingPostMapId(post.mapId)
+      const { getMapBundle } = await import("./lib/mapService.read")
+      const bundle = await getMapBundle(post.mapId)
+      await importMapBundleToLocal(bundle, { toastMessage: "지도를 내 라이브러리에 저장했어요." })
+      setSelectedPostRef(null)
+    } catch (error) {
+      console.error("Failed to save post map", error)
+      showToast("지도 저장에 실패했어요. 잠시 후 다시 시도해 주세요.")
+    } finally {
+      setSavingPostMapId(null)
+    }
+  }, [importMapBundleToLocal, maps, openMapEditor, savingPostMapId, setSelectedPostRef, showToast])
+
+  const handlePublishSubmit = useCallback(async () => {
+    if (publishSubmitting) return
+    setPublishSubmitting(true)
+    try {
+      await publishMap()
+    } finally {
+      setPublishSubmitting(false)
+    }
+  }, [publishMap, publishSubmitting])
+
+  const handleSaveSharedMap = useCallback(async () => {
+    if (savingSharedMap) return
+    setSavingSharedMap(true)
+    try {
+      await importSharedMapToLocal()
+    } finally {
+      setSavingSharedMap(false)
+    }
+  }, [importSharedMapToLocal, savingSharedMap])
 
   // --- Route effects ---
 
@@ -367,26 +482,33 @@ export default function App() {
     return () => { isMounted = false }
   }, [routeAtLoad, showToast])
 
-  // 로컬 모드에서 현재 activeMapId가 maps에 없으면 보정 (렌더 중 조건부 setState — React 공식 패턴)
-  if (activeMapSource === "local") {
+  // 로컬 모드에서 현재 activeMapId가 maps에 없으면 보정
+  useEffect(() => {
+    if (activeMapSource !== "local") return
     if (mapsView === "editor" && maps.length === 0 && activeMapId) {
       setMapsView("list")
-    } else if (activeMapId && !maps.some((mapItem) => mapItem.id === activeMapId) && maps.length > 0) {
+      return
+    }
+    if (activeMapId && !maps.some((mapItem) => mapItem.id === activeMapId) && maps.length > 0) {
       setActiveMapId(maps[0].id)
     }
-  }
+  }, [activeMapId, activeMapSource, maps, mapsView])
 
   useEffect(() => {
+    const sharedMapPath = activeMapSource === "shared" && sharedMapData
+      ? routeAtLoad?.type === "slug" && routeAtLoad.slug
+        ? `/s/${encodeURIComponent(routeAtLoad.slug)}`
+        : buildMapSharePath(sharedMapData.map, sharedMapData.features)
+      : null
+
     const nextPath = activeTab === "maps" && mapsView === "editor" && activeMapId
-      ? activeMapSource === "shared" && sharedMapData
-        ? buildMapSharePath(sharedMapData.map, sharedMapData.features)
-        : buildMapRoutePath(activeMapId)
+      ? sharedMapPath ?? buildMapRoutePath(activeMapId)
       : "/"
     const currentPath = `${window.location.pathname}${window.location.search}`
     if (currentPath !== nextPath) {
       window.history.replaceState(null, "", nextPath)
     }
-  }, [activeMapId, activeMapSource, activeTab, mapsView, sharedMapData])
+  }, [activeMapId, activeMapSource, activeTab, mapsView, routeAtLoad, sharedMapData])
 
   // --- Header Config ---
 
@@ -394,9 +516,10 @@ export default function App() {
     if (activeTab === "maps" && mapsView === "editor") {
       if (activeMapSource === "shared") {
         return {
-          subtitle: activeMap ? `${activeMap.title} · 공유 지도` : "공유 지도",
-          actionLabel: "내 지도로 저장",
-          onAction: importSharedMapToLocal,
+          subtitle: activeMap ? `${activeMap.title} · 발행 지도` : "발행 지도",
+          actionLabel: savingSharedMap ? "저장 중..." : "내 라이브러리에 저장",
+          onAction: handleSaveSharedMap,
+          actionDisabled: savingSharedMap,
         }
       }
       if (activeMapSource === "demo") {
@@ -420,7 +543,7 @@ export default function App() {
       }
     }
     return { subtitle: null, actionLabel: null, onAction: null }
-  }, [activeMap, activeMapSource, activeTab, importSharedMapToLocal, mapsView])
+  }, [activeMap, activeMapSource, activeTab, handleSaveSharedMap, mapsView, savingSharedMap])
 
   // --- Render ---
 
@@ -430,7 +553,8 @@ export default function App() {
         <SharedMapViewer
           map={sharedMapData.map}
           features={sharedMapData.features}
-          onSaveToApp={importSharedMapToLocal}
+          onSaveToApp={handleSaveSharedMap}
+          savingToApp={savingSharedMap}
         />
         <Toast message={toast.message} />
       </Suspense>
@@ -451,7 +575,12 @@ export default function App() {
         </div>
         <div className="top-bar__actions">
           {!(activeTab === "maps" && mapsView === "list") && headerConfig.actionLabel ? (
-            <button className={`button ${activeTab === "profile" ? "button--primary" : "button--ghost"}`} type="button" onClick={headerConfig.onAction}>
+            <button
+              className={`button ${activeTab === "profile" ? "button--primary" : "button--ghost"}`}
+              type="button"
+              onClick={headerConfig.onAction}
+              disabled={Boolean(headerConfig.actionDisabled)}
+            >
               {headerConfig.actionLabel}
             </button>
           ) : null}
@@ -581,18 +710,7 @@ export default function App() {
             showLabels={showMapLabels}
             characterStyle={characterStyle}
             levelEmoji={levelEmoji}
-            onBack={() => {
-              if (activeMapSource === "community" || activeMapSource === "shared") {
-                setActiveTab("home")
-              }
-              if (activeMapSource === "shared") {
-                setSharedMapData(null)
-                setActiveMapId(maps[0]?.id ?? null)
-              }
-              setMapsView("list")
-              resetEditorState()
-              setActiveMapSource("local")
-            }}
+            onBack={handleMapEditorBack}
             onFit={() => setFitTrigger((value) => value + 1)}
             onSearchLocation={(loc) => setFocusPoint(loc)}
             onLocate={locateMe}
@@ -653,18 +771,11 @@ export default function App() {
       </Suspense>
       </main>
 
-      {/* 행사 지도 참여 중에는 BottomNav 숨김 */}
-      {activeTab === "maps" && mapsView === "editor" && activeMap?.category === "event" ? null : (
+      {/* 행사 지도 참여 중이거나 키보드 입력 중에는 BottomNav 숨김 */}
+      {(activeTab === "maps" && mapsView === "editor" && activeMap?.category === "event") || keyboardVisible ? null : (
       <BottomNav
         activeTab={activeTab}
-        onChange={(nextTab) => {
-          handleTabChange(nextTab)
-          if (nextTab !== "maps" && activeMapSource === "shared") {
-            setSharedMapData(null)
-            setActiveMapSource("local")
-            setActiveMapId(maps[0]?.id ?? null)
-          }
-        }}
+        onChange={handleBottomNavChange}
       />
       )}
 
@@ -688,7 +799,7 @@ export default function App() {
       <PublishSheet
         publishSheet={publishSheet} setPublishSheet={setPublishSheet}
         unpublishedMaps={unpublishedMaps} features={features}
-        onPublish={() => publishMap()} onClose={() => setPublishSheet(null)}
+        onPublish={handlePublishSubmit} publishing={publishSubmitting} onClose={() => setPublishSheet(null)}
       />
       <UserProfileSheet
         user={selectedUser} userPosts={selectedUserPosts}
@@ -700,7 +811,8 @@ export default function App() {
         post={selectedPost}
         onClose={() => setSelectedPostRef(null)}
         onOpenMap={(mapId) => { setSelectedPostRef(null); openMapEditor(mapId) }}
-        onUnpublish={unpublish} onSave={likePost}
+        onUnpublish={unpublish} onSaveMap={handleSavePostMap}
+        saving={savingPostMapId === selectedPost?.mapId}
         isFollowing={selectedPost?.user ? followed.includes(selectedPost.user.id) : false}
         onToggleFollow={toggleFollow}
         mapFeatures={selectedPost ? features.filter((f) => f.mapId === selectedPost.mapId) : []}

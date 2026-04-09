@@ -11,6 +11,8 @@ import {
   collectTopTags,
   getFeatureCenter,
   buildSlugShareUrl,
+  buildLegalDocumentUrl,
+  resolvePublicWebOrigin,
   parseAppLocation,
 } from "./appUtils"
 
@@ -134,6 +136,35 @@ describe("buildSlugShareUrl", () => {
   it("슬러그 기반 공유 URL 생성", () => {
     const result = buildSlugShareUrl("test-slug", "link", "https://example.com")
     expect(result).toBe("https://example.com/s/test-slug?utm_source=link")
+  })
+})
+
+describe("resolvePublicWebOrigin", () => {
+  it("https origin은 그대로 유지", () => {
+    expect(resolvePublicWebOrigin("https://loca.app")).toBe("https://loca.app")
+  })
+
+  it("일반 http origin은 https로 승격", () => {
+    expect(resolvePublicWebOrigin("http://example.com")).toBe("https://example.com")
+  })
+
+  it("localhost origin은 개발 편의를 위해 유지", () => {
+    expect(resolvePublicWebOrigin("http://localhost:5173")).toBe("http://localhost:5173")
+    expect(resolvePublicWebOrigin("http://127.0.0.1:4173")).toBe("http://127.0.0.1:4173")
+  })
+
+  it("비표준 스킴은 fallback origin 사용", () => {
+    expect(resolvePublicWebOrigin("capacitor://localhost", "https://fallback.app")).toBe("https://fallback.app")
+  })
+})
+
+describe("buildLegalDocumentUrl", () => {
+  it("약관 URL 생성", () => {
+    expect(buildLegalDocumentUrl("terms", "https://loca.app")).toBe("https://loca.app/legal/terms.html")
+  })
+
+  it("개인정보처리방침 URL 생성", () => {
+    expect(buildLegalDocumentUrl("privacy", "https://loca.app")).toBe("https://loca.app/legal/privacy.html")
   })
 })
 

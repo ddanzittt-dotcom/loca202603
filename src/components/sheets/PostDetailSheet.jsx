@@ -16,7 +16,7 @@ function getTagColor(tag) {
   return { bg: "#FFF4EB", text: "#993C1D" }
 }
 
-export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSave, isFollowing, onToggleFollow, mapFeatures }) {
+export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSaveMap, saving = false, isFollowing, onToggleFollow, mapFeatures }) {
   const isOwn = post?.source === "own"
   const pins = mapFeatures ? mapFeatures.filter((f) => f.type === "pin") : []
   const routes = mapFeatures ? mapFeatures.filter((f) => f.type === "route") : []
@@ -113,11 +113,11 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSave,
             </button>
             {isOwn ? (
               <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onUnpublish(post.id)}>
-                공유 해제
+                발행 중단
               </button>
             ) : (
-              <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onSave(post.id)}>
-                저장하기
+              <button className="pds__btn pds__btn--secondary" type="button" disabled={saving} onClick={() => onSaveMap?.(post)}>
+                {saving ? "저장 중..." : "라이브러리에 저장"}
               </button>
             )}
           </div>

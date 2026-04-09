@@ -1,0 +1,1016 @@
+[
+  {
+    "scenario": "iphone_se",
+    "width": 375,
+    "height": 667,
+    "steps": [
+      {
+        "step": "home",
+        "metrics": {
+          "viewport": {
+            "width": 375,
+            "height": 667
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 606,
+              "right": 375,
+              "bottom": 667,
+              "width": 375,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "map",
+        "metrics": {
+          "viewport": {
+            "width": 375,
+            "height": 667
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 606,
+              "right": 375,
+              "bottom": 667,
+              "width": 375,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 552,
+              "right": 98.734375,
+              "bottom": 586,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 504,
+              "right": 79.328125,
+              "bottom": 538,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 309,
+              "top": 317.5,
+              "right": 353,
+              "bottom": 413.5,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 342,
+              "bottom": 176,
+              "width": 290,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "share_sheet",
+        "metrics": {
+          "viewport": {
+            "width": 375,
+            "height": 667
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 606,
+              "right": 375,
+              "bottom": 667,
+              "width": 375,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 552,
+              "right": 98.734375,
+              "bottom": 586,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 504,
+              "right": 79.328125,
+              "bottom": 538,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 309,
+              "top": 317.5,
+              "right": 353,
+              "bottom": 413.5,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": {
+              "left": 0,
+              "top": 120.0625,
+              "right": 375,
+              "bottom": 667,
+              "width": 375,
+              "height": 546.9375
+            },
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 342,
+              "bottom": 176,
+              "width": 290,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [
+              {
+                "width": 91.65625,
+                "height": 79
+              },
+              {
+                "width": 91.671875,
+                "height": 79
+              },
+              {
+                "width": 91.671875,
+                "height": 79
+              }
+            ],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": {
+              "width": 91.65625,
+              "height": 79
+            },
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "profile",
+        "metrics": {
+          "viewport": {
+            "width": 375,
+            "height": 667
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 606,
+              "right": 375,
+              "bottom": 667,
+              "width": 375,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": true,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "small_android",
+    "width": 360,
+    "height": 640,
+    "steps": [
+      {
+        "step": "home",
+        "metrics": {
+          "viewport": {
+            "width": 360,
+            "height": 640
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 579,
+              "right": 360,
+              "bottom": 640,
+              "width": 360,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "map",
+        "metrics": {
+          "viewport": {
+            "width": 360,
+            "height": 640
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 579,
+              "right": 360,
+              "bottom": 640,
+              "width": 360,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 525,
+              "right": 98.734375,
+              "bottom": 559,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 477,
+              "right": 79.328125,
+              "bottom": 511,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 294,
+              "top": 304,
+              "right": 338,
+              "bottom": 400,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 327,
+              "bottom": 176,
+              "width": 275,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "share_sheet",
+        "metrics": {
+          "viewport": {
+            "width": 360,
+            "height": 640
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 579,
+              "right": 360,
+              "bottom": 640,
+              "width": 360,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 525,
+              "right": 98.734375,
+              "bottom": 559,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 477,
+              "right": 79.328125,
+              "bottom": 511,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 294,
+              "top": 304,
+              "right": 338,
+              "bottom": 400,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": {
+              "left": 0,
+              "top": 115.203125,
+              "right": 360,
+              "bottom": 640,
+              "width": 360,
+              "height": 524.796875
+            },
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 327,
+              "bottom": 176,
+              "width": 275,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [
+              {
+                "width": 86.65625,
+                "height": 79
+              },
+              {
+                "width": 86.671875,
+                "height": 79
+              },
+              {
+                "width": 86.671875,
+                "height": 79
+              }
+            ],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": {
+              "width": 86.65625,
+              "height": 79
+            },
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "profile",
+        "metrics": {
+          "viewport": {
+            "width": 360,
+            "height": 640
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 579,
+              "right": 360,
+              "bottom": 640,
+              "width": 360,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": true,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      }
+    ]
+  },
+  {
+    "scenario": "iphone_12",
+    "width": 390,
+    "height": 844,
+    "steps": [
+      {
+        "step": "home",
+        "metrics": {
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 783,
+              "right": 390,
+              "bottom": 844,
+              "width": 390,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "map",
+        "metrics": {
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 783,
+              "right": 390,
+              "bottom": 844,
+              "width": 390,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 729,
+              "right": 98.734375,
+              "bottom": 763,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 681,
+              "right": 79.328125,
+              "bottom": 715,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 324,
+              "top": 406,
+              "right": 368,
+              "bottom": 502,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 357,
+              "bottom": 176,
+              "width": 305,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "share_sheet",
+        "metrics": {
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 783,
+              "right": 390,
+              "bottom": 844,
+              "width": 390,
+              "height": 61
+            },
+            "mapListBar": {
+              "left": 24,
+              "top": 729,
+              "right": 98.734375,
+              "bottom": 763,
+              "width": 74.734375,
+              "height": 34
+            },
+            "mapFilterBar": {
+              "left": 24,
+              "top": 681,
+              "right": 79.328125,
+              "bottom": 715,
+              "width": 55.328125,
+              "height": 34
+            },
+            "meFabs": {
+              "left": 324,
+              "top": 406,
+              "right": 368,
+              "bottom": 502,
+              "width": 44,
+              "height": 96
+            },
+            "draftBar": null,
+            "sheet": {
+              "left": 0,
+              "top": 272.890625,
+              "right": 390,
+              "bottom": 844,
+              "width": 390,
+              "height": 571.109375
+            },
+            "searchInput": {
+              "left": 52,
+              "top": 158,
+              "right": 357,
+              "bottom": 176,
+              "width": 305,
+              "height": 18
+            },
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [
+              {
+                "width": 44,
+                "height": 44
+              },
+              {
+                "width": 44,
+                "height": 44
+              }
+            ],
+            "mapTopButtons": [
+              {
+                "width": 40,
+                "height": 40
+              },
+              {
+                "width": 40,
+                "height": 40
+              }
+            ],
+            "shareButtons": [
+              {
+                "width": 96.65625,
+                "height": 79
+              },
+              {
+                "width": 96.671875,
+                "height": 79
+              },
+              {
+                "width": 96.671875,
+                "height": 79
+              }
+            ],
+            "profileButtons": []
+          },
+          "authGateVisible": false,
+          "mapEditorVisible": true
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": {
+              "width": 44,
+              "height": 44
+            },
+            "mapTopButtons": {
+              "width": 40,
+              "height": 40
+            },
+            "shareButtons": {
+              "width": 96.65625,
+              "height": 79
+            },
+            "profileButtons": null
+          }
+        }
+      },
+      {
+        "step": "profile",
+        "metrics": {
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "overflowX": 0,
+          "hasHorizontalScroll": false,
+          "rects": {
+            "bottomNav": {
+              "left": 0,
+              "top": 783,
+              "right": 390,
+              "bottom": 844,
+              "width": 390,
+              "height": 61
+            },
+            "mapListBar": null,
+            "mapFilterBar": null,
+            "meFabs": null,
+            "draftBar": null,
+            "sheet": null,
+            "searchInput": null,
+            "profileEditHeader": null,
+            "profileEditTextarea": null
+          },
+          "touch": {
+            "fabs": [],
+            "mapTopButtons": [],
+            "shareButtons": [],
+            "profileButtons": []
+          },
+          "authGateVisible": true,
+          "mapEditorVisible": false
+        },
+        "summary": {
+          "collisions": {
+            "navVsMapListBar": false,
+            "navVsMapFilterBar": false,
+            "navVsDraftBar": false,
+            "mapListVsFabs": false
+          },
+          "minTouch": {
+            "fabs": null,
+            "mapTopButtons": null,
+            "shareButtons": null,
+            "profileButtons": null
+          }
+        }
+      }
+    ]
+  }
+]

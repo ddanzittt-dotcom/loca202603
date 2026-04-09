@@ -102,7 +102,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
       await onImport(trimmed)
       onClose()
     } catch (err) {
-      showToast?.(err.message || "지도를 가져올 수 없어요.")
+      showToast?.(err.message || "지도를 불러올 수 없어요.")
     } finally {
       setLoading(false)
     }
@@ -116,7 +116,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
       <div className="import-map-modal">
         {!mode ? (
           <>
-            <h3 className="import-map-modal__title">지도 가져오기</h3>
+            <h3 className="import-map-modal__title">발행 지도 불러오기</h3>
             <div className="import-map-sheet__options">
               <button
                 className="import-map-sheet__option"
@@ -164,7 +164,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
         {mode === "code" ? (
           <div className="import-map-sheet__code">
             <label className="field">
-              <span>공유 코드</span>
+              <span>발행 코드</span>
               <input
                 type="text"
                 value={code}
@@ -182,7 +182,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
                 onClick={() => handleImport()}
                 disabled={!code.trim() || loading}
               >
-                {loading ? "가져오는 중..." : "가져오기"}
+                {loading ? "불러오는 중..." : "불러오기"}
               </button>
             </div>
           </div>

@@ -7,60 +7,126 @@ import {
   normalizePublication,
 } from "./mapService.utils"
 
+function parseRpcResult(data) {
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data)
+    } catch {
+      return null
+    }
+  }
+  return data || null
+}
+
+function isMissingDbObject(error, objectName) {
+  if (!error) return false
+  const message = `${error.message || ""}`.toLowerCase()
+  return (
+    error.code === "42883"
+    || error.code === "42P01"
+    || message.includes(`${objectName}`.toLowerCase())
+  )
+}
+
 // ─── 발행 / 비공개 ───
 
 export async function publishMap(mapId, options = {}) {
-  const user = await requireUser()
+  await requireUser()
   const supabase = requireSupabase()
-  const now = new Date().toISOString()
-  const slug = options.slug || createSlugCandidate(options.title || options.caption || mapId)
+  const inputSlug = options.slug || createSlugCandidate(options.title || options.caption || mapId)
 
-  const { data: mapRow, error: mapError } = await supabase
-    .from("maps")
-    .update({
-      slug: slug || null,
-      visibility: options.visibility || "unlisted",
-      is_published: true,
-      published_at: now,
-      updated_at: now,
+  try {
+    const { data, error } = await supabase.rpc("publish_map_revision", {
+      p_map_id: mapId,
+      p_slug: inputSlug || null,
+      p_note: options.note || null,
+      p_visibility: options.visibility || null,
     })
-    .eq("id", mapId)
-    .eq("user_id", user.id)
-    .select("*")
-    .single()
+    if (error) throw error
 
-  if (mapError) throw mapError
+    const result = parseRpcResult(data)
+    if (!result?.success) {
+      throw new Error(result?.error || "발행에 실패했습니다.")
+    }
 
-  const { data: publicationRow, error: publicationError } = await supabase
-    .from("map_publications")
-    .upsert(
-      {
-        map_id: mapId,
-        caption: options.caption || "",
-        likes_count: options.likes || 0,
-        saves_count: options.saves || 0,
+    const [{ data: mapRow, error: mapError }, { data: publicationRow, error: publicationError }] = await Promise.all([
+      supabase.from("maps").select("*").eq("id", mapId).single(),
+      supabase.from("map_publications").select("*").eq("map_id", mapId).maybeSingle(),
+    ])
+
+    if (mapError) throw mapError
+    if (publicationError) throw publicationError
+
+    return {
+      map: normalizeMap(mapRow, normalizePublication(publicationRow)),
+      publication: normalizePublication(publicationRow),
+    }
+  } catch (error) {
+    if (!isMissingDbObject(error, "publish_map_revision")) throw error
+
+    const user = await requireUser()
+    const now = new Date().toISOString()
+    const slug = inputSlug
+
+    const { data: mapRow, error: mapError } = await supabase
+      .from("maps")
+      .update({
+        slug: slug || null,
+        visibility: options.visibility || "unlisted",
+        is_published: true,
         published_at: now,
-      },
-      { onConflict: "map_id" },
-    )
-    .select("*")
-    .single()
+        updated_at: now,
+      })
+      .eq("id", mapId)
+      .eq("user_id", user.id)
+      .select("*")
+      .single()
+    if (mapError) throw mapError
 
-  if (publicationError) throw publicationError
+    const { data: publicationRow, error: publicationError } = await supabase
+      .from("map_publications")
+      .upsert(
+        {
+          map_id: mapId,
+          caption: options.caption || "",
+          likes_count: options.likes || 0,
+          saves_count: options.saves || 0,
+          published_at: now,
+        },
+        { onConflict: "map_id" },
+      )
+      .select("*")
+      .single()
+    if (publicationError) throw publicationError
 
-  return {
-    map: normalizeMap(mapRow, normalizePublication(publicationRow)),
-    publication: normalizePublication(publicationRow),
+    return {
+      map: normalizeMap(mapRow, normalizePublication(publicationRow)),
+      publication: normalizePublication(publicationRow),
+    }
   }
 }
 
 export async function unpublishMap(mapId) {
-  const user = await requireUser()
+  await requireUser()
   const supabase = requireSupabase()
-  const now = new Date().toISOString()
 
-  const [mapRes, publicationRes] = await Promise.all([
-    supabase
+  try {
+    const { data, error } = await supabase.rpc("unpublish_map_revision", {
+      p_map_id: mapId,
+    })
+    if (error) throw error
+
+    const result = parseRpcResult(data)
+    if (!result?.success) {
+      throw new Error(result?.error || "발행 중단에 실패했습니다.")
+    }
+    return
+  } catch (error) {
+    if (!isMissingDbObject(error, "unpublish_map_revision")) throw error
+
+    const user = await requireUser()
+    const now = new Date().toISOString()
+    const { error: mapError } = await supabase
       .from("maps")
       .update({
         is_published: false,
@@ -69,12 +135,32 @@ export async function unpublishMap(mapId) {
         updated_at: now,
       })
       .eq("id", mapId)
-      .eq("user_id", user.id),
-    supabase.from("map_publications").delete().eq("map_id", mapId),
-  ])
+      .eq("user_id", user.id)
+    if (mapError) throw mapError
+  }
+}
 
-  if (mapRes.error) throw mapRes.error
-  if (publicationRes.error) throw publicationRes.error
+// ─── Saves (single source: map_saves) ───
+
+export async function saveMap(mapId, options = {}) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("save_map", {
+    p_map_id: mapId,
+    p_session_id: options.sessionId || getSessionId(),
+    p_source: options.source || "unknown",
+  })
+  if (error) throw error
+  return typeof data === "string" ? JSON.parse(data) : data
+}
+
+export async function unsaveMap(mapId, options = {}) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("unsave_map", {
+    p_map_id: mapId,
+    p_session_id: options.sessionId || getSessionId(),
+  })
+  if (error) throw error
+  return typeof data === "string" ? JSON.parse(data) : data
 }
 
 // ─── B2B/B2G 초대코드 ───

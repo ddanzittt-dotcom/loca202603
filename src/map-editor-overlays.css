@@ -911,6 +911,11 @@
   transition: background 0.15s, border-color 0.15s;
 }
 
+.share-sheet__action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .share-sheet__action-btn:active {
   background: var(--line);
 }
@@ -930,6 +935,11 @@
 
 .share-sheet__action-btn--image:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.share-sheet__qr-download-btn:disabled {
+  opacity: 0.65;
   cursor: not-allowed;
 }
 
@@ -968,6 +978,69 @@
 
 .share-sheet__url-input:focus {
   border-color: var(--primary);
+}
+
+@media (max-height: 700px) {
+  .share-sheet {
+    padding: 4px 14px 14px;
+  }
+
+  .share-sheet__hint {
+    font-size: 0.76rem;
+    margin-bottom: 10px;
+  }
+
+  .share-sheet__qr-section {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .share-sheet__qr-preview {
+    width: min(176px, 56vw);
+    height: min(176px, 56vw);
+  }
+
+  .share-sheet__qr-download-btn {
+    font-size: 0.74rem !important;
+    padding: 8px 10px !important;
+  }
+
+  .share-sheet__actions {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .share-sheet__action-btn {
+    padding: 12px 6px;
+    border-radius: 14px;
+  }
+
+  .share-sheet__action-icon {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .share-sheet__hint {
+    display: none;
+  }
+
+  .share-sheet__qr-preview {
+    width: min(156px, 52vw);
+    height: min(156px, 52vw);
+  }
+
+  .share-sheet__qr-section {
+    margin-bottom: 8px;
+  }
+
+  .share-sheet__action-btn {
+    padding: 10px 4px;
+  }
+
+  .share-sheet__action-label {
+    font-size: 0.72rem;
+  }
 }
 
 .profile-map-grid {
@@ -2051,6 +2124,16 @@
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.2px;
+}
+
+.mc__badge--published {
+  background: rgba(18, 185, 129, 0.92);
+  color: #eafff7;
+}
+
+.mc__badge--draft {
+  background: rgba(16, 24, 40, 0.28);
+  color: rgba(255, 255, 255, 0.9);
 }
 .mc__bottom {
   position: absolute;
@@ -5116,4 +5199,173 @@
   font-size: 8px;
   color: #aaa;
   margin: 1px 0 0;
+}
+
+/* Release UX hardening: map editor touch targets + mode guidance */
+.editor-mode-guide {
+  position: absolute;
+  top: 66px;
+  left: 12px;
+  right: 72px;
+  z-index: 518;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(20, 27, 52, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.editor-mode-guide strong {
+  color: #1a1a1a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.editor-mode-guide span {
+  color: #5c5652;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.editor-mode-guide--pin { border-color: rgba(255, 107, 53, 0.25); }
+.editor-mode-guide--route { border-color: rgba(15, 110, 86, 0.25); }
+.editor-mode-guide--area { border-color: rgba(133, 79, 11, 0.25); }
+.editor-mode-guide--relocate { border-color: rgba(45, 74, 62, 0.25); }
+
+.map-search-box__bar {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.map-search-box__bar input {
+  font-size: 0.92rem;
+}
+
+.map-search-box__clear {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-search-box__item {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.map-search-box__item strong {
+  font-size: 0.8rem;
+}
+
+.map-search-box__item span {
+  font-size: 0.72rem;
+}
+
+.me-bar__back,
+.me-bar__share {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  justify-content: center;
+}
+
+.me-fabs {
+  gap: 8px;
+}
+
+.me-fab {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+.me-fab--label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.map-filter-bar--upper {
+  bottom: 56px;
+}
+
+.map-list-bar {
+  bottom: 8px;
+}
+
+.map-filter-chip {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 0.76rem;
+  gap: 4px;
+}
+
+.map-place-strip {
+  height: 56px;
+}
+
+.map-place-card {
+  min-width: 164px;
+  min-height: 54px;
+  height: auto;
+  padding: 7px 12px;
+  border-radius: 12px;
+}
+
+.map-place-card strong {
+  font-size: 0.85rem;
+}
+
+.map-place-card small {
+  font-size: 0.74rem;
+  margin-top: 4px;
+}
+
+.draft-bar--compact .button {
+  min-height: 40px;
+  font-size: 0.82rem;
+}
+
+.draft-bar--relocate {
+  font-size: 0.88rem;
+}
+
+.fab.fab--cancel {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+}
+
+.map-feature-summary__close {
+  width: 40px;
+  height: 40px;
+}
+
+@media (max-width: 420px) {
+  .editor-mode-guide {
+    right: 64px;
+    padding: 9px 10px;
+  }
+
+  .editor-mode-guide strong {
+    font-size: 0.78rem;
+  }
+
+  .editor-mode-guide span {
+    font-size: 0.7rem;
+  }
+
+  .map-filter-chip {
+    min-height: 34px;
+    font-size: 0.72rem;
+  }
 }

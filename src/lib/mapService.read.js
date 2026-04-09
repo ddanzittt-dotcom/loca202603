@@ -9,6 +9,104 @@ import {
 
 // ─── 내부 batch 조회 ───
 
+function isMissingDbObject(error, objectName) {
+  if (!error) return false
+  const message = `${error.message || ""}`.toLowerCase()
+  return (
+    error.code === "42883"
+    || error.code === "42P01"
+    || message.includes(`${objectName}`.toLowerCase())
+  )
+}
+
+function normalizeSnapshotMapRow(liveRevision, requestedSlug) {
+  const mapSnapshot = liveRevision?.snapshot?.map || {}
+  const publishedAt = (
+    liveRevision?.published_at
+    || mapSnapshot?.published_at
+    || mapSnapshot?.updated_at
+    || liveRevision?.created_at
+    || new Date().toISOString()
+  )
+
+  return {
+    id: liveRevision?.map_id || mapSnapshot?.id,
+    title: mapSnapshot?.title || "LOCA 지도",
+    description: mapSnapshot?.description || "",
+    theme: mapSnapshot?.theme || "#4F46E5",
+    visibility: mapSnapshot?.visibility || "public",
+    slug: liveRevision?.slug || mapSnapshot?.slug || requestedSlug || null,
+    tags: Array.isArray(mapSnapshot?.tags) ? mapSnapshot.tags : [],
+    category: mapSnapshot?.category || "personal",
+    config: mapSnapshot?.config || {},
+    is_published: true,
+    published_at: publishedAt,
+    updated_at: mapSnapshot?.updated_at || publishedAt,
+    created_at: mapSnapshot?.created_at || liveRevision?.created_at || publishedAt,
+  }
+}
+
+function normalizeSnapshotFeatureRows(liveRevision) {
+  const rawRows = Array.isArray(liveRevision?.snapshot?.features)
+    ? liveRevision.snapshot.features
+    : []
+
+  return rawRows
+    .filter((row) => row && typeof row === "object" && typeof row.id === "string" && row.id.length > 0)
+    .map((row, index) => {
+      const type = row.type || "pin"
+      const sortOrder = Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : index
+      return {
+        ...row,
+        map_id: row.map_id || liveRevision?.map_id,
+        type,
+        title: row.title || "새 항목",
+        emoji: row.emoji || (type === "route" ? "🛣️" : type === "area" ? "🟩" : "📍"),
+        tags: Array.isArray(row.tags) ? row.tags : [],
+        note: row.note || "",
+        highlight: Boolean(row.highlight),
+        sort_order: sortOrder,
+        created_at: row.created_at || liveRevision?.created_at || new Date().toISOString(),
+        updated_at: row.updated_at || liveRevision?.published_at || liveRevision?.created_at || new Date().toISOString(),
+      }
+    })
+    .sort((a, b) => {
+      if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+      return (a.created_at || "").localeCompare(b.created_at || "")
+    })
+}
+
+async function getPublishedBundleFromLiveRevision(supabase, liveRevision, slug) {
+  const mapRow = normalizeSnapshotMapRow(liveRevision, slug)
+  const featureRows = normalizeSnapshotFeatureRows(liveRevision)
+
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  const featureIds = featureRows.map((row) => row.id).filter((id) => uuidPattern.test(id))
+
+  const publicationReq = supabase
+    .from("map_publications")
+    .select("*")
+    .eq("map_id", liveRevision.map_id)
+    .maybeSingle()
+
+  const memoReq = featureIds.length ? listMemosForFeatureIds(featureIds) : Promise.resolve([])
+  const mediaReq = featureIds.length ? listMediaForFeatureIds(featureIds) : Promise.resolve([])
+
+  const [{ data: publicationRow, error: publicationError }, memoRows, mediaRows] = await Promise.all([
+    publicationReq,
+    memoReq,
+    mediaReq,
+  ])
+  if (publicationError) throw publicationError
+
+  const publication = normalizePublication(publicationRow)
+  return {
+    map: normalizeMap(mapRow, publication),
+    features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
+    publication,
+  }
+}
+
 export async function listPublicationsForMapIds(mapIds) {
   if (!mapIds.length) return []
   const supabase = requireSupabase()
@@ -122,7 +220,7 @@ export async function getMyAppData() {
   return {
     maps: mapRows.map((row) => normalizeMap(row, normalizePublication(publicationRows.find((item) => item.map_id === row.id)))),
     features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
-    shares: publicationRows.map((row) => normalizePublication(row)),
+    shares: publicationRows.filter((row) => row.visibility === "public").map((row) => normalizePublication(row)),
     followed: (followsRes.data || []).map((row) => row.following_id),
     followerCount: followersRes.count ?? 0,
   }
@@ -155,6 +253,28 @@ export async function getMapBundle(mapId) {
 
 export async function getPublishedMapBySlug(slug) {
   const supabase = requireSupabase()
+
+  const { data: liveRevision, error: revisionError } = await supabase
+    .from("map_publication_revisions")
+    .select("id,map_id,slug,revision_no,status,snapshot,published_at,created_at")
+    .eq("slug", slug)
+    .eq("status", "live")
+    .order("revision_no", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (revisionError) {
+    if (!isMissingDbObject(revisionError, "map_publication_revisions")) {
+      throw revisionError
+    }
+  } else if (liveRevision?.snapshot && typeof liveRevision.snapshot === "object") {
+    try {
+      return await getPublishedBundleFromLiveRevision(supabase, liveRevision, slug)
+    } catch (error) {
+      console.warn("[publish] failed to load live snapshot. fallback to legacy map lookup:", error)
+    }
+  }
+
   const { data: mapRow, error } = await supabase
     .from("maps")
     .select("*")
@@ -169,6 +289,32 @@ export async function getPublishedMapBySlug(slug) {
 
 export async function getPublishedMaps(limit = 10) {
   const supabase = requireSupabase()
+
+  const { data: liveRevisions, error: revisionError } = await supabase
+    .from("map_publication_revisions")
+    .select("map_id,slug,revision_no,status,snapshot,published_at,created_at")
+    .eq("status", "live")
+    .order("published_at", { ascending: false })
+    .limit(limit)
+
+  if (revisionError) {
+    if (!isMissingDbObject(revisionError, "map_publication_revisions")) {
+      throw revisionError
+    }
+  } else if (liveRevisions?.length) {
+    const mapIds = liveRevisions.map((row) => row.map_id)
+    const publicationRows = await listPublicationsForMapIds(mapIds)
+    const publicationByMapId = new Map(publicationRows.map((row) => [row.map_id, normalizePublication(row)]))
+
+    return liveRevisions
+      .map((row) => {
+        const mapRow = normalizeSnapshotMapRow(row, row.slug)
+        const publication = publicationByMapId.get(row.map_id) || null
+        return normalizeMap(mapRow, publication)
+      })
+      .filter((map) => ["public", "unlisted"].includes(map.visibility))
+  }
+
   const { data, error } = await supabase
     .from("maps")
     .select("*, map_publications(likes_count, saves_count)")
