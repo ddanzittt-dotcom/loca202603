@@ -388,7 +388,7 @@ export function ProfileScreen({
 
         {/* 액션 버튼 */}
         <div className="pf__actions">
-          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 발행</button>
+          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 올리기</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
