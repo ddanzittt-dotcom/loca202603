@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Bell } from "lucide-react"
 import { BottomNav, Toast } from "./components/ui"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
@@ -31,6 +31,7 @@ import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, saveMap as saveMapRecord } from "./lib/mapService"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
+const WelcomeScreen = lazy(() => import("./screens/WelcomeScreen").then((m) => ({ default: m.WelcomeScreen })))
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
@@ -56,7 +57,9 @@ import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
 import { resolveEventAccess } from "./lib/eventAccess"
-import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
+import { findPlacementForMap, isEventMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
+import { isWelcomeSeen, isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated } from "./lib/onboarding"
+import { CoachMark } from "./components/CoachMark"
 import { mergeFeatureListWithLocalMedia } from "./lib/featureMediaMerge"
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
 const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
@@ -132,6 +135,9 @@ export default function App() {
   const [savingPostMapId, setSavingPostMapId] = useState(null)
   const [savingSharedMap, setSavingSharedMap] = useState(false)
   const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() => isWelcomeSeen())
+  const [coachmarkStep, setCoachmarkStep] = useState(0) // 0=off, 1~3=active step
+  const [firstPinHintVisible, setFirstPinHintVisible] = useState(false)
 
   const isOnline = useOnlineStatus()
   const toast = useToast()
@@ -170,6 +176,35 @@ export default function App() {
   useEffect(() => {
     cleanupOrphanedMedia([...features, ...communityMapFeatures])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // --- 온보딩: 편집기 코치마크 트리거 ---
+  useEffect(() => {
+    if (mapsView === "editor" && activeTab === "maps" && !isCoachmarkSeen()) {
+      setCoachmarkStep(1)
+    }
+  }, [mapsView, activeTab])
+
+  // 코치마크 3: FeatureDetailSheet 처음 열릴 때 (코치마크 진행 중이었으면)
+  useEffect(() => {
+    if (featureSheet && !isCoachmarkSeen() && coachmarkStep === 0) {
+      // 코치마크 2가 끝나고(step=0) 아직 seen 안 됐으면 step 3
+      setCoachmarkStep(3)
+    }
+  }, [featureSheet, coachmarkStep])
+
+  // --- 온보딩: 첫 핀 저장 축하 ---
+  const prevPinCountRef = useRef(features.filter((f) => f.type === "pin").length)
+  useEffect(() => {
+    const pinCount = features.filter((f) => f.type === "pin").length
+    if (pinCount > prevPinCountRef.current && !isFirstPinCelebrated()) {
+      markFirstPinCelebrated()
+      showToast("첫 장소를 기록했어요")
+      // 토스트 후 힌트 카드 표시
+      const timer = setTimeout(() => setFirstPinHintVisible(true), 2500)
+      return () => clearTimeout(timer)
+    }
+    prevPinCountRef.current = pinCount
+  }, [features, showToast])
 
   // --- Session / Auth ---
 
@@ -316,7 +351,7 @@ export default function App() {
   const profileUploadCandidates = useMemo(() => (
     maps.filter((mapItem) => {
       if (onProfileMapIds.has(mapItem.id)) return false
-      if (mapItem.category === "event") return Boolean(mapItem.isPublished)
+      if (isEventMap(mapItem)) return Boolean(mapItem.isPublished)
       return true
     })
   ), [maps, onProfileMapIds])
@@ -822,6 +857,16 @@ export default function App() {
 
   // --- Render ---
 
+  // 웰컴 화면: 공유 링크 아님 + 미인증 + 웰컴 안 봄
+  const showWelcome = !sharedMapData && hasSupabaseEnv && authReady && !authUser && !welcomeDismissed
+  if (showWelcome) {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <WelcomeScreen onStart={() => setWelcomeDismissed(true)} />
+      </Suspense>
+    )
+  }
+
   if (sharedMapData) {
     return (
       <Suspense fallback={<ScreenFallback />}>
@@ -902,8 +947,6 @@ export default function App() {
 
         {showPersonalGate ? (
           <AuthScreen
-            title="LOCA 계정 연결"
-            subtitle="내 지도와 프로필을 기기마다 불러오려면 먼저 로그인해 주세요."
             onSuccess={(mode) => showToast(mode === "signup" ? "회원가입이 완료됐어요." : "로그인했어요.")}
           />
         ) : null}
@@ -1040,6 +1083,32 @@ export default function App() {
               setSelectedFeatureSummaryId(null)
             }}
             showToast={showToast}
+            coachmarkStep={coachmarkStep}
+            onCoachmarkNext={(nextStep) => {
+              if (nextStep === 2) {
+                // 코치마크 1 → 핀 모드 자동 설정 + 코치마크 2
+                if (editorMode !== "pin") {
+                  setEditorMode("pin")
+                  setDraftPoints([])
+                  setFocusPoint(null)
+                  setSelectedFeatureId(null)
+                  setSelectedFeatureSummaryId(null)
+                }
+                setCoachmarkStep(2)
+              } else if (nextStep === 0) {
+                // 코치마크 2 확인 → dismiss, 사용자가 실제 탭할 때까지 대기
+                setCoachmarkStep(0)
+              }
+            }}
+            onCoachmarkSkip={() => {
+              markCoachmarkSeen()
+              setCoachmarkStep(0)
+            }}
+            firstPinHintVisible={firstPinHintVisible}
+            onDismissFirstPinHint={() => {
+              markFirstPinCelebrated()
+              setFirstPinHintVisible(false)
+            }}
           />
         ) : null}
 
@@ -1073,6 +1142,10 @@ export default function App() {
               }
             }}
             onNavigateToMaps={() => setActiveTab("maps")}
+            onResetCoachmark={() => {
+              resetCoachmark()
+              showToast("다음 편집기 진입 시 가이드가 다시 표시돼요")
+            }}
             characterStyle={characterStyle}
             onChangeCharacter={setCharacterStyle}
             hasB2BAccess={hasB2BAccess}
@@ -1111,6 +1184,23 @@ export default function App() {
         onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
         memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo}
       />
+      {coachmarkStep === 3 ? (
+        <CoachMark
+          step={3}
+          totalSteps={3}
+          title="이름과 메모를 적으면 기록이 완성돼요"
+          description="간단한 메모만 남겨도 괜찮아요. 사진이나 음성도 나중에 추가할 수 있어요."
+          nextLabel="이해했어요"
+          onNext={() => {
+            markCoachmarkSeen()
+            setCoachmarkStep(0)
+          }}
+          onSkip={() => {
+            markCoachmarkSeen()
+            setCoachmarkStep(0)
+          }}
+        />
+      ) : null}
       <PublishSheet
         publishSheet={publishSheet} setPublishSheet={setPublishSheet}
         candidates={profileUploadCandidates} features={features}

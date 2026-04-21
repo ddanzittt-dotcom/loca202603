@@ -3,6 +3,7 @@ import { createId } from "../lib/appUtils"
 import { logEvent } from "../lib/analytics"
 import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import { friendlySupabaseError } from "../lib/mapService"
+import { isEventMap } from "../lib/mapPlacement"
 import {
   createMap as createMapRecord,
   updateMap as updateMapRecord,
@@ -264,7 +265,7 @@ export function useMapCRUD({
     if (!effectiveMapId) return showToast("발행할 지도를 먼저 선택해 주세요.")
     const targetMap = maps.find((item) => item.id === effectiveMapId)
     // 행사지도 발행은 대시보드 전용 — 메인 앱 발행 흐름에서 차단
-    if (targetMap?.category === "event") {
+    if (isEventMap(targetMap)) {
       setPublishSheet(null)
       return null
     }
@@ -308,7 +309,7 @@ export function useMapCRUD({
       if (!targetMapId) return
       const targetMap = maps.find((item) => item.id === targetMapId)
       // 행사지도는 대시보드에서만 발행 중단한다.
-      if (targetMap?.category === "event") return
+      if (isEventMap(targetMap)) return
       if (cloudMode) {
         await unpublishMapRecord(targetMapId)
       }
