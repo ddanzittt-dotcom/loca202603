@@ -428,11 +428,6 @@ export function ProfileScreen({
         ) : null}
 
         {/* 프로필에 올린 지도 갤러리 */}
-        <div className="pf__gallery-head" style={{ padding: "2px 14px 6px" }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0 }}>
-            프로필에 올린 지도
-          </p>
-        </div>
         {shares.length > 0 ? (
           <div className="pf__gallery">
             {shares.map((share) => {
