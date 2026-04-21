@@ -11,6 +11,8 @@ import {
   publishMap as publishMapRecord,
   unpublishMap as unpublishMapRecord,
   linkMapLineage as linkMapLineageRecord,
+  addMapToProfile as addMapToProfileRecord,
+  removeMapFromProfile as removeMapFromProfileRecord,
 } from "../lib/mapService"
 import { recordMapAction } from "../lib/gamificationService"
 
@@ -42,6 +44,7 @@ export function useMapCRUD({
   setPublishSheet,
   setSelectedPostRef,
   refreshGameProfile,
+  communityMapId = "community-map",
 }) {
   const touchMap = useCallback((mapId) => {
     setMaps((current) =>
@@ -78,11 +81,11 @@ export function useMapCRUD({
   const openCommunityMapEditor = useCallback(() => {
     setActiveTab("maps")
     setActiveMapSource("community")
-    setActiveMapId("community-map")
+    setActiveMapId(communityMapId || "community-map")
     setMapsView("editor")
     resetEditorState()
     setFitTrigger((value) => value + 1)
-  }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
+  }, [communityMapId, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
 
   const saveMapSheet = useCallback(async () => {
     if (!mapSheet?.title.trim()) return showToast("지도 이름을 입력하세요.")
@@ -183,7 +186,7 @@ export function useMapCRUD({
     if (!bundle?.map) return
     const sourceMap = bundle.map
     const sourceFeatures = Array.isArray(bundle.features) ? bundle.features : []
-    const toastMessage = options.toastMessage || "발행 지도를 내 라이브러리에 저장했어요."
+    const toastMessage = options.toastMessage || "공유 지도를 내 라이브러리에 저장했어요."
 
     try {
         if (cloudMode) {
@@ -252,59 +255,145 @@ export function useMapCRUD({
 
   const importSharedMapToLocal = useCallback(async () => {
     if (!sharedMapData) return
-    await importMapBundleToLocal(sharedMapData, { toastMessage: "발행 지도를 내 라이브러리에 저장했어요." })
+    await importMapBundleToLocal(sharedMapData, { toastMessage: "공유 지도를 내 라이브러리에 저장했어요." })
   }, [importMapBundleToLocal, sharedMapData])
 
+  // 발행 = 공개 링크(/s/:slug) 를 가진 상태로 전환. 프로필 노출을 자동으로 하지 않는다.
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
     if (!effectiveMapId) return showToast("발행할 지도를 먼저 선택해 주세요.")
-    if (shares.some((share) => share.mapId === effectiveMapId && share.visibility === "public")) return showToast("이미 쇼케이스에 발행된 지도예요.")
+    const targetMap = maps.find((item) => item.id === effectiveMapId)
+    // 행사지도 발행은 대시보드 전용 — 메인 앱 발행 흐름에서 차단
+    if (targetMap?.category === "event") {
+      setPublishSheet(null)
+      return null
+    }
+    if (targetMap?.isPublished) return showToast("이미 발행된 지도예요.")
     const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
     if (mapFeatureCount === 0) return showToast("장소를 추가해야 발행할 수 있어요.")
-    const caption = publishSheet?.caption?.trim() || ""
 
     try {
       if (cloudMode) {
-        const mapItem = maps.find((item) => item.id === effectiveMapId)
-        const { map: publishedMap, publication } = await publishMapRecord(effectiveMapId, {
-          caption,
-          title: mapItem?.title,
+        const { map: publishedMap } = await publishMapRecord(effectiveMapId, {
+          title: targetMap?.title,
           visibility: "public",
         })
         setMaps((current) => current.map((item) => (item.id === effectiveMapId ? publishedMap : item)))
-        setShares((current) => [publication, ...current])
       } else {
-        setShares((current) => [
-          { id: createId("share"), mapId: effectiveMapId, caption, date: new Date().toISOString().slice(0, 10), likes: 0, saves: 0 },
-          ...current,
-        ])
+        const now = new Date().toISOString()
+        setMaps((current) => current.map((item) => (
+          item.id === effectiveMapId
+            ? { ...item, isPublished: true, publishedAt: now, updatedAt: now, slug: item.slug || `local-${effectiveMapId}` }
+            : item
+        )))
       }
       logEvent("map_publish", { map_id: effectiveMapId })
       if (cloudMode) recordMapAction({ actionType: "map_publish", eventKey: `publish:${effectiveMapId}`, mapId: effectiveMapId }).then(() => refreshGameProfile?.()).catch(() => {})
       setPublishSheet(null)
-      showToast("쇼케이스에 지도를 발행했어요.")
+      showToast("지도를 발행했어요.")
+      return effectiveMapId
     } catch (error) {
       console.error("Failed to publish map", error)
       showToast(friendlySupabaseError(error))
+      return null
     }
-  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, setShares, shares, showToast, refreshGameProfile])
+  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, showToast, refreshGameProfile])
 
-  const unpublish = useCallback(async (postId) => {
+  // 발행 중단 = is_published=false + publication row 삭제(프로필에서도 내려감).
+  // 인자: mapId 또는 postId(shares 항목의 id). 두 경로 모두 지원한다.
+  const unpublish = useCallback(async (idOrPostId) => {
     try {
+      const targetShare = shares.find((share) => share.id === idOrPostId)
+      const targetMapId = targetShare?.mapId || idOrPostId
+      if (!targetMapId) return
+      const targetMap = maps.find((item) => item.id === targetMapId)
+      // 행사지도는 대시보드에서만 발행 중단한다.
+      if (targetMap?.category === "event") return
       if (cloudMode) {
-        const targetShare = shares.find((share) => share.id === postId)
-        if (targetShare?.mapId) {
-          await unpublishMapRecord(targetShare.mapId)
-        }
+        await unpublishMapRecord(targetMapId)
       }
-      const targetShareForLog = shares.find((share) => share.id === postId)
-      logEvent("map_unpublish", { map_id: targetShareForLog?.mapId })
-      setShares((current) => current.filter((share) => share.id !== postId))
-      setSelectedPostRef((current) => (current?.source === "own" && current.id === postId ? null : current))
-      showToast("지도 발행을 중단했어요.")
+      logEvent("map_unpublish", { map_id: targetMapId })
+      setShares((current) => current.filter((share) => share.mapId !== targetMapId))
+      setMaps((current) => current.map((item) => (
+        item.id === targetMapId
+          ? { ...item, isPublished: false, publishedAt: null, slug: null, publication: null }
+          : item
+      )))
+      setSelectedPostRef((current) => {
+        if (!current) return current
+        if (current.source === "own" && (current.id === idOrPostId || current.id === targetMapId)) return null
+        return current
+      })
+      showToast("발행을 중단했어요. 프로필에서도 내려갔어요.")
     } catch (error) {
       console.error("Failed to unpublish map", error)
       showToast(friendlySupabaseError(error))
+    }
+  }, [cloudMode, maps, setMaps, setSelectedPostRef, setShares, shares, showToast])
+
+  // 프로필에 올리기 = publication row 생성 (발행된 지도 한정).
+  const addMapToProfile = useCallback(async (mapId) => {
+    if (!mapId) return false
+    const targetMap = maps.find((item) => item.id === mapId)
+    if (!targetMap) return false
+    if (!targetMap.isPublished) {
+      showToast("먼저 지도를 발행해 주세요.")
+      return false
+    }
+    if (shares.some((share) => share.mapId === mapId)) {
+      showToast("이미 프로필에 올라간 지도예요.")
+      return false
+    }
+    try {
+      if (cloudMode) {
+        const row = await addMapToProfileRecord(mapId, { caption: "" })
+        const publication = {
+          id: row.id,
+          mapId: row.map_id,
+          caption: row.caption || "",
+          date: (row.published_at || row.created_at || "").slice(0, 10),
+          likes: row.likes_count || 0,
+          saves: row.saves_count || 0,
+          publishedAt: row.published_at || row.created_at || null,
+        }
+        setShares((current) => [publication, ...current])
+      } else {
+        setShares((current) => [
+          { id: createId("share"), mapId, caption: "", date: new Date().toISOString().slice(0, 10), likes: 0, saves: 0 },
+          ...current,
+        ])
+      }
+      logEvent("map_add_to_profile", { map_id: mapId })
+      showToast("프로필에 올렸어요.")
+      return true
+    } catch (error) {
+      console.error("Failed to add map to profile", error)
+      showToast(friendlySupabaseError(error))
+      return false
+    }
+  }, [cloudMode, maps, setShares, shares, showToast])
+
+  const removeMapFromProfile = useCallback(async (mapId) => {
+    if (!mapId) return false
+    const shareRow = shares.find((share) => share.mapId === mapId)
+    if (!shareRow) return false
+    try {
+      if (cloudMode) {
+        await removeMapFromProfileRecord(mapId)
+      }
+      logEvent("map_remove_from_profile", { map_id: mapId })
+      setShares((current) => current.filter((share) => share.mapId !== mapId))
+      setSelectedPostRef((current) => {
+        if (!current) return current
+        if (current.source === "own" && current.id === shareRow.id) return null
+        return current
+      })
+      showToast("프로필에서 내렸어요.")
+      return true
+    } catch (error) {
+      console.error("Failed to remove map from profile", error)
+      showToast(friendlySupabaseError(error))
+      return false
     }
   }, [cloudMode, setSelectedPostRef, setShares, shares, showToast])
 
@@ -356,6 +445,8 @@ export function useMapCRUD({
     importSharedMapToLocal,
     publishMap,
     unpublish,
+    addMapToProfile,
+    removeMapFromProfile,
     openFeatureFromPlaces,
     handleTabChange,
   }

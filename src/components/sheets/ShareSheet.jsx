@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import QRCode from "qrcode"
 import { BottomSheet } from "../ui"
 import { logEvent } from "../../lib/analytics"
+import { getProfilePlacementState } from "../../lib/mapPlacement"
 
 const QR_PREVIEW_SIZE = 200
 const QR_DOWNLOAD_SIZE = 1024
@@ -210,9 +211,9 @@ export function ShareSheet({
       }
 
       await navigator.clipboard.writeText(cleanUrl)
-      showToast?.("링크를 복사했어요. 카카오톡에 붙여넣어 공유해 주세요.")
+      showToast?.("링크를 복사했어요. 카카오에 붙여넣어 공유해 주세요.")
     } catch {
-      prompt("카카오톡에 붙여넣으세요:", cleanUrl)
+      prompt("카카오에 붙여넣으세요:", cleanUrl)
     } finally {
       setKakaoSharing(false)
     }
@@ -241,11 +242,35 @@ export function ShareSheet({
     }
   }, [map?.id, map?.slug, map?.title, qrDownloading, qrUrl, showToast])
 
+  const placement = getProfilePlacementState(map || {}, null)
+  const statusLabel = placement.isPublished ? "발행됨" : "저장용"
+  const statusHint = placement.isPublished
+    ? "발행된 링크로 공유할 수 있어요"
+    : "발행하지 않아도 특정 사람과 공유할 수 있어요"
+
   return (
-    <BottomSheet open={open} title="발행 링크 공유" onClose={onClose}>
+    <BottomSheet open={open} title="공유 링크" onClose={onClose}>
       <div className="share-sheet">
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "8px 12px", marginBottom: 8,
+          background: "#FAF5EE", borderRadius: 10,
+        }}>
+          <span style={{
+            fontSize: 10, fontWeight: 500,
+            padding: "2px 8px", borderRadius: 8,
+            background: placement.isPublished ? "#E1F5EE" : "#FAEEDA",
+            color: placement.isPublished ? "#085041" : "#633806",
+          }}>{statusLabel}</span>
+          <p style={{ fontSize: 11, color: "#666", margin: 0, lineHeight: 1.4 }}>
+            {statusHint}
+          </p>
+        </div>
         <p className="share-sheet__hint">
           링크를 전달하면 상대가 지도를 바로 열고, 내 라이브러리로 저장할 수 있어요.
+        </p>
+        <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 12px", lineHeight: 1.4 }}>
+          보여주고 싶은 지도만 프로필에 올릴 수 있어요.
         </p>
 
         {qrUrl ? (
@@ -287,7 +312,7 @@ export function ShareSheet({
             disabled={!cleanUrl || kakaoSharing}
           >
             <span className="share-sheet__action-icon">💬</span>
-            <span className="share-sheet__action-label">{kakaoSharing ? "준비 중..." : "카카오톡"}</span>
+            <span className="share-sheet__action-label">{kakaoSharing ? "준비 중..." : "카카오"}</span>
           </button>
 
           <button

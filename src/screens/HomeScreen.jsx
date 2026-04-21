@@ -79,7 +79,6 @@ export function HomeScreen({
   const [events, setEvents] = useState([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [eventsNearby, setEventsNearby] = useState(false)
-  const [eventsRadiusKm, setEventsRadiusKm] = useState(null)
   const [eventsError, setEventsError] = useState("")
   const eventsRequestRef = useRef(0)
 
@@ -95,7 +94,6 @@ export function HomeScreen({
 
   const applyFetchResult = (data) => {
     setEvents(data.items?.length > 0 ? data.items : [])
-    setEventsRadiusKm(data.radiusKm || null)
     setEventsError("")
   }
 
@@ -127,7 +125,6 @@ export function HomeScreen({
       .catch((error) => {
         if (!cancelled && requestId === eventsRequestRef.current) {
           setEvents([])
-          setEventsRadiusKm(null)
           setEventsError(getApiErrorMessage(error, "이벤트를 불러오지 못했어요."))
         }
       })
@@ -150,7 +147,6 @@ export function HomeScreen({
         .catch((error) => {
           if (requestId === eventsRequestRef.current) {
             setEvents([])
-            setEventsRadiusKm(null)
             setEventsError(getApiErrorMessage(error, "근처 이벤트를 불러오지 못했어요."))
           }
         })
@@ -186,7 +182,6 @@ export function HomeScreen({
       .catch((error) => {
         if (requestId === eventsRequestRef.current) {
           setEvents([])
-          setEventsRadiusKm(null)
           setEventsError(getApiErrorMessage(error, "이벤트를 불러오지 못했어요."))
         }
       })
@@ -290,7 +285,7 @@ export function HomeScreen({
 
           {/* Row 3: 통계 5칸 */}
           <div className="hero-card__stats" onClick={(e) => e.stopPropagation()} role="presentation">
-            <HeroStatItem value={placeCount} label="장소" tip="핀, 경로, 구역 등 맵핑한 장소 수" index={0} activeTooltip={activeTooltip} onTap={handleStatTap} />
+            <HeroStatItem value={placeCount} label="장소" tip="핀, 경로, 영역 등 맵핑한 장소 수" index={0} activeTooltip={activeTooltip} onTap={handleStatTap} />
             <HeroStatItem value={mapCount} label="지도" tip="내가 만든 지도 개수" index={1} activeTooltip={activeTooltip} onTap={handleStatTap} />
             <HeroStatItem value={recordCount} label="기록" tip="사진, 메모, 음성 등 남긴 기록 수" index={2} activeTooltip={activeTooltip} onTap={handleStatTap} />
             <HeroStatItem value={followerCount} label="팔로워" tip="나를 팔로우하는 사람 수" index={3} activeTooltip={activeTooltip} onTap={handleStatTap} />
@@ -409,7 +404,7 @@ export function HomeScreen({
       {/* ─── 4. 내 근처 이벤트 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>{eventsNearby ? `내 근처 이벤트${eventsRadiusKm ? ` (${eventsRadiusKm}km)` : ""}` : "진행 중인 이벤트"}</h2>
+          <h2>{eventsNearby ? "내 근처 이벤트" : "진행 중인 이벤트"}</h2>
           <button className={`home-event-locate${eventsNearby ? " is-active" : ""}`} type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
             <Navigation size={12} /> {eventsNearby ? "내 근처" : "내 위치"}
           </button>
@@ -424,7 +419,7 @@ export function HomeScreen({
             </button>
           </div>
         ) : events.length === 0 ? (
-          <div className="home-section__empty">{eventsNearby ? "100km 이내 진행 중인 행사가 없어요" : "진행 중인 행사가 없어요"}</div>
+          <div className="home-section__empty">{eventsNearby ? "내 근처 진행 중인 행사가 없어요" : "진행 중인 행사가 없어요"}</div>
         ) : (
           <>
             <div className="home-event-list">
@@ -448,7 +443,7 @@ export function HomeScreen({
                         {formatEventDate(event.startDate)}~{formatEventDate(event.endDate)}
                       </span>
                     ) : null}
-                    {event.addr ? <span className="event-card__addr">{event.distKm != null ? `${event.distKm}km · ` : ""}{event.addr}</span> : null}
+                    {event.addr ? <span className="event-card__addr">{event.addr}</span> : null}
                   </div>
                 </article>
               ))}

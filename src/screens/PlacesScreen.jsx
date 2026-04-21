@@ -30,7 +30,7 @@ const TYPE_ICON = {
 const TYPE_LABEL = {
   pin: { text: "핀", className: "pl-badge--pin" },
   route: { text: "경로", className: "pl-badge--route" },
-  area: { text: "구역", className: "pl-badge--area" },
+  area: { text: "영역", className: "pl-badge--area" },
 }
 
 export function PlacesScreen({ maps, features, onOpenFeature }) {

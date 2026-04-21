@@ -16,16 +16,15 @@ function getTagColor(tag) {
   return { bg: "#FFF4EB", text: "#993C1D" }
 }
 
-export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSaveMap, saving = false, isFollowing, onToggleFollow, mapFeatures }) {
+export function PostDetailSheet({ post, onClose, onOpenMap, onRemoveFromProfile, onSaveMap, saving = false, isFollowing, onToggleFollow, mapFeatures }) {
   const isOwn = post?.source === "own"
   const pins = mapFeatures ? mapFeatures.filter((f) => f.type === "pin") : []
   const routes = mapFeatures ? mapFeatures.filter((f) => f.type === "route") : []
-  const isEvent = post?.category === "event"
 
   return (
     <BottomSheet
       open={Boolean(post)}
-      title={post?.title || "게시물"}
+      title={post?.title || "지도"}
       subtitle="지도 상세"
       onClose={onClose}
     >
@@ -51,9 +50,6 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSaveM
             <div className="pds__blob" style={{ right: -10, top: -8, width: 80, height: 55, background: "rgba(156,200,172,.4)" }} />
             <div className="pds__blob" style={{ left: "35%", top: "28%", width: 60, height: 40, background: "rgba(128,174,146,.25)" }} />
             <div className="pds__region-chip">서울 · 성동구</div>
-            <div className="pds__type-badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
-              {isEvent ? "Event" : "Editor"}
-            </div>
             <div className="pds__card-footer">
               <p className="pds__card-title">{post.title}</p>
               <div className="pds__card-counts">
@@ -112,8 +108,8 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onUnpublish, onSaveM
               지도 열기
             </button>
             {isOwn ? (
-              <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onUnpublish(post.id)}>
-                발행 중단
+              <button className="pds__btn pds__btn--secondary" type="button" onClick={() => onRemoveFromProfile?.(post.mapId)}>
+                프로필에서 내리기
               </button>
             ) : (
               <button className="pds__btn pds__btn--secondary" type="button" disabled={saving} onClick={() => onSaveMap?.(post)}>

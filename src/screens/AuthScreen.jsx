@@ -12,7 +12,7 @@ function friendlyError(message = "") {
   return message || "알 수 없는 오류가 발생했어요."
 }
 
-export function AuthScreen({ title = "로그인", subtitle = "내 지도를 계정에 저장하고 불러올 수 있어요.", onSuccess }) {
+export function AuthScreen({ title = "로그인", subtitle = "내 지도를 계정에 저장하고, 발행·공유한 지도를 이어서 관리할 수 있어요.", onSuccess }) {
   const [mode, setMode] = useState("login")
   const [nickname, setNickname] = useState("")
   const [email, setEmail] = useState("")

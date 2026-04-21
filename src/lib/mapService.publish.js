@@ -4,7 +4,6 @@ import {
   requireUser,
   createSlugCandidate,
   normalizeMap,
-  normalizePublication,
 } from "./mapService.utils"
 
 function parseRpcResult(data) {
@@ -28,7 +27,22 @@ function isMissingDbObject(error, objectName) {
   )
 }
 
-// ─── 발행 / 비공개 ───
+// ─── 발행 / 발행 중단 ───
+//
+// 발행(publish)은 공개 링크(/s/:slug) 를 가진 상태로 전환만 담당한다.
+// 프로필 노출(map_publications row) 은 별도 액션(addMapToProfile) 으로만 생성된다.
+// publishMap() 은 publication row 를 생성하지 않고, 레거시 RPC가 생성했더라도 즉시 삭제해 invariant를 지킨다.
+
+async function dropPublicationRowIfAny(supabase, mapId) {
+  try {
+    await supabase.from("map_publications").delete().eq("map_id", mapId)
+  } catch (error) {
+    // publication 테이블이 없거나 권한이 없어도 publish 성공 자체는 유지한다.
+    if (!isMissingDbObject(error, "map_publications")) {
+      console.warn("[publish] failed to clear publication row:", error)
+    }
+  }
+}
 
 export async function publishMap(mapId, options = {}) {
   await requireUser()
@@ -49,17 +63,19 @@ export async function publishMap(mapId, options = {}) {
       throw new Error(result?.error || "발행에 실패했습니다.")
     }
 
-    const [{ data: mapRow, error: mapError }, { data: publicationRow, error: publicationError }] = await Promise.all([
-      supabase.from("maps").select("*").eq("id", mapId).single(),
-      supabase.from("map_publications").select("*").eq("map_id", mapId).maybeSingle(),
-    ])
+    // 발행은 프로필 노출과 분리된다. 레거시 RPC 가 publication row 를 만들었을 수 있으므로 즉시 제거.
+    await dropPublicationRowIfAny(supabase, mapId)
 
+    const { data: mapRow, error: mapError } = await supabase
+      .from("maps")
+      .select("*")
+      .eq("id", mapId)
+      .single()
     if (mapError) throw mapError
-    if (publicationError) throw publicationError
 
     return {
-      map: normalizeMap(mapRow, normalizePublication(publicationRow)),
-      publication: normalizePublication(publicationRow),
+      map: normalizeMap(mapRow, null),
+      publication: null,
     }
   } catch (error) {
     if (!isMissingDbObject(error, "publish_map_revision")) throw error
@@ -83,25 +99,12 @@ export async function publishMap(mapId, options = {}) {
       .single()
     if (mapError) throw mapError
 
-    const { data: publicationRow, error: publicationError } = await supabase
-      .from("map_publications")
-      .upsert(
-        {
-          map_id: mapId,
-          caption: options.caption || "",
-          likes_count: options.likes || 0,
-          saves_count: options.saves || 0,
-          published_at: now,
-        },
-        { onConflict: "map_id" },
-      )
-      .select("*")
-      .single()
-    if (publicationError) throw publicationError
+    // 발행은 프로필 노출과 분리된다. 과거 row 가 있었다면 정리한다.
+    await dropPublicationRowIfAny(supabase, mapId)
 
     return {
-      map: normalizeMap(mapRow, normalizePublication(publicationRow)),
-      publication: normalizePublication(publicationRow),
+      map: normalizeMap(mapRow, null),
+      publication: null,
     }
   }
 }
@@ -120,6 +123,8 @@ export async function unpublishMap(mapId) {
     if (!result?.success) {
       throw new Error(result?.error || "발행 중단에 실패했습니다.")
     }
+    // 발행을 중단하면 프로필에서도 내려간다. RPC 여부와 무관하게 publication row 를 정리한다.
+    await dropPublicationRowIfAny(supabase, mapId)
     return
   } catch (error) {
     if (!isMissingDbObject(error, "unpublish_map_revision")) throw error
@@ -137,6 +142,8 @@ export async function unpublishMap(mapId) {
       .eq("id", mapId)
       .eq("user_id", user.id)
     if (mapError) throw mapError
+
+    await dropPublicationRowIfAny(supabase, mapId)
   }
 }
 

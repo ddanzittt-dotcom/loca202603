@@ -45,7 +45,7 @@ export const BADGES = [
   { id: "three_publishes", emoji: "📢", name: "공유왕",    desc: "지도 3개 발행",             category: "create", condition: (s) => s.publishes >= 3 },
 
   // 커뮤니티 계열
-  { id: "ten_memos",       emoji: "💬", name: "수다쟁이",  desc: "댓글 10개 작성",            category: "community", condition: (s) => s.memos >= 10 },
+  { id: "ten_memos",       emoji: "💬", name: "수다쟁이",  desc: "메모 10개 작성",            category: "community", condition: (s) => s.memos >= 10 },
   { id: "five_imports",    emoji: "📥", name: "수집가",    desc: "다른 지도 5개 가져오기",     category: "community", condition: (s) => s.imports >= 5 },
 
   // 연속 기록

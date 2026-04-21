@@ -19,22 +19,18 @@ function ProfileMiniCard({ map, features, onClick }) {
   const routes = features.filter((f) => f.type === "route")
   const areas = features.filter((f) => f.type === "area")
   const pal = MINI_PALETTES["서울"] // fallback
-  const isEvent = map.category === "event"
   const hash = (map.title || "").length % 3
 
   return (
     <button className="pf__mini-card" type="button" onClick={onClick} style={{ background: pal[3] }}>
       <div className="pf__mini-blob" style={{ left: -8, bottom: -8, width: 60, height: 42, background: `${pal[1]}66` }} />
       <div className="pf__mini-blob" style={{ right: -6 + hash * 3, top: -5, width: 50, height: 35, background: `${pal[3]}80` }} />
-      <span className="pf__mini-badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
-        {isEvent ? "Event" : "Editor"}
-      </span>
       <div className="pf__mini-bottom">
         <p className="pf__mini-title">{map.title}</p>
         <div className="pf__mini-meta">
           <span><MapPin size={7} fill="#fff" stroke="#fff" /> {pins.length}</span>
           {routes.length > 0 ? <span>{routes.length} 경로</span> : null}
-          {areas.length > 0 ? <span>{areas.length} 구역</span> : null}
+          {areas.length > 0 ? <span>{areas.length} 영역</span> : null}
         </div>
       </div>
     </button>
@@ -69,6 +65,15 @@ function saveAppSettings(settings) {
   localStorage.setItem("loca.appSettings", JSON.stringify(settings))
 }
 
+const CURATION_NOTICE_KEY = "loca.profile_curation_notice_seen"
+
+function readCurationNoticeSeen() {
+  try { return window.localStorage?.getItem(CURATION_NOTICE_KEY) === "true" } catch { return false }
+}
+function writeCurationNoticeSeen() {
+  try { window.localStorage?.setItem(CURATION_NOTICE_KEY, "true") } catch { /* noop */ }
+}
+
 export function ProfileScreen({
   user,
   shares,
@@ -84,6 +89,19 @@ export function ProfileScreen({
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
+  const showCurationNotice = !curationNoticeSeen
+  const handleDismissCurationNotice = () => {
+    writeCurationNoticeSeen()
+    setCurationNoticeSeen(true)
+  }
+  useEffect(() => {
+    // 프로필 탭에 첫 진입한 시점에 flag 를 기록한다.
+    // dismiss 버튼과 무관하게 1회 이상 본 사용자는 다시 노출하지 않는다.
+    if (!curationNoticeSeen) {
+      writeCurationNoticeSeen()
+    }
+  }, [curationNoticeSeen])
 
   // 프로필 편집 폼
   const [editName, setEditName] = useState("")
@@ -374,7 +392,47 @@ export function ProfileScreen({
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
-        {/* 지도 갤러리 */}
+        {/* 프로필 구성 변경 안내 (최초 1회) */}
+        {showCurationNotice ? (
+          <div
+            role="status"
+            style={{
+              margin: "8px 14px 12px",
+              padding: "12px 14px",
+              background: "#FFF4EB",
+              border: "0.5px solid rgba(0,0,0,.06)",
+              borderRadius: 12,
+              display: "flex", alignItems: "flex-start", gap: 10,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0, lineHeight: 1.4 }}>
+                프로필 구성이 바뀌었어요
+              </p>
+              <p style={{ fontSize: 11, color: "#666", margin: "4px 0 0", lineHeight: 1.4 }}>
+                보여주고 싶은 지도만 직접 올려보세요.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="안내 닫기"
+              onClick={handleDismissCurationNotice}
+              style={{
+                background: "transparent", border: "none", padding: 4,
+                fontSize: 14, fontWeight: 500, color: "#888", cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ) : null}
+
+        {/* 프로필에 올린 지도 갤러리 */}
+        <div className="pf__gallery-head" style={{ padding: "2px 14px 6px" }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0 }}>
+            프로필에 올린 지도
+          </p>
+        </div>
         {shares.length > 0 ? (
           <div className="pf__gallery">
             {shares.map((share) => {
@@ -387,8 +445,8 @@ export function ProfileScreen({
         ) : (
           <div className="pf__empty">
             <div className="pf__empty-icon"><MapIcon size={20} color="#FF6B35" /></div>
-            <p className="pf__empty-title">아직 만든 지도가 없어요</p>
-            <p className="pf__empty-desc">첫 지도를 만들고 쇼케이스에 발행해보세요</p>
+            <p className="pf__empty-title">아직 프로필에 올린 지도가 없어요</p>
+            <p className="pf__empty-desc">발행한 뒤, 보여주고 싶은 지도만 프로필에 올려보세요</p>
           </div>
         )}
       </div>
@@ -434,33 +492,17 @@ export function ProfileScreen({
             </label>
             {appSettings.notifications !== false && (
               <div className="settings-noti-detail">
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">이벤트 공지</span>
-                  <input type="checkbox" checked={appSettings.noti_announcement !== false} onChange={(e) => updateSetting("noti_announcement", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">내 맵핑 댓글</span>
-                  <input type="checkbox" checked={appSettings.noti_feature_comment !== false} onChange={(e) => updateSetting("noti_feature_comment", e.target.checked)} />
-                </label>
+                {/* 전역 설정은 사용자 실제 기능 중심으로 노출한다. */}
+                {/* 행사 참여용 토글(이벤트 공지, 체크인 리마인더, 완주 축하, 행사 임박, 내 댓글 고정)은 */}
+                {/* 세션 진입 시점에 표시하는 방향으로 이동하므로 전역 설정에서는 숨긴다. */}
+                {/* 저장된 localStorage 값(noti_announcement 등)은 그대로 보존된다. */}
                 <label className="settings-toggle-row">
                   <span className="settings-toggle-label">내 지도 공유</span>
                   <input type="checkbox" checked={appSettings.noti_map_viewed !== false} onChange={(e) => updateSetting("noti_map_viewed", e.target.checked)} />
                 </label>
                 <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">체크인 리마인더</span>
-                  <input type="checkbox" checked={appSettings.noti_checkin_reminder !== false} onChange={(e) => updateSetting("noti_checkin_reminder", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">완주 축하</span>
-                  <input type="checkbox" checked={appSettings.noti_completion !== false} onChange={(e) => updateSetting("noti_completion", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">내 댓글 고정</span>
-                  <input type="checkbox" checked={appSettings.noti_comment_pinned !== false} onChange={(e) => updateSetting("noti_comment_pinned", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">행사 임박</span>
-                  <input type="checkbox" checked={appSettings.noti_event_ending !== false} onChange={(e) => updateSetting("noti_event_ending", e.target.checked)} />
+                  <span className="settings-toggle-label">내 맵핑 댓글</span>
+                  <input type="checkbox" checked={appSettings.noti_feature_comment !== false} onChange={(e) => updateSetting("noti_feature_comment", e.target.checked)} />
                 </label>
               </div>
             )}

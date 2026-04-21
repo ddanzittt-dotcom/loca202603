@@ -27,9 +27,10 @@ import {
   placeEmojis,
   themePalette,
 } from "./lib/appUtils"
-import { hasSupabaseEnv } from "./lib/supabase"
-import { getPublishedMapBySlug } from "./lib/mapService"
-// 라우트별 코드 스플리팅 — 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
+import { hasSupabaseEnv, supabase } from "./lib/supabase"
+import { logEvent } from "./lib/analytics"
+import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, saveMap as saveMapRecord } from "./lib/mapService"
+// 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
@@ -53,6 +54,10 @@ import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
 import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
+import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
+import { resolveEventAccess } from "./lib/eventAccess"
+import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
+import { mergeFeatureListWithLocalMedia } from "./lib/featureMediaMerge"
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
 const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
@@ -62,7 +67,7 @@ function ScreenFallback() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#999" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🗺</div>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
         <span style={{ fontSize: 14 }}>로딩 중...</span>
       </div>
     </div>
@@ -85,6 +90,7 @@ export default function App() {
   const [communityPosts, setCommunityPosts] = useLocalStorageState("loca.mobile.communityPosts", communityPostsSeed)
   const [likedPosts, setLikedPosts] = useLocalStorageState("loca.mobile.likedPosts", [])
   const [communityMapFeatures, setCommunityMapFeatures] = useLocalStorageState("loca.mobile.communityMapFeatures", communityMapFeaturesSeed)
+  const [communityMapId, setCommunityMapId] = useState("community-map")
   const [viewerProfile, setViewerProfile] = useLocalStorageState("loca.mobile.viewerProfile", me)
 
   const routeAtLoad = useMemo(() => {
@@ -118,6 +124,9 @@ export default function App() {
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const [importSheetOpen, setImportSheetOpen] = useState(false)
+  // 프로필 올리기/내리기 공통 confirm 시트 상태
+  const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
+  const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
   const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
   const [publishSubmitting, setPublishSubmitting] = useState(false)
   const [savingPostMapId, setSavingPostMapId] = useState(null)
@@ -219,7 +228,14 @@ export default function App() {
     const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
     return Object.fromEntries(mergedUsers.map((user) => [user.id, user]))
   }, [viewerProfile])
-  const communityMapMeta = useMemo(() => [{ id: "community-map", title: "모두의 지도", description: "모두가 함께 만드는 지도", theme: "#4f46e5", updatedAt: new Date().toISOString() }], [])
+  const communityMapMeta = useMemo(() => [{
+    id: communityMapId,
+    title: "모두의 지도",
+    description: "모두가 함께 만드는 지도",
+    theme: "#4F46E5",
+    updatedAt: communityMapFeatures[0]?.updatedAt || new Date().toISOString(),
+    canEditFeatures: !(hasSupabaseEnv && (!authUser || communityMapId === "community-map")),
+  }], [authUser, communityMapFeatures, communityMapId])
   const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
   const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
   const activeMapPool = activeMapSource === "community"
@@ -272,7 +288,9 @@ export default function App() {
     return activeFeaturePool.find((feature) => feature.id === selectedFeatureSummaryId) || null
   }, [activeFeaturePool, selectedFeatureSummaryId])
 
-  const unpublishedMaps = maps.filter((mapItem) => !shares.some((share) => share.mapId === mapItem.id))
+  // 발행 후보 = non-event + 아직 발행되지 않은 지도.
+  // 행사지도 발행은 대시보드 전용이다.
+  const publishableMaps = maps.filter((mapItem) => mapItem.category !== "event" && !mapItem.isPublished)
   const shareUrl = useMemo(() => {
     if (!activeMap) return ""
     if (activeMap.slug) {
@@ -283,9 +301,9 @@ export default function App() {
 
   const featureEmojiChoices = featureSheet
     ? featureSheet.type === "route"
-      ? [...placeEmojis, "🛣️", "🚶", "🚗", "🚲", "🏃", "🛤️", "🧭", "🗺️"]
+      ? [...placeEmojis, "🚶", "🚲", "🛵", "🚗", "🚌", "🚇", "⛴️", "✈️"]
       : featureSheet.type === "area"
-        ? ["🟩", "📐", "🏞️", "🌳", "🏕️", "🏟️", "🌊", "🏔️", "🗾", "🌾"]
+        ? ["🏙️", "🌳", "🏞️", "🏝️", "🏕️", "🏟️", "🛍️", "🏛️", "🏠", "📌"]
         : placeEmojis
     : []
 
@@ -303,7 +321,8 @@ export default function App() {
     touchMap, resetEditorState,
     openMapEditor, openDemoMap, openCommunityMapEditor,
     saveMapSheet, deleteMap: deleteMapAction,
-    importSharedMapToLocal, importMapBundleToLocal, publishMap, unpublish,
+    importSharedMapToLocal, importMapBundleToLocal,
+    publishMap, unpublish, addMapToProfile, removeMapFromProfile,
     openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
     maps, setMaps, features, setFeatures, shares, setShares,
@@ -314,23 +333,23 @@ export default function App() {
     showToast, sharedMapData, setSharedMapData,
     publishSheet, setPublishSheet, setSelectedPostRef,
     refreshGameProfile,
+    communityMapId,
   })
 
   const handleImportMap = useCallback(async (slugCode) => {
     if (!hasSupabaseEnv) throw new Error("클라우드 연결이 필요해요.")
     const bundle = await getPublishedMapBySlug(slugCode)
     if (!bundle) throw new Error("해당 코드의 지도를 찾을 수 없어요.")
-    const { map: importedMap, features: importedFeatures } = bundle
+    const { map: importedMap } = bundle
     if (maps.some((m) => m.id === importedMap.id)) {
       showToast("이미 라이브러리에 있는 지도예요.")
       openMapEditor(importedMap.id)
       return
     }
-    setMaps((prev) => [importedMap, ...prev])
-    setFeatures((prev) => [...prev, ...importedFeatures])
-    showToast(`"${importedMap.title}" 지도를 라이브러리에 불러왔어요!`)
-    openMapEditor(importedMap.id)
-  }, [maps, setMaps, setFeatures, showToast, openMapEditor])
+    await importMapBundleToLocal(bundle, {
+      toastMessage: `"${importedMap.title}" 지도를 내 라이브러리에 저장했어요.`,
+    })
+  }, [importMapBundleToLocal, maps, openMapEditor, showToast])
 
   const {
     focusFeature, focusFeatureOnly, openFeatureDetail,
@@ -339,6 +358,8 @@ export default function App() {
     startRelocatePin,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
+    activeMapCategory: activeMap?.category || "personal",
+    activeMapRole: activeMap?.userRole || "owner",
     setFeatures, featureSheet, setFeatureSheet,
     selectedFeatureSummaryId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
@@ -346,6 +367,8 @@ export default function App() {
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
     maps, features, refreshGameProfile, myLocation, setFocusPoint,
+    currentUserId: viewerProfile.id,
+    currentUserName: viewerProfile.name,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
@@ -366,10 +389,16 @@ export default function App() {
     touchMap, showToast,
   })
 
+  const mapEditorReadOnly = activeMapSource === "demo"
+    || activeMapSource === "shared"
+    || (activeMapSource === "local" && activeMap?.canEditFeatures === false)
+    || (activeMapSource === "community" && hasSupabaseEnv && (!authUser || communityMapId === "community-map"))
+
+  const { shouldOpenEventViewer } = resolveEventAccess({ activeMap })
+
   const hasUnsavedEditorDraft = activeTab === "maps"
     && mapsView === "editor"
     && activeMapSource === "local"
-    && activeMap?.category !== "event"
     && (draftPoints.length > 0 || ["pin", "route", "area", "relocate"].includes(editorMode))
 
   const confirmDiscardEditorDraft = useCallback(() => {
@@ -416,6 +445,13 @@ export default function App() {
     }
     try {
       setSavingPostMapId(post.mapId)
+      // 저장 진입점(공유 뷰어/피드)을 동일 기준으로 집계한다.
+      logEvent("map_save", { map_id: post.mapId })
+      try {
+        await saveMapRecord(post.mapId, { source: "post_save" })
+      } catch {
+        // map_saves가 아직 없거나 RPC가 실패해도 실제 가져오기 흐름은 유지
+      }
       const { getMapBundle } = await import("./lib/mapService.read")
       const bundle = await getMapBundle(post.mapId)
       await importMapBundleToLocal(bundle, { toastMessage: "지도를 내 라이브러리에 저장했어요." })
@@ -432,11 +468,39 @@ export default function App() {
     if (publishSubmitting) return
     setPublishSubmitting(true)
     try {
-      await publishMap()
+      return await publishMap()
     } finally {
       setPublishSubmitting(false)
     }
   }, [publishMap, publishSubmitting])
+
+  // 프로필 올리기/내리기 공통 confirm 진입점.
+  // 호출부: MapsList / MapEditor / PublishSheet 성공 후속 / ProfileScreen 내부.
+  const requestProfilePlacement = useCallback((mode, mapId, onSuccess) => {
+    if (!mapId) return
+    setProfilePlacementSheet({ mode, mapId, onSuccess: onSuccess || null })
+  }, [])
+
+  const handleProfilePlacementCancel = useCallback(() => {
+    if (profilePlacementSubmitting) return
+    setProfilePlacementSheet(null)
+  }, [profilePlacementSubmitting])
+
+  const handleProfilePlacementConfirm = useCallback(async () => {
+    if (!profilePlacementSheet) return
+    setProfilePlacementSubmitting(true)
+    try {
+      const ok = profilePlacementSheet.mode === "remove"
+        ? await removeMapFromProfile(profilePlacementSheet.mapId)
+        : await addMapToProfile(profilePlacementSheet.mapId)
+      if (ok) {
+        profilePlacementSheet.onSuccess?.()
+        setProfilePlacementSheet(null)
+      }
+    } finally {
+      setProfilePlacementSubmitting(false)
+    }
+  }, [addMapToProfile, profilePlacementSheet, removeMapFromProfile])
 
   const handleSaveSharedMap = useCallback(async () => {
     if (savingSharedMap) return
@@ -448,16 +512,197 @@ export default function App() {
     }
   }, [importSharedMapToLocal, savingSharedMap])
 
+  // 배포 후 최초 1회: 레거시 "발행=자동 프로필 노출" 시절의 publication row 를 정리한다.
+  // cloudMode 가 true 가 되는 순간에 시도하고, 성공 시 localStorage flag 로 재실행을 막는다.
+  useEffect(() => {
+    if (!cloudMode) return
+    let cancelled = false
+    resetLegacyProfileCuration()
+      .then((result) => {
+        if (cancelled) return
+        if (result?.deleted) {
+          // 대시보드/로컬 상태와 동기화. 화면에 남아있는 shares 가 있을 수 있으므로 비운다.
+          setShares([])
+        }
+      })
+      .catch((error) => {
+        console.warn("[profile curation reset] failed (will retry next session):", error)
+      })
+    return () => { cancelled = true }
+  }, [cloudMode, setShares])
+
+  useEffect(() => {
+    if (!supabase || !cloudMode) return
+    if (activeTab !== "maps" || mapsView !== "editor") return
+    if (activeMapSource === "shared" || activeMapSource === "demo") return
+
+    const mapId = activeMapSource === "community" ? communityMapId : activeMapId
+    if (!mapId || mapId === "community-map") return
+
+    const featureIds = new Set(
+      activeFeaturePool
+        .filter((feature) => feature.mapId === mapId)
+        .map((feature) => feature.id),
+    )
+
+    let cancelled = false
+    let pendingTimer = null
+    let syncRunning = false
+
+    const syncMapBundle = async () => {
+      if (cancelled || syncRunning) return
+      syncRunning = true
+      try {
+        if (activeMapSource === "community") {
+          const bundle = await getCommunityMapBundle()
+          if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
+
+          setCommunityMapId(bundle.map.id)
+          setCommunityMapFeatures((current) => (
+            mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
+          ))
+          setActiveMapId((current) => (
+            current === "community-map" || current === mapId
+              ? bundle.map.id
+              : current
+          ))
+          return
+        }
+
+        const bundle = await getMapBundle(mapId)
+        if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
+
+        const nextFeatures = Array.isArray(bundle.features) ? bundle.features : []
+        setFeatures((current) => [
+          ...current.filter((feature) => feature.mapId !== mapId),
+          ...mergeFeatureListWithLocalMedia(
+            nextFeatures,
+            current.filter((feature) => feature.mapId === mapId),
+          ),
+        ])
+        setMaps((current) => current.map((mapItem) => (
+          mapItem.id === mapId ? { ...mapItem, ...bundle.map } : mapItem
+        )))
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to sync map changes in realtime", error)
+        }
+      } finally {
+        syncRunning = false
+      }
+    }
+
+    const scheduleSync = () => {
+      if (cancelled) return
+      if (pendingTimer) window.clearTimeout(pendingTimer)
+      pendingTimer = window.setTimeout(() => {
+        syncMapBundle()
+      }, 120)
+    }
+
+    const channel = supabase
+      .channel(`loca-map-sync:${mapId}:${activeMapSource}:${Date.now()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "map_features", filter: `map_id=eq.${mapId}` },
+        scheduleSync,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "feature_memos" },
+        (payload) => {
+          const featureId = payload?.new?.feature_id || payload?.old?.feature_id
+          if (featureId && featureIds.has(featureId)) {
+            scheduleSync()
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "feature_media" },
+        (payload) => {
+          const featureId = payload?.new?.feature_id || payload?.old?.feature_id
+          if (featureId && featureIds.has(featureId)) {
+            scheduleSync()
+          }
+        },
+      )
+
+    channel.subscribe((status) => {
+      if (status === "CHANNEL_ERROR") {
+        console.warn("Realtime channel error", { mapId, source: activeMapSource })
+      }
+    })
+
+    return () => {
+      cancelled = true
+      if (pendingTimer) window.clearTimeout(pendingTimer)
+      supabase.removeChannel(channel)
+    }
+  }, [
+    activeFeaturePool,
+    activeMapId,
+    activeMapSource,
+    activeTab,
+    cloudMode,
+    communityMapId,
+    mapsView,
+    setActiveMapId,
+    setCommunityMapId,
+    setCommunityMapFeatures,
+    setFeatures,
+    setMaps,
+  ])
+
   // --- Route effects ---
+
+  useEffect(() => {
+    if (!hasSupabaseEnv || !authReady) return
+    let cancelled = false
+
+    const hydrateCommunityMap = async () => {
+      try {
+        if (authUser) {
+          await ensureCommunityMap()
+        }
+        const bundle = await getCommunityMapBundle()
+        if (cancelled || !bundle?.map) return
+
+        setCommunityMapId(bundle.map.id)
+        setCommunityMapFeatures((current) => (
+          mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
+        ))
+        setActiveMapId((current) => (current === "community-map" ? bundle.map.id : current))
+
+        if (routeAtLoad?.type === "map" && (routeAtLoad.mapId === "community-map" || routeAtLoad.mapId === bundle.map.id)) {
+          setActiveTab("maps")
+          setMapsView("editor")
+          setActiveMapSource("community")
+          setActiveMapId(bundle.map.id)
+        }
+      } catch (error) {
+        console.error("Failed to hydrate community map", error)
+      }
+    }
+
+    hydrateCommunityMap()
+    return () => { cancelled = true }
+  }, [authReady, authUser, routeAtLoad, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView, setCommunityMapFeatures])
 
   useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
       showToast("공유 링크를 열지 못했어요.")
     }
-    if (routeAtLoad?.type === "map" && !initialStoredTarget && (!hasSupabaseEnv || authReady)) {
+    if (
+      routeAtLoad?.type === "map"
+      && !initialStoredTarget
+      && routeAtLoad.mapId !== "community-map"
+      && routeAtLoad.mapId !== communityMapId
+      && (!hasSupabaseEnv || (authReady && communityMapId !== "community-map"))
+    ) {
       showToast("이 기기에서 찾을 수 없는 지도예요.")
     }
-  }, [authReady, initialStoredTarget, routeAtLoad?.type, showToast])
+  }, [authReady, communityMapId, initialStoredTarget, routeAtLoad, showToast])
 
   // 슬러그 기반 공유 URL 로딩 (/s/:slug)
   useEffect(() => {
@@ -501,8 +746,9 @@ export default function App() {
         : buildMapSharePath(sharedMapData.map, sharedMapData.features)
       : null
 
-    const nextPath = activeTab === "maps" && mapsView === "editor" && activeMapId
-      ? sharedMapPath ?? buildMapRoutePath(activeMapId)
+    const routeMapId = activeMapSource === "community" ? "community-map" : activeMapId
+    const nextPath = activeTab === "maps" && mapsView === "editor" && routeMapId
+      ? sharedMapPath ?? buildMapRoutePath(routeMapId)
       : "/"
     const currentPath = `${window.location.pathname}${window.location.search}`
     if (currentPath !== nextPath) {
@@ -516,7 +762,7 @@ export default function App() {
     if (activeTab === "maps" && mapsView === "editor") {
       if (activeMapSource === "shared") {
         return {
-          subtitle: activeMap ? `${activeMap.title} · 발행 지도` : "발행 지도",
+          subtitle: activeMap ? `${activeMap.title} · 공유 지도` : "공유 지도",
           actionLabel: savingSharedMap ? "저장 중..." : "내 라이브러리에 저장",
           onAction: handleSaveSharedMap,
           actionDisabled: savingSharedMap,
@@ -564,7 +810,7 @@ export default function App() {
   return (
     <div className="app-shell">
       {!isOnline ? (
-        <div className="offline-banner">오프라인 모드 — 데이터가 자동 저장됩니다</div>
+        <div className="offline-banner">오프라인 모드 - 데이터가 자동 저장됩니다</div>
       ) : null}
       <header className="top-bar">
         <div>
@@ -605,7 +851,7 @@ export default function App() {
         onDismiss={notiDismissBanner}
       />
 
-      {/* 알림 풀스크린 */}
+      {/* 알림 패널 */}
       {notiPanelOpen && (
         <NotificationPanel
           notifications={notiList}
@@ -652,6 +898,7 @@ export default function App() {
           <MapsListScreen
             maps={maps}
             features={features}
+            shares={shares}
             loading={cloudLoading}
             onImport={() => setImportSheetOpen(true)}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
@@ -674,11 +921,22 @@ export default function App() {
               if (!window.confirm(`"${mapTitle}" 지도를 삭제할까요?`)) return
               deleteMapAction(mapId)
             }}
+            onShare={(mapId) => {
+              // MapsList 에서 공유 호출 시 해당 지도로 에디터를 열고, 에디터의 ShareSheet 를 사용한다.
+              openMapEditor(mapId)
+            }}
+            onPublish={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
+            onUnpublish={(mapId) => {
+              if (!window.confirm("발행을 중단할까요?\n발행을 중단하면 프로필에서도 내려가요.")) return
+              unpublish(mapId)
+            }}
+            onAddToProfile={(mapId) => requestProfilePlacement("add", mapId)}
+            onRemoveFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
           />
         ) : null}
 
-        {/* 행사 지도 → participant shell (SharedMapViewer) */}
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && activeMap.category === "event" ? (
+        {/* 행사 지도는 역할과 무관하게 항상 participant shell (SharedMapViewer) 로 렌더 */}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer ? (
           <SharedMapViewer
             map={activeMap}
             features={activeFeatures}
@@ -691,8 +949,8 @@ export default function App() {
           />
         ) : null}
 
-        {/* 일반 지도 → MapEditorScreen */}
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && activeMap.category !== "event" ? (
+        {/* 일반 지도 MapEditorScreen (non-event only) */}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && !shouldOpenEventViewer ? (
           <MapEditorScreen
             map={activeMap}
             features={activeFeatures}
@@ -703,7 +961,7 @@ export default function App() {
             focusPoint={focusPoint}
             fitTrigger={fitTrigger}
             myLocation={myLocation}
-            readOnly={activeMapSource === "demo" || activeMapSource === "shared"}
+            readOnly={mapEditorReadOnly}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
             shareUrl={shareUrl}
@@ -735,6 +993,14 @@ export default function App() {
             onOpenFeatureDetail={openFeatureDetail}
             onAddMemo={addMemo}
             onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
+            placementRow={findPlacementForMap(activeMap?.id, shares)}
+            onPublishMap={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
+            onUnpublishMap={(mapId) => {
+              if (!window.confirm("발행을 중단할까요?\n발행을 중단하면 프로필에서도 내려가요.")) return
+              unpublish(mapId)
+            }}
+            onAddMapToProfile={(mapId) => requestProfilePlacement("add", mapId)}
+            onRemoveMapFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
             onCloseFeatureSummary={() => {
               setSelectedFeatureId(null)
               setSelectedFeatureSummaryId(null)
@@ -757,7 +1023,7 @@ export default function App() {
             canImportLocalData={cloudMode && readLocalImportData().hasAny}
             onImportLocalData={importLocalDataToCloud}
             onSignOut={cloudMode ? handleSignOut : null}
-            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: unpublishedMaps[0]?.id ?? null })}
+            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: publishableMaps[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
             onUpdateProfile={handleUpdateProfile}
             characterStyle={characterStyle}
@@ -771,15 +1037,15 @@ export default function App() {
       </Suspense>
       </main>
 
-      {/* 행사 지도 참여 중이거나 키보드 입력 중에는 BottomNav 숨김 */}
-      {(activeTab === "maps" && mapsView === "editor" && activeMap?.category === "event") || keyboardVisible ? null : (
+      {/* 행사 지도 참여 중이거나 폼 입력 중에는 BottomNav 숨김 */}
+      {(activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer) || keyboardVisible ? null : (
       <BottomNav
         activeTab={activeTab}
         onChange={handleBottomNavChange}
       />
       )}
 
-      {/* ─── Sheets (각각 독립 렌더링) ─── */}
+      {/* Sheets */}
       <MapFormSheet
         mapSheet={mapSheet} setMapSheet={setMapSheet}
         onSave={saveMapSheet} onDelete={deleteMapAction}
@@ -788,9 +1054,11 @@ export default function App() {
       <FeatureDetailSheet
         featureSheet={featureSheet} setFeatureSheet={setFeatureSheet}
         activeMapSource={activeMapSource} featureEmojiChoices={featureEmojiChoices}
+        readOnly={mapEditorReadOnly}
+        currentUserId={viewerProfile.id}
         onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
         onSave={saveFeatureSheet} onDelete={deleteFeature}
-        onRelocatePin={activeMapSource === "local" ? startRelocatePin : undefined}
+        onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
         photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}
         onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
         onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
@@ -798,8 +1066,15 @@ export default function App() {
       />
       <PublishSheet
         publishSheet={publishSheet} setPublishSheet={setPublishSheet}
-        unpublishedMaps={unpublishedMaps} features={features}
-        onPublish={handlePublishSubmit} publishing={publishSubmitting} onClose={() => setPublishSheet(null)}
+        publishableMaps={publishableMaps} features={features}
+        onPublish={handlePublishSubmit}
+        onOfferAddToProfile={(mapId) => {
+          // 발행 성공 후 공통 confirm 시트로 전환.
+          setPublishSheet(null)
+          requestProfilePlacement("add", mapId)
+        }}
+        publishing={publishSubmitting}
+        onClose={() => setPublishSheet(null)}
       />
       <UserProfileSheet
         user={selectedUser} userPosts={selectedUserPosts}
@@ -811,7 +1086,11 @@ export default function App() {
         post={selectedPost}
         onClose={() => setSelectedPostRef(null)}
         onOpenMap={(mapId) => { setSelectedPostRef(null); openMapEditor(mapId) }}
-        onUnpublish={unpublish} onSaveMap={handleSavePostMap}
+        onRemoveFromProfile={(mapId) => {
+          setSelectedPostRef(null)
+          requestProfilePlacement("remove", mapId)
+        }}
+        onSaveMap={handleSavePostMap}
         saving={savingPostMapId === selectedPost?.mapId}
         isFollowing={selectedPost?.user ? followed.includes(selectedPost.user.id) : false}
         onToggleFollow={toggleFollow}
@@ -830,6 +1109,14 @@ export default function App() {
         pendingSharePlace={pendingSharePlace} maps={maps} features={features}
         onSaveToMap={saveSharePlaceToMap} onClose={() => setPendingSharePlace(null)}
       />
+      <ProfilePlacementConfirmSheet
+        open={Boolean(profilePlacementSheet)}
+        mode={profilePlacementSheet?.mode}
+        mapTitle={maps.find((item) => item.id === profilePlacementSheet?.mapId)?.title || ""}
+        submitting={profilePlacementSubmitting}
+        onConfirm={handleProfilePlacementConfirm}
+        onCancel={handleProfilePlacementCancel}
+      />
       {importSheetOpen ? (
         <Suspense fallback={null}>
           <ImportMapSheet
@@ -843,3 +1130,4 @@ export default function App() {
     </div>
   )
 }
+

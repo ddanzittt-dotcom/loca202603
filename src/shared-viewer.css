@@ -76,7 +76,7 @@
   font-size: 10px;
   color: rgba(250,245,238,.35);
   font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -209,7 +209,7 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
   color: #1A3C5E;
   flex-shrink: 0;
   overflow: hidden;
@@ -304,6 +304,38 @@
   flex-shrink: 0;
 }
 
+.lw-chip--control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lw-chip--control svg {
+  flex-shrink: 0;
+}
+
+.lw-chip--name {
+  border-color: rgba(255,107,53,.4);
+  color: #FF6B35;
+}
+
+.lw-chip--name.is-active {
+  background: #FF6B35;
+  border-color: #FF6B35;
+  color: #fff;
+}
+
+.lw-chip--locate {
+  border-color: rgba(45,74,62,.3);
+  color: #2D4A3E;
+  font-weight: 500;
+}
+
+.lw-chip--locate:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .lw-chip.is-active {
   background: #2D4A3E;
   color: #E1F5EE;
@@ -336,9 +368,59 @@
 
 .lw-chips__progress-label {
   font-size: 7px;
-  font-weight: 600;
+  font-weight: 500;
   color: #FF6B35;
   white-space: nowrap;
+}
+
+.lw-locate-hint {
+  margin: 5px 8px 0;
+  background: #FFF7F1;
+  border: 0.5px solid rgba(255,107,53,.22);
+  border-radius: 8px;
+  padding: 7px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.lw-locate-hint__msg {
+  flex: 1;
+  min-width: 0;
+  font-size: 8px;
+  font-weight: 500;
+  color: #7A3A24;
+  line-height: 1.35;
+}
+
+.lw-locate-hint__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lw-locate-hint__btn {
+  border: none;
+  border-radius: 12px;
+  background: #FF6B35;
+  color: #fff;
+  font-size: 7px;
+  font-weight: 500;
+  padding: 4px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lw-locate-hint__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.lw-locate-hint__btn--ghost {
+  background: rgba(45,74,62,.12);
+  color: #2D4A3E;
 }
 
 /* Announcement banner */
@@ -374,7 +456,7 @@
 }
 
 .lw-announce__text strong {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .lw-announce__close {
@@ -420,7 +502,7 @@
   font-size: 8px;
   color: rgba(255,255,255,.4);
   font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
+  font-weight: 500;
   margin-left: 2px;
 }
 
@@ -771,7 +853,7 @@
   border-bottom: 2px solid transparent;
   background: none;
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 500;
   color: #aaa;
   cursor: pointer;
   text-align: center;
@@ -837,7 +919,7 @@
 }
 .lw-walk-info__text strong {
   color: #2D4A3E;
-  font-weight: 600;
+  font-weight: 500;
 }
 .lw-walk-info__nav-btn {
   flex-shrink: 0;
@@ -845,7 +927,7 @@
   background: #2D4A3E;
   color: #fff;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   border: none;
   border-radius: 8px;
   text-decoration: none;
@@ -861,7 +943,7 @@
   background: #2D4A3E;
   color: #fff;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 500;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -873,7 +955,7 @@
 
 .lw-walk-badge {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   color: #2D4A3E;
   background: rgba(45,74,62,.08);
   padding: 3px 8px;
@@ -897,7 +979,7 @@
 .lw-checkin-btn {
   padding: 4px 10px;
   font-size: 8px;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
   background: #FF6B35;
   border: none;
@@ -939,7 +1021,7 @@
 .lw-comment-input button {
   padding: 6px 10px;
   font-size: 8px;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
   background: #FF6B35;
   border: none;
@@ -1011,7 +1093,7 @@
   background: rgba(255, 107, 53, 0.14);
   color: #9f3b1d;
   font-size: 7px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .lw-comment__meta strong {
@@ -1073,7 +1155,7 @@
   border: none;
   border-radius: 5px;
   font-size: 8px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1121,7 +1203,7 @@
 .lw-report h4 {
   margin: 0 0 4px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .lw-report p {
@@ -1160,7 +1242,7 @@
   background: none;
   font-size: 10px;
   color: #aaa;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   text-align: center;
 }
@@ -1190,7 +1272,7 @@
 
 .lw-survey h3 {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   margin: 0 0 14px;
   text-align: center;
 }
@@ -1341,6 +1423,12 @@
 .lw-locate-btn:active { background: #f5f5f5; }
 .lw-locate-btn:disabled { opacity: 0.5; cursor: default; }
 
+.lw-locate-btn--event {
+  z-index: 560;
+  right: 10px;
+  bottom: max(72px, calc(env(safe-area-inset-bottom, 0px) + 56px));
+}
+
 .lw-noti-dot {
   position: absolute;
   top: -1px;
@@ -1370,7 +1458,7 @@
   text-align: center;
   padding: 6px 0;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1384,7 +1472,7 @@
   border: none;
   border-radius: 14px;
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1410,7 +1498,7 @@
 
 .lw-sheet__next-title {
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 500;
   color: #1A1A1A;
   display: block;
   overflow: hidden;
@@ -1531,7 +1619,7 @@
 }
 .noti-dropdown__title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 500;
   color: #1A1A1A;
 }
 .noti-dropdown__read-all {
@@ -1644,7 +1732,7 @@
 
 .lw-save-btn__text {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .lw-back-btn,
@@ -1662,7 +1750,7 @@
 
 .lw-chips__count {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .lw-chip {

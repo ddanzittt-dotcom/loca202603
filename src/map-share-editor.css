@@ -33,7 +33,7 @@
 
 .share-editor__heading {
   font-size: 0.95rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .share-editor__export {
@@ -44,7 +44,7 @@
   background: #4f46e5;
   color: #fff;
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -92,7 +92,7 @@
 
 .share-editor__label {
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #667085;
 }
 
@@ -110,7 +110,7 @@
   border: none;
   border-radius: 10px;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
   transition: transform 0.12s, box-shadow 0.12s;
 }
@@ -135,7 +135,7 @@
   background: none;
   color: #4f46e5;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
   padding: 0;
 }

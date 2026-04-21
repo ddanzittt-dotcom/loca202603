@@ -107,9 +107,9 @@ button {
 input,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 0.5px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--bg);
   padding: 12px 14px;
   color: var(--text);
   font-size: var(--text-body);
@@ -148,7 +148,7 @@ textarea {
 .brand {
   display: block;
   font-size: 1.2rem;
-  font-weight: 900;
+  font-weight: 500;
   color: var(--secondary, #2D4A3E);
   letter-spacing: 0.02em;
 }
@@ -219,7 +219,7 @@ textarea {
 .section-head__title {
   margin: 0;
   font-size: var(--text-display);
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: -0.02em;
 }
 .section-head__subtitle {
@@ -322,7 +322,7 @@ textarea {
   display: block;
   margin-top: 6px;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 .search-box {
   display: flex;
@@ -382,7 +382,7 @@ textarea {
 .map-card__header h2 {
   margin: 0;
   font-size: var(--text-title);
-  font-weight: 700;
+  font-weight: 500;
 }
 .feed-section__head span,
 .settings-card p,
@@ -512,7 +512,7 @@ textarea {
   background: #ffffffeb;
   box-shadow: var(--shadow);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .pill--theme {
   background: var(--pill-theme);
@@ -556,7 +556,7 @@ textarea {
 }
 .draft-bar span {
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 .draft-bar__actions {
   display: flex;
@@ -597,7 +597,7 @@ textarea {
   border: 1px solid var(--line);
   white-space: nowrap;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 500;
 }
 .chip--active {
   background: var(--primary-light);
@@ -671,7 +671,7 @@ textarea {
 .place-row__type {
   color: var(--muted);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 .settings-card {
   padding: 18px;
@@ -692,7 +692,7 @@ textarea {
   border-radius: 999px;
   background: var(--surface-soft);
   color: var(--primary);
-  font-weight: 800;
+  font-weight: 500;
 }
 .settings-card--muted {
   background: var(--surface-muted);
@@ -771,7 +771,7 @@ textarea {
 .field > span,
 .toggle-row > span {
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .theme-row,
 .emoji-grid {
@@ -846,16 +846,15 @@ textarea {
   position: relative;
 }
 .bottom-nav__item.is-active {
-  color: var(--primary, #FF6B35);
+  color: #2D4A3E;
 }
 .bottom-nav__item.is-active::after {
   content: "";
-  position: absolute;
-  bottom: 2px;
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--primary, #FF6B35);
+  background: #FF6B35;
+  margin-top: 3px;
 }
 .bottom-nav__icon {
   font-size: 1.25rem;
@@ -865,8 +864,17 @@ textarea {
   justify-content: center;
   height: 20px;
 }
+/* 핸드북 §13.9: BottomNav 는 아이콘만 표시한다. 라벨 텍스트는 스크린리더에만 보이도록 sr-only 처리. */
 .bottom-nav__label {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .toast {
   position: fixed;
@@ -878,7 +886,7 @@ textarea {
   border-radius: 999px;
   background: #111827eb;
   color: #fff;
-  font-weight: 700;
+  font-weight: 500;
   box-shadow: var(--shadow);
 }
 .avatar {
@@ -927,7 +935,7 @@ textarea {
   background: #dbeafe;
   color: #2563eb;
   font-size: 0.72rem;
-  font-weight: 900;
+  font-weight: 500;
 }
 .map-preview {
   position: relative;
@@ -1010,7 +1018,7 @@ textarea {
   border-radius: 999px;
   background: #ffffff2e;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 .collection-card {
   width: 220px;
@@ -1163,7 +1171,7 @@ textarea {
   align-items: center;
   gap: 6px;
   color: var(--text);
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
 }
 .feed-card__caption {

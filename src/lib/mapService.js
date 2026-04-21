@@ -19,9 +19,11 @@ export {
   getMyMaps,
   getMyAppData,
   getMapBundle,
+  getCommunityMapBundle,
   getPublishedMapBySlug,
   getPublishedMaps,
   getFeatureMemos,
+  getFeatureOperatorNote,
   getProfile,
   getProfileBySlug,
   getFollowingIds,
@@ -33,17 +35,20 @@ export {
   checkCollaboratorAccess,
   checkAdminRole,
   searchProfiles,
+  listFeatureChangeRequests,
 } from "./mapService.read"
 
 // write
 export {
   createMap,
+  ensureCommunityMap,
   updateMap,
   deleteMap,
   createFeature,
   updateFeature,
   deleteFeature,
   addFeatureMemo,
+  saveFeatureOperatorNote,
   createMediaRecord,
   deleteMediaRecord,
   uploadAvatar,
@@ -54,8 +59,20 @@ export {
   getCollaborators,
   addCollaborator,
   removeCollaborator,
+  createFeatureChangeRequest,
+  resolveFeatureChangeRequest,
   linkMapLineage,
 } from "./mapService.write"
+
+// profile placement (프로필 노출 — 발행과 분리된 별도 액션)
+export {
+  getProfilePlacementState,
+  findPlacementForMap,
+  addMapToProfile,
+  removeMapFromProfile,
+  resetLegacyProfileCuration,
+  PROFILE_CURATION_RESET_FLAG,
+} from "./mapPlacement"
 
 // publish / announcements / B2B / gamification / survey
 export {

@@ -82,8 +82,8 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
     <section className="screen screen--scroll">
       {/* 타이틀 */}
       <div className="sr-header">
-        <h1 className="sr-header__title">찾기</h1>
-        <p className="sr-header__sub">취향이 맞는 에디터를 찾아 지도를 구독해보세요</p>
+        <h1 className="sr-header__title">검색</h1>
+        <p className="sr-header__sub">취향이 맞는 에디터를 검색해 지도를 구독해보세요</p>
       </div>
 
       {/* 검색바 */}

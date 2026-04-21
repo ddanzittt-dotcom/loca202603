@@ -1,21 +1,43 @@
-﻿import { useEffect, useState, useRef, useCallback } from "react"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MapPin } from "lucide-react"
-import { getPinIcon, emojiToCategory } from "../data/pinIcons"
+import { useEffect, useState, useRef, useCallback } from "react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
+import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
+import { getProfilePlacementState } from "../lib/mapPlacement"
 
 const formatFeatureMeta = (feature) => {
   if (!feature) return ""
   if (feature.type === "route") return `경로 · ${feature.points.length}개 지점`
-  if (feature.type === "area") return `범위 · ${feature.points.length}개 꼭짓점`
+  if (feature.type === "area") return `영역 · ${feature.points.length}개 꼭짓점`
   return "장소"
 }
 
 const summarizeFeatureNote = (feature, length = 46) => {
   if (!feature?.note) return "등록된 메모가 아직 없습니다."
   return feature.note.length > length ? `${feature.note.slice(0, length)}...` : feature.note
+}
+
+const getFeatureBadgeMeta = (feature) => {
+  if (!feature) return { kind: "none" }
+  if (feature.type !== "pin") return { kind: feature.type }
+  const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
+  if (explicitCategory) {
+    const iconData = getPinIcon(explicitCategory)
+    return { kind: "icon", catId: iconData.id, bg: iconData.bg }
+  }
+  const emoji = typeof feature.emoji === "string" ? feature.emoji.trim() : ""
+  if (isMappedPinEmoji(emoji)) {
+    const catId = emojiToCategory(emoji)
+    const iconData = getPinIcon(catId)
+    return { kind: "icon", catId, bg: iconData.bg }
+  }
+  const isEmojiValue = emoji && emoji.length <= 4 && !emoji.includes("/")
+  if (isEmojiValue) return { kind: "emoji", emoji }
+  const catId = feature.category || emojiToCategory(feature.emoji)
+  const iconData = getPinIcon(catId)
+  return { kind: "icon", catId, bg: iconData.bg }
 }
 
 export function MapEditorScreen({
@@ -52,7 +74,13 @@ export function MapEditorScreen({
   onStripFeatureTap,
   showToast,
   shareUrl = "",
+  placementRow = null,
+  onPublishMap,
+  onUnpublishMap,
+  onAddMapToProfile,
+  onRemoveMapFromProfile,
 }) {
+  const placement = getProfilePlacementState(map, placementRow)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -63,6 +91,16 @@ export function MapEditorScreen({
   const [stripOpen, setStripOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
+  const [mapMenuOpen, setMapMenuOpen] = useState(false)
+  const mapMenuRef = useRef(null)
+  useEffect(() => {
+    if (!mapMenuOpen) return
+    const onPointerDown = (e) => {
+      if (mapMenuRef.current && !mapMenuRef.current.contains(e.target)) setMapMenuOpen(false)
+    }
+    document.addEventListener("pointerdown", onPointerDown)
+    return () => document.removeEventListener("pointerdown", onPointerDown)
+  }, [mapMenuOpen])
   const naverMapRef = useRef(null)
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
@@ -236,9 +274,61 @@ export function MapEditorScreen({
               </>
             ) : null}
             {!communityMode ? (
-              <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유">
-                <Link2 size={16} color="#2D4A3E" />
-              </button>
+              <>
+                <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유">
+                  <Link2 size={16} color="#2D4A3E" />
+                </button>
+                {(placement.canPublish || placement.canUnpublish || placement.canAddToProfile || placement.canRemoveFromProfile) ? (
+                  <div style={{ position: "relative" }} ref={mapMenuRef}>
+                    <button
+                      className="me-bar__share"
+                      type="button"
+                      aria-label="더보기"
+                      onClick={() => setMapMenuOpen((prev) => !prev)}
+                    >
+                      <MoreHorizontal size={16} color="#2D4A3E" />
+                    </button>
+                    {mapMenuOpen ? (
+                      <div
+                        role="menu"
+                        style={{
+                          position: "absolute",
+                          right: 0, top: "calc(100% + 6px)",
+                          background: "#fff",
+                          border: "0.5px solid rgba(0,0,0,.06)",
+                          borderRadius: 12,
+                          padding: 6,
+                          minWidth: 170,
+                          boxShadow: "0 10px 24px rgba(0,0,0,.15)",
+                          display: "flex", flexDirection: "column", gap: 2,
+                          zIndex: 10,
+                        }}
+                      >
+                        {placement.canPublish && onPublishMap ? (
+                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onPublishMap(map.id) }}>
+                            발행하기
+                          </MapMenuItem>
+                        ) : null}
+                        {placement.canAddToProfile && onAddMapToProfile ? (
+                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onAddMapToProfile(map.id) }}>
+                            프로필에 올리기
+                          </MapMenuItem>
+                        ) : null}
+                        {placement.canRemoveFromProfile && onRemoveMapFromProfile ? (
+                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onRemoveMapFromProfile(map.id) }}>
+                            프로필에서 내리기
+                          </MapMenuItem>
+                        ) : null}
+                        {placement.canUnpublish && onUnpublishMap ? (
+                          <MapMenuItem variant="danger" onClick={() => { setMapMenuOpen(false); onUnpublishMap(map.id) }}>
+                            발행 중단
+                          </MapMenuItem>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         </div>
@@ -340,7 +430,7 @@ export function MapEditorScreen({
             </button>
           ) : null}
           {!readOnly ? (
-            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="범위 추가">
+            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="영역 추가">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
             </button>
           ) : null}
@@ -367,7 +457,7 @@ export function MapEditorScreen({
               되돌리기
             </button>
             <button className="button button--primary" type="button" onClick={editorMode === "area" ? onCompleteArea : onCompleteRoute}>
-              {editorMode === "area" ? "범위 저장" : "경로 저장"}
+              {editorMode === "area" ? "영역 저장" : "경로 저장"}
             </button>
           </div>
         ) : null}
@@ -381,34 +471,49 @@ export function MapEditorScreen({
               <div>
                 <strong className="me-summary-title">
                   {(() => {
-                    const catId = selectedFeatureSummary.category || emojiToCategory(selectedFeatureSummary.emoji)
-                    const iconData = getPinIcon(catId)
-                    return <span className="me-summary-icon" style={{ background: iconData.bg }}><img src={`/icons/pins/${catId}.svg`} width="14" height="14" alt="" /></span>
+                    const badge = getFeatureBadgeMeta(selectedFeatureSummary)
+                    if (badge.kind === "emoji") {
+                      return <span className="me-summary-icon me-summary-icon--emoji">{badge.emoji}</span>
+                    }
+                    if (badge.kind === "icon") {
+                      return <span className="me-summary-icon" style={{ background: badge.bg }}><img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" /></span>
+                    }
+                    if (badge.kind === "route") {
+                      return <span className="me-summary-icon me-summary-icon--type me-summary-icon--route"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg></span>
+                    }
+                    if (badge.kind === "area") {
+                      return <span className="me-summary-icon me-summary-icon--type me-summary-icon--area"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></span>
+                    }
+                    return <span className="me-summary-icon me-summary-icon--emoji">{"\u{1F4CD}"}</span>
                   })()}
                   {selectedFeatureSummary.title}
                 </strong>
                 <span>{formatFeatureMeta(selectedFeatureSummary)}</span>
               </div>
-              {selectedFeatureSummary.type === "pin" ? (
-                <>
-                  {walkInfo ? (
-                    <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
-                  ) : null}
+              <div className="map-feature-summary__head-actions">
+                {selectedFeatureSummary.type === "pin" ? (
                   <button
                     type="button"
-                    className="lw-route-btn"
+                    className="lw-route-btn map-feature-summary__route-btn"
+                    title="도보 경로 보기"
+                    aria-label="도보 경로 보기"
                     disabled={walkLoading || !myLocation}
                     onClick={handleWalkNavigate}
                   >
-                    {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
+                    <span className="map-feature-summary__route-icon" aria-hidden="true">{walkLoading ? "…" : "👟"}</span>
                   </button>
-                </>
-              ) : null}
-              <button className="icon-button map-feature-summary__close" type="button" onClick={onCloseFeatureSummary} aria-label="요약 닫기">
-                <X size={16} />
-              </button>
+                ) : null}
+                <button className="icon-button map-feature-summary__close" type="button" onClick={onCloseFeatureSummary} aria-label="요약 닫기">
+                  <X size={16} />
+                </button>
+              </div>
             </div>
             <p>{summarizeFeatureNote(selectedFeatureSummary)}</p>
+            {selectedFeatureSummary.type === "pin" && walkInfo ? (
+              <span className="lw-walk-badge map-feature-summary__walk-badge">
+                도보 {Math.max(1, Math.round(walkInfo.duration / 60000))}분
+              </span>
+            ) : null}
             {selectedFeatureSummary.tags?.length ? (
               <div className="map-feature-summary__tags">
                 {selectedFeatureSummary.tags.slice(0, 3).map((tag) => (
@@ -420,34 +525,36 @@ export function MapEditorScreen({
             ) : null}
             {communityMode ? (
               <div className="map-feature-summary__note-form">
-                <div className="map-feature-summary__note-row">
-                  <input
-                    className="map-feature-summary__note-input"
-                    type="text"
-                    placeholder="메모 추가..."
-                    value={userNoteText}
-                    onChange={(e) => setUserNoteText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && userNoteText.trim()) {
-                        onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
-                        setUserNoteText("")
-                      }
-                    }}
-                  />
-                  <button
-                    className="button button--primary map-feature-summary__note-btn"
-                    type="button"
-                    disabled={!userNoteText.trim()}
-                    onClick={() => {
-                      if (userNoteText.trim()) {
-                        onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
-                        setUserNoteText("")
-                      }
-                    }}
-                  >
-                    추가
-                  </button>
-                </div>
+                {!readOnly ? (
+                  <div className="map-feature-summary__note-row">
+                    <input
+                      className="map-feature-summary__note-input"
+                      type="text"
+                      placeholder={"\uBA54\uBAA8 \uCD94\uAC00..."}
+                      value={userNoteText}
+                      onChange={(e) => setUserNoteText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && userNoteText.trim()) {
+                          onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
+                          setUserNoteText("")
+                        }
+                      }}
+                    />
+                    <button
+                      className="button button--primary map-feature-summary__note-btn"
+                      type="button"
+                      disabled={!userNoteText.trim()}
+                      onClick={() => {
+                        if (userNoteText.trim()) {
+                          onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
+                          setUserNoteText("")
+                        }
+                      }}
+                    >
+                      {"\uCD94\uAC00"}
+                    </button>
+                  </div>
+                ) : null}
                 {recentMemos.length ? (
                   <ul className="map-feature-summary__notes-list">
                     {recentMemos.map((memo) => (
@@ -460,14 +567,19 @@ export function MapEditorScreen({
                 ) : null}
               </div>
             ) : (
-              <button className="button button--primary map-feature-summary__action" type="button" onClick={() => onOpenFeatureDetail(selectedFeatureSummary.id)}>
-                상세 보기
-              </button>
+              <div className="map-feature-summary__actions">
+                <button className="button button--primary map-feature-summary__action" type="button" onClick={() => onOpenFeatureDetail(selectedFeatureSummary.id)}>
+                  {"\uC0C1\uC138 \uBCF4\uAE30"}
+                </button>
+              </div>
             )}
           </article>
         ) : null}
 
-        <div className={`map-filter-bar map-filter-bar--upper${communityMode ? " map-filter-bar--community" : ""}`} aria-label="지도 필터">
+        <div
+          className={`map-filter-bar map-filter-bar--upper${communityMode ? " map-filter-bar--community" : ""}${stripOpen && features.length > 0 ? " map-filter-bar--raised" : ""}`}
+          aria-label="지도 필터"
+        >
           <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
             필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "◀" : "▶"}</span>
           </button>
@@ -476,7 +588,7 @@ export function MapEditorScreen({
               <button className={`map-filter-chip${activeFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("all")}>전체</button>
               <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>핀</button>
               <button className={`map-filter-chip${activeFilter === "route" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("route")}>경로</button>
-              <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>범위</button>
+              <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>영역</button>
             </>
           ) : null}
         </div>
@@ -530,9 +642,18 @@ export function MapEditorScreen({
                     onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                   >
                     <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
-                      {feature.type === "pin" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg> :
-                       feature.type === "route" ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg> :
-                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>}
+                      {(() => {
+                        if (feature.type === "pin") {
+                          const badge = getFeatureBadgeMeta(feature)
+                          if (badge.kind === "emoji") return <span className="me-strip-icon__emoji">{badge.emoji}</span>
+                          if (badge.kind === "icon") return <img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" />
+                          return <span className="me-strip-icon__emoji">{"\u{1F4CD}"}</span>
+                        }
+                        if (feature.type === "route") {
+                          return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                        }
+                        return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+                      })()}
                     </div>
                     <div className="me-strip-info">
                       <strong>{feature.title}</strong>
@@ -571,5 +692,24 @@ export function MapEditorScreen({
         showToast={showToast}
       />
     </section>
+  )
+}
+
+function MapMenuItem({ onClick, variant = "default", children }) {
+  const color = variant === "danger" ? "#E24B4A" : "#1A1A1A"
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        background: "transparent", border: "none",
+        padding: "8px 10px", borderRadius: 8,
+        fontSize: 12, fontWeight: 500, color,
+        textAlign: "left", width: "100%", cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
   )
 }

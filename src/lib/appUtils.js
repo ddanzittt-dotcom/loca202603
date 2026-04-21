@@ -164,7 +164,7 @@ export function createMapSharePayload(map, features) {
     exportedAt: new Date().toISOString(),
     map: {
       id: map.id,
-      title: map.title || "발행 지도",
+      title: map.title || "공유 지도",
       description: map.description || "",
       theme: map.theme || themePalette[0],
       updatedAt: map.updatedAt || new Date().toISOString(),
@@ -214,7 +214,7 @@ export function parseMapSharePayload(encodedPayload) {
   const mapId = payload.map.id || createId("shared")
   const normalizedMap = {
     id: mapId,
-    title: payload.map.title || "발행 지도",
+    title: payload.map.title || "공유 지도",
     description: payload.map.description || "",
     theme: payload.map.theme || themePalette[0],
     updatedAt: payload.map.updatedAt || payload.exportedAt || new Date().toISOString(),
@@ -443,7 +443,7 @@ export function buildOwnPosts(shares, maps, features, me) {
         user: me,
         title: map.title,
         description: map.description,
-        caption: share.caption || map.description || "내 지도를 프로필에 올렸어요.",
+        caption: share.caption || map.description || "프로필에 올린 지도예요.",
         date: share.date,
         likes: share.likes,
         saves: share.saves,

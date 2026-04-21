@@ -1,8 +1,8 @@
-import { useRef, useState } from "react"
+﻿import { useRef, useState } from "react"
 import { ImagePlus, X as XIcon, Mic } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
-import { PIN_ICON_GROUPS, emojiToCategory } from "../../data/pinIcons"
+import { PIN_ICON_GROUPS, emojiToCategory, categoryToEmoji } from "../../data/pinIcons"
 
 function TagInput({ tags, onChange }) {
   const [inputVal, setInputVal] = useState("")
@@ -86,6 +86,8 @@ export function FeatureDetailSheet({
   featureSheet,
   setFeatureSheet,
   activeMapSource,
+  readOnly = false,
+  currentUserId = "me",
   onClose,
   onSave,
   onDelete,
@@ -103,13 +105,11 @@ export function FeatureDetailSheet({
   onAddMemo,
 }) {
   const isCommunity = activeMapSource === "community"
-  const canEdit = activeMapSource === "local" || (isCommunity && featureSheet?.createdBy === "me")
+  const canEdit = !readOnly && (activeMapSource === "local" || (isCommunity && featureSheet?.createdBy === currentUserId))
   const featureMemos = featureSheet?.memos || []
 
-  // 2탭: 정보 / 기록
   const [detailTab, setDetailTab] = useState("info")
 
-  // 커뮤니티 댓글 사진
   const commentPhotoRef = useRef(null)
   const [commentPhotos, setCommentPhotos] = useState([])
 
@@ -134,26 +134,42 @@ export function FeatureDetailSheet({
   }
 
   const handleSubmitComment = () => {
+    if (readOnly) return
     if (!memoText.trim() && commentPhotos.length === 0) return
     onAddMemo(featureSheet.id, memoText, commentPhotos.map((p) => p.file))
-    setCommentPhotos((prev) => { prev.forEach((p) => URL.revokeObjectURL(p.preview)); return [] })
+    setCommentPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.preview))
+      return []
+    })
   }
 
-  const sheetTitle = isCommunity ? "장소" : featureSheet?.type === "route" ? "경로 상세" : featureSheet?.type === "area" ? "범위 상세" : "장소 상세"
+  const sheetTitle = isCommunity
+    ? "장소"
+    : featureSheet?.type === "route"
+      ? "경로 상세"
+      : featureSheet?.type === "area"
+        ? "영역 상세"
+        : "장소 상세"
 
   return (
     <BottomSheet open={Boolean(featureSheet)} title={sheetTitle} onClose={onClose}>
       {featureSheet ? (
         <div className="fd">
-          {/* ─── 커뮤니티 모드 ─── */}
           {isCommunity ? (
             <>
-              {featureSheet.createdByName ? <span className="fd__author">작성자: {featureSheet.createdByName}</span> : null}
+              {featureSheet.createdByName ? <span className="fd__author">작성자 · {featureSheet.createdByName}</span> : null}
               {canEdit ? (
                 <>
                   <label className="fd__field"><span className="fd__label">이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} /></label>
                   <label className="fd__field"><span className="fd__label">아이콘</span>
-                    <IconSelector selected={featureSheet.category || featureSheet.emoji} onSelect={(iconId) => setFeatureSheet((c) => ({ ...c, category: iconId }))} />
+                    <IconSelector
+                      selected={featureSheet.category || featureSheet.emoji}
+                      onSelect={(iconId) => setFeatureSheet((c) => ({
+                        ...c,
+                        category: iconId,
+                        emoji: c?.type === "pin" ? categoryToEmoji(iconId) : c?.emoji,
+                      }))}
+                    />
                   </label>
                   <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
                 </>
@@ -164,24 +180,26 @@ export function FeatureDetailSheet({
                   {featureSheet.note ? <p>{featureSheet.note}</p> : null}
                 </div>
               )}
-              {/* 커뮤니티 댓글 */}
+
               <div className="fd__comments">
-                <span className="fd__sec-label">댓글 ({featureMemos.length})</span>
-                <div className="fd__comment-box">
-                  <textarea className="fd__comment-input" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="댓글을 남겨보세요..." />
-                  {commentPhotos.length > 0 ? (
-                    <div className="fd__comment-photos">{commentPhotos.map((p) => (
-                      <div key={p.id} className="fd__comment-thumb"><img src={p.preview} alt="" /><button type="button" className="fd__comment-thumb-x" onClick={() => removeCommentPhoto(p.id)}><XIcon size={10} /></button></div>
-                    ))}</div>
-                  ) : null}
-                  <div className="fd__comment-bar">
-                    <button type="button" className="fd__photo-btn" onClick={() => commentPhotoRef.current?.click()} disabled={commentPhotos.length >= 3}><ImagePlus size={16} /></button>
-                    <input ref={commentPhotoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleCommentPhotoSelect} />
-                    <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={handleSubmitComment} disabled={!memoText.trim() && commentPhotos.length === 0}>등록</button>
+                <span className="fd__sec-label">메모 ({featureMemos.length})</span>
+                {!readOnly ? (
+                  <div className="fd__comment-box">
+                    <textarea className="fd__comment-input" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="메모를 남겨보세요..." />
+                    {commentPhotos.length > 0 ? (
+                      <div className="fd__comment-photos">{commentPhotos.map((p) => (
+                        <div key={p.id} className="fd__comment-thumb"><img src={p.preview} alt="" /><button type="button" className="fd__comment-thumb-x" onClick={() => removeCommentPhoto(p.id)}><XIcon size={10} /></button></div>
+                      ))}</div>
+                    ) : null}
+                    <div className="fd__comment-bar">
+                      <button type="button" className="fd__photo-btn" onClick={() => commentPhotoRef.current?.click()} disabled={commentPhotos.length >= 3}><ImagePlus size={16} /></button>
+                      <input ref={commentPhotoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleCommentPhotoSelect} />
+                      <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={handleSubmitComment} disabled={!memoText.trim() && commentPhotos.length === 0}>등록</button>
+                    </div>
                   </div>
-                </div>
+                ) : null}
                 <div className="fd__memo-list">
-                  {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 댓글이 없어요</p> : [...featureMemos].reverse().map((m) => (
+                  {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 메모가 없어요.</p> : [...featureMemos].reverse().map((m) => (
                     <div className="fd__memo-item" key={m.id}>
                       {m.userName ? <strong className="fd__memo-user">{m.userName}</strong> : null}
                       <p className="fd__memo-text">{m.text}</p>
@@ -193,7 +211,6 @@ export function FeatureDetailSheet({
               </div>
             </>
           ) : (
-            /* ─── 일반 지도: 2탭 구조 ─── */
             <>
               <div className="fd__tabs">
                 <button className={`fd__tab${detailTab === "info" ? " is-active" : ""}`} type="button" onClick={() => setDetailTab("info")}>정보</button>
@@ -204,7 +221,7 @@ export function FeatureDetailSheet({
                 <div className="fd__info-tab">
                   {canEdit ? (
                     <>
-                      <label className="fd__field"><span className="fd__label">이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} placeholder="장소 이름을 입력하세요" /></label>
+                      <label className="fd__field"><span className="fd__label">이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} placeholder="장소 이름을 입력하세요." /></label>
 
                       {featureSheet.type === "pin" ? (
                         <div className="fd__field">
@@ -233,7 +250,14 @@ export function FeatureDetailSheet({
                       </div>
 
                       <div className="fd__field"><span className="fd__label">아이콘</span>
-                        <IconSelector selected={featureSheet.category || featureSheet.emoji} onSelect={(iconId) => setFeatureSheet((c) => ({ ...c, category: iconId }))} />
+                        <IconSelector
+                          selected={featureSheet.category || featureSheet.emoji}
+                          onSelect={(iconId) => setFeatureSheet((c) => ({
+                            ...c,
+                            category: iconId,
+                            emoji: c?.type === "pin" ? categoryToEmoji(iconId) : c?.emoji,
+                          }))}
+                        />
                       </div>
 
                       <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
@@ -249,7 +273,6 @@ export function FeatureDetailSheet({
                 </div>
               ) : (
                 <div className="fd__records-tab">
-                  {/* 사진 */}
                   <div className="fd__rec-section">
                     <span className="fd__sec-label">사진 ({(featureSheet.photos || []).length})</span>
                     <div className="fd__photo-row">
@@ -265,7 +288,6 @@ export function FeatureDetailSheet({
                     </div>
                   </div>
 
-                  {/* 음성 */}
                   <div className="fd__rec-section">
                     <span className="fd__sec-label">음성 메모 ({(featureSheet.voices || []).length})</span>
                     {canEdit ? (
@@ -278,15 +300,16 @@ export function FeatureDetailSheet({
                     ))}
                   </div>
 
-                  {/* 메모 */}
                   <div className="fd__rec-section">
                     <span className="fd__sec-label">메모 ({featureMemos.length})</span>
-                    <div className="fd__memo-input-box">
-                      <textarea className="fd__memo-textarea" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="메모를 남겨보세요..." />
-                      <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={() => onAddMemo(featureSheet.id, memoText)} disabled={!memoText.trim()}>저장</button>
-                    </div>
+                    {canEdit ? (
+                      <div className="fd__memo-input-box">
+                        <textarea className="fd__memo-textarea" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="메모를 남겨보세요..." />
+                        <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={() => onAddMemo(featureSheet.id, memoText)} disabled={!memoText.trim()}>저장</button>
+                      </div>
+                    ) : null}
                     <div className="fd__memo-list">
-                      {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 메모가 없어요</p> : [...featureMemos].reverse().map((m) => (
+                      {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 메모가 없어요.</p> : [...featureMemos].reverse().map((m) => (
                         <div className="fd__memo-item" key={m.id}>
                           <p className="fd__memo-text">{m.text}</p>
                           <span className="fd__memo-date">{new Date(m.date).toLocaleDateString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
@@ -303,3 +326,8 @@ export function FeatureDetailSheet({
     </BottomSheet>
   )
 }
+
+
+
+
+

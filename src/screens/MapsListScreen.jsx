@@ -1,8 +1,24 @@
 import { useMemo, useState } from "react"
 import { Plus, Download, Search as SearchIcon } from "lucide-react"
 import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
+import { findPlacementForMap } from "../lib/mapPlacement"
 
-export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onOpen, onDelete, loading = false }) {
+export function MapsListScreen({
+  maps,
+  features,
+  shares = [],
+  onCreate,
+  onImport,
+  onEdit,
+  onOpen,
+  onDelete,
+  onShare,
+  onPublish,
+  onUnpublish,
+  onAddToProfile,
+  onRemoveFromProfile,
+  loading = false,
+}) {
   const [query, setQuery] = useState("")
 
   const filtered = useMemo(() => {
@@ -22,7 +38,7 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
         </div>
         <div className="section-head__actions">
           <button className="button button--ghost" type="button" onClick={onImport}>
-            <Download size={15} /> 발행 불러오기
+            <Download size={15} /> 공유 지도 불러오기
           </button>
           <button className="button button--primary" type="button" onClick={onCreate}>
             <Plus size={15} /> 새 지도
@@ -49,7 +65,7 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
           <EmptyState
             icon="🗺"
             title="첫 번째 지도를 만들어보세요"
-            description="나만의 장소를 기록하고 필요하면 발행할 수 있어요."
+            description="나만의 장소를 기록하고, 필요하면 발행해 링크로 공유할 수 있어요."
             action="새 지도 만들기"
             onAction={onCreate}
           />
@@ -65,9 +81,15 @@ export function MapsListScreen({ maps, features, onCreate, onImport, onEdit, onO
               key={map.id}
               map={map}
               features={features.filter((feature) => feature.mapId === map.id)}
+              placementRow={findPlacementForMap(map.id, shares)}
               onOpen={onOpen}
               onEdit={onEdit}
               onDelete={onDelete}
+              onShare={onShare}
+              onPublish={onPublish}
+              onUnpublish={onUnpublish}
+              onAddToProfile={onAddToProfile}
+              onRemoveFromProfile={onRemoveFromProfile}
             />
           ))
         )}

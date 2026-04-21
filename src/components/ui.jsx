@@ -1,5 +1,7 @@
+import { useState, useEffect, useRef } from "react"
 import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
-import { Home, Map, MapPin, Search, User, X, AlertTriangle, RefreshCw, Pencil, Trash2 } from "lucide-react"
+import { Home, Map, MapPin, Search, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import { getProfilePlacementState } from "../lib/mapPlacement"
 
 export function BottomSheet({ open, title, subtitle, onClose, children }) {
   if (!open) return null
@@ -24,6 +26,7 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
 }
 
 const NAV_ICONS = { home: Home, maps: Map, places: MapPin, search: Search, profile: User }
+const NAV_LABELS = { home: "홈", maps: "지도", places: "장소", search: "검색", profile: "프로필" }
 
 export function BottomNav({ activeTab, onChange }) {
   const items = ["home", "maps", "places", "search", "profile"]
@@ -32,12 +35,20 @@ export function BottomNav({ activeTab, onChange }) {
     <nav className="bottom-nav">
       {items.map((id) => {
         const Icon = NAV_ICONS[id]
+        const label = NAV_LABELS[id] || id
         const isActive = activeTab === id
         return (
-          <button key={id} className={`bottom-nav__item${isActive ? " is-active" : ""}`} type="button" onClick={() => onChange(id)}>
+          <button
+            key={id}
+            className={`bottom-nav__item${isActive ? " is-active" : ""}`}
+            type="button"
+            onClick={() => onChange(id)}
+            aria-label={label}
+          >
             <span className="bottom-nav__icon">
               <Icon size={20} strokeWidth={isActive ? 2.4 : 1.5} fill={isActive ? "currentColor" : "none"} />
             </span>
+            <span className="bottom-nav__label">{label}</span>
           </button>
         )
       })}
@@ -142,23 +153,61 @@ function formatRelativeDate(dateStr) {
   return `${Math.floor(diff / 30)}달 전`
 }
 
-export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
+export function MapCard({
+  map,
+  features,
+  placementRow = null,
+  onOpen,
+  onEdit,
+  onDelete,
+  onShare,
+  onPublish,
+  onUnpublish,
+  onAddToProfile,
+  onRemoveFromProfile,
+}) {
   const pins = features.filter((f) => f.type === "pin")
   const routes = features.filter((f) => f.type === "route")
   const areas = features.filter((f) => f.type === "area")
   const region = getRegionInfo(pins)
   const pal = region.palette // [dark, mid, light, pale]
 
-  const isEvent = map.category === "event"
-  const isPublished = Boolean(map.isPublished || map.visibility === "public" || map.visibility === "unlisted")
+  const placement = getProfilePlacementState(map, placementRow)
   const lastMod = formatRelativeDate(map.updatedAt)
+  const canManage = map.canManage !== false
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    document.addEventListener("pointerdown", handleClickOutside)
+    return () => document.removeEventListener("pointerdown", handleClickOutside)
+  }, [menuOpen])
+
+  // overflow 메뉴에 노출할 액션 후보를 placement 기준으로 계산.
+  const hasOverflowActions = Boolean(
+    onShare
+    || (placement.canPublish && onPublish)
+    || (placement.canUnpublish && onUnpublish)
+    || (placement.canAddToProfile && onAddToProfile)
+    || (placement.canRemoveFromProfile && onRemoveFromProfile)
+    || onEdit
+    || onDelete,
+  )
 
   // blob 위치에 약간의 변주
   const hash = (map.title || "").length % 4
   const blobOffsets = [hash * 5, (hash + 1) * 4, (hash + 2) * 3]
 
   return (
-    <article className="mc" onClick={() => onOpen(map.id)} style={{ background: pal[3] }}>
+    <article
+      className="mc"
+      onClick={() => onOpen(map.id)}
+      style={{ background: pal[3], overflow: menuOpen ? "visible" : "hidden" }}
+    >
       {/* Blobs */}
       <div className="mc__blob" style={{ left: -15 + blobOffsets[0], bottom: -15, width: 160, height: 100, background: `${pal[0]}73` }} />
       <div className="mc__blob" style={{ right: -10 + blobOffsets[1], top: -10, width: 130, height: 85, background: `${pal[3]}80` }} />
@@ -170,13 +219,10 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
         <span className="mc__region-label">{region.name}</span>
       </div>
 
-      {/* 우상단: 타입 뱃지 */}
+      {/* 우상단: 단일 상태 뱃지 (저장용 / 발행됨) */}
       <div className="mc__badges">
-        <span className="mc__badge" style={{ background: isEvent ? "#FF6B35" : "#2D4A3E", color: isEvent ? "#fff" : "#E1F5EE" }}>
-          {isEvent ? "Event" : "Editor"}
-        </span>
-        <span className={`mc__badge ${isPublished ? "mc__badge--published" : "mc__badge--draft"}`}>
-          {isPublished ? "발행됨" : "저장용"}
+        <span className={`mc__badge ${placement.isPublished ? "mc__badge--published" : "mc__badge--draft"}`}>
+          {placement.isPublished ? "발행됨" : "저장용"}
         </span>
       </div>
 
@@ -188,15 +234,110 @@ export function MapCard({ map, features, onOpen, onEdit, onDelete }) {
           <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1,8 4,3 7,6 9,2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> {routes.length}</span>
           <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1" width="8" height="8" rx="2" stroke="#fff" strokeWidth="1" strokeDasharray="2 1.5"/></svg> {areas.length}</span>
           <span className="mc__meta-sep">· {lastMod}</span>
+          {placement.isOnProfile ? (
+            <span
+              className="mc__meta-placement"
+              aria-label="프로필에 올린 지도"
+              style={{
+                fontSize: 9, fontWeight: 500,
+                padding: "1px 6px", borderRadius: 8,
+                background: "rgba(255,255,255,.2)", color: "#fff",
+              }}
+            >
+              프로필에 올림
+            </span>
+          ) : null}
         </div>
       </div>
 
-      {/* 편집/삭제 (카드 외부에서 접근) */}
-      <div className="mc__actions">
-        <button type="button" onClick={(e) => { e.stopPropagation(); onEdit(map.id) }}><Pencil size={12} color="#fff" /></button>
-        {onDelete ? <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(map.id, map.title) }}><Trash2 size={12} color="#fff" /></button> : null}
-      </div>
+      {/* 우하단 overflow menu: 편집/삭제 + 공유/발행/프로필 액션 */}
+      {canManage && hasOverflowActions ? (
+        <div className="mc__actions" ref={menuRef}>
+          <button
+            type="button"
+            aria-label="더보기"
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev) }}
+          >
+            <MoreHorizontal size={14} color="#fff" />
+          </button>
+          {menuOpen ? (
+            <div
+              className="mc__menu"
+              role="menu"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: "absolute",
+                right: 0, bottom: "calc(100% + 6px)",
+                background: "#fff",
+                borderRadius: 12,
+                padding: 6,
+                minWidth: 160,
+                boxShadow: "0 10px 24px rgba(0,0,0,.15)",
+                border: "0.5px solid rgba(0,0,0,.06)",
+                display: "flex", flexDirection: "column", gap: 2,
+                zIndex: 3,
+              }}
+            >
+              {onShare ? (
+                <MenuItem onClick={() => { setMenuOpen(false); onShare(map.id) }}>
+                  {placement.isPublished ? "링크 공유" : "공유하기"}
+                </MenuItem>
+              ) : null}
+              {placement.canPublish && onPublish ? (
+                <MenuItem onClick={() => { setMenuOpen(false); onPublish(map.id) }}>
+                  발행하기
+                </MenuItem>
+              ) : null}
+              {placement.canAddToProfile && onAddToProfile ? (
+                <MenuItem onClick={() => { setMenuOpen(false); onAddToProfile(map.id) }}>
+                  프로필에 올리기
+                </MenuItem>
+              ) : null}
+              {placement.canRemoveFromProfile && onRemoveFromProfile ? (
+                <MenuItem onClick={() => { setMenuOpen(false); onRemoveFromProfile(map.id) }}>
+                  프로필에서 내리기
+                </MenuItem>
+              ) : null}
+              {placement.canUnpublish && onUnpublish ? (
+                <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onUnpublish(map.id) }}>
+                  발행 중단
+                </MenuItem>
+              ) : null}
+              {onEdit ? (
+                <MenuItem onClick={() => { setMenuOpen(false); onEdit(map.id) }}>
+                  <Pencil size={12} /> 지도 설정
+                </MenuItem>
+              ) : null}
+              {onDelete ? (
+                <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onDelete(map.id, map.title) }}>
+                  <Trash2 size={12} /> 삭제
+                </MenuItem>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </article>
+  )
+}
+
+function MenuItem({ onClick, variant = "default", children }) {
+  const color = variant === "danger" ? "#E24B4A" : "#1A1A1A"
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: 6,
+        background: "transparent", border: "none",
+        padding: "8px 10px", borderRadius: 8,
+        fontSize: 12, fontWeight: 500, color,
+        textAlign: "left", width: "100%", cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
   )
 }
 
