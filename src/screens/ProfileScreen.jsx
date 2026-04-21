@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react"
-import { Settings, MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon } from "lucide-react"
-import { BottomSheet } from "../components/ui"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { Settings, MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check } from "lucide-react"
+import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
+import { getProfilePlacementState } from "../lib/mapPlacement"
 
 // 미니 지도 카드 (갤러리용)
 const MINI_PALETTES = {
@@ -65,6 +66,120 @@ function saveAppSettings(settings) {
   localStorage.setItem("loca.appSettings", JSON.stringify(settings))
 }
 
+// 프로필 갤러리 빈 상태 (발행 여부에 따라 분기)
+// 빈 공간에는 캐릭터 + 안내 문구만 보여주고 CTA 버튼은 숨긴다.
+// 프로필에 올리는 진입점은 상단 "+ 지도 올리기" 버튼 하나로 통일.
+function ProfileEmptyGallery({ maps, shares, characterImage }) {
+  const hasPublishedNotOnProfile = maps.some((m) => {
+    const state = getProfilePlacementState(m)
+    return state.isPublished && !shares.some((s) => s.mapId === m.id)
+  })
+
+  const charImg = characterImage || "/characters/cloud_lv1.svg"
+
+  if (hasPublishedNotOnProfile) {
+    return (
+      <EmptyState
+        variant="character"
+        characterImage={charImg}
+        title="프로필을 꾸며볼까요"
+        description="발행한 지도 중에서 보여주고 싶은 것만 프로필에 올릴 수 있어요"
+      />
+    )
+  }
+
+  return (
+    <EmptyState
+      variant="character"
+      characterImage={charImg}
+      title="아직 프로필에 올릴 지도가 없어요"
+      description="지도를 만들고 발행한 뒤에 프로필에 올릴 수 있어요"
+    />
+  )
+}
+
+// 프로필 올리기 피커 시트
+function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddToProfile }) {
+  const [selected, setSelected] = useState(new Set())
+
+  const candidates = useMemo(() => {
+    return maps.filter((m) => {
+      const state = getProfilePlacementState(m)
+      return state.isPublished && !shares.some((s) => s.mapId === m.id)
+    })
+  }, [maps, shares])
+
+  const toggle = (mapId) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(mapId)) next.delete(mapId)
+      else next.add(mapId)
+      return next
+    })
+  }
+
+  const handleConfirm = () => {
+    if (selected.size === 0) return
+    onBatchAddToProfile?.([...selected])
+    onClose()
+  }
+
+  if (!open) return null
+
+  return (
+    <BottomSheet open={open} title="프로필에 올릴 지도" subtitle="발행한 지도 중 보여주고 싶은 것만 올려보세요" onClose={onClose}>
+      <div style={{ padding: "0 16px 8px", maxHeight: "50vh", overflowY: "auto" }}>
+        {candidates.length === 0 ? (
+          <p style={{ textAlign: "center", color: "#888", fontSize: 12, padding: "24px 0" }}>올릴 수 있는 지도가 없어요</p>
+        ) : (
+          candidates.map((map) => {
+            const isSelected = selected.has(map.id)
+            const pins = features.filter((f) => f.mapId === map.id && f.type === "pin").length
+            return (
+              <button
+                key={map.id}
+                type="button"
+                onClick={() => toggle(map.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", padding: "12px 8px",
+                  background: isSelected ? "#FFF4EB" : "transparent",
+                  border: "none", borderRadius: 10, cursor: "pointer",
+                  textAlign: "left", transition: "background .15s",
+                }}
+              >
+                <span style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: isSelected ? "#FF6B35" : "#f0f0f0",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  {isSelected ? <Check size={14} color="#fff" /> : null}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{map.title}</p>
+                  <p style={{ fontSize: 11, color: "#888", margin: "2px 0 0" }}><MapPin size={9} /> {pins}개 장소</p>
+                </span>
+              </button>
+            )
+          })
+        )}
+      </div>
+      <div style={{ padding: "8px 16px 16px" }}>
+        <button
+          type="button"
+          className="button button--primary"
+          disabled={selected.size === 0}
+          onClick={handleConfirm}
+          style={{ width: "100%" }}
+        >
+          선택한 지도 올리기{selected.size > 0 ? ` (${selected.size})` : ""}
+        </button>
+      </div>
+    </BottomSheet>
+  )
+}
+
 const CURATION_NOTICE_KEY = "loca.profile_curation_notice_seen"
 
 function readCurationNoticeSeen() {
@@ -82,13 +197,16 @@ export function ProfileScreen({
   followedCount,
   cloudMode = false,
   cloudEmail = "",
+  characterImage,
   onSignOut,
   onPublishOpen,
   onSelectPost,
   onUpdateProfile,
+  onBatchAddToProfile,
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
   const showCurationNotice = !curationNoticeSeen
   const handleDismissCurationNotice = () => {
@@ -438,13 +556,22 @@ export function ProfileScreen({
             })}
           </div>
         ) : (
-          <div className="pf__empty">
-            <div className="pf__empty-icon"><MapIcon size={20} color="#FF6B35" /></div>
-            <p className="pf__empty-title">아직 프로필에 올린 지도가 없어요</p>
-            <p className="pf__empty-desc">발행한 뒤, 보여주고 싶은 지도만 프로필에 올려보세요</p>
-          </div>
+          <ProfileEmptyGallery
+            maps={maps}
+            shares={shares}
+            characterImage={characterImage}
+          />
         )}
       </div>
+
+      <ProfilePickerSheet
+        open={pickerOpen}
+        maps={maps}
+        shares={shares}
+        features={features}
+        onClose={() => setPickerOpen(false)}
+        onBatchAddToProfile={onBatchAddToProfile}
+      />
 
       <BottomSheet
         open={settingsOpen}
