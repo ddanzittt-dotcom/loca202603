@@ -288,9 +288,17 @@ export default function App() {
     return activeFeaturePool.find((feature) => feature.id === selectedFeatureSummaryId) || null
   }, [activeFeaturePool, selectedFeatureSummaryId])
 
-  // 발행 후보 = non-event + 아직 발행되지 않은 지도.
-  // 행사지도 발행은 대시보드 전용이다.
-  const publishableMaps = maps.filter((mapItem) => mapItem.category !== "event" && !mapItem.isPublished)
+  // "지도 올리기" 시트 후보 = 아직 프로필에 올라가지 않은 지도.
+  // - non-event: 저장용이면 발행 후 올리기 / 이미 발행됐으면 바로 올리기.
+  // - event: 메인 앱에서 발행은 못 하지만, 대시보드에서 이미 발행된 event map 이면 프로필에 올릴 수 있다.
+  const onProfileMapIds = useMemo(() => new Set(shares.map((share) => share.mapId)), [shares])
+  const profileUploadCandidates = useMemo(() => (
+    maps.filter((mapItem) => {
+      if (onProfileMapIds.has(mapItem.id)) return false
+      if (mapItem.category === "event") return Boolean(mapItem.isPublished)
+      return true
+    })
+  ), [maps, onProfileMapIds])
   const shareUrl = useMemo(() => {
     if (!activeMap) return ""
     if (activeMap.slug) {
@@ -900,6 +908,7 @@ export default function App() {
             features={features}
             shares={shares}
             loading={cloudLoading}
+            characterImage={levelEmoji}
             onImport={() => setImportSheetOpen(true)}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
             onEdit={(mapId) => {
@@ -1023,7 +1032,7 @@ export default function App() {
             canImportLocalData={cloudMode && readLocalImportData().hasAny}
             onImportLocalData={importLocalDataToCloud}
             onSignOut={cloudMode ? handleSignOut : null}
-            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: publishableMaps[0]?.id ?? null })}
+            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
             onUpdateProfile={handleUpdateProfile}
             characterStyle={characterStyle}
@@ -1066,8 +1075,13 @@ export default function App() {
       />
       <PublishSheet
         publishSheet={publishSheet} setPublishSheet={setPublishSheet}
-        publishableMaps={publishableMaps} features={features}
+        candidates={profileUploadCandidates} features={features}
         onPublish={handlePublishSubmit}
+        onAddToProfile={(mapId) => {
+          // 이미 발행된 지도: 공통 confirm 으로 바로 전환.
+          setPublishSheet(null)
+          requestProfilePlacement("add", mapId)
+        }}
         onOfferAddToProfile={(mapId) => {
           // 발행 성공 후 공통 confirm 시트로 전환.
           setPublishSheet(null)
