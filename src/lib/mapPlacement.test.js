@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest"
-import { findPlacementForMap, getProfilePlacementState } from "./mapPlacement"
+import { findPlacementForMap, getProfilePlacementState, isEventMap } from "./mapPlacement"
+
+describe("isEventMap", () => {
+  it("category === 'event' 이면 true", () => {
+    expect(isEventMap({ category: "event" })).toBe(true)
+  })
+  it("category === 'personal' 이면 false", () => {
+    expect(isEventMap({ category: "personal" })).toBe(false)
+  })
+  it("category 누락 이면 false", () => {
+    expect(isEventMap({})).toBe(false)
+  })
+  it("null / undefined 도 안전하게 false", () => {
+    expect(isEventMap(null)).toBe(false)
+    expect(isEventMap(undefined)).toBe(false)
+  })
+})
 
 const draftMap = {
   id: "m1",

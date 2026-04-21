@@ -259,7 +259,28 @@ export default function App() {
   )
   const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, viewerProfile), [features, maps, shares, viewerProfile])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
+
+  // 인기 지도: is_curated 우선 → 폴백으로 기존 collections + communityFeed
+  const [curatedMaps, setCuratedMaps] = useState([])
+  useEffect(() => {
+    if (!cloudMode) return
+    let cancelled = false
+    import("./lib/mapService").then((svc) => svc.getCuratedMaps(12))
+      .then((result) => { if (!cancelled) setCuratedMaps(result) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [cloudMode])
+
   const recommendedMaps = useMemo(() => {
+    // 큐레이션 지도가 있으면 우선 사용
+    if (curatedMaps.length > 0) {
+      return curatedMaps.map((m) => ({
+        id: m.id, mapId: m.id, title: m.title,
+        creator: m.creatorName || "", emojis: [], placeCount: m.featureCount || 0,
+        gradient: m.gradient, tags: m.tags,
+      }))
+    }
+    // 폴백: 기존 컬렉션 + 커뮤니티
     const fromCollections = collections.map((c) => ({
       id: c.id, mapId: c.mapId, title: c.title,
       creator: c.creator, emojis: c.emojis, placeCount: c.places,
@@ -271,7 +292,7 @@ export default function App() {
       gradient: p.gradient,
     }))
     return [...fromCollections, ...fromPosts]
-  }, [communityFeed])
+  }, [communityFeed, curatedMaps])
 
   const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
   const selectedUserPosts = useMemo(
@@ -893,12 +914,16 @@ export default function App() {
             communityMapFeatures={communityMapFeatures}
             userStats={userStats}
             viewerProfile={viewerProfile}
-            souvenirs={souvenirs}
             maps={maps}
             features={features}
             followedCount={followed.length}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
+            onResumeMyMap={openMapEditor}
+            onCreateMap={() => {
+              setActiveTab("maps")
+              setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
+            }}
           />
         ) : null}
 
@@ -1018,7 +1043,7 @@ export default function App() {
           />
         ) : null}
 
-        {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? <PlacesScreen maps={maps} features={features} onOpenFeature={openFeatureFromPlaces} /> : null}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? <PlacesScreen maps={maps} features={features} characterImage={levelEmoji} onOpenFeature={openFeatureFromPlaces} /> : null}
         {!showPersonalLoading && !showPersonalGate && activeTab === "search" ? <SearchScreen users={users.filter((u) => u.id !== "me")} followed={followed} onToggleFollow={toggleFollow} onSelectUser={setSelectedUserId} /> : null}
         {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
           <ProfileScreen
@@ -1029,12 +1054,25 @@ export default function App() {
             followedCount={followed.length}
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
+            characterImage={levelEmoji}
             canImportLocalData={cloudMode && readLocalImportData().hasAny}
             onImportLocalData={importLocalDataToCloud}
             onSignOut={cloudMode ? handleSignOut : null}
             onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
             onUpdateProfile={handleUpdateProfile}
+            onBatchAddToProfile={async (mapIds) => {
+              const results = await Promise.allSettled(mapIds.map((id) => addMapToProfile(id)))
+              const succeeded = results.filter((r) => r.status === "fulfilled").length
+              if (succeeded === mapIds.length) {
+                showToast(`${succeeded}개 지도를 프로필에 올렸어요`)
+              } else if (succeeded > 0) {
+                showToast(`${succeeded}/${mapIds.length}개 지도를 프로필에 올렸어요`)
+              } else {
+                showToast("프로필에 올리지 못했어요")
+              }
+            }}
+            onNavigateToMaps={() => setActiveTab("maps")}
             characterStyle={characterStyle}
             onChangeCharacter={setCharacterStyle}
             hasB2BAccess={hasB2BAccess}

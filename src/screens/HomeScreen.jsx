@@ -1,8 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Trophy } from "lucide-react"
+import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Trophy, Sparkles } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
+import { isEventMap } from "../lib/mapPlacement"
+
+// "이어서 기록하기" 카드용 간단 상대시간 포맷 (ui.jsx 의 formatRelativeDate 와 동일)
+function formatUpdatedAt(dateStr) {
+  if (!dateStr) return ""
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000)
+  if (diff <= 0) return "오늘 수정"
+  if (diff === 1) return "어제 수정"
+  if (diff < 7) return `${diff}일 전 수정`
+  if (diff < 30) return `${Math.floor(diff / 7)}주 전 수정`
+  return `${Math.floor(diff / 30)}달 전 수정`
+}
 
 function formatCount(n) {
   if (n < 10000) return n.toString()
@@ -32,9 +44,10 @@ export function HomeScreen({
   communityMapFeatures,
   onOpenMap,
   onOpenCommunityEditor,
+  onResumeMyMap,
+  onCreateMap,
   userStats,
   viewerProfile,
-  souvenirs = [],
   maps = [],
   features = [],
   followedCount = 0,
@@ -51,6 +64,43 @@ export function HomeScreen({
   const recordCount = userStats?.records || userStats?.memos || 0
   const followerCount = viewerProfile?.followers || 0
   const followingCount = followedCount
+
+  // "이어서 기록하기" / "첫 기록 시작하기" 분기 계산
+  //   분기 A: 내 지도(non-event) 0개                       → 첫 기록 시작하기 카드
+  //   분기 B: 피처 보유 + 30일 이내 수정된 non-event 지도   → 이어서 기록하기 카드 (가장 최근 1개)
+  //   분기 C: 그 외                                        → 섹션 숨김
+  const resumeState = useMemo(() => {
+    const myMaps = maps.filter((map) => !isEventMap(map))
+    if (myMaps.length === 0) {
+      return { mode: "first" }
+    }
+
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
+    const now = Date.now()
+    // 피처가 1개 이상 있는 지도만 후보로 추린다 — 제목만 수정된 빈 지도 제외.
+    const featureCountByMapId = new Map()
+    for (const feature of features) {
+      if (!feature.mapId) continue
+      featureCountByMapId.set(feature.mapId, (featureCountByMapId.get(feature.mapId) || 0) + 1)
+    }
+
+    const withFeatures = myMaps.filter((map) => (featureCountByMapId.get(map.id) || 0) > 0)
+    if (withFeatures.length === 0) {
+      return { mode: "hidden" }
+    }
+
+    const recent = withFeatures
+      .filter((map) => {
+        const updated = new Date(map.updatedAt || 0).getTime()
+        return Number.isFinite(updated) && now - updated <= THIRTY_DAYS
+      })
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+
+    if (recent.length === 0) {
+      return { mode: "hidden" }
+    }
+    return { mode: "resume", map: recent[0] }
+  }, [maps, features])
 
   // 히어로 카드 툴팁
   const [activeTooltip, setActiveTooltip] = useState(null)
@@ -252,6 +302,24 @@ export function HomeScreen({
 
   return (
     <section className="screen screen--scroll">
+      {/* ─── 0. 상단 문구 (고정) ─── */}
+      <div style={{ padding: "18px 16px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <p style={{
+          margin: 0,
+          fontSize: 18,
+          fontWeight: 500,
+          color: "#1A1A1A",
+          fontFamily: '"MaruBuri", serif',
+          letterSpacing: "-0.3px",
+          lineHeight: 1.35,
+        }}>
+          오늘은 어디를 기록해볼까요?
+        </p>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 400, color: "#888", lineHeight: 1.5 }}>
+          내가 남긴 장소가 하나의 지도가 돼요
+        </p>
+      </div>
+
       {/* ─── 1. 히어로 카드 ─── */}
       <div className="hero-card" onClick={() => setActiveTooltip(null)} role="presentation">
         {/* blob 장식 */}
@@ -294,44 +362,122 @@ export function HomeScreen({
         </div>
       </div>
 
-      {/* ─── 업적 배너 ─── */}
-      {earnedBadges.length > 0 || nextBadge ? (
-        <div className="home-achievement-banner">
-          <div className="home-achievement-banner__icon">
-            <Trophy size={18} />
-          </div>
-          <div className="home-achievement-banner__text">
-            {earnedBadges.length > 0 ? (
-              <strong>{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name} 달성!</strong>
-            ) : null}
-            {nextBadge ? (
-              <span>다음 목표: {nextBadge.emoji} {nextBadge.desc}</span>
-            ) : null}
-          </div>
+      {/* ─── 2. 이어서 기록하기 / 첫 기록 시작하기 (분기) ─── */}
+      {resumeState.mode === "first" ? (
+        <div className="home-section">
+          <article
+            role="button"
+            tabIndex={0}
+            onClick={() => onCreateMap?.()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCreateMap?.() }}
+            style={{
+              margin: "0 14px",
+              padding: "18px",
+              background: "#FFF4EB",
+              border: "0.5px solid rgba(0,0,0,.06)",
+              borderRadius: 14,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              cursor: "pointer",
+            }}
+          >
+            <p style={{
+              margin: 0,
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#1A1A1A",
+              fontFamily: '"MaruBuri", serif',
+              letterSpacing: "-0.3px",
+              lineHeight: 1.35,
+            }}>
+              첫 지도를 만들어볼까요?
+            </p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 400, color: "#888", lineHeight: 1.5 }}>
+              내 장소를 모아 하나의 지도로 남겨보세요
+            </p>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onCreateMap?.() }}
+              style={{ marginTop: 10, alignSelf: "flex-start", padding: "8px 16px", fontSize: 12, fontWeight: 500 }}
+            >
+              지도 만들기
+            </button>
+          </article>
         </div>
       ) : null}
 
-      {/* ─── 수비니어 컬렉션 ─── */}
-      {souvenirs.length > 0 ? (
+      {resumeState.mode === "resume" ? (
         <div className="home-section">
           <div className="home-section__head">
-            <h2>수비니어</h2>
+            <h2 style={{
+              fontFamily: '"MaruBuri", serif',
+              letterSpacing: "-0.3px",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#1A1A1A",
+              margin: 0,
+            }}>이어서 기록하기</h2>
           </div>
-          <div className="home-souvenir-row">
-            {souvenirs.map((s) => (
-              <div key={s.id || s.souvenir_id} className="souvenir-chip">
-                <span className="souvenir-chip__emoji">{s.emoji || "🏆"}</span>
-                <span className="souvenir-chip__title">{s.title}</span>
-              </div>
-            ))}
-          </div>
+          <article
+            role="button"
+            tabIndex={0}
+            onClick={() => onResumeMyMap?.(resumeState.map.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onResumeMyMap?.(resumeState.map.id) }}
+            style={{
+              margin: "0 14px",
+              padding: 12,
+              background: "#fff",
+              border: "0.5px solid rgba(0,0,0,.06)",
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              cursor: "pointer",
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                width: 52, height: 52, borderRadius: 10,
+                background: "#E1F5EE",
+                flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <MapPin size={18} color="#085041" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0, fontSize: 14, fontWeight: 500, color: "#1A1A1A",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+                {resumeState.map.title || "내 지도"}
+              </p>
+              <p style={{ margin: "3px 0 0", fontSize: 11, fontWeight: 400, color: "#888" }}>
+                {formatUpdatedAt(resumeState.map.updatedAt)}
+              </p>
+            </div>
+            <button
+              className="button button--primary"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onResumeMyMap?.(resumeState.map.id) }}
+              style={{ padding: "6px 12px", fontSize: 11, fontWeight: 500, flexShrink: 0 }}
+            >
+              계속 편집하기
+            </button>
+          </article>
         </div>
       ) : null}
 
-      {/* ─── 2. 인기 지도 ─── */}
+      {/* ─── 3. 둘러보기 좋은 지도 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>인기 지도</h2>
+          <div>
+            <h2>둘러보기 좋은 지도</h2>
+            <p className="home-section__desc">다른 사람이 남긴 지도를 둘러보세요</p>
+          </div>
         </div>
         {recommendedMaps.length > 0 ? (
           <div className="home-map-scroller">
@@ -367,7 +513,13 @@ export function HomeScreen({
             })}
           </div>
         ) : (
-          <div className="home-section__empty">아직 발행된 지도가 없어요</div>
+          <div className="home-curated-empty">
+            <div className="home-curated-empty__icon">
+              <Sparkles size={22} color="#FF6B35" />
+            </div>
+            <p className="home-curated-empty__title">추천 지도를 준비 중이에요</p>
+            <p className="home-curated-empty__desc">곧 만나볼 수 있어요</p>
+          </div>
         )}
       </div>
 
@@ -401,10 +553,13 @@ export function HomeScreen({
         </div>
       </div>
 
-      {/* ─── 4. 내 근처 이벤트 ─── */}
+      {/* ─── 5. 근처 소식 ─── */}
       <div className="home-section">
         <div className="home-section__head">
-          <h2>{eventsNearby ? "내 근처 이벤트" : "진행 중인 이벤트"}</h2>
+          <div>
+            <h2>근처 소식</h2>
+            <p className="home-section__desc">가까이에서 열리는 행사를 살펴보세요</p>
+          </div>
           <button className={`home-event-locate${eventsNearby ? " is-active" : ""}`} type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
             <Navigation size={12} /> {eventsNearby ? "내 근처" : "내 위치"}
           </button>
@@ -423,7 +578,7 @@ export function HomeScreen({
         ) : (
           <>
             <div className="home-event-list">
-              {events.slice(0, 4).map((event) => (
+              {events.slice(0, 2).map((event) => (
                 <article key={event.id} className="event-card" onClick={() => openEventDetail(event)} style={{ cursor: "pointer" }}>
                   {event.image ? (
                     <div className="event-card__img" style={{ backgroundImage: `url(${event.image})` }} />
@@ -448,14 +603,32 @@ export function HomeScreen({
                 </article>
               ))}
             </div>
-            {events.length > 4 ? (
+            {events.length > 2 ? (
               <button className="home-event-more" type="button" onClick={() => setShowEventList(true)}>
-                더보기 ({events.length - 4}개)
+                더보기 ({events.length - 2}개)
               </button>
             ) : null}
           </>
         )}
       </div>
+
+      {/* ─── 6. 업적 배너 (홈 최하단) ─── */}
+      {earnedBadges.length > 0 || nextBadge ? (
+        <div className="home-achievement-banner">
+          <div className="home-achievement-banner__icon">
+            <Trophy size={18} />
+          </div>
+          <div className="home-achievement-banner__text">
+            {earnedBadges.length > 0 ? (
+              <strong>{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name} 달성!</strong>
+            ) : null}
+            {nextBadge ? (
+              <span>다음 목표: {nextBadge.emoji} {nextBadge.desc}</span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {/* ─── 이벤트 전체 목록 화면 ─── */}
       {showEventList ? (
         <div className="event-list-screen">

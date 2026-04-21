@@ -128,9 +128,9 @@ function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddT
 
   return (
     <BottomSheet open={open} title="프로필에 올릴 지도" subtitle="발행한 지도 중 보여주고 싶은 것만 올려보세요" onClose={onClose}>
-      <div style={{ padding: "0 16px 8px", maxHeight: "50vh", overflowY: "auto" }}>
+      <div className="picker-sheet__list">
         {candidates.length === 0 ? (
-          <p style={{ textAlign: "center", color: "#888", fontSize: 12, padding: "24px 0" }}>올릴 수 있는 지도가 없어요</p>
+          <p className="picker-sheet__empty">올릴 수 있는 지도가 없어요</p>
         ) : (
           candidates.map((map) => {
             const isSelected = selected.has(map.id)
@@ -139,39 +139,27 @@ function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddT
               <button
                 key={map.id}
                 type="button"
+                className={`picker-sheet__item${isSelected ? " is-selected" : ""}`}
                 onClick={() => toggle(map.id)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  width: "100%", padding: "12px 8px",
-                  background: isSelected ? "#FFF4EB" : "transparent",
-                  border: "none", borderRadius: 10, cursor: "pointer",
-                  textAlign: "left", transition: "background .15s",
-                }}
               >
-                <span style={{
-                  width: 28, height: 28, borderRadius: 8,
-                  background: isSelected ? "#FF6B35" : "#f0f0f0",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
+                <span className={`picker-sheet__check${isSelected ? " is-checked" : ""}`}>
                   {isSelected ? <Check size={14} color="#fff" /> : null}
                 </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{map.title}</p>
-                  <p style={{ fontSize: 11, color: "#888", margin: "2px 0 0" }}><MapPin size={9} /> {pins}개 장소</p>
+                <span className="picker-sheet__info">
+                  <p className="picker-sheet__title">{map.title}</p>
+                  <p className="picker-sheet__meta"><MapPin size={9} /> {pins}개 장소</p>
                 </span>
               </button>
             )
           })
         )}
       </div>
-      <div style={{ padding: "8px 16px 16px" }}>
+      <div className="picker-sheet__footer">
         <button
           type="button"
-          className="button button--primary"
+          className="button button--primary picker-sheet__confirm"
           disabled={selected.size === 0}
           onClick={handleConfirm}
-          style={{ width: "100%" }}
         >
           선택한 지도 올리기{selected.size > 0 ? ` (${selected.size})` : ""}
         </button>
@@ -198,6 +186,7 @@ export function ProfileScreen({
   cloudMode = false,
   cloudEmail = "",
   characterImage,
+  souvenirs = [],
   onSignOut,
   onPublishOpen,
   onSelectPost,
@@ -509,6 +498,33 @@ export function ProfileScreen({
           <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 올리기</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
+
+        {/* 기념 뱃지 (구 수비니어) */}
+        {souvenirs.length > 0 ? (
+          <div className="home-section" style={{ marginTop: 10 }}>
+            <div className="home-section__head">
+              <div>
+                <h2 style={{
+                  fontFamily: '"MaruBuri", serif',
+                  letterSpacing: "-0.3px",
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: "#1A1A1A",
+                  margin: 0,
+                }}>기념 뱃지</h2>
+                <p className="home-section__desc">다녀온 행사에서 얻은 기념품이에요</p>
+              </div>
+            </div>
+            <div className="home-souvenir-row">
+              {souvenirs.map((s) => (
+                <div key={s.id || s.souvenir_id} className="souvenir-chip">
+                  <span className="souvenir-chip__emoji">{s.emoji || "🏆"}</span>
+                  <span className="souvenir-chip__title">{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* 프로필 구성 변경 안내 (최초 1회) */}
         {showCurationNotice ? (
