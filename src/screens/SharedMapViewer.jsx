@@ -7,6 +7,7 @@ import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
 import { saveMap as saveMapRecord } from "../lib/mapService"
+import { isEventMap as checkIsEventMap } from "../lib/mapPlacement"
 import { useEventMapData, formatDistance } from "../hooks/useEventMapData"
 import { useEventComments } from "../hooks/useEventComments"
 import { useNotifications } from "../hooks/useNotifications"
@@ -51,7 +52,7 @@ function SaveButton({ onClick, isEvent, loading = false }) {
       disabled={loading}
     >
       <PinSvg />
-      <span className="lw-save-btn__text">{loading ? "저장 중..." : "loca에 저장"}</span>
+      <span className="lw-save-btn__text">{loading ? "저장 중..." : "내 라이브러리에 저장"}</span>
     </button>
   )
 }
@@ -84,8 +85,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   const [spotTab, setSpotTab] = useState("info")
   const [toastMsg, setToastMsg] = useState("")
   const [activeChip, setActiveChip] = useState("all")
+  const [showMapNames, setShowMapNames] = useState(true)
 
-  const isEventMap = map.category === "event"
+  const isEventMap = checkIsEventMap(map)
   const config = useMemo(() => map.config || {}, [map.config])
 
   const showViewerToast = useCallback((msg) => {
@@ -176,9 +178,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     // 카카오 SDK 없으면 클립보드 복사
     try {
       await navigator.clipboard.writeText(shareUrl)
-      showViewerToast("링크가 복사되었어요. 카카오톡에 붙여넣기 하세요!")
+      showViewerToast("링크가 복사되었어요. 카카오에 붙여넣기 하세요!")
     } catch {
-      prompt("카카오톡에 붙여넣으세요:", shareUrl)
+      prompt("카카오에 붙여넣으세요:", shareUrl)
     }
     setShareOpen(false)
   }, [shareUrl, map, showViewerToast])
@@ -210,29 +212,74 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   // ─── GPS 위치 ───
   const [localUserPos, setLocalUserPos] = useState(null)
   const [locating, setLocating] = useState(false)
+  const [locationHint, setLocationHint] = useState(null)
   const currentUserPos = userPos || localUserPos
 
-  const handleLocateMe = useCallback(() => {
+  const moveToCurrentPosition = useCallback((coords, fallback = false) => {
+    const loc = { lat: coords.latitude, lng: coords.longitude }
+    setLocalUserPos(loc)
+    setFocusPoint({ ...loc, zoom: 16 })
+    setLocating(false)
+    setLocationHint(null)
+    showViewerToast(fallback ? "정밀 위치가 지연되어 현재 위치로 이동했어요" : "현재 위치로 이동했어요")
+  }, [showViewerToast])
+
+  const handleLocateMe = useCallback(async () => {
+    if (locating) return
     if (!navigator.geolocation) {
+      setLocationHint({ kind: "unsupported", message: "현재 기기에서 위치 서비스를 사용할 수 없어요." })
       showViewerToast("위치 서비스를 사용할 수 없어요")
       return
     }
+
+    if (navigator.permissions?.query) {
+      try {
+        const permission = await navigator.permissions.query({ name: "geolocation" })
+        if (permission.state === "denied") {
+          setLocationHint({ kind: "denied", message: "위치 권한이 꺼져 있어요. 브라우저 설정에서 허용한 뒤 다시 시도해주세요." })
+          showViewerToast("위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해주세요.")
+          return
+        }
+      } catch {
+        // Some browsers (iOS Safari) may not fully support Permissions API.
+      }
+    }
+
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setLocalUserPos(loc)
-        setFocusPoint(loc)
+      (pos) => moveToCurrentPosition(pos.coords),
+      (error) => {
+        if (error?.code === 1) {
+          setLocating(false)
+          setLocationHint({ kind: "denied", message: "위치 권한이 필요해요. 권한을 허용한 뒤 다시 시도해주세요." })
+          showViewerToast("위치 권한이 필요해요. 권한을 허용해주세요.")
+          return
+        }
+        if (error?.code === 2) {
+          setLocating(false)
+          setLocationHint({ kind: "unavailable", message: "위치 정보를 확인할 수 없어요. 네트워크/GPS 상태를 확인해주세요." })
+          showViewerToast("위치 정보를 확인할 수 없어요. 잠시 후 다시 시도해주세요.")
+          return
+        }
+        if (error?.code === 3) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => moveToCurrentPosition(pos.coords, true),
+            () => {
+              setLocating(false)
+              setLocationHint({ kind: "timeout", message: "위치 확인 시간이 초과됐어요. 내 위치를 다시 시도해주세요." })
+              showViewerToast("위치 확인 시간이 초과됐어요. 다시 시도해주세요.")
+            },
+            { enableHighAccuracy: false, maximumAge: 60000, timeout: 7000 },
+          )
+          return
+        }
         setLocating(false)
-        showViewerToast("현재 위치를 찾았어요")
-      },
-      () => {
-        setLocating(false)
+        setLocationHint({ kind: "error", message: "위치를 가져올 수 없어요. 잠시 후 다시 시도해주세요." })
         showViewerToast("위치를 가져올 수 없어요. 위치 권한을 확인해주세요.")
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
     )
-  }, [showViewerToast])
+  }, [locating, moveToCurrentPosition, showViewerToast])
 
   // ─── 도보 길찾기 ───
   const [walkRoute, setWalkRoute] = useState(null)
@@ -495,7 +542,19 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
         {/* Map area */}
         <div className="lw-map">
           <MapErrorBoundary>
-            <NaverMap features={features} selectedFeatureId={selectedId} draftPoints={[]} draftMode="browse" focusPoint={focusPoint} fitTrigger={fitTrigger} onFeatureTap={handleFeatureSelect} showLabels mapCategory={map.category} walkRoute={walkRoute} />
+            <NaverMap
+              features={features}
+              selectedFeatureId={selectedId}
+              draftPoints={[]}
+              draftMode="browse"
+              focusPoint={focusPoint}
+              fitTrigger={fitTrigger}
+              onFeatureTap={handleFeatureSelect}
+              showLabels
+              myLocation={currentUserPos}
+              mapCategory={map.category}
+              walkRoute={walkRoute}
+            />
           </MapErrorBoundary>
 
           {/* 내 위치 버튼 */}
@@ -604,7 +663,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 </button>
                 <button type="button" className="lw-share-item lw-share-item--kakao" onClick={handleKakaoShare}>
                   <span className="lw-share-icon">💬</span>
-                  <span>카카오톡</span>
+                  <span>카카오</span>
                 </button>
               </div>
             </>
@@ -616,6 +675,24 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           {/* Filter chip bar */}
           <div className="lw-chips">
             <span className="lw-chips__count">📍 {features.length}곳</span>
+            <span className="lw-chips__sep" />
+            <button
+              className={`lw-chip lw-chip--control lw-chip--name${showMapNames ? " is-active" : ""}`}
+              type="button"
+              onClick={() => setShowMapNames((prev) => !prev)}
+              aria-pressed={showMapNames}
+            >
+              이름
+            </button>
+            <button
+              className="lw-chip lw-chip--control lw-chip--locate"
+              type="button"
+              onClick={handleLocateMe}
+              disabled={locating}
+            >
+              <LocateFixed size={11} />
+              <span>{locating ? "위치 찾는 중" : "내 위치"}</span>
+            </button>
             <span className="lw-chips__sep" />
             <button
               className={`lw-chip${activeChip === "all" ? " is-active" : ""}`}
@@ -646,6 +723,24 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             ) : null}
           </div>
 
+          {locationHint ? (
+            <div className="lw-locate-hint" role="status" aria-live="polite">
+              <span className="lw-locate-hint__msg">{locationHint.message}</span>
+              <div className="lw-locate-hint__actions">
+                <button type="button" className="lw-locate-hint__btn" onClick={handleLocateMe} disabled={locating}>
+                  {locating ? "확인 중..." : "다시 시도"}
+                </button>
+                <button
+                  type="button"
+                  className="lw-locate-hint__btn lw-locate-hint__btn--ghost"
+                  onClick={() => setLocationHint(null)}
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {/* Announcement banner */}
           {announcements.length > 0 && !announcementDismissed ? (
             <div className="lw-announce">
@@ -672,15 +767,22 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 focusPoint={focusPoint}
                 fitTrigger={fitTrigger}
                 onFeatureTap={handleFeatureSelect}
-                showLabels
+                showLabels={showMapNames}
+                myLocation={currentUserPos}
                 checkedInIds={config.checkin_enabled ? checkedInIds : null}
                 mapCategory={map.category}
                 walkRoute={walkRoute}
               />
             </MapErrorBoundary>
 
-            {/* 내 위치 버튼 */}
-            <button type="button" className="lw-locate-btn" onClick={handleLocateMe} disabled={locating} aria-label="내 위치">
+            {/* 내 위치 버튼 (event quick action) */}
+            <button
+              type="button"
+              className="lw-locate-btn lw-locate-btn--event"
+              onClick={handleLocateMe}
+              disabled={locating}
+              aria-label="내 위치"
+            >
               <LocateFixed size={18} />
             </button>
 

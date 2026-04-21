@@ -133,7 +133,8 @@ export async function submitSurveyReward({ mapId }) {
 }
 
 /**
- * 수비니어 목록 조회 (getGameProfile에 포함되므로 단독 호출은 드묾)
+ * 기념 뱃지 목록 조회 (getGameProfile 에 포함되므로 단독 호출은 드묾).
+ * 내부 저장은 user_souvenirs 테이블 — API 명은 하위 호환을 위해 souvenir 유지.
  */
 export async function getUserSouvenirs() {
   if (!hasSupabaseEnv) return []
@@ -170,7 +171,8 @@ export async function awardBadge(badgeId) {
 }
 
 /**
- * 수비니어 발급
+ * 기념 뱃지 발급.
+ * 내부 저장은 user_souvenirs 테이블 — API 명은 하위 호환을 위해 souvenir 유지.
  */
 export async function awardSouvenir(souvenirCode, mapId, meta) {
   if (!hasSupabaseEnv) return null
