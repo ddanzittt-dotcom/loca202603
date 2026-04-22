@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Trophy, Sparkles } from "lucide-react"
+import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Sparkles } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
-import { getLevelProgress, getEarnedBadges, getNextEarnableBadge, LEVELS } from "../data/gamification"
+import { getLevelProgress, LEVELS } from "../data/gamification"
 import { isEventMap } from "../lib/mapPlacement"
 
 // "이어서 기록하기" 카드용 간단 상대시간 포맷 (ui.jsx 의 formatRelativeDate 와 동일)
@@ -55,8 +55,6 @@ export function HomeScreen({
 }) {
   const xp = userStats?.xp || 0
   const levelInfo = useMemo(() => getLevelProgress(xp), [xp])
-  const earnedBadges = useMemo(() => getEarnedBadges(userStats || {}), [userStats])
-  const nextBadge = useMemo(() => getNextEarnableBadge(userStats || {}), [userStats])
   const nickname = viewerProfile?.name || "탐험가"
 
   // 히어로 카드 통계
@@ -581,23 +579,6 @@ export function HomeScreen({
           </>
         )}
       </div>{/* /band-nearby */}
-
-      {/* ─── 업적 배너 (홈 최하단, band 외부) ─── */}
-      {earnedBadges.length > 0 || nextBadge ? (
-        <div className="home-achievement-banner">
-          <div className="home-achievement-banner__icon">
-            <Trophy size={18} />
-          </div>
-          <div className="home-achievement-banner__text">
-            {earnedBadges.length > 0 ? (
-              <strong>{earnedBadges[earnedBadges.length - 1].emoji} {earnedBadges[earnedBadges.length - 1].name} 달성!</strong>
-            ) : null}
-            {nextBadge ? (
-              <span>다음 목표: {nextBadge.emoji} {nextBadge.desc}</span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
 
       {/* ─── 이벤트 전체 목록 화면 ─── */}
       {showEventList ? (
