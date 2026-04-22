@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react"
-import { Settings, MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check } from "lucide-react"
+import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
@@ -187,6 +187,8 @@ export function ProfileScreen({
   cloudEmail = "",
   characterImage,
   souvenirs = [],
+  settingsOpen: settingsOpenProp,
+  onSettingsOpenChange,
   onSignOut,
   onPublishOpen,
   onSelectPost,
@@ -194,8 +196,24 @@ export function ProfileScreen({
   onBatchAddToProfile,
   onResetCoachmark,
 }) {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // 설정 시트 상태: 외부(App top-bar)에서 제어 가능하도록 lift 가능.
+  // prop 미전달 시 내부 fallback state 사용.
+  const [settingsOpenLocal, setSettingsOpenLocal] = useState(false)
+  const settingsOpen = settingsOpenProp ?? settingsOpenLocal
+  const setSettingsOpen = onSettingsOpenChange ?? setSettingsOpenLocal
   const [editOpen, setEditOpen] = useState(false)
+  const [souvenirsPopoverOpen, setSouvenirsPopoverOpen] = useState(false)
+  const souvenirsPopoverRef = useRef(null)
+  useEffect(() => {
+    if (!souvenirsPopoverOpen) return
+    const handleDocClick = (e) => {
+      if (souvenirsPopoverRef.current && !souvenirsPopoverRef.current.contains(e.target)) {
+        setSouvenirsPopoverOpen(false)
+      }
+    }
+    document.addEventListener("pointerdown", handleDocClick)
+    return () => document.removeEventListener("pointerdown", handleDocClick)
+  }, [souvenirsPopoverOpen])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
   const showCurationNotice = !curationNoticeSeen
@@ -243,10 +261,6 @@ export function ProfileScreen({
 
   const openNewWindow = (url) => {
     window.open(url, "_blank", "noopener,noreferrer")
-  }
-
-  const handleOpenSettings = () => {
-    setSettingsOpen(true)
   }
 
   const handleClearCache = () => {
@@ -467,9 +481,74 @@ export function ProfileScreen({
             </div>
             <p className="pf__handle">@{user.handle?.replace("@", "") || user.name}</p>
           </div>
-          <button className="pf__settings-btn" type="button" onClick={handleOpenSettings} aria-label="설정">
-            <Settings size={18} color="#2D4A3E" />
-          </button>
+
+          {/* 기념 뱃지 간이 chip (0개면 숨김) — 탭 시 popover 로 목록 표시 */}
+          {souvenirs.length > 0 ? (
+            <div ref={souvenirsPopoverRef} style={{ position: "relative", alignSelf: "center" }}>
+              <button
+                type="button"
+                aria-label={`기념 뱃지 ${souvenirs.length}개`}
+                aria-expanded={souvenirsPopoverOpen}
+                onClick={() => setSouvenirsPopoverOpen((v) => !v)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "6px 10px",
+                  background: "#FAEEDA",
+                  border: "0.5px solid rgba(0,0,0,.06)",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "#633806",
+                  cursor: "pointer",
+                }}
+              >
+                <span aria-hidden="true">🏆</span>
+                <span>{souvenirs.length}</span>
+              </button>
+              {souvenirsPopoverOpen ? (
+                <div
+                  role="dialog"
+                  aria-label="받은 기념 뱃지"
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "calc(100% + 6px)",
+                    zIndex: 20,
+                    minWidth: 200,
+                    maxWidth: 240,
+                    background: "#fff",
+                    border: "0.5px solid rgba(0,0,0,.08)",
+                    borderRadius: 12,
+                    padding: 10,
+                    boxShadow: "0 10px 24px rgba(0,0,0,.12)",
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 500, color: "#666" }}>
+                    기념 뱃지
+                  </p>
+                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}>
+                    {souvenirs.map((s) => (
+                      <li
+                        key={s.id || s.souvenir_id || s.souvenir_code}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "4px 6px",
+                        }}
+                      >
+                        <span aria-hidden="true" style={{ fontSize: 18, flexShrink: 0 }}>{s.emoji || "🏆"}</span>
+                        <span style={{ fontSize: 12, color: "#1A1A1A", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {s.title}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* 바이오 */}
@@ -500,31 +579,7 @@ export function ProfileScreen({
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
-        {/* 기념 뱃지 (구 수비니어) */}
-        {souvenirs.length > 0 ? (
-          <div className="home-section" style={{ marginTop: 10 }}>
-            <div className="home-section__head">
-              <div>
-                <h2 style={{
-                  letterSpacing: "-0.3px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: "#1A1A1A",
-                  margin: 0,
-                }}>기념 뱃지</h2>
-                <p className="home-section__desc">다녀온 행사에서 얻은 기념품이에요</p>
-              </div>
-            </div>
-            <div className="home-souvenir-row">
-              {souvenirs.map((s) => (
-                <div key={s.id || s.souvenir_id} className="souvenir-chip">
-                  <span className="souvenir-chip__emoji">{s.emoji || "🏆"}</span>
-                  <span className="souvenir-chip__title">{s.title}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        {/* 기념 뱃지는 프로필 info 행의 chip + popover 로 간결하게 이동됨. 섹션 형태 렌더 제거. */}
 
         {/* 프로필 구성 변경 안내 (최초 1회) */}
         {showCurationNotice ? (

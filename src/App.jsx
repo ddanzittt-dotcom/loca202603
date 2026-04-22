@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Bell } from "lucide-react"
+import { Bell, Settings as SettingsIcon } from "lucide-react"
 import { BottomNav, Toast } from "./components/ui"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
@@ -247,6 +247,7 @@ export default function App() {
   // --- Notifications ---
 
   const [notiPanelOpen, setNotiPanelOpen] = useState(false)
+  const [profileSettingsOpen, setProfileSettingsOpen] = useState(false)
   const {
     notifications: notiList,
     hasUnread: notiHasUnread,
@@ -904,7 +905,16 @@ export default function App() {
               {headerConfig.actionLabel}
             </button>
           ) : null}
-          {!(activeTab === "maps" && mapsView === "editor") ? (
+          {activeTab === "profile" ? (
+            <button
+              className="top-bar__noti-btn"
+              type="button"
+              aria-label="설정"
+              onClick={() => setProfileSettingsOpen(true)}
+            >
+              <SettingsIcon size={18} />
+            </button>
+          ) : !(activeTab === "maps" && mapsView === "editor") ? (
             <button
               className="top-bar__noti-btn"
               type="button"
@@ -1124,6 +1134,8 @@ export default function App() {
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
             characterImage={levelEmoji}
+            settingsOpen={profileSettingsOpen}
+            onSettingsOpenChange={setProfileSettingsOpen}
             canImportLocalData={cloudMode && readLocalImportData().hasAny}
             onImportLocalData={importLocalDataToCloud}
             onSignOut={cloudMode ? handleSignOut : null}
