@@ -545,6 +545,8 @@ export function HomeScreen({
                         aria-label={status.label}
                         style={{
                           flexShrink: 0,
+                          marginLeft: "auto",
+                          alignSelf: "center",
                           background: isUpcoming ? "#2D4A3E" : "#E1F5EE",
                           color: isUpcoming ? "#F4C55F" : "#085041",
                           padding: "8px 10px",

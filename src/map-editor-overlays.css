@@ -2085,6 +2085,7 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  flex: 1;
   justify-content: center;
 }
 .event-card__title {
