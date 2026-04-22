@@ -307,25 +307,18 @@ export function HomeScreen({
   }
 
   return (
-    <section className="screen screen--scroll">
-      {/* ─── 0. 상단 문구 (고정) ─── */}
-      <div style={{ padding: "18px 16px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
-        <p style={{
-          margin: 0,
-          fontSize: 18,
-          fontWeight: 500,
-          color: "#1A1A1A",
-          letterSpacing: "-0.3px",
-          lineHeight: 1.35,
-        }}>
-          오늘은 어디를 기록해볼까요?
-        </p>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 400, color: "#888", lineHeight: 1.5 }}>
-          내가 남긴 장소가 하나의 지도가 돼요
-        </p>
-      </div>
+    <section className="screen screen--scroll home-screen">
+      {/* ═══ Band 1: MY RECORDS (forest full-bleed) ═══ */}
+      <div className="home-band home-band--mine">
+        <div className="home-band__head">
+          <div className="home-band__head-left">
+            <div className="home-band__eye">MY RECORDS</div>
+            <p className="home-band__t">오늘은 어디를 기록해볼까요?</p>
+            <p className="home-band__s">내가 남긴 장소가 하나의 지도가 돼요</p>
+          </div>
+        </div>
 
-      {/* ─── 1. 히어로 카드 ─── */}
+      {/* ─── 히어로 카드 ─── */}
       <div className="hero-card" onClick={() => setActiveTooltip(null)} role="presentation">
         {/* blob 장식 */}
         <span className="hero-card__blob hero-card__blob--tr" />
@@ -367,123 +360,63 @@ export function HomeScreen({
         </div>
       </div>
 
-      {/* ─── 2. 이어서 기록하기 / 첫 기록 시작하기 (분기) ─── */}
-      {resumeState.mode === "first" ? (
-        <div className="home-section">
+        {/* 이어서 기록하기 / 첫 기록 시작하기 — band-mine 내부 카드 */}
+        {resumeState.mode === "first" ? (
           <article
             role="button"
             tabIndex={0}
+            className="home-first-card"
             onClick={() => onCreateMap?.()}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onCreateMap?.() }}
-            style={{
-              margin: "0 14px",
-              padding: "18px",
-              background: "#FFF4EB",
-              border: "0.5px solid rgba(0,0,0,.06)",
-              borderRadius: 14,
-              display: "flex",
-              flexDirection: "column",
-              gap: 6,
-              cursor: "pointer",
-            }}
           >
-            <p style={{
-              margin: 0,
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#1A1A1A",
-              letterSpacing: "-0.3px",
-              lineHeight: 1.35,
-            }}>
-              첫 지도를 만들어볼까요?
-            </p>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 400, color: "#888", lineHeight: 1.5 }}>
-              내 장소를 모아 하나의 지도로 남겨보세요
-            </p>
+            <p className="home-first-card__title">첫 지도를 만들어볼까요?</p>
+            <p className="home-first-card__sub">내 장소를 모아 하나의 지도로 남겨보세요</p>
             <button
-              className="button button--primary"
+              className="home-first-card__cta"
               type="button"
               onClick={(e) => { e.stopPropagation(); onCreateMap?.() }}
-              style={{ marginTop: 10, alignSelf: "flex-start", padding: "8px 16px", fontSize: 12, fontWeight: 500 }}
             >
               지도 만들기
             </button>
           </article>
-        </div>
-      ) : null}
+        ) : null}
 
-      {resumeState.mode === "resume" ? (
-        <div className="home-section">
-          <div className="home-section__head">
-            <div>
-              <h2 style={{
-                letterSpacing: "-0.3px",
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#1A1A1A",
-                margin: 0,
-              }}>이어서 기록하기</h2>
-              <p className="home-section__desc">작업하던 지도를 마저 완성해볼까요?</p>
-            </div>
-          </div>
+        {resumeState.mode === "resume" ? (
           <article
             role="button"
             tabIndex={0}
+            className="home-mine-card"
             onClick={() => onResumeMyMap?.(resumeState.map.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onResumeMyMap?.(resumeState.map.id) }}
-            style={{
-              margin: "0 14px",
-              padding: 12,
-              background: "#fff",
-              border: "0.5px solid rgba(0,0,0,.06)",
-              borderRadius: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              cursor: "pointer",
-            }}
           >
-            <div
-              aria-hidden="true"
-              style={{
-                width: 52, height: 52, borderRadius: 10,
-                background: "#E1F5EE",
-                flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <MapPin size={18} color="#085041" />
+            <div className="home-mine-card__icon" aria-hidden="true">
+              <MapPin size={19} />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{
-                margin: 0, fontSize: 14, fontWeight: 500, color: "#1A1A1A",
-                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
-                {resumeState.map.title || "내 지도"}
-              </p>
-              <p style={{ margin: "3px 0 0", fontSize: 11, fontWeight: 400, color: "#888" }}>
+            <div className="home-mine-card__info">
+              <p className="home-mine-card__title">{resumeState.map.title || "내 지도"}</p>
+              <p className="home-mine-card__meta">
                 {formatUpdatedAt(resumeState.map.updatedAt)}
                 {resumeState.placeCount > 0 ? ` · 장소 ${resumeState.placeCount}개` : ""}
               </p>
             </div>
             <button
-              className="button button--primary"
+              className="home-mine-card__cta"
               type="button"
               onClick={(e) => { e.stopPropagation(); onResumeMyMap?.(resumeState.map.id) }}
-              style={{ padding: "6px 12px", fontSize: 11, fontWeight: 500, flexShrink: 0 }}
             >
-              계속 편집하기
+              계속 편집
             </button>
           </article>
-        </div>
-      ) : null}
+        ) : null}
+      </div>{/* /band-mine */}
 
-      {/* ─── 3. 둘러보기 좋은 지도 ─── */}
-      <div className="home-section">
-        <div className="home-section__head">
-          <div>
-            <h2>둘러보기 좋은 지도</h2>
-            <p className="home-section__desc">다른 사람이 남긴 지도를 둘러보세요</p>
+      {/* ═══ Band 2: EXPLORE (warm) ═══ */}
+      <div className="home-band home-band--explore">
+        <div className="home-band__head">
+          <div className="home-band__head-left">
+            <div className="home-band__eye">EXPLORE</div>
+            <p className="home-band__t">둘러보기 좋은 지도</p>
+            <p className="home-band__s">다른 사람이 남긴 지도에서 영감을 얻어보세요</p>
           </div>
         </div>
         {recommendedMaps.length > 0 ? (
@@ -528,16 +461,17 @@ export function HomeScreen({
             <p className="home-curated-empty__desc">곧 만나볼 수 있어요</p>
           </div>
         )}
-      </div>
+      </div>{/* /band-explore */}
 
-      {/* ─── 3. 모두의 지도 ─── */}
-      <div className="home-section">
-        <div className="home-section__head">
-          <div>
-            <h2>모두의 지도</h2>
-            <p className="home-section__desc">내 근처 추천 장소를 공유해보세요</p>
+      {/* ═══ Band 3: COMMUNITY (mint) — 모두의 지도 독립 ═══ */}
+      <div className="home-band home-band--community">
+        <div className="home-band__head">
+          <div className="home-band__head-left">
+            <div className="home-band__eye">COMMUNITY</div>
+            <p className="home-band__t">모두의 지도</p>
+            <p className="home-band__s">내 근처 추천 장소를 공유해보세요</p>
           </div>
-          <button className="home-section__cta" type="button" onClick={onOpenCommunityEditor}>
+          <button className="home-band__action--primary" type="button" onClick={onOpenCommunityEditor}>
             참여하기
           </button>
         </div>
@@ -558,17 +492,18 @@ export function HomeScreen({
             />
           </MapErrorBoundary>
         </div>
-      </div>
+      </div>{/* /band-community */}
 
-      {/* ─── 5. 근처 소식 ─── */}
-      <div className="home-section">
-        <div className="home-section__head">
-          <div>
-            <h2>근처 소식</h2>
-            <p className="home-section__desc">가까이에서 열리는 행사를 살펴보세요</p>
+      {/* ═══ Band 4: NEARBY (page bg) — 근처 소식 ═══ */}
+      <div className="home-band home-band--nearby">
+        <div className="home-band__head">
+          <div className="home-band__head-left">
+            <div className="home-band__eye">NEARBY</div>
+            <p className="home-band__t">근처 소식</p>
+            <p className="home-band__s">가까이에서 열리는 행사를 살펴보세요</p>
           </div>
-          <button className={`home-event-locate${eventsNearby ? " is-active" : ""}`} type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
-            <Navigation size={12} /> {eventsNearby ? "내 근처" : "내 위치"}
+          <button className="home-band__action--ghost" type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
+            <Navigation size={11} /> {eventsNearby ? "내 근처" : "내 위치"}
           </button>
         </div>
         {eventsLoading ? (
@@ -643,9 +578,9 @@ export function HomeScreen({
             ) : null}
           </>
         )}
-      </div>
+      </div>{/* /band-nearby */}
 
-      {/* ─── 6. 업적 배너 (홈 최하단) ─── */}
+      {/* ─── 업적 배너 (홈 최하단, band 외부) ─── */}
       {earnedBadges.length > 0 || nextBadge ? (
         <div className="home-achievement-banner">
           <div className="home-achievement-banner__icon">
