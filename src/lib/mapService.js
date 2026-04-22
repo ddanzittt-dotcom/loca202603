@@ -22,6 +22,7 @@ export {
   getCommunityMapBundle,
   getPublishedMapBySlug,
   getPublishedMaps,
+  getCuratedMaps,
   getFeatureMemos,
   getFeatureOperatorNote,
   getProfile,
@@ -48,7 +49,6 @@ export {
   updateFeature,
   deleteFeature,
   addFeatureMemo,
-  saveFeatureOperatorNote,
   createMediaRecord,
   deleteMediaRecord,
   uploadAvatar,
@@ -59,10 +59,16 @@ export {
   getCollaborators,
   addCollaborator,
   removeCollaborator,
-  createFeatureChangeRequest,
-  resolveFeatureChangeRequest,
   linkMapLineage,
 } from "./mapService.write"
+
+// ── Dormant collab/operator-note stubs ──
+// v2 이후 메인 앱 UI 에서 event manager 경로가 제거되어 도달 불가.
+// 외부에서 mapService.write 구현을 정리했지만 useFeatureEditing/CollaboratorsSheet 의
+// dormant import 경로가 여전히 이 심볼을 참조하므로 silent noop 로 유지.
+export async function saveFeatureOperatorNote() { return null }
+export async function createFeatureChangeRequest() { return null }
+export async function resolveFeatureChangeRequest() { return null }
 
 // profile placement (프로필 노출 — 발행과 분리된 별도 액션)
 export {

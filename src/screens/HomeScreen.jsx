@@ -23,10 +23,11 @@ function formatCount(n) {
 }
 
 function HeroStatItem({ value, label, tip, isLast, activeTooltip, index, onTap }) {
+  const isZero = !value || value === 0
   return (
     <button
       type="button"
-      className={`hero-stat${isLast ? " hero-stat--last" : ""}`}
+      className={`hero-stat${isLast ? " hero-stat--last" : ""}${isZero ? " hero-stat--zero" : " hero-stat--active"}`}
       onClick={() => onTap(index)}
     >
       <span className={`hero-stat__num${activeTooltip === index ? " is-active" : ""}`}>{formatCount(value)}</span>
@@ -99,7 +100,12 @@ export function HomeScreen({
     if (recent.length === 0) {
       return { mode: "hidden" }
     }
-    return { mode: "resume", map: recent[0] }
+    const picked = recent[0]
+    return {
+      mode: "resume",
+      map: picked,
+      placeCount: featureCountByMapId.get(picked.id) || 0,
+    }
   }, [maps, features])
 
   // 히어로 카드 툴팁
@@ -411,14 +417,17 @@ export function HomeScreen({
       {resumeState.mode === "resume" ? (
         <div className="home-section">
           <div className="home-section__head">
-            <h2 style={{
-              fontFamily: '"MaruBuri", serif',
-              letterSpacing: "-0.3px",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#1A1A1A",
-              margin: 0,
-            }}>이어서 기록하기</h2>
+            <div>
+              <h2 style={{
+                fontFamily: '"MaruBuri", serif',
+                letterSpacing: "-0.3px",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#1A1A1A",
+                margin: 0,
+              }}>이어서 기록하기</h2>
+              <p className="home-section__desc">작업하던 지도를 마저 완성해볼까요?</p>
+            </div>
           </div>
           <article
             role="button"
@@ -457,6 +466,7 @@ export function HomeScreen({
               </p>
               <p style={{ margin: "3px 0 0", fontSize: 11, fontWeight: 400, color: "#888" }}>
                 {formatUpdatedAt(resumeState.map.updatedAt)}
+                {resumeState.placeCount > 0 ? ` · 장소 ${resumeState.placeCount}개` : ""}
               </p>
             </div>
             <button
@@ -578,30 +588,56 @@ export function HomeScreen({
         ) : (
           <>
             <div className="home-event-list">
-              {events.slice(0, 2).map((event) => (
-                <article key={event.id} className="event-card" onClick={() => openEventDetail(event)} style={{ cursor: "pointer" }}>
-                  {event.image ? (
-                    <div className="event-card__img" style={{ backgroundImage: `url(${event.image})` }} />
-                  ) : (
-                    <div className="event-card__img event-card__img--empty">🎪</div>
-                  )}
-                  <div className="event-card__body">
-                    <div className="event-card__title-row">
+              {events.slice(0, 2).map((event) => {
+                const status = getEventStatus(event.startDate, event.endDate)
+                const isUpcoming = status && /^D-/.test(status.label)
+                const dayNumber = isUpcoming ? status.label.replace(/^D-/, "") : null
+                return (
+                  <article key={event.id} className="event-card" onClick={() => openEventDetail(event)} style={{ cursor: "pointer" }}>
+                    {event.image ? (
+                      <div className="event-card__img" style={{ backgroundImage: `url(${event.image})` }} />
+                    ) : (
+                      <div className="event-card__img event-card__img--empty">🎪</div>
+                    )}
+                    <div className="event-card__body">
                       <strong className="event-card__title">{event.title}</strong>
-                      {(() => {
-                        const status = getEventStatus(event.startDate, event.endDate)
-                        return status ? <span className={`event-badge ${status.className}`}>{status.label}</span> : null
-                      })()}
+                      {event.startDate ? (
+                        <span className="event-card__date">
+                          {formatEventDate(event.startDate)}~{formatEventDate(event.endDate)}
+                        </span>
+                      ) : null}
+                      {event.addr ? <span className="event-card__addr">{event.addr}</span> : null}
                     </div>
-                    {event.startDate ? (
-                      <span className="event-card__date">
-                        {formatEventDate(event.startDate)}~{formatEventDate(event.endDate)}
-                      </span>
+                    {status ? (
+                      <div
+                        aria-label={status.label}
+                        style={{
+                          flexShrink: 0,
+                          background: isUpcoming ? "#2D4A3E" : "#E1F5EE",
+                          color: isUpcoming ? "#F4C55F" : "#085041",
+                          padding: "8px 10px",
+                          borderRadius: 10,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: 48,
+                          lineHeight: 1,
+                        }}
+                      >
+                        {isUpcoming ? (
+                          <>
+                            <span style={{ fontSize: 13, fontWeight: 500 }}>D-{dayNumber}</span>
+                            <span style={{ fontSize: 8, fontWeight: 400, opacity: 0.7, marginTop: 2, letterSpacing: "0.04em" }}>DAYS</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize: 10, fontWeight: 500 }}>진행 중</span>
+                        )}
+                      </div>
                     ) : null}
-                    {event.addr ? <span className="event-card__addr">{event.addr}</span> : null}
-                  </div>
-                </article>
-              ))}
+                  </article>
+                )
+              })}
             </div>
             {events.length > 2 ? (
               <button className="home-event-more" type="button" onClick={() => setShowEventList(true)}>

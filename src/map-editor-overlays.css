@@ -3805,6 +3805,26 @@
 .hero-stat__num.is-active {
   color: #FF6B35;
 }
+/* 0 값은 톤다운해서 '아직 쌓지 않은 지표' 임을 자연스럽게 인식시킨다. */
+.hero-stat--zero .hero-stat__num {
+  color: rgba(250,245,238,.35);
+}
+/* 값이 있는 stat 은 하단 얇은 코랄 언더라인으로 강조. */
+.hero-stat--active {
+  position: relative;
+}
+.hero-stat--active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 2px;
+  border-radius: 2px;
+  background: #FF6B35;
+  opacity: .85;
+}
 .hero-stat__label {
   display: block;
   font-size: 7px;

@@ -1,4 +1,4 @@
-import { requireSupabase } from "./supabase"
+﻿import { requireSupabase } from "./supabase"
 import {
   DEFAULT_MAP_THEME,
   requireUser,
@@ -34,6 +34,70 @@ export async function createMap(mapData = {}) {
 
   if (error) throw error
   return normalizeMap(data)
+}
+
+/**
+ * Ensure the shared community map record exists.
+ * - Fixed slug: community-map
+ * - Return existing row if present, create once otherwise.
+ */
+export async function ensureCommunityMap() {
+  const user = await requireUser()
+  const supabase = requireSupabase()
+
+  const existingRes = await supabase
+    .from("maps")
+    .select("*")
+    .eq("slug", "community-map")
+    .maybeSingle()
+
+  if (existingRes.error) throw existingRes.error
+  if (existingRes.data) {
+    return normalizeMap({
+      ...existingRes.data,
+      user_role: existingRes.data.user_id === user.id ? "owner" : "viewer",
+    })
+  }
+
+  const now = new Date().toISOString()
+  const createRes = await supabase
+    .from("maps")
+    .insert({
+      user_id: user.id,
+      title: "모두의 지도",
+      description: "모두가 함께 만드는 지도",
+      theme: "#4F46E5",
+      visibility: "public",
+      slug: "community-map",
+      tags: ["community"],
+      category: "personal",
+      config: { community: true },
+      is_published: true,
+      published_at: now,
+    })
+    .select("*")
+    .single()
+
+  if (createRes.error) {
+    // Race: another user created the same slug first.
+    if (createRes.error.code === "23505") {
+      const refetch = await supabase
+        .from("maps")
+        .select("*")
+        .eq("slug", "community-map")
+        .maybeSingle()
+      if (refetch.error) throw refetch.error
+      if (refetch.data) {
+        return normalizeMap({
+          ...refetch.data,
+          user_role: refetch.data.user_id === user.id ? "owner" : "viewer",
+        })
+      }
+    }
+    throw createRes.error
+  }
+
+  return normalizeMap({ ...createRes.data, user_role: "owner" })
 }
 
 export async function updateMap(mapId, updates = {}) {
