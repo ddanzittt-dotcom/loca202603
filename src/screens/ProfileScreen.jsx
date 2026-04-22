@@ -192,6 +192,7 @@ export function ProfileScreen({
   onSelectPost,
   onUpdateProfile,
   onBatchAddToProfile,
+  onResetCoachmark,
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -505,7 +506,6 @@ export function ProfileScreen({
             <div className="home-section__head">
               <div>
                 <h2 style={{
-                  fontFamily: '"MaruBuri", serif',
                   letterSpacing: "-0.3px",
                   fontSize: 14,
                   fontWeight: 500,
@@ -655,6 +655,24 @@ export function ProfileScreen({
               </button>
               <button className="button button--danger" type="button" onClick={handleClearCache}>
                 <Trash2 size={14} /> 캐시 삭제
+              </button>
+            </div>
+          </div>
+
+          {/* 도움말 */}
+          <div className="settings-card">
+            <h2>도움말</h2>
+            <div className="settings-link-list">
+              <button
+                className="settings-link-row"
+                type="button"
+                onClick={() => {
+                  onResetCoachmark?.()
+                  setSettingsOpen(false)
+                }}
+              >
+                <span>에디터 가이드 다시 보기</span>
+                <ChevronRight size={14} />
               </button>
             </div>
           </div>

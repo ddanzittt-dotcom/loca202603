@@ -315,7 +315,6 @@ export function HomeScreen({
           fontSize: 18,
           fontWeight: 500,
           color: "#1A1A1A",
-          fontFamily: '"MaruBuri", serif',
           letterSpacing: "-0.3px",
           lineHeight: 1.35,
         }}>
@@ -393,7 +392,6 @@ export function HomeScreen({
               fontSize: 14,
               fontWeight: 500,
               color: "#1A1A1A",
-              fontFamily: '"MaruBuri", serif',
               letterSpacing: "-0.3px",
               lineHeight: 1.35,
             }}>
@@ -419,7 +417,6 @@ export function HomeScreen({
           <div className="home-section__head">
             <div>
               <h2 style={{
-                fontFamily: '"MaruBuri", serif',
                 letterSpacing: "-0.3px",
                 fontSize: 14,
                 fontWeight: 500,

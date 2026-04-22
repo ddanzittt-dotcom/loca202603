@@ -45,7 +45,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .welcome-screen__title {
-  font-family: "MaruBuri", serif;
   font-size: 19px;
   font-weight: 500;
   color: var(--text, #1A1A1A);
