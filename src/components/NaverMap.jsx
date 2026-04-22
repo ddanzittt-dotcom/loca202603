@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
-import { getPinIcon, emojiToCategory } from "../data/pinIcons"
+import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
 
 const getNaverMaps = () => window.naver?.maps ?? null
 
@@ -14,9 +14,12 @@ const zoomScale = (zoom) => {
   return Math.max(0.3, Math.min(s, 1.4))
 }
 
+const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
+const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230F6E56' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
+
 const LOCA_DARK_STYLE_ID = "90019b0b-7cdc-4f96-baa6-438d871a37d5"
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null, mapCategory = null, walkRoute = null }, ref) {
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null, isEventMap = false, walkRoute = null }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
@@ -25,8 +28,8 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
   const onMapTapRef = useRef(onMapTap)
   const ignoreMapTapUntilRef = useRef(0)
   const lastFeatureTapRef = useRef({ featureId: null, at: 0 })
-  const mapCategoryRef = useRef(mapCategory)
-  mapCategoryRef.current = mapCategory
+  const isEventMapRef = useRef(isEventMap)
+  isEventMapRef.current = isEventMap
   const [mapReady, setMapReady] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3) // 1=far, 2=mid, 3=close
 
@@ -90,6 +93,111 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     onMapTapRef.current = onMapTap
   }, [onMapTap])
 
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root) return undefined
+
+    const hiddenNodes = new Set()
+    const isEditorMode = typeof onMapTap === "function"
+    if (!isEditorMode) return undefined
+
+    const CONTROL_CLASS_RE = /(btn_|zoom|mylct|flick|control|draw|tool|compass|locate|location|map_btn|ctl)/i
+
+    const hideNativeControls = () => {
+      const rootRect = root.getBoundingClientRect()
+      const candidates = root.querySelectorAll("[class], button, a, div")
+      candidates.forEach((node) => {
+        const el = node instanceof HTMLElement ? node : null
+        if (!el) return
+        const className = typeof el.className === "string" ? el.className : (el.getAttribute("class") || "")
+        if (!className || className.includes("loca-")) return
+        if (!CONTROL_CLASS_RE.test(className)) return
+
+        const style = window.getComputedStyle(el)
+        if (style.position !== "absolute" && style.position !== "fixed") return
+
+        const rect = el.getBoundingClientRect()
+        if (rect.width <= 0 || rect.height <= 0) return
+        const onRightRail = rect.left >= (rootRect.right - 140)
+        const withinMap = rect.top >= (rootRect.top - 6) && rect.bottom <= (rootRect.bottom + 6)
+        const compactControl = rect.width <= 120 && rect.height <= 420
+        if (!onRightRail || !withinMap || !compactControl) return
+
+        el.style.setProperty("display", "none", "important")
+        el.setAttribute("data-loca-hidden-native-control", "1")
+        hiddenNodes.add(el)
+      })
+    }
+
+    hideNativeControls()
+    const observer = new MutationObserver(() => hideNativeControls())
+    observer.observe(root, { childList: true, subtree: true })
+    const timerId = window.setInterval(hideNativeControls, 800)
+
+    return () => {
+      observer.disconnect()
+      window.clearInterval(timerId)
+      hiddenNodes.forEach((el) => {
+        if (el.getAttribute("data-loca-hidden-native-control") === "1") {
+          el.style.removeProperty("display")
+          el.removeAttribute("data-loca-hidden-native-control")
+        }
+      })
+      hiddenNodes.clear()
+    }
+  }, [onMapTap, mapReady])
+
+  useEffect(() => {
+    const root = containerRef.current
+    if (!root) return undefined
+
+    const nextCursor = draftMode === "pin"
+      ? PIN_MODE_CURSOR
+      : (draftMode === "route" || draftMode === "area")
+        ? DRAW_MODE_CURSOR
+        : null
+
+    const applyCursor = (eventTarget = null) => {
+      const targets = eventTarget
+        ? [root, eventTarget]
+        : [root, ...root.querySelectorAll("canvas, div, svg, path, span, img")]
+      if (!nextCursor) {
+        targets.forEach((el) => {
+          if (el.getAttribute("data-loca-draft-cursor") === "1") {
+            el.style.removeProperty("cursor")
+            el.removeAttribute("data-loca-draft-cursor")
+          }
+        })
+        return
+      }
+      targets.forEach((el) => {
+        el.style.setProperty("cursor", nextCursor, "important")
+        el.setAttribute("data-loca-draft-cursor", "1")
+      })
+    }
+
+    applyCursor()
+    const observer = new MutationObserver(() => applyCursor())
+    observer.observe(root, { childList: true, subtree: true })
+    const handleMouseMove = (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null
+      if (target) applyCursor(target)
+    }
+    root.addEventListener("mousemove", handleMouseMove, true)
+
+    return () => {
+      observer.disconnect()
+      root.removeEventListener("mousemove", handleMouseMove, true)
+      const targets = [root, ...root.querySelectorAll("canvas, div, svg, path, span, img")]
+      targets.forEach((el) => {
+        if (el.getAttribute("data-loca-draft-cursor") === "1") {
+          el.style.removeProperty("cursor")
+          el.removeAttribute("data-loca-draft-cursor")
+        }
+      })
+    }
+  }, [draftMode])
+
   // Load SDK + init map (once on mount)
   useEffect(() => {
     let cancelled = false
@@ -111,7 +219,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           logoControlOptions: { position: naverMaps.Position.BOTTOM_LEFT },
           mapDataControl: false,
         }
-        if (mapCategoryRef.current === "event") {
+        if (isEventMapRef.current) {
           mapOptions.gl = true
           mapOptions.customStyleId = LOCA_DARK_STYLE_ID
         }
@@ -259,19 +367,32 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const isSelected = feature.id === selectedFeatureId
           const isChecked = checkedInIds && checkedInIds.has(feature.id)
           const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
-          const catId = feature.category || emojiToCategory(feature.emoji)
+          const emoji = typeof feature.emoji === "string" ? feature.emoji.trim() : ""
+          const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
+          const mappedCategory = isMappedPinEmoji(emoji) ? emojiToCategory(emoji) : ""
+          const catId = explicitCategory || mappedCategory || emojiToCategory(feature.emoji)
           const iconData = getPinIcon(catId)
+          const hasCustomEmoji = !explicitCategory
+            && !mappedCategory
+            && emoji
+            && emoji.length <= 4
+            && !emoji.includes("/")
 
-          // 줌 레벨별 핀 구성
+          // ????????? ???
           const dotSizes = [8, 10, 14]
           const dotBorders = [1.5, 2, 2.5]
           const dotSize = dotSizes[zoomLevel - 1]
           const dotBorder = dotBorders[zoomLevel - 1]
           const showBadge = zoomLevel >= 2
-          const showPinLabel = zoomLevel === 3 && showLabels
+          const baseLabelZoomThreshold = isEventMap ? 2 : 3
+          const expandedLabelZoomThreshold = Math.max(1, baseLabelZoomThreshold - 2)
+          const showPinLabel = showLabels && zoomLevel >= expandedLabelZoomThreshold
 
+          const badgeInnerHtml = hasCustomEmoji
+            ? `<span class="loca-pin-badge__emoji">${escapeHtml(emoji)}</span>`
+            : `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
           const badgeHtml = showBadge
-            ? `<div class="loca-pin-badge" style="background:${iconData.bg}"><img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/></div>`
+            ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`
             : ""
           const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;${isSelected ? "border-color:#2D4A3E" : ""}`
           const labelHtml = showPinLabel
@@ -455,7 +576,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("네이버 지도 레이어 업데이트 실패:", e)
     }
-  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
+  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, isEventMap, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
 
   // Focus
   useEffect(() => {

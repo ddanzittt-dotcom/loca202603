@@ -552,7 +552,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               onFeatureTap={handleFeatureSelect}
               showLabels
               myLocation={currentUserPos}
-              mapCategory={map.category}
+              isEventMap={isEventMap}
               walkRoute={walkRoute}
             />
           </MapErrorBoundary>
@@ -770,7 +770,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 showLabels={showMapNames}
                 myLocation={currentUserPos}
                 checkedInIds={config.checkin_enabled ? checkedInIds : null}
-                mapCategory={map.category}
+                isEventMap={isEventMap}
                 walkRoute={walkRoute}
               />
             </MapErrorBoundary>

@@ -21,9 +21,9 @@ import {
   awardBadge as rpcAwardBadge,
   updateStreak as rpcUpdateStreak,
 } from "./mapService"
-import { computeStatsFromLocal, BADGES } from "../data/gamification"
+import { computeStatsFromLocal, BADGES, MILESTONE_SOUVENIRS } from "../data/gamification"
 // re-export for convenience
-export { LEVELS, BADGES, XP_VALUES, getLevelForXp, getNextLevel, getLevelProgress, getEarnedBadges, getNextEarnableBadge } from "../data/gamification"
+export { LEVELS, BADGES, MILESTONE_SOUVENIRS, XP_VALUES, getLevelForXp, getNextLevel, getLevelProgress, getEarnedBadges, getNextEarnableBadge } from "../data/gamification"
 
 // ─── Profile shape normalizer ───
 // DB snake_case → JS camelCase 통일
@@ -223,6 +223,27 @@ export async function checkAndAwardBadges(stats, earnedBadgeIds) {
     }
   }
   return newBadges
+}
+
+/**
+ * 기념 뱃지 milestone 자동 체크 + 발급
+ * @param {object} stats - normalized stats (camelCase)
+ * @param {string[]} earnedCodes - 이미 보유한 souvenir_code 목록
+ * @returns {string[]} 새로 발급된 souvenir_code 목록
+ */
+export async function checkAndAwardMilestoneSouvenirs(stats, earnedCodes) {
+  const newCodes = []
+  for (const milestone of MILESTONE_SOUVENIRS) {
+    if (earnedCodes.includes(milestone.code)) continue
+    if (milestone.condition(stats)) {
+      const result = await awardSouvenir(milestone.code, null, {
+        title: milestone.title,
+        emoji: milestone.emoji,
+      })
+      if (result) newCodes.push(milestone.code)
+    }
+  }
+  return newCodes
 }
 
 /**

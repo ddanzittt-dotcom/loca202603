@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
+import { CoachMark } from "../components/CoachMark"
 import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
@@ -79,6 +80,11 @@ export function MapEditorScreen({
   onUnpublishMap,
   onAddMapToProfile,
   onRemoveMapFromProfile,
+  coachmarkStep = 0,
+  onCoachmarkNext,
+  onCoachmarkSkip,
+  firstPinHintVisible = false,
+  onDismissFirstPinHint,
 }) {
   const placement = getProfilePlacementState(map, placementRow)
   const [searchQuery, setSearchQuery] = useState("")
@@ -407,7 +413,7 @@ export function MapEditorScreen({
             myLocation={myLocation}
             characterStyle={characterStyle}
             levelEmoji={levelEmoji}
-            mapCategory={map?.category}
+            isEventMap={placement.isEventMap}
             walkRoute={walkRoute}
           />
         </MapErrorBoundary>
@@ -691,6 +697,43 @@ export function MapEditorScreen({
         }}
         showToast={showToast}
       />
+
+      {/* 코치마크 */}
+      {coachmarkStep === 1 ? (
+        <CoachMark
+          step={1}
+          totalSteps={3}
+          title="먼저 핀을 골라보세요"
+          description="장소는 핀, 경로는 선, 영역은 면으로 기록할 수 있어요. 우선 핀부터 시작해볼까요?"
+          onNext={() => onCoachmarkNext?.(2)}
+          onSkip={() => onCoachmarkSkip?.()}
+        />
+      ) : null}
+      {coachmarkStep === 2 ? (
+        <CoachMark
+          step={2}
+          totalSteps={3}
+          title="지도에서 기록할 곳을 눌러보세요"
+          description="탭한 위치에 핀이 놓여요"
+          nextLabel="확인"
+          onNext={() => onCoachmarkNext?.(0)}
+          onSkip={() => onCoachmarkSkip?.()}
+        />
+      ) : null}
+
+      {/* 첫 핀 힌트 카드 */}
+      {firstPinHintVisible ? (
+        <div className="first-pin-hint">
+          <img src="/characters/cloud_lv1.svg" alt="" className="first-pin-hint__icon" />
+          <div className="first-pin-hint__text">
+            <p className="first-pin-hint__title">잘 기록했어요</p>
+            <p className="first-pin-hint__desc">장소를 더 추가하거나, 메모를 남겨보세요</p>
+          </div>
+          <button className="first-pin-hint__close" type="button" onClick={() => onDismissFirstPinHint?.()} aria-label="닫기">
+            <X size={16} />
+          </button>
+        </div>
+      ) : null}
     </section>
   )
 }

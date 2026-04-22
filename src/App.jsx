@@ -422,7 +422,7 @@ export default function App() {
     startRelocatePin,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
-    activeMapCategory: activeMap?.category || "personal",
+    isEventMap: isEventMap(activeMap),
     activeMapRole: activeMap?.userRole || "owner",
     setFeatures, featureSheet, setFeatureSheet,
     selectedFeatureSummaryId,

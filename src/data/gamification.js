@@ -31,13 +31,8 @@ export const XP_VALUES = {
 }
 
 // ─── 뱃지 정의 ───
+// 업적 = 활동 성취 (창작/커뮤니티/연속). 행사 참여 이정표는 MILESTONE_SOUVENIRS (기념 뱃지) 로 이관됨.
 export const BADGES = [
-  // 탐험 계열
-  { id: "first_checkin",   emoji: "🏃", name: "첫 발자국",  desc: "첫 체크인 완료",           category: "explore", condition: (s) => s.checkins >= 1 },
-  { id: "first_completion", emoji: "🎯", name: "완주자",    desc: "이벤트 첫 완주",           category: "explore", condition: (s) => s.completions >= 1 },
-  { id: "five_completions", emoji: "🏅", name: "5관왕",    desc: "5개 이벤트 완주",           category: "explore", condition: (s) => s.completions >= 5 },
-  { id: "three_regions",   emoji: "🌏", name: "3개 도시",  desc: "3개 이상 지역에서 체크인",   category: "explore", condition: (s) => s.regions >= 3 },
-
   // 창작 계열
   { id: "ten_pins",        emoji: "📍", name: "핀 초보",   desc: "핀 10개 추가",             category: "create", condition: (s) => s.pins >= 10 },
   { id: "fifty_pins",      emoji: "📌", name: "핀 장인",   desc: "핀 50개 추가",             category: "create", condition: (s) => s.pins >= 50 },
@@ -52,6 +47,16 @@ export const BADGES = [
   { id: "streak_3",        emoji: "🔥", name: "3일 연속",  desc: "3일 연속 활동",             category: "streak", condition: (s) => s.streak >= 3 },
   { id: "streak_7",        emoji: "🔥", name: "7일 연속",  desc: "7일 연속 활동",             category: "streak", condition: (s) => s.streak >= 7 },
   { id: "streak_30",       emoji: "💎", name: "30일 연속", desc: "30일 연속 활동",            category: "streak", condition: (s) => s.streak >= 30 },
+]
+
+// ─── 기념 뱃지 milestone 정의 ───
+// 행사 참여 경험을 기념하는 자동 발급 뱃지. user_souvenirs 테이블에 souvenir_code 로 저장된다.
+// condition 이 참이면 awardSouvenir(souvenir_code) 로 1회 발급하고, 이후 중복 호출은 서버에서 무시.
+export const MILESTONE_SOUVENIRS = [
+  { code: "first_checkin",    title: "첫 발자국", emoji: "🏃", desc: "첫 체크인 완료",           condition: (s) => s.checkins >= 1 },
+  { code: "first_completion", title: "완주자",    emoji: "🎯", desc: "행사 첫 완주",             condition: (s) => s.completions >= 1 },
+  { code: "five_completions", title: "5관왕",     emoji: "🏅", desc: "행사 5개 완주",            condition: (s) => s.completions >= 5 },
+  { code: "three_regions",    title: "3개 도시",  emoji: "🌏", desc: "3개 이상 지역에서 체크인", condition: (s) => s.regions >= 3 },
 ]
 
 // ─── 유틸리티 함수 ───
