@@ -36,7 +36,7 @@
   animation: welcome-fadein 0.5s ease-out both;
 }
 .welcome-screen__character-fallback {
-  font-size: 72px;
+  font-size: clamp(48px, 14vw, 64px);
   margin-bottom: 24px;
   animation: welcome-fadein 0.5s ease-out both;
 }
