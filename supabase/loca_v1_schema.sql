@@ -49,6 +49,7 @@ create table if not exists public.map_features (
   lat double precision,
   lng double precision,
   points jsonb,
+  style jsonb not null default '{}'::jsonb,
   highlight boolean not null default false,
   sort_order integer not null default 0,
   created_by uuid references public.profiles(id) on delete set null,
