@@ -4,18 +4,24 @@ import { logEvent } from "../lib/analytics"
 import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import {
   addFeatureMemo as addFeatureMemoRecord,
-  createFeatureChangeRequest,
   createFeature as createFeatureRecord,
   getFeatureOperatorNote,
   saveFeatureOperatorNote,
   updateFeature as updateFeatureRecord,
   deleteFeature as deleteFeatureRecord,
 } from "../lib/mapService"
+import { createFeatureChangeRequest } from "../lib/mapService.write"
 import { recordMapAction } from "../lib/gamificationService"
 import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { me } from "../data/sampleData"
+import { uploadMediaToCloud } from "../lib/mediaStore"
+import { getDefaultFeatureStyle, normalizeFeatureStyle } from "../lib/featureStyle"
 
-const toEditableFeature = (feature) => ({ ...feature, tagsText: tagsToText(feature.tags) })
+const toEditableFeature = (feature) => ({
+  ...feature,
+  style: normalizeFeatureStyle(feature?.style, feature?.type || "pin"),
+  tagsText: tagsToText(feature.tags),
+})
 
 const getFeatureDefaultEmoji = (type) => {
   if (type === "route") return "\uD83D\uDEE3\uFE0F"
@@ -136,6 +142,7 @@ export function useFeatureEditing({
   setFocusPoint,
   currentUserId = me.id,
   currentUserName = me.name,
+  onCommunityRequestSubmitted = null,
 }) {
   const canPersistCommunityInCloud = activeMapSource === "community"
     && cloudMode
@@ -231,15 +238,129 @@ export function useFeatureEditing({
     }
   }, [cloudMode, maps, features])
 
+  const buildCommunityRequestPayload = useCallback((sourceFeature, requestMessage = "") => {
+    if (!sourceFeature?.id) return null
+    const trimmedTitle = `${sourceFeature.title || ""}`.trim().slice(0, 100)
+    if (!trimmedTitle) return null
+    const nextFeature = {
+      ...sourceFeature,
+      title: trimmedTitle,
+      emoji: sourceFeature.emoji || getFeatureDefaultEmoji(sourceFeature.type),
+      style: normalizeFeatureStyle(sourceFeature.style, sourceFeature.type),
+      tags: (sourceFeature.tagsText || "")
+        .split(",")
+        .map((tag) => tag.trim().slice(0, 50))
+        .filter(Boolean)
+        .slice(0, 20),
+      note: (sourceFeature.note || "").slice(0, 2000),
+    }
+    if (nextFeature.type === "pin" && nextFeature.lat != null) {
+      const sc = sanitizeCoord(nextFeature.lat, nextFeature.lng)
+      nextFeature.lat = sc.lat
+      nextFeature.lng = sc.lng
+    }
+    if (nextFeature.points) {
+      nextFeature.points = sanitizePoints(nextFeature.points)
+    }
+    return {
+      feature: nextFeature,
+      payload: {
+        type: nextFeature.type,
+        title: nextFeature.title,
+        emoji: nextFeature.emoji,
+        tags: nextFeature.tags || [],
+        note: nextFeature.note || "",
+        highlight: Boolean(nextFeature.highlight),
+        style: nextFeature.style,
+        lat: nextFeature.lat,
+        lng: nextFeature.lng,
+        points: nextFeature.points || null,
+        sortOrder: nextFeature.sortOrder || 0,
+        requestMessage: `${requestMessage || ""}`.slice(0, 400),
+        createdByName: currentUserName || me.name,
+      },
+    }
+  }, [currentUserName])
+
+  const requestCommunityFeatureUpdateById = useCallback(async (featureId, requestMessage = "", draftFeature = null) => {
+    if (activeMapSource !== "community") return false
+    if (!featureId) return false
+    if (!cloudMode || !canPersistCommunityInCloud || !activeMapId) {
+      showToast("수정 요청을 보낼 수 없는 상태예요. 잠시 후 다시 시도해 주세요.")
+      return false
+    }
+
+    const sourceFeature = draftFeature || activeFeaturePool.find((item) => item.id === featureId)
+    if (!sourceFeature) {
+      showToast("장소 정보를 찾을 수 없어요.")
+      return false
+    }
+    if ((sourceFeature.createdBy || null) === (currentUserId || me.id)) {
+      showToast("내가 등록한 장소는 바로 수정할 수 있어요.")
+      return false
+    }
+
+    const requestBody = buildCommunityRequestPayload(sourceFeature, requestMessage)
+    if (!requestBody?.feature?.title) {
+      showToast("이름을 입력해 주세요.")
+      return false
+    }
+
+    const requested = await submitFeatureRequest("update", requestBody.feature.id, requestBody.payload)
+    if (!requested) return false
+    onCommunityRequestSubmitted?.({
+      mapId: activeMapId,
+      featureId: requestBody.feature.id,
+      featureTitle: requestBody.feature.title,
+      requestMessage: `${requestMessage || ""}`.slice(0, 400),
+      requestedBy: currentUserId || me.id,
+      requestedByName: currentUserName || me.name,
+    })
+    return true
+  }, [
+    activeFeaturePool,
+    activeMapId,
+    activeMapSource,
+    buildCommunityRequestPayload,
+    canPersistCommunityInCloud,
+    cloudMode,
+    currentUserId,
+    currentUserName,
+    onCommunityRequestSubmitted,
+    showToast,
+    submitFeatureRequest,
+  ])
+
+  const requestCommunityFeatureUpdate = useCallback(async (requestMessage = "") => {
+    if (!featureSheet?.id) return false
+    const requested = await requestCommunityFeatureUpdateById(featureSheet.id, requestMessage, featureSheet)
+    if (!requested) return false
+    setFeatureSheet(null)
+    setSelectedFeatureId(null)
+    setSelectedFeatureSummaryId(null)
+    return true
+  }, [
+    featureSheet,
+    requestCommunityFeatureUpdateById,
+    setFeatureSheet,
+    setSelectedFeatureId,
+    setSelectedFeatureSummaryId,
+  ])
+
   const saveFeatureSheet = useCallback(async () => {
     const lastKnownUpdatedAt = featureSheet?.updatedAt || null
     const operatorNote = `${featureSheet?.operatorNote || ""}`.slice(0, 4000)
     if (!featureSheet?.title.trim()) return showToast("이름을 입력해 주세요.")
+    if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
+      showToast("내가 등록한 장소만 직접 수정할 수 있어요. 수정 요청을 이용해 주세요.")
+      return
+    }
     const trimmedTitle = featureSheet.title.trim().slice(0, 100)
     const nextFeature = {
       ...featureSheet,
       title: trimmedTitle,
       emoji: featureSheet.emoji || getFeatureDefaultEmoji(featureSheet.type),
+      style: normalizeFeatureStyle(featureSheet.style, featureSheet.type),
       tags: featureSheet.tagsText.split(",").map((tag) => tag.trim().slice(0, 50)).filter(Boolean).slice(0, 20),
       note: (featureSheet.note || "").slice(0, 2000),
       updatedAt: new Date().toISOString(),
@@ -299,6 +420,7 @@ export function useFeatureEditing({
             tags: nextFeature.tags || [],
             note: nextFeature.note || "",
             highlight: Boolean(nextFeature.highlight),
+            style: nextFeature.style,
             lat: nextFeature.lat,
             lng: nextFeature.lng,
             points: nextFeature.points || null,
@@ -366,6 +488,7 @@ export function useFeatureEditing({
     activeMapSource,
     canPersistCommunityInCloud,
     cloudMode,
+    currentUserId,
     currentUserName,
     featureSheet,
     shouldRequestApproval,
@@ -381,6 +504,10 @@ export function useFeatureEditing({
 
   const deleteFeature = useCallback(async () => {
     if (!featureSheet?.id || !window.confirm("이 항목을 삭제할까요?")) return
+    if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
+      showToast("내가 등록한 장소만 삭제할 수 있어요.")
+      return
+    }
     if (activeMapSource === "community") {
       if (canPersistCommunityInCloud) {
         try {
@@ -439,6 +566,7 @@ export function useFeatureEditing({
     activeMapSource,
     canPersistCommunityInCloud,
     cloudMode,
+    currentUserId,
     featureSheet,
     shouldRequestApproval,
     setCommunityMapFeatures,
@@ -451,13 +579,44 @@ export function useFeatureEditing({
     touchMap,
   ])
 
-  const addMemo = useCallback(async (featureId, text) => {
-    if (!text.trim()) return
+  const addMemo = useCallback(async (featureId, text, photoFiles = []) => {
+    const trimmedText = `${text || ""}`.trim()
+    const selectedFiles = Array.isArray(photoFiles) ? photoFiles : []
+    if (!trimmedText && selectedFiles.length === 0) return
+
+    let uploadedPhotoUrls = []
+    if (selectedFiles.length > 0) {
+      if (cloudMode) {
+        const uploadResults = await Promise.all(
+          selectedFiles.map(async (file) => {
+            try {
+              const uploadId = createId("memo_photo")
+              const cloudMeta = await uploadMediaToCloud(uploadId, file, "memo-photos")
+              return cloudMeta?.publicUrl || null
+            } catch (error) {
+              console.error("Failed to upload memo photo", error)
+              return null
+            }
+          }),
+        )
+        uploadedPhotoUrls = uploadResults.filter(Boolean)
+      } else {
+        uploadedPhotoUrls = selectedFiles
+          .map((file) => {
+            try {
+              return URL.createObjectURL(file)
+            } catch {
+              return null
+            }
+          })
+          .filter(Boolean)
+      }
+    }
 
     let memo
     if (cloudMode) {
       try {
-        memo = await addFeatureMemoRecord(featureId, text)
+        memo = await addFeatureMemoRecord(featureId, trimmedText, currentUserName || me.name, uploadedPhotoUrls)
       } catch (error) {
         console.error("Failed to save memo to cloud", error)
         showToast("메모 저장에 실패했어요.")
@@ -469,8 +628,12 @@ export function useFeatureEditing({
         userId: currentUserId || me.id,
         userName: currentUserName || me.name,
         date: new Date().toISOString(),
-        text: text.trim(),
+        text: trimmedText,
+        photos: uploadedPhotoUrls,
       }
+    }
+    if (uploadedPhotoUrls.length > 0 && (!memo.photos || memo.photos.length === 0)) {
+      memo = { ...memo, photos: uploadedPhotoUrls }
     }
 
     const isCommunityFeature = communityMapFeatures.some((feature) => feature.id === featureId)
@@ -496,10 +659,9 @@ export function useFeatureEditing({
     if (featureSheet && featureSheet.id === featureId) {
       setFeatureSheet((current) => ({ ...current, memos: [...(current.memos || []), memo] }))
     }
-    showToast("메모를 저장했어요.")
+    showToast(uploadedPhotoUrls.length > 0 ? "메모와 사진을 저장했어요." : "메모를 저장했어요.")
   }, [
     cloudMode,
-    communityMapFeatures,
     currentUserId,
     currentUserName,
     featureSheet,
@@ -508,7 +670,69 @@ export function useFeatureEditing({
     setFeatures,
     setMemoText,
     showToast,
+    communityMapFeatures,
   ])
+
+  // 모두의 지도 → 내 지도 가져오기 / 취소
+  //
+  // 정책:
+  //   - 타겟 지도: 사용자의 첫 개인 지도 (maps[0]). 없으면 토스트로 안내.
+  //   - 복제 필드: type, title, emoji, tags, note, highlight, style, lat/lng, points.
+  //     memos/photos/voices 는 원본(커뮤니티)에 남겨두고 복제본은 빈 상태로 시작.
+  //   - sourceFeatureId 에 원본 id 저장 — '저장됨' 상태 판별과 언임포트 매칭에 사용.
+  //   - 현재는 localStorage 상태에만 반영. 클라우드 동기화는 별도 마이그레이션 필요.
+  const importCommunityFeatureToMine = useCallback((sourceFeatureId) => {
+    if (!sourceFeatureId) return false
+    const source = (communityMapFeatures || []).find((f) => f.id === sourceFeatureId)
+    if (!source) { showToast("원본 장소를 찾을 수 없어요."); return false }
+
+    const alreadyImported = (features || []).some((f) => f.sourceFeatureId === sourceFeatureId)
+    if (alreadyImported) { showToast("이미 내 지도에 저장되어 있어요."); return true }
+
+    const targetMap = (maps || [])[0]
+    if (!targetMap) { showToast("먼저 내 지도를 만들어 주세요."); return false }
+
+    const cloned = {
+      id: createId("feat"),
+      mapId: targetMap.id,
+      type: source.type,
+      title: source.title,
+      emoji: source.emoji,
+      category: source.category || null,
+      tags: Array.isArray(source.tags) ? [...source.tags] : [],
+      note: source.note || "",
+      highlight: Boolean(source.highlight),
+      style: normalizeFeatureStyle(source.style, source.type),
+      lat: source.lat,
+      lng: source.lng,
+      points: Array.isArray(source.points) ? source.points.map((p) => ({ ...p })) : null,
+      sortOrder: 0,
+      memos: [],
+      photos: [],
+      voices: [],
+      createdBy: currentUserId || me.id,
+      createdByName: currentUserName || me.name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sourceFeatureId,
+      sourceMapId: source.mapId || null,
+    }
+    setFeatures((current) => [...current, cloned])
+    touchMap?.(targetMap.id)
+    showToast(`'${targetMap.title || "내 지도"}'에 저장했어요.`)
+    return true
+  }, [communityMapFeatures, features, maps, setFeatures, touchMap, showToast, currentUserId, currentUserName])
+
+  const unimportCommunityFeature = useCallback((sourceFeatureId) => {
+    if (!sourceFeatureId) return false
+    const matching = (features || []).filter((f) => f.sourceFeatureId === sourceFeatureId)
+    if (matching.length === 0) { showToast("저장된 항목을 찾지 못했어요."); return false }
+    const affectedMapIds = new Set(matching.map((f) => f.mapId).filter(Boolean))
+    setFeatures((current) => current.filter((f) => f.sourceFeatureId !== sourceFeatureId))
+    affectedMapIds.forEach((id) => touchMap?.(id))
+    showToast("저장을 취소했어요.")
+    return true
+  }, [features, setFeatures, touchMap, showToast])
 
   // 핀 위치 재지정
   const relocatingRef = useRef(null)
@@ -605,6 +829,7 @@ export function useFeatureEditing({
         type: "pin",
         title: "새 장소",
         emoji: "\uD83D\uDCCD",
+        style: getDefaultFeatureStyle("pin"),
         lat: sc.lat,
         lng: sc.lng,
         tags: [],
@@ -639,6 +864,7 @@ export function useFeatureEditing({
               tags: nextFeature.tags || [],
               note: nextFeature.note || "",
               highlight: Boolean(nextFeature.highlight),
+              style: nextFeature.style,
               lat: nextFeature.lat,
               lng: nextFeature.lng,
               points: null,
@@ -712,6 +938,7 @@ export function useFeatureEditing({
       type: "route",
       title: "새 경로",
       emoji: "\uD83D\uDEE3\uFE0F",
+      style: getDefaultFeatureStyle("route"),
       points: sanitizePoints(draftPoints),
       tags: [],
       note: "",
@@ -745,6 +972,7 @@ export function useFeatureEditing({
             tags: nextFeature.tags || [],
             note: nextFeature.note || "",
             highlight: Boolean(nextFeature.highlight),
+            style: nextFeature.style,
             points: nextFeature.points || [],
             sortOrder: 0,
             createdByName: currentUserName || me.name,
@@ -790,6 +1018,7 @@ export function useFeatureEditing({
       type: "area",
       title: "새 범위",
       emoji: "\uD83D\uDFE9",
+      style: getDefaultFeatureStyle("area"),
       points: sanitizePoints(draftPoints),
       tags: [],
       note: "",
@@ -823,6 +1052,7 @@ export function useFeatureEditing({
             tags: nextFeature.tags || [],
             note: nextFeature.note || "",
             highlight: Boolean(nextFeature.highlight),
+            style: nextFeature.style,
             points: nextFeature.points || [],
             sortOrder: 0,
             createdByName: currentUserName || me.name,
@@ -865,13 +1095,15 @@ export function useFeatureEditing({
     focusFeatureOnly,
     openFeatureDetail,
     saveFeatureSheet,
+    requestCommunityFeatureUpdate,
+    requestCommunityFeatureUpdateById,
     deleteFeature,
     addMemo,
     createHandleMapTap,
     completeRoute,
     completeArea,
     startRelocatePin,
+    importCommunityFeatureToMine,
+    unimportCommunityFeature,
   }
 }
-
-

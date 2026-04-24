@@ -30,6 +30,8 @@ import {
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, saveMap as saveMapRecord } from "./lib/mapService"
+import { listFeatureChangeRequests } from "./lib/mapService.read"
+import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const WelcomeScreen = lazy(() => import("./screens/WelcomeScreen").then((m) => ({ default: m.WelcomeScreen })))
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
@@ -138,6 +140,7 @@ export default function App() {
   const [welcomeDismissed, setWelcomeDismissed] = useState(() => isWelcomeSeen())
   const [coachmarkStep, setCoachmarkStep] = useState(0) // 0=off, 1~3=active step
   const [firstPinHintVisible, setFirstPinHintVisible] = useState(false)
+  const [communityPendingRequests, setCommunityPendingRequests] = useState([])
 
   const isOnline = useOnlineStatus()
   const toast = useToast()
@@ -256,6 +259,7 @@ export default function App() {
     markRead: notiMarkRead,
     markAllRead: notiMarkAllRead,
     removeItem: notiRemove,
+    refresh: notiRefresh,
   } = useNotifications()
 
   // --- Derived data ---
@@ -264,14 +268,22 @@ export default function App() {
     const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
     return Object.fromEntries(mergedUsers.map((user) => [user.id, user]))
   }, [viewerProfile])
+  const canEditCommunityMap = !(hasSupabaseEnv && authReady && !authUser)
+  const importedCommunityFeatureIds = useMemo(() => {
+    const set = new Set()
+    for (const f of features) {
+      if (f?.sourceFeatureId) set.add(f.sourceFeatureId)
+    }
+    return set
+  }, [features])
   const communityMapMeta = useMemo(() => [{
     id: communityMapId,
     title: "모두의 지도",
     description: "모두가 함께 만드는 지도",
     theme: "#4F46E5",
     updatedAt: communityMapFeatures[0]?.updatedAt || new Date().toISOString(),
-    canEditFeatures: !(hasSupabaseEnv && (!authUser || communityMapId === "community-map")),
-  }], [authUser, communityMapFeatures, communityMapId])
+    canEditFeatures: canEditCommunityMap,
+  }], [canEditCommunityMap, communityMapFeatures, communityMapId])
   const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
   const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
   const activeMapPool = activeMapSource === "community"
@@ -295,6 +307,40 @@ export default function App() {
   )
   const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, viewerProfile), [features, maps, shares, viewerProfile])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
+  const communityRequestSummary = useMemo(() => {
+    const currentUserId = viewerProfile?.id || me.id
+    const featureById = new Map(communityMapFeatures.map((feature) => [feature.id, feature]))
+    const myFeatureIds = new Set(
+      communityMapFeatures
+        .filter((feature) => (feature.createdBy || null) === currentUserId)
+        .map((feature) => feature.id),
+    )
+    const mine = []
+    const incoming = []
+    for (const request of communityPendingRequests) {
+      if (!request || request.status !== "pending") continue
+      const featureId = request.featureId || null
+      const feature = featureId ? featureById.get(featureId) : null
+      const title = request.payload?.title || feature?.title || "장소"
+      const item = {
+        ...request,
+        featureTitle: title,
+        requestedAtLabel: new Date(request.createdAt).toLocaleString("ko-KR"),
+      }
+      if (request.requestedBy === currentUserId) {
+        mine.push(item)
+      }
+      if (featureId && myFeatureIds.has(featureId) && request.requestedBy !== currentUserId) {
+        incoming.push(item)
+      }
+    }
+    return {
+      mine,
+      incoming,
+      mineCount: mine.length,
+      incomingCount: incoming.length,
+    }
+  }, [communityMapFeatures, communityPendingRequests, viewerProfile?.id])
 
   // 인기 지도: is_curated 우선 → 폴백으로 기존 collections + communityFeed
   const [curatedMaps, setCuratedMaps] = useState([])
@@ -416,11 +462,21 @@ export default function App() {
     })
   }, [importMapBundleToLocal, maps, openMapEditor, showToast])
 
+  const refreshCommunityPendingRequests = useCallback(async () => {
+    if (!hasSupabaseEnv || !authUser || !communityMapId || communityMapId === "community-map") return
+    try {
+      const requests = await listFeatureChangeRequests(communityMapId, "pending")
+      setCommunityPendingRequests(requests)
+    } catch (error) {
+      console.error("Failed to refresh community feature requests", error)
+    }
+  }, [authUser, communityMapId])
+
   const {
     focusFeature, focusFeatureOnly, openFeatureDetail,
-    saveFeatureSheet, deleteFeature,
+    saveFeatureSheet, requestCommunityFeatureUpdate, requestCommunityFeatureUpdateById, deleteFeature,
     addMemo, createHandleMapTap, completeRoute, completeArea,
-    startRelocatePin,
+    startRelocatePin, importCommunityFeatureToMine, unimportCommunityFeature,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
     isEventMap: isEventMap(activeMap),
@@ -434,9 +490,15 @@ export default function App() {
     maps, features, refreshGameProfile, myLocation, setFocusPoint,
     currentUserId: viewerProfile.id,
     currentUserName: viewerProfile.name,
+    onCommunityRequestSubmitted: refreshCommunityPendingRequests,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
+  const handleCreatePinAtLocation = useCallback(async ({ lat, lng }) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    setDraftPoints([])
+    return createHandleMapTap("pin")({ lat, lng })
+  }, [createHandleMapTap])
 
   // --- Social / Profile ---
 
@@ -457,13 +519,14 @@ export default function App() {
   const mapEditorReadOnly = activeMapSource === "demo"
     || activeMapSource === "shared"
     || (activeMapSource === "local" && activeMap?.canEditFeatures === false)
-    || (activeMapSource === "community" && hasSupabaseEnv && (!authUser || communityMapId === "community-map"))
+    || (activeMapSource === "community" && !canEditCommunityMap)
 
   const { shouldOpenEventViewer } = resolveEventAccess({ activeMap })
 
   const hasUnsavedEditorDraft = activeTab === "maps"
     && mapsView === "editor"
     && activeMapSource === "local"
+    && !shouldOpenEventViewer
     && (draftPoints.length > 0 || ["pin", "route", "area", "relocate"].includes(editorMode))
 
   const confirmDiscardEditorDraft = useCallback(() => {
@@ -755,6 +818,54 @@ export default function App() {
   }, [authReady, authUser, routeAtLoad, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView, setCommunityMapFeatures])
 
   useEffect(() => {
+    if (!hasSupabaseEnv || !authReady || !authUser || !communityMapId || communityMapId === "community-map") {
+      setCommunityPendingRequests([])
+      return undefined
+    }
+    let cancelled = false
+    const fetchRequests = async () => {
+      try {
+        const requests = await listFeatureChangeRequests(communityMapId, "pending")
+        if (!cancelled) {
+          setCommunityPendingRequests(requests)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load community feature requests", error)
+        }
+      }
+    }
+    fetchRequests()
+    const timer = window.setInterval(fetchRequests, 45000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [authReady, authUser, communityMapId])
+
+  useEffect(() => {
+    if (!authUser || communityRequestSummary.incoming.length === 0) return
+    let added = false
+    for (const request of communityRequestSummary.incoming) {
+      const next = addNotification({
+        type: NOTI_TYPES.FEATURE_UPDATE_REQUEST,
+        mapId: request.mapId,
+        title: `${request.featureTitle || "장소"} 수정 요청`,
+        body: `${request.requestedByName || "사용자"}님이 변경을 제안했어요.`,
+        meta: {
+          dedup: `community-feature-request:${request.id}`,
+          requestId: request.id,
+          featureId: request.featureId,
+        },
+      })
+      if (next) added = true
+    }
+    if (added) {
+      notiRefresh()
+    }
+  }, [authUser, communityRequestSummary.incoming, notiRefresh])
+
+  useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
       showToast("공유 링크를 열지 못했어요.")
     }
@@ -965,6 +1076,7 @@ export default function App() {
           <HomeScreen
             recommendedMaps={recommendedMaps}
             communityMapFeatures={communityMapFeatures}
+            communityRequestSummary={communityRequestSummary}
             userStats={userStats}
             viewerProfile={viewerProfile}
             maps={maps}
@@ -1028,11 +1140,7 @@ export default function App() {
             map={activeMap}
             features={activeFeatures}
             onSaveToApp={null}
-            onBack={() => {
-              setMapsView("list")
-              resetEditorState()
-              setActiveMapSource("local")
-            }}
+            onBack={handleMapEditorBack}
           />
         ) : null}
 
@@ -1048,6 +1156,7 @@ export default function App() {
             focusPoint={focusPoint}
             fitTrigger={fitTrigger}
             myLocation={myLocation}
+            currentUserId={viewerProfile.id}
             readOnly={mapEditorReadOnly}
             hideCount={activeMapSource === "community"}
             communityMode={activeMapSource === "community"}
@@ -1058,6 +1167,7 @@ export default function App() {
             onBack={handleMapEditorBack}
             onFit={() => setFitTrigger((value) => value + 1)}
             onSearchLocation={(loc) => setFocusPoint(loc)}
+            onCreatePinAtLocation={handleCreatePinAtLocation}
             onLocate={locateMe}
             onModeChange={(mode) => {
               setEditorMode(mode)
@@ -1079,6 +1189,10 @@ export default function App() {
             onToggleLabels={() => setShowMapLabels((current) => !current)}
             onOpenFeatureDetail={openFeatureDetail}
             onAddMemo={addMemo}
+            importedCommunityFeatureIds={importedCommunityFeatureIds}
+            onImportCommunityFeature={importCommunityFeatureToMine}
+            onUnimportCommunityFeature={unimportCommunityFeature}
+            onRequestCommunityUpdateFromSummary={requestCommunityFeatureUpdateById}
             onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
             placementRow={findPlacementForMap(activeMap?.id, shares)}
             onPublishMap={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
@@ -1195,6 +1309,7 @@ export default function App() {
         onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
         onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
         memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo}
+        onRequestCommunityUpdate={requestCommunityFeatureUpdate}
       />
       {coachmarkStep === 3 ? (
         <CoachMark

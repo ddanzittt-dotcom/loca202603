@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react"
+﻿import { useEffect, useState, useRef, useCallback } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
@@ -7,18 +7,31 @@ import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 import { getProfilePlacementState } from "../lib/mapPlacement"
+import { FeaturePopupCard } from "../components/FeaturePopupCard"
+import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 
-const formatFeatureMeta = (feature) => {
-  if (!feature) return ""
-  if (feature.type === "route") return `경로 · ${feature.points.length}개 지점`
-  if (feature.type === "area") return `영역 · ${feature.points.length}개 꼭짓점`
-  return "장소"
+// 경로 길이(km) — 위경도 배열의 haversine 합산
+function computeRouteLengthKm(points) {
+  if (!Array.isArray(points) || points.length < 2) return null
+  const R = 6371
+  const toRad = (deg) => (deg * Math.PI) / 180
+  let km = 0
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1]
+    const b = points[i]
+    const lat1 = Number(a?.lat ?? a?.[1] ?? a?.y)
+    const lng1 = Number(a?.lng ?? a?.[0] ?? a?.x)
+    const lat2 = Number(b?.lat ?? b?.[1] ?? b?.y)
+    const lng2 = Number(b?.lng ?? b?.[0] ?? b?.x)
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) continue
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+    km += 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
+  }
+  return km > 0 ? km : null
 }
 
-const summarizeFeatureNote = (feature, length = 46) => {
-  if (!feature?.note) return "등록된 메모가 아직 없습니다."
-  return feature.note.length > length ? `${feature.note.slice(0, length)}...` : feature.note
-}
 
 const getFeatureBadgeMeta = (feature) => {
   if (!feature) return { kind: "none" }
@@ -53,13 +66,15 @@ export function MapEditorScreen({
   readOnly = false,
   hideCount = false,
   communityMode = false,
+  currentUserId = "me",
   showLabels = true,
   myLocation = null,
   characterStyle = "m3",
-  levelEmoji = "🥚",
+  levelEmoji = "\uD83E\uDD5A",
   onBack,
   onLocate,
   onSearchLocation,
+  onCreatePinAtLocation,
   onModeChange,
   onMapTap,
   onFeatureTap,
@@ -71,6 +86,10 @@ export function MapEditorScreen({
   onOpenFeatureDetail,
   onCloseFeatureSummary,
   onAddMemo,
+  importedCommunityFeatureIds,
+  onImportCommunityFeature,
+  onUnimportCommunityFeature,
+  onRequestCommunityUpdateFromSummary,
   onOpenShareEditor,
   onStripFeatureTap,
   showToast,
@@ -91,7 +110,8 @@ export function MapEditorScreen({
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [searching, setSearching] = useState(false)
-  const [userNoteText, setUserNoteText] = useState("")
+  const [pendingSearchPin, setPendingSearchPin] = useState(null)
+  const [mappingSearchPin, setMappingSearchPin] = useState(false)
   const [activeFilter, setActiveFilter] = useState("all")
   const [filterOpen, setFilterOpen] = useState(false)
   const [stripOpen, setStripOpen] = useState(false)
@@ -108,46 +128,68 @@ export function MapEditorScreen({
     return () => document.removeEventListener("pointerdown", onPointerDown)
   }, [mapMenuOpen])
   const naverMapRef = useRef(null)
+  const voicePlayback = useVoicePlayback()
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
   const trimmedSearchQuery = searchQuery.trim()
-  const recentMemos = selectedFeatureSummary?.memos || []
+  const summaryOpen = Boolean(selectedFeatureSummary)
+  const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
+  const canEditOwnCommunitySummary = communityMode && !readOnly && isSummaryCreator
+  const canRequestSummaryEdit = (
+    communityMode
+    && !readOnly
+    && !isSummaryCreator
+    && typeof onRequestCommunityUpdateFromSummary === "function"
+  )
+  const canOpenDetailOnHeader = !communityMode && typeof onOpenFeatureDetail === "function"
+  const canMapPinFromSearch = !readOnly && typeof onCreatePinAtLocation === "function"
 
-  // ─── 도보 경로 ───
-  const [walkRoute, setWalkRoute] = useState(null)
-  const [walkInfo, setWalkInfo] = useState(null)
-  const [walkLoading, setWalkLoading] = useState(false)
+  const handleSummaryRequestEdit = useCallback(async () => {
+    if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
+    const requestMessage = window.prompt("?????곌떽釉붾??????椰????????????????쇨덫櫻????????밸쫫??????萸?? (????壤굿??Β??")
+    if (requestMessage === null) return
+    const requested = await onRequestCommunityUpdateFromSummary?.(selectedFeatureSummary.id, requestMessage)
+    if (requested) onCloseFeatureSummary?.()
+  }, [
+    canRequestSummaryEdit,
+    onCloseFeatureSummary,
+    onRequestCommunityUpdateFromSummary,
+    selectedFeatureSummary?.id,
+  ])
 
-  const handleWalkNavigate = useCallback(async () => {
-    if (!myLocation || !selectedFeatureSummary) return
-    const feat = selectedFeatureSummary
-    if (!feat.lat || !feat.lng) return
-    setWalkLoading(true)
-    setWalkRoute(null)
-    setWalkInfo(null)
-    try {
-      const start = `${myLocation.lng},${myLocation.lat}`
-      const goal = `${feat.lng},${feat.lat}`
-      const res = await fetch(`/api/directions/walk?start=${start}&goal=${goal}`)
-      const data = await res.json()
-      if (!res.ok || !data.path) {
-        showToast?.(data.error || "경로를 찾을 수 없어요")
-        return
-      }
-      setWalkRoute(data.path)
-      setWalkInfo({ distance: data.distance, duration: data.duration })
-    } catch {
-      showToast?.("도보 경로 조회에 실패했어요")
-    } finally {
-      setWalkLoading(false)
+  const handleSearchResultSelect = useCallback((result) => {
+    const lat = Number(result?.lat)
+    const lng = Number(result?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    const locationLabel = result?.roadAddress || result?.jibunAddress || "선택한 위치"
+    onSearchLocation?.({ lat, lng, zoom: 16 })
+    setSearchQuery(locationLabel)
+    setSearchOpen(false)
+    setSearching(false)
+    if (canMapPinFromSearch) {
+      setPendingSearchPin({ lat, lng, label: locationLabel })
+    } else {
+      setPendingSearchPin(null)
     }
-  }, [myLocation, selectedFeatureSummary, showToast])
+  }, [canMapPinFromSearch, onSearchLocation])
 
-  // 핀 선택 변경 시 경로 초기화
+  const handleConfirmSearchPin = useCallback(async () => {
+    if (!canMapPinFromSearch || !pendingSearchPin || mappingSearchPin) return
+    setMappingSearchPin(true)
+    try {
+      await onCreatePinAtLocation?.({ lat: pendingSearchPin.lat, lng: pendingSearchPin.lng })
+      setPendingSearchPin(null)
+    } finally {
+      setMappingSearchPin(false)
+    }
+  }, [canMapPinFromSearch, mappingSearchPin, onCreatePinAtLocation, pendingSearchPin])
+
   useEffect(() => {
-    setWalkRoute(null)
-    setWalkInfo(null)
-  }, [selectedFeatureId])
+    if (!canMapPinFromSearch) {
+      setPendingSearchPin(null)
+      setMappingSearchPin(false)
+    }
+  }, [canMapPinFromSearch])
 
   const pinCount = features.filter((feature) => feature.type === "pin").length
   const routeCount = features.filter((feature) => feature.type === "route").length
@@ -155,26 +197,32 @@ export function MapEditorScreen({
   const isDrawing = editorMode === "route" || editorMode === "area"
   const editorGuide = !readOnly ? (() => {
     if (editorMode === "pin") {
-      return { title: "핀 추가 모드", description: "지도를 탭하면 핀이 즉시 생성됩니다." }
+      return {
+        title: "\uD540 \uCD94\uAC00 \uBAA8\uB4DC",
+        description: "\uC9C0\uB3C4\uB97C \uD0ED\uD558\uBA74 \uC7A5\uC18C\uAC00 \uBC14\uB85C \uCD94\uAC00\uB429\uB2C8\uB2E4.",
+      }
     }
     if (editorMode === "route") {
       return {
-        title: "경로 생성 모드",
+        title: "\uACBD\uB85C \uC0DD\uC131 \uBAA8\uB4DC",
         description: draftPoints.length > 0
-          ? `${draftPoints.length}개 지점을 선택했어요. 우측 하단 저장 버튼으로 완료하세요.`
-          : "지도에서 순서대로 지점을 탭해 경로를 그리세요.",
+          ? `${draftPoints.length}\uAC1C \uC9C0\uC810\uC744 \uC120\uD0DD\uD588\uC5B4\uC694. \uC6B0\uCE21 \uD558\uB2E8 \uBC84\uD2BC\uC73C\uB85C \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`
+          : "\uC9C0\uB3C4\uC5D0\uC11C \uC21C\uC11C\uB300\uB85C \uC9C0\uC810\uC744 \uD0ED\uD574 \uACBD\uB85C\uB97C \uADF8\uB824 \uBCF4\uC138\uC694.",
       }
     }
     if (editorMode === "area") {
       return {
-        title: "영역 생성 모드",
+        title: "\uC601\uC5ED \uC0DD\uC131 \uBAA8\uB4DC",
         description: draftPoints.length > 0
-          ? `${draftPoints.length}개 꼭짓점을 선택했어요. 3개 이상 선택 후 저장하세요.`
-          : "영역의 꼭짓점을 순서대로 탭해 경계를 만드세요.",
+          ? `${draftPoints.length}\uAC1C \uAF2D\uC9D3\uC810\uC744 \uC120\uD0DD\uD588\uC5B4\uC694. 3\uAC1C \uC774\uC0C1 \uC120\uD0DD \uD6C4 \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`
+          : "\uC601\uC5ED\uC758 \uAF2D\uC9D3\uC810\uC744 \uC21C\uC11C\uB300\uB85C \uC120\uD0DD\uD574 \uACBD\uACC4\uB97C \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694.",
       }
     }
     if (editorMode === "relocate") {
-      return { title: "위치 이동 모드", description: "지도를 탭해 핀의 새 위치를 지정하세요." }
+      return {
+        title: "\uC704\uCE58 \uC774\uB3D9 \uBAA8\uB4DC",
+        description: "\uC9C0\uB3C4\uB97C \uD0ED\uD574 \uC0C8\uB85C\uC6B4 \uC704\uCE58\uB97C \uC9C0\uC815\uD574 \uC8FC\uC138\uC694.",
+      }
     }
     return null
   })() : null
@@ -190,7 +238,7 @@ export function MapEditorScreen({
       const query = trimmedSearchQuery
       setSearching(true)
 
-      // 네이버 geocode (한국 주소)
+      // ???????濡?씀?濾????ㅼ굣野????geocode (???????怨뺤른???????깆땠?????????꾩룆梨????
       const tryNaver = () =>
         new Promise((resolve) => {
           const naverMaps = window.naver?.maps
@@ -209,7 +257,7 @@ export function MapEditorScreen({
           })
         })
 
-      // Google Places (글로벌 — 해외 + 한국 보완)
+      // Google Places (?????????????????????????????泥??+ ???????怨뺤른???????깆땠?????????ㅻ깹?????
       const tryGoogle = () =>
         new Promise((resolve) => {
           const googleKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
@@ -236,11 +284,11 @@ export function MapEditorScreen({
 
       Promise.all([tryNaver(), tryGoogle()]).then(([naverResults, googleResults]) => {
         if (cancelled || controller.signal.aborted) return
-        // 한글 검색어면 네이버 우선, 그 외 Google 우선
-        const hasKorean = /[가-힣]/.test(query)
+        // ??? ???뀀맩鍮???癲????????嚥???癲?????쇨덧??????ル??????????????濡?씀?濾????ㅼ굣野?????????????, ????Google ?????????
+        const hasKorean = /[\uAC00-\uD7A3]/.test(query)
         const primary = hasKorean ? naverResults : googleResults
         const secondary = hasKorean ? googleResults : naverResults
-        // 중복 제거 (같은 좌표 0.001도 이내)
+        // ????????썼린?濾?????熬곥끇???????????怨???????(???????????? ?????雅?퍔瑗?땟????0.001???????
         const merged = [...primary]
         for (const s of secondary) {
           const isDuplicate = merged.some((p) => Math.abs(p.lat - s.lat) < 0.001 && Math.abs(p.lng - s.lng) < 0.001)
@@ -260,12 +308,12 @@ export function MapEditorScreen({
   }, [trimmedSearchQuery])
 
   return (
-    <section className="map-editor">
-      {/* ─── 지도 바 ─── */}
+    <section className={`map-editor${summaryOpen ? " map-editor--summary-open" : ""}`}>
+      {/* ?????? ????釉먮폁???????????????? */}
       <div className="me-bar">
         <div className="me-bar__card">
           <div className="me-bar__left">
-            <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로 가기">
+            <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로가기">
               <ArrowLeft size={16} color="#2D4A3E" />
             </button>
             <span className="me-bar__name">{map.title}</span>
@@ -281,7 +329,7 @@ export function MapEditorScreen({
             ) : null}
             {!communityMode ? (
               <>
-                <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유">
+                <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
                   <Link2 size={16} color="#2D4A3E" />
                 </button>
                 {(placement.canPublish || placement.canUnpublish || placement.canAddToProfile || placement.canRemoveFromProfile) ? (
@@ -289,7 +337,7 @@ export function MapEditorScreen({
                     <button
                       className="me-bar__share"
                       type="button"
-                      aria-label="더보기"
+                      aria-label="메뉴 열기"
                       onClick={() => setMapMenuOpen((prev) => !prev)}
                     >
                       <MoreHorizontal size={16} color="#2D4A3E" />
@@ -312,22 +360,21 @@ export function MapEditorScreen({
                       >
                         {placement.canPublish && onPublishMap ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onPublishMap(map.id) }}>
-                            발행하기
-                          </MapMenuItem>
+                            ??????꾩룆梨띰쭕?뚢뵾?????????ル뭽癲ル슢??????????款?蹂κ콬?????????獄쏅챶留???????                          </MapMenuItem>
                         ) : null}
                         {placement.canAddToProfile && onAddMapToProfile ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onAddMapToProfile(map.id) }}>
-                            프로필에 올리기
+                            ??????熬곣뫖利당춯??쎾퐲??逆????????熬곣뫖利당춯??쎾퐲???????????⑤슢????
                           </MapMenuItem>
                         ) : null}
                         {placement.canRemoveFromProfile && onRemoveMapFromProfile ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onRemoveMapFromProfile(map.id) }}>
-                            프로필에서 내리기
+                            ??????熬곣뫖利당춯??쎾퐲??逆????????熬곣뫖利당춯??쎾퐲?????????????⑤슢????
                           </MapMenuItem>
                         ) : null}
                         {placement.canUnpublish && onUnpublishMap ? (
                           <MapMenuItem variant="danger" onClick={() => { setMapMenuOpen(false); onUnpublishMap(map.id) }}>
-                            발행 중단
+                            ??????꾩룆梨띰쭕?뚢뵾?????????ル뭽癲ル슢??????????款?蹂κ콬??????????썼린?濾?????熬곥끇????
                           </MapMenuItem>
                         ) : null}
                       </div>
@@ -350,13 +397,14 @@ export function MapEditorScreen({
               onChange={(event) => {
                 const nextQuery = event.target.value
                 setSearchQuery(nextQuery)
+                setPendingSearchPin(null)
                 if (!nextQuery.trim()) {
                   setSearchResults([])
                   setSearchOpen(false)
                   setSearching(false)
                 }
               }}
-              placeholder="주소·지명 검색"
+              placeholder="주소 또는 장소를 검색하세요"
             />
             {searchQuery ? (
               <button
@@ -367,28 +415,24 @@ export function MapEditorScreen({
                   setSearchResults([])
                   setSearchOpen(false)
                   setSearching(false)
+                  setPendingSearchPin(null)
                 }}
                 aria-label="검색어 지우기"
               >
-                ✕
+                ×
               </button>
             ) : null}
           </div>
           {searchOpen ? (
             <div className="map-search-box__results">
-              {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
-              {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요.</div> : null}
+              {searching && searchResults.length === 0 ? <div className="map-search-box__item">???뀀맩鍮???癲??????..</div> : null}
+              {!searching && searchResults.length === 0 ? <div className="map-search-box__item">???뀀맩鍮???癲???????뀀맩鍮???癲??????饔낅떽?????? ??????嚥싲갭큔?????</div> : null}
               {searchResults.map((result) => (
                 <button
                   key={result.id}
                   className="map-search-box__item"
                   type="button"
-                  onClick={() => {
-                    onSearchLocation?.({ lat: result.lat, lng: result.lng, zoom: 16 })
-                    setSearchQuery(result.roadAddress || result.jibunAddress)
-                    setSearchOpen(false)
-                    setSearching(false)
-                  }}
+                  onClick={() => handleSearchResultSelect(result)}
                 >
                   <strong>{result.roadAddress || result.jibunAddress}</strong>
                   {result.roadAddress && result.jibunAddress ? <span>{result.jibunAddress}</span> : null}
@@ -414,29 +458,55 @@ export function MapEditorScreen({
             characterStyle={characterStyle}
             levelEmoji={levelEmoji}
             isEventMap={placement.isEventMap}
-            walkRoute={walkRoute}
           />
         </MapErrorBoundary>
 
+        {pendingSearchPin && canMapPinFromSearch ? (
+          <div className="search-pin-confirm">
+            <div className="search-pin-confirm__text">
+              <strong>{"이 위치를 핀으로 맵핑할까요?"}</strong>
+              <span>{pendingSearchPin.label}</span>
+            </div>
+            <div className="search-pin-confirm__actions">
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setPendingSearchPin(null)}
+                disabled={mappingSearchPin}
+              >
+                {"취소"}
+              </button>
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={handleConfirmSearchPin}
+                disabled={mappingSearchPin}
+              >
+                {mappingSearchPin ? "추가 중..." : "핀 추가"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="me-fabs">
-          <button className="me-fab" type="button" onClick={onLocate} aria-label="현재 위치">
+          <button className="me-fab" type="button" onClick={onLocate} aria-label="내 위치로 이동">
             <Navigation size={16} color="#2D4A3E" />
           </button>
-          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="이름 토글">
+          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="????????">
             <span>이름</span>
           </button>
           {!readOnly ? (
-            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="핀 추가">
+            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="?? ???????ш끽紐???">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="경로 추가">
+            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="???뀀맩鍮???癲????????????????ш끽紐???">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="영역 추가">
+            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="??????????筌?????????ш끽紐???">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
             </button>
           ) : null}
@@ -451,143 +521,92 @@ export function MapEditorScreen({
 
         {editorMode === "relocate" ? (
           <div className="draft-bar draft-bar--compact draft-bar--relocate">
-            <span>📍 지도를 탭하여 위치를 지정하세요</span>
+            <span>지도를 눌러 새 위치를 지정한 뒤 완료해 주세요.</span>
             <button className="button button--ghost" type="button" onClick={() => onModeChange("browse")}>
-              취소
+              나가기
             </button>
           </div>
         ) : null}
         {!readOnly && isDrawing && draftPoints.length > 0 ? (
           <div className="draft-bar draft-bar--compact">
             <button className="button button--ghost" type="button" onClick={onUndoDraft}>
-              되돌리기
+              마지막 점 취소
             </button>
             <button className="button button--primary" type="button" onClick={editorMode === "area" ? onCompleteArea : onCompleteRoute}>
-              {editorMode === "area" ? "영역 저장" : "경로 저장"}
+              {editorMode === "area" ? "영역 완성하기" : "경로 완성하기"}
             </button>
           </div>
         ) : null}
         {!readOnly && isDrawing ? (
-          <button className="fab fab--cancel" type="button" onClick={onCancelDraft} aria-label="취소"><X size={18} /></button>
+          <button className="fab fab--cancel" type="button" onClick={onCancelDraft} aria-label="그리기 취소">
+            <X size={18} />
+          </button>
         ) : null}
 
         {selectedFeatureSummary ? (
-          <article className="map-feature-summary">
-            <div className="map-feature-summary__head">
-              <div>
-                <strong className="me-summary-title">
-                  {(() => {
-                    const badge = getFeatureBadgeMeta(selectedFeatureSummary)
-                    if (badge.kind === "emoji") {
-                      return <span className="me-summary-icon me-summary-icon--emoji">{badge.emoji}</span>
+          <div className="map-feature-summary-wrap">
+            <FeaturePopupCard
+              feature={selectedFeatureSummary}
+              mapMode={communityMode ? "community" : "personal"}
+              isAuthor={isSummaryCreator}
+              currentUserId={currentUserId}
+              routeLengthKm={
+                selectedFeatureSummary.type === "route"
+                  ? computeRouteLengthKm(selectedFeatureSummary.points)
+                  : null
+              }
+              onClose={() => { voicePlayback.stop(); onCloseFeatureSummary?.() }}
+              onOpenDetail={
+                canOpenDetailOnHeader
+                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+                  : undefined
+              }
+              onEdit={
+                canEditOwnCommunitySummary
+                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+                  : undefined
+              }
+              onRequestEdit={canRequestSummaryEdit ? handleSummaryRequestEdit : undefined}
+              onAddMemo={
+                communityMode && !readOnly && typeof onAddMemo === "function"
+                  ? (text, files) => onAddMemo(selectedFeatureSummary.id, text, files)
+                  : undefined
+              }
+              imported={
+                communityMode && importedCommunityFeatureIds
+                  ? importedCommunityFeatureIds.has(selectedFeatureSummary.id)
+                  : false
+              }
+              onImport={
+                communityMode && typeof onImportCommunityFeature === "function"
+                  ? () => onImportCommunityFeature(selectedFeatureSummary.id)
+                  : undefined
+              }
+              onUnimport={
+                communityMode && typeof onUnimportCommunityFeature === "function"
+                  ? () => {
+                      if (window.confirm("가져오기를 취소할까요?\n내 지도에서 이 항목이 삭제돼요.")) {
+                        onUnimportCommunityFeature(selectedFeatureSummary.id)
+                      }
                     }
-                    if (badge.kind === "icon") {
-                      return <span className="me-summary-icon" style={{ background: badge.bg }}><img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" /></span>
-                    }
-                    if (badge.kind === "route") {
-                      return <span className="me-summary-icon me-summary-icon--type me-summary-icon--route"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg></span>
-                    }
-                    if (badge.kind === "area") {
-                      return <span className="me-summary-icon me-summary-icon--type me-summary-icon--area"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></span>
-                    }
-                    return <span className="me-summary-icon me-summary-icon--emoji">{"\u{1F4CD}"}</span>
-                  })()}
-                  {selectedFeatureSummary.title}
-                </strong>
-                <span>{formatFeatureMeta(selectedFeatureSummary)}</span>
-              </div>
-              <div className="map-feature-summary__head-actions">
-                {selectedFeatureSummary.type === "pin" ? (
-                  <button
-                    type="button"
-                    className="lw-route-btn map-feature-summary__route-btn"
-                    title="도보 경로 보기"
-                    aria-label="도보 경로 보기"
-                    disabled={walkLoading || !myLocation}
-                    onClick={handleWalkNavigate}
-                  >
-                    <span className="map-feature-summary__route-icon" aria-hidden="true">{walkLoading ? "…" : "👟"}</span>
-                  </button>
-                ) : null}
-                <button className="icon-button map-feature-summary__close" type="button" onClick={onCloseFeatureSummary} aria-label="요약 닫기">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <p>{summarizeFeatureNote(selectedFeatureSummary)}</p>
-            {selectedFeatureSummary.type === "pin" && walkInfo ? (
-              <span className="lw-walk-badge map-feature-summary__walk-badge">
-                도보 {Math.max(1, Math.round(walkInfo.duration / 60000))}분
-              </span>
-            ) : null}
-            {selectedFeatureSummary.tags?.length ? (
-              <div className="map-feature-summary__tags">
-                {selectedFeatureSummary.tags.slice(0, 3).map((tag) => (
-                  <span className="chip chip--small" key={tag}>
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            {communityMode ? (
-              <div className="map-feature-summary__note-form">
-                {!readOnly ? (
-                  <div className="map-feature-summary__note-row">
-                    <input
-                      className="map-feature-summary__note-input"
-                      type="text"
-                      placeholder={"\uBA54\uBAA8 \uCD94\uAC00..."}
-                      value={userNoteText}
-                      onChange={(e) => setUserNoteText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && userNoteText.trim()) {
-                          onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
-                          setUserNoteText("")
-                        }
-                      }}
-                    />
-                    <button
-                      className="button button--primary map-feature-summary__note-btn"
-                      type="button"
-                      disabled={!userNoteText.trim()}
-                      onClick={() => {
-                        if (userNoteText.trim()) {
-                          onAddMemo?.(selectedFeatureSummary.id, userNoteText.trim())
-                          setUserNoteText("")
-                        }
-                      }}
-                    >
-                      {"\uCD94\uAC00"}
-                    </button>
-                  </div>
-                ) : null}
-                {recentMemos.length ? (
-                  <ul className="map-feature-summary__notes-list">
-                    {recentMemos.map((memo) => (
-                      <li key={memo.id}>
-                        <strong>{memo.userName}</strong>
-                        <span>{memo.text}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            ) : (
-              <div className="map-feature-summary__actions">
-                <button className="button button--primary map-feature-summary__action" type="button" onClick={() => onOpenFeatureDetail(selectedFeatureSummary.id)}>
-                  {"\uC0C1\uC138 \uBCF4\uAE30"}
-                </button>
-              </div>
-            )}
-          </article>
+                  : undefined
+              }
+              currentPlayingVoiceId={voicePlayback.playingId}
+              onVoiceClick={(voice, index) => {
+                const key = makeVoiceScopeKey(selectedFeatureSummary.id, voice, index)
+                voicePlayback.toggle(voice, key)
+              }}
+            />
+          </div>
         ) : null}
+
 
         <div
           className={`map-filter-bar map-filter-bar--upper${communityMode ? " map-filter-bar--community" : ""}${stripOpen && features.length > 0 ? " map-filter-bar--raised" : ""}`}
           aria-label="지도 필터"
         >
           <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
-            필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "◀" : "▶"}</span>
+            필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "▲" : "▼"}</span>
           </button>
           {filterOpen ? (
             <>
@@ -602,7 +621,7 @@ export function MapEditorScreen({
         {features.length > 0 ? (
           <div className="map-list-bar" aria-label="맵핑 목록">
             <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
-              목록 ({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "◀" : "▶"}</span>
+              맵핑 목록({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▲" : "▼"}</span>
             </button>
             {stripOpen ? (
               <div
@@ -690,7 +709,7 @@ export function MapEditorScreen({
               onOpenShareEditor?.(canvas)
             }
           } catch (err) {
-            console.error("지도 캡처 실패:", err)
+            console.error("????釉먮폁????????????釉먮폁???????ㅼ뒧?????????????????怨뺤름??", err)
           } finally {
             setCapturing(false)
           }
@@ -698,13 +717,13 @@ export function MapEditorScreen({
         showToast={showToast}
       />
 
-      {/* 코치마크 */}
+      {/* ??????袁⑸즴筌?씛彛???????????????亦껋꼦維쀯쭗???????꾩룆梨띰쭕??力?肉??*/}
       {coachmarkStep === 1 ? (
         <CoachMark
           step={1}
           totalSteps={3}
-          title="먼저 핀을 골라보세요"
-          description="장소는 핀, 경로는 선, 영역은 면으로 기록할 수 있어요. 우선 핀부터 시작해볼까요?"
+          title="핀, 경로, 영역을 자유롭게 추가해 보세요"
+          description="오른쪽 버튼으로 모드를 선택한 뒤 지도를 탭하면 맵핑 요소를 만들 수 있습니다."
           onNext={() => onCoachmarkNext?.(2)}
           onSkip={() => onCoachmarkSkip?.()}
         />
@@ -713,21 +732,21 @@ export function MapEditorScreen({
         <CoachMark
           step={2}
           totalSteps={3}
-          title="지도에서 기록할 곳을 눌러보세요"
-          description="탭한 위치에 핀이 놓여요"
-          nextLabel="확인"
+          title="지도에 등록한 항목을 바로 확인할 수 있어요"
+          description="맵핑한 장소를 누르면 설명, 사진, 음성을 미리보기로 확인할 수 있습니다."
+          nextLabel="시작하기"
           onNext={() => onCoachmarkNext?.(0)}
           onSkip={() => onCoachmarkSkip?.()}
         />
       ) : null}
 
-      {/* 첫 핀 힌트 카드 */}
+      {/* ???? ????????ш끽紐????????嶺뚮ㅎ?볠꽴????*/}
       {firstPinHintVisible ? (
         <div className="first-pin-hint">
           <img src="/characters/cloud_lv1.svg" alt="" className="first-pin-hint__icon" />
           <div className="first-pin-hint__text">
-            <p className="first-pin-hint__title">잘 기록했어요</p>
-            <p className="first-pin-hint__desc">장소를 더 추가하거나, 메모를 남겨보세요</p>
+            <p className="first-pin-hint__title">첫 핀 등록이 완료됐어요</p>
+            <p className="first-pin-hint__desc">장소에 설명과 사진, 음성을 추가해서 더 풍부하게 기록해 보세요.</p>
           </div>
           <button className="first-pin-hint__close" type="button" onClick={() => onDismissFirstPinHint?.()} aria-label="닫기">
             <X size={16} />
@@ -756,3 +775,6 @@ function MapMenuItem({ onClick, variant = "default", children }) {
     </button>
   )
 }
+
+
+

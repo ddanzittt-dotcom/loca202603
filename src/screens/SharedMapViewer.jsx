@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+﻿import { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { X, Bell, ArrowLeft, Share2, LocateFixed } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -15,10 +15,34 @@ import { NotificationPanel, NotificationBanner } from "../components/Notificatio
 import { SurveyPopup } from "../components/viewer/SurveyPopup"
 import { ReportDialog } from "../components/viewer/ReportDialog"
 import { SpotComments } from "../components/viewer/SpotComments"
+import { FeaturePopupCard } from "../components/FeaturePopupCard"
+import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
+
+// 경로 길이 (haversine) — FeaturePopupCard 의 routeLengthKm prop 으로 전달
+function computeRouteLengthKm(points) {
+  if (!Array.isArray(points) || points.length < 2) return null
+  const R = 6371
+  const toRad = (deg) => (deg * Math.PI) / 180
+  let km = 0
+  for (let i = 1; i < points.length; i += 1) {
+    const a = points[i - 1]
+    const b = points[i]
+    const lat1 = Number(a?.lat ?? a?.[1] ?? a?.y)
+    const lng1 = Number(a?.lng ?? a?.[0] ?? a?.x)
+    const lat2 = Number(b?.lat ?? b?.[1] ?? b?.y)
+    const lng2 = Number(b?.lng ?? b?.[0] ?? b?.x)
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) continue
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+    km += 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
+  }
+  return km > 0 ? km : null
+}
 
 const DEFAULT_CHECKIN_RADIUS_M = 50
 
-// 공지 노출 시 announcement_view 이벤트를 1회만 발생시키는 헬퍼
+// 怨듭? ?몄텧 ??announcement_view ?대깽?몃? 1?뚮쭔 諛쒖깮?쒗궎???ы띁
 const _loggedAnnouncements = new Set()
 function AnnouncementViewTracker({ mapId, announcements, dismissed }) {
   useEffect(() => {
@@ -32,6 +56,7 @@ function AnnouncementViewTracker({ mapId, announcements, dismissed }) {
   }, [mapId, announcements, dismissed])
   return null
 }
+
 
 // Pin SVG icon for save button
 function PinSvg() {
@@ -83,6 +108,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   const featureViewStart = useRef(null)
   const prevSelectedId = useRef(null)
   const [spotTab, setSpotTab] = useState("info")
+  const voicePlayback = useVoicePlayback()
   const [toastMsg, setToastMsg] = useState("")
   const [activeChip, setActiveChip] = useState("all")
   const [showMapNames, setShowMapNames] = useState(true)
@@ -95,7 +121,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     setTimeout(() => setToastMsg(""), 2500)
   }, [])
 
-  // ─── 이벤트 데이터 + 액션 ───
+  // ??? ?대깽???곗씠??+ ?≪뀡 ???
   const {
     checkedInIds, handleCheckin, pinDistances, userPos,
     totalCheckpoints, checkedCount, isCompleted, progressPct, nextSpot,
@@ -104,7 +130,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     surveyComment, setSurveyComment, surveySubmitted, handleSurveySubmit,
   } = useEventMapData({ map, features, config, isEventMap, showViewerToast })
 
-  // ─── 댓글 ───
+  // ??? ?볤? ???
   const {
     comments, commentText, setCommentText, commentLoading, myKey,
     editingId, setEditingId, editText, setEditText,
@@ -112,7 +138,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     handleAddComment, handleEditComment, handleDeleteComment, handleReport,
   } = useEventComments({ mapId: map.id, selectedId, isEventMap, config, checkedInIds, showViewerToast })
 
-  // ─── 공유 ───
+  // ??? 怨듭쑀 ???
   const [shareOpen, setShareOpen] = useState(false)
   const shareUrl = useMemo(() => {
     if (map.slug) return `${window.location.origin}/s/${map.slug}`
@@ -123,9 +149,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     try {
       await navigator.clipboard.writeText(shareUrl)
       logEvent("share_click", { map_id: map.id, meta: { method: "link" } })
-      showViewerToast("링크가 복사되었어요!")
+      showViewerToast("留곹겕媛 蹂듭궗?섏뿀?댁슂!")
     } catch {
-      prompt("복사하세요:", shareUrl)
+      prompt("蹂듭궗?섏꽭??", shareUrl)
     }
     setShareOpen(false)
   }, [shareUrl, map.id, showViewerToast])
@@ -134,7 +160,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     logEvent("share_click", { map_id: map.id, meta: { method: "kakao" } })
     const kakaoUrl = shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
 
-    // 카카오 SDK 로드
+    // 移댁뭅??SDK 濡쒕뱶
     const sdkReady = await new Promise((resolve) => {
       if (window.Kakao?.Share) {
         if (!window.Kakao.isInitialized()) {
@@ -163,7 +189,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           objectType: "feed",
           content: {
             title: map.title || "LOCA 지도",
-            description: map.description || `${map.title || "LOCA"} 지도를 열어보세요.`,
+            description: map.description || `${map.title || "LOCA"} 지도를 열어보세요`,
             imageUrl: ogImageUrl,
             imageWidth: 800,
             imageHeight: 400,
@@ -175,17 +201,17 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
         return
       } catch { /* fallback */ }
     }
-    // 카카오 SDK 없으면 클립보드 복사
+    // 移댁뭅??SDK ?놁쑝硫??대┰蹂대뱶 蹂듭궗
     try {
       await navigator.clipboard.writeText(shareUrl)
-      showViewerToast("링크가 복사되었어요. 카카오에 붙여넣기 하세요!")
+      showViewerToast("留곹겕媛 蹂듭궗?섏뿀?댁슂. 移댁뭅?ㅼ뿉 遺숈뿬?ｊ린 ?섏꽭??")
     } catch {
-      prompt("카카오에 붙여넣으세요:", shareUrl)
+      prompt("移댁뭅?ㅼ뿉 遺숈뿬?ｌ쑝?몄슂:", shareUrl)
     }
     setShareOpen(false)
   }, [shareUrl, map, showViewerToast])
 
-  // ─── 알림 ───
+  // ??? ?뚮┝ ???
   const [notiPanelOpen, setNotiPanelOpen] = useState(false)
   const {
     notifications: notiList,
@@ -209,7 +235,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
 
   const selectedFeature = selectedId ? features.find((f) => f.id === selectedId) : null
 
-  // ─── GPS 위치 ───
+  // ??? GPS ?꾩튂 ???
   const [localUserPos, setLocalUserPos] = useState(null)
   const [locating, setLocating] = useState(false)
   const [locationHint, setLocationHint] = useState(null)
@@ -221,24 +247,24 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     setFocusPoint({ ...loc, zoom: 16 })
     setLocating(false)
     setLocationHint(null)
-    showViewerToast(fallback ? "정밀 위치가 지연되어 현재 위치로 이동했어요" : "현재 위치로 이동했어요")
+    showViewerToast(fallback ? "정확한 위치가 지연되어 현재 위치로 이동했어요." : "현재 위치로 이동했어요.")
   }, [showViewerToast])
 
   const handleLocateMe = useCallback(async () => {
-    if (locating) return
+    if (locating) return currentUserPos || null
     if (!navigator.geolocation) {
       setLocationHint({ kind: "unsupported", message: "현재 기기에서 위치 서비스를 사용할 수 없어요." })
-      showViewerToast("위치 서비스를 사용할 수 없어요")
-      return
+      showViewerToast("위치 서비스를 사용할 수 없어요.")
+      return null
     }
 
     if (navigator.permissions?.query) {
       try {
         const permission = await navigator.permissions.query({ name: "geolocation" })
         if (permission.state === "denied") {
-          setLocationHint({ kind: "denied", message: "위치 권한이 꺼져 있어요. 브라우저 설정에서 허용한 뒤 다시 시도해주세요." })
-          showViewerToast("위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해주세요.")
-          return
+          setLocationHint({ kind: "denied", message: "위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요." })
+          showViewerToast("위치 권한을 허용해 주세요.")
+          return null
         }
       } catch {
         // Some browsers (iOS Safari) may not fully support Permissions API.
@@ -246,76 +272,57 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     }
 
     setLocating(true)
-    navigator.geolocation.getCurrentPosition(
-      (pos) => moveToCurrentPosition(pos.coords),
-      (error) => {
-        if (error?.code === 1) {
-          setLocating(false)
-          setLocationHint({ kind: "denied", message: "위치 권한이 필요해요. 권한을 허용한 뒤 다시 시도해주세요." })
-          showViewerToast("위치 권한이 필요해요. 권한을 허용해주세요.")
-          return
-        }
-        if (error?.code === 2) {
-          setLocating(false)
-          setLocationHint({ kind: "unavailable", message: "위치 정보를 확인할 수 없어요. 네트워크/GPS 상태를 확인해주세요." })
-          showViewerToast("위치 정보를 확인할 수 없어요. 잠시 후 다시 시도해주세요.")
-          return
-        }
-        if (error?.code === 3) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => moveToCurrentPosition(pos.coords, true),
-            () => {
-              setLocating(false)
-              setLocationHint({ kind: "timeout", message: "위치 확인 시간이 초과됐어요. 내 위치를 다시 시도해주세요." })
-              showViewerToast("위치 확인 시간이 초과됐어요. 다시 시도해주세요.")
-            },
-            { enableHighAccuracy: false, maximumAge: 60000, timeout: 7000 },
-          )
-          return
-        }
-        setLocating(false)
-        setLocationHint({ kind: "error", message: "위치를 가져올 수 없어요. 잠시 후 다시 시도해주세요." })
-        showViewerToast("위치를 가져올 수 없어요. 위치 권한을 확인해주세요.")
-      },
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
-    )
-  }, [locating, moveToCurrentPosition, showViewerToast])
 
-  // ─── 도보 길찾기 ───
-  const [walkRoute, setWalkRoute] = useState(null)
-  const [walkInfo, setWalkInfo] = useState(null) // { distance, duration }
-  const [walkLoading, setWalkLoading] = useState(false)
-
-  const handleWalkNavigate = useCallback(async (feature) => {
-    if (!currentUserPos || !feature) return
-    setWalkLoading(true)
-    setWalkRoute(null)
-    setWalkInfo(null)
-    try {
-      const start = `${currentUserPos.lng},${currentUserPos.lat}`
-      const goal = `${feature.lng},${feature.lat}`
-      const res = await fetch(`/api/directions/walk?start=${start}&goal=${goal}`)
-      const data = await res.json()
-      if (!res.ok || !data.path) {
-        console.warn("[walk] API 실패:", data)
-        showViewerToast(data.error || "경로를 찾을 수 없어요")
-        return
-      }
-      setWalkRoute(data.path)
-      setWalkInfo({ distance: data.distance, duration: data.duration })
-      logEvent("walk_navigate_app", { map_id: map.id, meta: { feature_id: feature.id } })
-    } catch {
-      showViewerToast("도보 경로 조회에 실패했어요")
-    } finally {
-      setWalkLoading(false)
+    const applyCoords = (coords, fallback = false) => {
+      const loc = { lat: coords.latitude, lng: coords.longitude }
+      moveToCurrentPosition(coords, fallback)
+      return loc
     }
-  }, [currentUserPos, map.id, showViewerToast])
 
-  // 핀 선택 변경 시 경로 초기화
-  useEffect(() => {
-    setWalkRoute(null)
-    setWalkInfo(null)
-  }, [selectedId])
+    return await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve(applyCoords(pos.coords))
+        },
+        (error) => {
+          if (error?.code === 1) {
+            setLocating(false)
+            setLocationHint({ kind: "denied", message: "위치 권한이 필요해요. 권한을 허용한 뒤 다시 시도해 주세요." })
+            showViewerToast("위치 권한을 허용해 주세요.")
+            resolve(null)
+            return
+          }
+          if (error?.code === 2) {
+            setLocating(false)
+            setLocationHint({ kind: "unavailable", message: "위치 정보를 확인할 수 없어요. 네트워크/GPS 상태를 확인해 주세요." })
+            showViewerToast("위치 정보를 확인할 수 없어요.")
+            resolve(null)
+            return
+          }
+          if (error?.code === 3) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                resolve(applyCoords(pos.coords, true))
+              },
+              () => {
+                setLocating(false)
+                setLocationHint({ kind: "timeout", message: "위치 확인 시간이 초과됐어요. 잠시 후 다시 시도해 주세요." })
+                showViewerToast("위치 확인 시간이 초과됐어요.")
+                resolve(null)
+              },
+              { enableHighAccuracy: false, maximumAge: 60000, timeout: 7000 },
+            )
+            return
+          }
+          setLocating(false)
+          setLocationHint({ kind: "error", message: "위치를 가져올 수 없어요. 잠시 후 다시 시도해 주세요." })
+          showViewerToast("위치를 가져올 수 없어요.")
+          resolve(null)
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+      )
+    })
+  }, [currentUserPos, locating, moveToCurrentPosition, showViewerToast])
 
   // Extract unique categories from features
   const uniqueCategories = useMemo(() => {
@@ -331,7 +338,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   }, [features])
 
   // Extract tag pills for normal map
-  const mapTags = useMemo(() => {
+  const _mapTags = useMemo(() => {
     const tagSet = new Set()
     features.forEach((f) => {
       const catId = f.category || emojiToCategory(f.emoji)
@@ -351,9 +358,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     })
   }, [features, activeChip])
 
-  // 피처 선택 이벤트 로깅 + 장소별 체류시간 추적
+  // ?쇱쿂 ?좏깮 ?대깽??濡쒓퉭 + ?μ냼蹂?泥대쪟?쒓컙 異붿쟻
   const handleFeatureSelect = useCallback((featureId) => {
-    // 이전 feature 체류시간 기록
+    // ?댁쟾 feature 泥대쪟?쒓컙 湲곕줉
     if (prevSelectedId.current && featureViewStart.current && hasSupabaseEnv && map.id) {
       const duration = Date.now() - featureViewStart.current
       if (duration > 500) {
@@ -396,7 +403,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     onSaveToApp()
   }, [map.id, onSaveToApp, savingToApp])
 
-  // 체크인 버튼 렌더 헬퍼
+  // 泥댄겕??踰꾪듉 ?뚮뜑 ?ы띁
   const renderCheckinBtn = (feature, size = "normal") => {
     if (!isEventMap || !config.checkin_enabled || feature.type !== "pin") return null
     const alreadyChecked = checkedInIds.has(feature.id)
@@ -407,9 +414,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     const tooFar = !noLimit && !isNearby && dist != null
 
     let label
-    if (alreadyChecked) label = "✓ 완료"
-    else if (tooFar) label = `${formatDistance(dist)} 거리`
-    else label = "체크인"
+    if (alreadyChecked) label = "\uCCB4\uD06C \uC644\uB8CC"
+    else if (tooFar) label = `${formatDistance(dist)} \uAC70\uB9AC`
+    else label = "\uCCB4\uD06C\uC778"
 
     return (
       <button
@@ -423,8 +430,8 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     )
   }
 
-  // ─── Bottom Sheet (shared by both map types) ───
-  const renderBottomSheet = (featureList) => (
+  // ??? Bottom Sheet (shared by both map types) ???
+  const _renderBottomSheet = (featureList) => (
     <div className={`lw-sheet${sheetExpanded ? " is-expanded" : ""}`}>
       <div className="lw-sheet__handle" onClick={() => setSheetExpanded((v) => !v)} />
       {!sheetExpanded ? (
@@ -465,7 +472,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                     <span className="lw-sheet__row-name">{f.title}</span>
                     <span className="lw-sheet__row-sub">{getRegionText(f)}</span>
                   </span>
-                  {checked ? <span className="lw-sheet__row-badge">✓</span> : null}
+                  {checked ? <span className="lw-sheet__row-badge">체크됨</span> : null}
                 </button>
               )
             })}
@@ -475,16 +482,16 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     </div>
   )
 
-  // ─── Event: next spot / completed row inside bottom sheet ───
+  // ??? Event: next spot / completed row inside bottom sheet ???
   const renderEventSheetExtras = () => {
     if (!isEventMap) return null
     if (isCompleted) {
       return (
         <div className="lw-sheet__completed">
-          <span>모든 장소를 방문했어요!</span>
+          <span>紐⑤뱺 ?μ냼瑜?諛⑸Ц?덉뼱??</span>
           {config.survey_enabled && !surveySubmitted ? (
             <button className="lw-sheet__survey-btn" type="button" onClick={() => setSurveyOpen(true)}>
-              설문 참여하기
+              ?ㅻЦ 李몄뿬?섍린
             </button>
           ) : null}
         </div>
@@ -499,7 +506,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             <img src={`/icons/pins/${catId}.svg`} width="12" height="12" alt="" />
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="lw-sheet__next-label">다음 장소</span>
+            <span className="lw-sheet__next-label">?ㅼ쓬 ?μ냼</span>
             <span className="lw-sheet__next-title">{nextSpot.title}</span>
           </span>
           {pinDistances[nextSpot.id] != null ? (
@@ -511,114 +518,21 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     return null
   }
 
-  // ─── 비이벤트 지도 (일반 공유) ───
-  if (!isEventMap) {
+  // ??? 鍮꾩씠踰ㅽ듃 吏??(?쇰컲 怨듭쑀) ???
+  const ciMainColor = config.ci_main_color || "#1A3C5E"
+  const _ciDarkColor = config.ci_dark_color || "#0D2740"
+  const orgName = config.org_name || map.title
+  const orgLogo = config.org_logo
+  const eventPeriod = config.event_period || ""
+  // unified shared viewer shell
     return (
       <div className="lw-viewer">
         {/* Hero card header */}
         <div className="lw-hero">
           <div className="lw-hero__blob" />
           <div className="lw-hero__row1">
-            {onBack ? (
-              <button type="button" onClick={onBack} className="lw-hero__logo" style={{ border: 'none', cursor: 'pointer', padding: 0, background: 'none' }}>loca</button>
-            ) : (
-              <span className="lw-hero__logo">loca</span>
-            )}
-            <span className="lw-hero__sep">·</span>
-            <span className="lw-hero__author">@{map.authorName || "user"}</span>
-            <span className="lw-hero__row1-right">
-              {onSaveToApp ? <SaveButton onClick={handleSave} isEvent={false} loading={savingToApp} /> : null}
-            </span>
-          </div>
-          <div className="lw-hero__title">{map.title}</div>
-          {map.description ? <div className="lw-hero__desc">{map.description}</div> : null}
-          {mapTags.length > 0 ? (
-            <div className="lw-hero__tags">
-              {mapTags.map((tag) => <span key={tag} className="lw-hero__tag">{tag}</span>)}
-            </div>
-          ) : null}
-        </div>
-
-        {/* Map area */}
-        <div className="lw-map">
-          <MapErrorBoundary>
-            <NaverMap
-              features={features}
-              selectedFeatureId={selectedId}
-              draftPoints={[]}
-              draftMode="browse"
-              focusPoint={focusPoint}
-              fitTrigger={fitTrigger}
-              onFeatureTap={handleFeatureSelect}
-              showLabels
-              myLocation={currentUserPos}
-              isEventMap={isEventMap}
-              walkRoute={walkRoute}
-            />
-          </MapErrorBoundary>
-
-          {/* 내 위치 버튼 */}
-          <button type="button" className="lw-locate-btn" onClick={handleLocateMe} disabled={locating} aria-label="내 위치">
-            <LocateFixed size={18} />
-          </button>
-
-          {/* Pin tap card */}
-          {selectedFeature ? (
-            <div className="lw-pin-card">
-              <div className="lw-pin-card__top">
-                <div className="lw-pin-card__icon" style={{ background: getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)).bg }}>
-                  <img src={`/icons/pins/${selectedFeature.category || emojiToCategory(selectedFeature.emoji)}.svg`} width="16" height="16" alt="" />
-                </div>
-                <div className="lw-pin-card__info">
-                  <span className="lw-pin-card__name">{selectedFeature.title}</span>
-                  <span className="lw-pin-card__region">{selectedFeature.note || getRegionText(selectedFeature)}</span>
-                </div>
-                <div className="lw-pin-card__actions">
-                  {walkInfo ? (
-                    <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="lw-route-btn"
-                    disabled={walkLoading || !currentUserPos}
-                    onClick={() => handleWalkNavigate(selectedFeature)}
-                  >
-                    {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
-                  </button>
-                  <button className="lw-pin-card__close" type="button" onClick={() => setSelectedId(null)}>
-                    <X size={16} strokeWidth={1.5} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Bottom sheet */}
-          {renderBottomSheet(features)}
-        </div>
-
-        {toastMsg ? <div className="lw-toast">{toastMsg}</div> : null}
-      </div>
-    )
-  }
-
-  // ─── 행사 지도 participant shell ───
-  const ciMainColor = config.ci_main_color || "#1A3C5E"
-  const ciDarkColor = config.ci_dark_color || "#0D2740"
-  const orgName = config.org_name || map.title
-  const orgLogo = config.org_logo
-  const eventPeriod = config.event_period || ""
-
-  return (
-    <div className="lw-event">
-      <div
-        className="lw-ci-frame"
-        style={{ background: `linear-gradient(160deg, ${ciMainColor}, ${ciDarkColor})` }}
-      >
-        {/* Top frame (corporate branding) */}
-        <div className="lw-ci-top">
           {onBack ? (
-            <button type="button" onClick={onBack} className="lw-back-btn" aria-label="뒤로가기">
+            <button type="button" onClick={onBack} className="lw-back-btn" aria-label="????">
               <ArrowLeft size={20} />
             </button>
           ) : null}
@@ -628,7 +542,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           <div className="lw-ci-info">
             <span className="lw-ci-title">{map.title}</span>
             <span className="lw-ci-org">
-              {orgName}{eventPeriod ? ` · ${eventPeriod}` : ""}
+              {orgName}{eventPeriod ? ` 쨌 ${eventPeriod}` : ""}
             </span>
           </div>
           <div className="lw-ci-actions">
@@ -636,7 +550,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             <button
               className="lw-noti-btn"
               type="button"
-              aria-label="공유"
+              aria-label="怨듭쑀"
               onClick={() => setShareOpen((v) => !v)}
             >
               <Share2 size={14} />
@@ -644,7 +558,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             <button
               className="lw-noti-btn"
               type="button"
-              aria-label="알림"
+              aria-label="?뚮┝"
               onClick={() => setNotiPanelOpen((v) => !v)}
             >
               <Bell size={14} />
@@ -652,18 +566,18 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             </button>
           </div>
 
-          {/* 공유 드롭다운 */}
+          {/* 怨듭쑀 ?쒕∼?ㅼ슫 */}
           {shareOpen && (
             <>
               <div className="lw-share-overlay" onClick={() => setShareOpen(false)} />
               <div className="lw-share-dropdown">
                 <button type="button" className="lw-share-item" onClick={handleCopyLink}>
-                  <span className="lw-share-icon">🔗</span>
-                  <span>링크 복사</span>
+                  <span className="lw-share-icon">?뵕</span>
+                  <span>留곹겕 蹂듭궗</span>
                 </button>
                 <button type="button" className="lw-share-item lw-share-item--kakao" onClick={handleKakaoShare}>
-                  <span className="lw-share-icon">💬</span>
-                  <span>카카오</span>
+                  <span className="lw-share-icon">?뮠</span>
+                  <span>카카오톡</span>
                 </button>
               </div>
             </>
@@ -674,7 +588,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
         <div className="lw-ci-inner">
           {/* Filter chip bar */}
           <div className="lw-chips">
-            <span className="lw-chips__count">📍 {features.length}곳</span>
+            <span className="lw-chips__count">총 {features.length}곳</span>
             <span className="lw-chips__sep" />
             <button
               className={`lw-chip lw-chip--control lw-chip--name${showMapNames ? " is-active" : ""}`}
@@ -682,7 +596,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               onClick={() => setShowMapNames((prev) => !prev)}
               aria-pressed={showMapNames}
             >
-              이름
+              ?대쫫
             </button>
             <button
               className="lw-chip lw-chip--control lw-chip--locate"
@@ -691,7 +605,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               disabled={locating}
             >
               <LocateFixed size={11} />
-              <span>{locating ? "위치 찾는 중" : "내 위치"}</span>
+              <span>{locating ? "위치 확인 중" : "내 위치"}</span>
             </button>
             <span className="lw-chips__sep" />
             <button
@@ -699,7 +613,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               type="button"
               onClick={() => setActiveChip("all")}
             >
-              전체
+              ?꾩껜
             </button>
             {uniqueCategories.map((cat) => (
               <button
@@ -728,14 +642,14 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               <span className="lw-locate-hint__msg">{locationHint.message}</span>
               <div className="lw-locate-hint__actions">
                 <button type="button" className="lw-locate-hint__btn" onClick={handleLocateMe} disabled={locating}>
-                  {locating ? "확인 중..." : "다시 시도"}
+                  {locating ? "?뺤씤 以?.." : "?ㅼ떆 ?쒕룄"}
                 </button>
                 <button
                   type="button"
                   className="lw-locate-hint__btn lw-locate-hint__btn--ghost"
                   onClick={() => setLocationHint(null)}
                 >
-                  닫기
+                  ?リ린
                 </button>
               </div>
             </div>
@@ -744,10 +658,10 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           {/* Announcement banner */}
           {announcements.length > 0 && !announcementDismissed ? (
             <div className="lw-announce">
-              <span className="lw-announce__icon">⚡</span>
+              <span className="lw-announce__icon">📢</span>
               <span className="lw-announce__text">
-                <strong>공지</strong> {announcements[0].title}
-                {announcements[0].body ? ` — ${announcements[0].body}` : ""}
+                <strong>怨듭?</strong> {announcements[0].title}
+                {announcements[0].body ? ` ??${announcements[0].body}` : ""}
               </span>
               <button className="lw-announce__close" type="button" onClick={() => setAnnouncementDismissed(true)}>
                 <X size={8} strokeWidth={1.5} />
@@ -771,82 +685,68 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 myLocation={currentUserPos}
                 checkedInIds={config.checkin_enabled ? checkedInIds : null}
                 isEventMap={isEventMap}
-                walkRoute={walkRoute}
               />
             </MapErrorBoundary>
 
-            {/* 내 위치 버튼 (event quick action) */}
+            {/* ???꾩튂 踰꾪듉 (event quick action) */}
             <button
               type="button"
               className="lw-locate-btn lw-locate-btn--event"
               onClick={handleLocateMe}
               disabled={locating}
-              aria-label="내 위치"
+              aria-label="???꾩튂"
             >
               <LocateFixed size={18} />
             </button>
 
-            {/* Pin tap card (event) — with checkin + tabs */}
+            {/* Pin tap card — FeaturePopupCard (subscriber view) */}
             {selectedFeature ? (
-              <div className="lw-spot-detail">
-                <div className="lw-spot-detail__head">
-                  <div className="lw-spot-detail__icon" style={{ background: getPinIcon(selectedFeature.category || emojiToCategory(selectedFeature.emoji)).bg }}>
-                    <img src={`/icons/pins/${selectedFeature.category || emojiToCategory(selectedFeature.emoji)}.svg`} width="16" height="16" alt="" />
-                  </div>
-                  <div className="lw-spot-detail__info">
-                    <span className="lw-spot-detail__name">{selectedFeature.title}</span>
-                  </div>
-                  <div className="lw-spot-detail__actions">
-                    {walkInfo ? (
-                      <span className="lw-walk-badge">🚶 {Math.max(1, Math.round(walkInfo.duration / 60000))}분</span>
-                    ) : null}
+              <div className="lw-spot-detail-wrap">
+                <FeaturePopupCard
+                  feature={selectedFeature}
+                  mapMode="personal"
+                  isAuthor={false}
+                  currentUserId={myKey}
+                  routeLengthKm={
+                    selectedFeature.type === "route"
+                      ? computeRouteLengthKm(selectedFeature.points)
+                      : null
+                  }
+                  onClose={() => { voicePlayback.stop(); setSelectedId(null) }}
+                  headerExtra={renderCheckinBtn(selectedFeature)}
+                  currentPlayingVoiceId={voicePlayback.playingId}
+                  onVoiceClick={(voice, index) => {
+                    const key = makeVoiceScopeKey(selectedFeature.id, voice, index)
+                    voicePlayback.toggle(voice, key)
+                  }}
+                />
+
+                {/* 이벤트 지도: 댓글 영역을 카드 아래에 따라 붙인다 */}
+                {isEventMap && commentsEnabled ? (
+                  <div className="lw-spot-detail-wrap__comments">
                     <button
                       type="button"
-                      className="lw-route-btn"
-                      disabled={walkLoading || !currentUserPos}
-                      onClick={() => handleWalkNavigate(selectedFeature)}
+                      className={`lw-spot-comments-toggle${spotTab === "comments" ? " is-open" : ""}`}
+                      onClick={() => setSpotTab(spotTab === "comments" ? "info" : "comments")}
+                      aria-expanded={spotTab === "comments"}
                     >
-                      {walkLoading ? "..." : walkRoute ? "↻" : "경로"}
+                      <span>댓글{comments.length > 0 ? ` ${comments.length}` : ""}</span>
+                      <span className="lw-spot-comments-toggle__chev" aria-hidden>
+                        {spotTab === "comments" ? "▾" : "▸"}
+                      </span>
                     </button>
-                    {renderCheckinBtn(selectedFeature)}
-                    <button className="lw-spot-detail__close" type="button" onClick={() => setSelectedId(null)}>
-                      <X size={16} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="lw-spot-tabs">
-                  <button className={`lw-spot-tab${spotTab === "info" ? " is-active" : ""}`} type="button" onClick={() => setSpotTab("info")}>정보</button>
-                  <button className={`lw-spot-tab${spotTab === "comments" ? " is-active" : ""}`} type="button" onClick={() => setSpotTab("comments")}>
-                    댓글{comments.length > 0 ? ` (${comments.length})` : ""}
-                  </button>
-                </div>
-
-                {/* Info tab */}
-                {spotTab === "info" ? (
-                  <div className="lw-spot-body">
-                    {selectedFeature.note ? <p className="lw-spot-note">{selectedFeature.note}</p> : <p className="lw-spot-note lw-spot-note--empty">등록된 설명이 없어요.</p>}
-                    {selectedFeature.tags?.length ? (
-                      <div className="lw-spot-tags">
-                        {selectedFeature.tags.map((tag) => <span key={tag} className="chip chip--small">#{tag}</span>)}
-                      </div>
+                    {spotTab === "comments" ? (
+                      <SpotComments
+                        comments={comments} commentText={commentText} setCommentText={setCommentText}
+                        commentLoading={commentLoading} myKey={myKey}
+                        editingId={editingId} setEditingId={setEditingId}
+                        editText={editText} setEditText={setEditText}
+                        commentsEnabled={commentsEnabled} canComment={canComment} config={config}
+                        onAddComment={handleAddComment} onEditComment={handleEditComment}
+                        onDeleteComment={handleDeleteComment} onReport={setReportTarget}
+                      />
                     ) : null}
-
                   </div>
-                ) : null}
-
-                {/* Comments tab */}
-                {spotTab === "comments" ? (
-                  <SpotComments
-                    comments={comments} commentText={commentText} setCommentText={setCommentText}
-                    commentLoading={commentLoading} myKey={myKey}
-                    editingId={editingId} setEditingId={setEditingId}
-                    editText={editText} setEditText={setEditText}
-                    commentsEnabled={commentsEnabled} canComment={canComment} config={config}
-                    onAddComment={handleAddComment} onEditComment={handleEditComment}
-                    onDeleteComment={handleDeleteComment} onReport={setReportTarget}
-                  />
                 ) : null}
               </div>
             ) : null}
