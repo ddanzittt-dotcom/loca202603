@@ -18,19 +18,20 @@
 
 /* ---------- Backdrop · Sheet shell ---------- */
 /*
- * z-index 위계:
+ * z-index 위계 (지도 FAB .me-fabs = 1200 보다 위):
  *   .map-feature-summary-wrap (popup)  = 520
- *   .fes-backdrop                      = 600
- *   .fes-sheet                         = 601
- *   .fes-picker-backdrop (내부)        = 610
- *   .fes-picker / .fes-memo-sheet      = 611
- * 편집 시트가 열리면 축약 팝업이 백드롭 아래로 가려진다.
+ *   .me-fabs (지도 FAB)                = 1200
+ *   .fes-backdrop                      = 1300
+ *   .fes-sheet                         = 1301
+ *   .fes-picker-backdrop (내부)        = 1400
+ *   .fes-picker / .fes-memo-sheet      = 1401
+ * 편집 시트가 열리면 지도 FAB 와 축약 팝업이 백드롭 아래로 가려진다.
  */
 .fes-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(26,26,26,0.32);
-  z-index: 600;
+  z-index: 1300;
   animation: fes-fade-in 0.16s ease-out;
 }
 
@@ -48,7 +49,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  z-index: 601;
+  z-index: 1301;
   padding-bottom: env(safe-area-inset-bottom, 0);
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   color: #1A1A1A;
@@ -693,7 +694,7 @@
   position: fixed;
   inset: 0;
   background: rgba(26,26,26,0.4);
-  z-index: 610;
+  z-index: 1400;
   animation: fes-fade-in 0.16s ease-out;
 }
 .fes-picker {
@@ -706,10 +707,12 @@
   background: #fff;
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -4px 24px rgba(26,26,26,0.1);
-  max-height: 75vh;
+  /* 고정 높이 — 탭·검색 결과별로 창이 수축/확장되지 않도록.
+   * min(560px, 80vh): 대형 폰은 560px 고정, 작은 폰은 80% 뷰포트로 축소. */
+  height: min(560px, 80vh);
   display: flex;
   flex-direction: column;
-  z-index: 611;
+  z-index: 1401;
   padding: 10px 16px 18px;
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
@@ -791,6 +794,7 @@
 
 .fes-picker-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   margin: 0 -4px;
   padding: 4px;
@@ -843,7 +847,7 @@
   background: #fff;
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -4px 24px rgba(26,26,26,0.1);
-  z-index: 611;
+  z-index: 1401;
   padding: 10px 16px 18px;
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
