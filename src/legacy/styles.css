@@ -210,8 +210,10 @@ textarea {
 }
 .screen--scroll {
   overflow-y: auto;
+  scrollbar-width: none;
   padding: 18px 18px calc(32px + env(safe-area-inset-bottom));
 }
+.screen--scroll::-webkit-scrollbar { display: none; }
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -331,17 +333,25 @@ textarea {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 46px;
   padding: 0 14px;
   margin-bottom: 14px;
   background: var(--surface);
   border-radius: 16px;
   border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  isolation: isolate;
 }
 .search-box input {
   border: 0;
   padding-left: 0;
   padding-right: 0;
   box-shadow: none;
+  background: transparent;
+  color: var(--text);
+}
+.search-box input::placeholder {
+  color: var(--muted);
 }
 .card-list {
   display: flex;

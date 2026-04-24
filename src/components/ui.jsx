@@ -435,15 +435,35 @@ export function SkeletonCard({ count = 1 }) {
   ))
 }
 
-export function EmptyState({ icon = "📭", title, description, action, onAction }) {
+export function EmptyState({
+  variant = "icon",
+  icon = "📭",
+  characterImage,
+  title,
+  description,
+  action,
+  onAction,
+  secondaryAction,
+  onSecondaryAction,
+  hint,
+}) {
+  const isCharacter = variant === "character" && characterImage
   return (
-    <article className="empty-state-card">
-      <span className="empty-state-card__icon">{icon}</span>
+    <article className={`empty-state-card${isCharacter ? " empty-state-card--character" : ""}`}>
+      {isCharacter ? (
+        <img src={characterImage} alt="" className="empty-state-card__character" />
+      ) : (
+        <span className="empty-state-card__icon">{icon}</span>
+      )}
       <strong>{title}</strong>
       {description ? <p>{description}</p> : null}
       {action && onAction ? (
         <button className="button button--primary" type="button" onClick={onAction}>{action}</button>
       ) : null}
+      {secondaryAction && onSecondaryAction ? (
+        <button className="empty-state-card__secondary" type="button" onClick={onSecondaryAction}>{secondaryAction}</button>
+      ) : null}
+      {hint ? <span className="empty-state-card__hint">{hint}</span> : null}
     </article>
   )
 }

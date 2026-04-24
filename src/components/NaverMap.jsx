@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
+﻿import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
 import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
+import { getFeatureStyleColor, getFeatureStyleLineStyle, FEATURE_LINE_STYLE_SHORT_DASH, FEATURE_LINE_STYLE_SHORT_DOT } from "../lib/featureStyle"
 
 const getNaverMaps = () => window.naver?.maps ?? null
 
 const escapeHtml = (str) => {
   if (!str) return ""
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+const getLineDashArrayAttr = (lineStyle) => {
+  if (lineStyle === FEATURE_LINE_STYLE_SHORT_DOT) return "2 3"
+  if (lineStyle === FEATURE_LINE_STYLE_SHORT_DASH) return "4 3"
+  return null
 }
 
 const BASE_ZOOM = 14
@@ -19,11 +26,10 @@ const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 const LOCA_DARK_STYLE_ID = "90019b0b-7cdc-4f96-baa6-438d871a37d5"
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "🥚", checkedInIds = null, isEventMap = false, walkRoute = null }, ref) {
+export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "?쪡", checkedInIds = null, isEventMap = false }, ref) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
-  const walkRouteLineRef = useRef(null)
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
   const ignoreMapTapUntilRef = useRef(0)
@@ -233,7 +239,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const s = zoomScale(zoom)
           containerRef.current?.style.setProperty("--map-scale", s)
           containerRef.current?.setAttribute("data-zoom", zoom < 12 ? "far" : "near")
-          // 3단계 줌 레벨
+          // 3?④퀎 以??덈꺼
           const newLevel = zoom < 13 ? 1 : zoom < 16 ? 2 : 3
           if (!cancelled) setZoomLevel(newLevel)
         }
@@ -242,7 +248,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         mapRef.current = map
         if (!cancelled) setMapReady(true)
       } catch (e) {
-        console.warn("네이버 지도 초기화 실패:", e)
+        console.warn("?ㅼ씠踰?吏??珥덇린???ㅽ뙣:", e)
         window.__naverMapReady = false
       }
     }
@@ -257,7 +263,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         try {
           layer.setMap(null)
         } catch (error) {
-          console.warn("네이버 지도 레이어 정리 실패:", error)
+          console.warn("?ㅼ씠踰?吏???덉씠???뺣━ ?ㅽ뙣:", error)
         }
       })
       layersRef.current = []
@@ -265,7 +271,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         try {
           mapRef.current.destroy()
         } catch (error) {
-          console.warn("네이버 지도 인스턴스 정리 실패:", error)
+          console.warn("?ㅼ씠踰?吏???몄뒪?댁뒪 ?뺣━ ?ㅽ뙣:", error)
         }
         mapRef.current = null
       }
@@ -296,16 +302,16 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         naverMaps.Event.addListener(target, "click", handleSelect)
       }
 
-      // ─── 클러스터링 (줌아웃/중간 줌에서만) ───
+      // ??? ?대윭?ㅽ꽣留?(以뚯븘??以묎컙 以뚯뿉?쒕쭔) ???
       const pins = features.filter((f) => f.type === "pin" && f.lat && f.lng && !(f.lat === 0 && f.lng === 0))
       const nonPins = features.filter((f) => f.type !== "pin")
-      const clusterDist = [40, 30, 0][zoomLevel - 1] // px 단위 거리
+      const clusterDist = [40, 30, 0][zoomLevel - 1] // px ?⑥쐞 嫄곕━
 
       let clusteredPins = []
       let clusters = []
 
       if (clusterDist > 0 && pins.length > 1) {
-        // 좌표 → 화면 픽셀 변환
+        // 좌표를 화면 픽셀로 변환
         const projection = map.getProjection()
         const pxPins = pins.map((p) => {
           const pt = projection.fromCoordToOffset(toLatLng(p.lat, p.lng))
@@ -351,7 +357,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           },
         })
         naverMaps.Event.addListener(marker, "click", () => {
-          // 클러스터 탭 → 줌인
+          // ?대윭?ㅽ꽣 ????以뚯씤
           const bounds = new naverMaps.LatLngBounds()
           cluster.features.forEach((f) => bounds.extend(toLatLng(f.lat, f.lng)))
           map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 })
@@ -365,8 +371,9 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         if (feature.type === "pin") {
           if (feature.lat === 0 && feature.lng === 0) return
           const isSelected = feature.id === selectedFeatureId
+          const pinColor = getFeatureStyleColor(feature, "pin")
           const isChecked = checkedInIds && checkedInIds.has(feature.id)
-          const checkBadge = isChecked ? `<div class="loca-pin-check">✓</div>` : ""
+          const checkBadge = isChecked ? `<div class="loca-pin-check">??/div>` : ""
           const emoji = typeof feature.emoji === "string" ? feature.emoji.trim() : ""
           const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
           const mappedCategory = isMappedPinEmoji(emoji) ? emojiToCategory(emoji) : ""
@@ -394,7 +401,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const badgeHtml = showBadge
             ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`
             : ""
-          const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;${isSelected ? "border-color:#2D4A3E" : ""}`
+          const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;background:${pinColor};${isSelected ? "border-color:#2D4A3E" : ""}`
           const labelHtml = showPinLabel
             ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
             : ""
@@ -413,11 +420,14 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(marker, feature.id)
           layersRef.current.push(marker)
         } else if (feature.type === "route") {
+          const routeColor = getFeatureStyleColor(feature, "route")
+          const routeLineStyle = getFeatureStyleLineStyle(feature, "route")
           const polyline = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
-            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "#0F6E56",
+            strokeColor: routeColor,
             strokeWeight: feature.id === selectedFeatureId ? 4.5 : 3.5,
             strokeOpacity: 0.5,
+            strokeStyle: routeLineStyle,
             strokeLineCap: "round",
             strokeLineJoin: "round",
             clickable: true,
@@ -427,7 +437,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           layersRef.current.push(polyline)
           const hitArea = new naverMaps.Polyline({
             path: pointsToPath(feature.points),
-            strokeColor: "#0F6E56",
+            strokeColor: routeColor,
             strokeWeight: 24,
             strokeOpacity: 0.05,
             clickable: true,
@@ -436,7 +446,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(hitArea, feature.id)
           layersRef.current.push(hitArea)
 
-          // 방향 화살표 (중간 지점마다)
+          // 諛⑺뼢 ?붿궡??(以묎컙 吏?먮쭏??
           if (feature.points.length >= 2) {
             const step = Math.max(1, Math.floor(feature.points.length / 4))
             for (let pi = step; pi < feature.points.length; pi += step) {
@@ -447,7 +457,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
                 position: toLatLng(lat2, lng2),
                 map,
                 icon: {
-                  content: `<div class="loca-route-arrow" style="transform:rotate(${angle}deg)"><svg width="10" height="10" viewBox="0 0 10 10" fill="#0F6E56" opacity="0.45"><polygon points="5,0 10,10 0,10"/></svg></div>`,
+                  content: `<div class="loca-route-arrow" style="transform:rotate(${angle}deg)"><svg width="10" height="10" viewBox="0 0 10 10" fill="${routeColor}" opacity="0.45"><polygon points="5,0 10,10 0,10"/></svg></div>`,
                   size: new naverMaps.Size(10, 10),
                   anchor: new naverMaps.Point(5, 5),
                 },
@@ -456,14 +466,14 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             }
           }
 
-          // 경로 라벨
+          // 寃쎈줈 ?쇰꺼
           const midpoint = feature.points[Math.floor(feature.points.length / 2)]
           if (showLabels && midpoint) {
             const routeLabel = new naverMaps.Marker({
               position: toLatLng(midpoint[1], midpoint[0]),
               map,
               icon: {
-                content: `<div class="loca-route-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg><span>${escapeHtml(feature.title)}</span></div>`,
+                content: `<div class="loca-route-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${routeColor}" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg><span style="color:${routeColor}">${escapeHtml(feature.title)}</span></div>`,
                 anchor: new naverMaps.Point(0, 14),
               },
               clickable: true,
@@ -472,22 +482,25 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             layersRef.current.push(routeLabel)
           }
         } else if (feature.type === "area") {
+          const areaColor = getFeatureStyleColor(feature, "area")
+          const areaLineStyle = getFeatureStyleLineStyle(feature, "area")
+          const areaDashArray = getLineDashArrayAttr(areaLineStyle)
           const polygon = new naverMaps.Polygon({
             paths: [pointsToPath(feature.points)],
-            strokeColor: feature.id === selectedFeatureId ? "#2D4A3E" : "#854F0B",
+            strokeColor: areaColor,
             strokeWeight: feature.id === selectedFeatureId ? 3.5 : 2.5,
             strokeOpacity: feature.id === selectedFeatureId ? 0.8 : 0.45,
-            strokeStyle: "shortdash",
-            fillColor: "#854F0B",
+            strokeStyle: areaLineStyle,
+            fillColor: areaColor,
             fillOpacity: feature.id === selectedFeatureId ? 0.15 : 0.08,
             map,
           })
           bindFeatureSelection(polygon, feature.id)
           layersRef.current.push(polygon)
-          // 거의 보이지 않는 넓은 히트 영역 (외곽선 클릭 감도 개선)
+          // 嫄곗쓽 蹂댁씠吏 ?딅뒗 ?볦? ?덊듃 ?곸뿭 (?멸낸???대┃ 媛먮룄 媛쒖꽑)
           const hitArea = new naverMaps.Polyline({
             path: [...pointsToPath(feature.points), pointsToPath(feature.points)[0]],
-            strokeColor: "#854F0B",
+            strokeColor: areaColor,
             strokeWeight: 24,
             strokeOpacity: 0.05,
             clickable: true,
@@ -496,14 +509,14 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(hitArea, feature.id)
           layersRef.current.push(hitArea)
 
-          // 구역 라벨 — 상단 중앙 배치
+          // 援ъ뿭 ?쇰꺼 ???곷떒 以묒븰 諛곗튂
           const getTopCenter = (pts) => {
             let minLat = Infinity, sumLng = 0
             for (const [lng, lat] of pts) {
               if (lat < minLat) minLat = lat
               sumLng += lng
             }
-            // 가장 위(남쪽이 작은 값) → 상단
+            // 媛?????⑥そ???묒? 媛? ???곷떒
             let maxLat = -Infinity
             for (const [, lat] of pts) { if (lat > maxLat) maxLat = lat }
             return new naverMaps.LatLng(maxLat, sumLng / pts.length)
@@ -514,7 +527,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
               position: topPoint,
               map,
               icon: {
-                content: `<div class="loca-area-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span>${escapeHtml(feature.title)}</span></div>`,
+                content: `<div class="loca-area-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${areaColor}" stroke-width="2" stroke-linecap="round"${areaDashArray ? ` stroke-dasharray="${areaDashArray}"` : ""}><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span style="color:${areaColor}">${escapeHtml(feature.title)}</span></div>`,
                 anchor: new naverMaps.Point(40, 24),
               },
               clickable: true,
@@ -574,7 +587,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         layersRef.current.push(locMarker)
       }
     } catch (e) {
-      console.warn("네이버 지도 레이어 업데이트 실패:", e)
+      console.warn("?ㅼ씠踰?吏???덉씠???낅뜲?댄듃 ?ㅽ뙣:", e)
     }
   }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, isEventMap, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
 
@@ -587,7 +600,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
       map.setCenter(new naverMaps.LatLng(focusPoint.lat, focusPoint.lng))
       map.setZoom(focusPoint.zoom || 15)
     } catch (e) {
-      console.warn("네이버 지도 포커스 실패:", e)
+      console.warn("?ㅼ씠踰?吏???ъ빱???ㅽ뙣:", e)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusPoint?.lat, focusPoint?.lng])
@@ -599,7 +612,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     if (!map || !naverMaps || !mapReady) return
     if (lastFitTriggerRef.current === fitTrigger) return
     lastFitTriggerRef.current = fitTrigger
-    // focusPoint가 있으면 fitBounds 대신 focusPoint 사용
+    // focusPoint媛 ?덉쑝硫?fitBounds ???focusPoint ?ъ슜
     if (focusPoint) {
       try {
         map.setCenter(new naverMaps.LatLng(focusPoint.lat, focusPoint.lng))
@@ -608,7 +621,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
       return
     }
     try {
-      // Collect all coordinates (미설정 0,0 핀 제외)
+      // Collect all coordinates (誘몄꽕??0,0 ? ?쒖쇅)
       const coords = []
       features.forEach((feature) => {
         if (feature.type === "pin") {
@@ -653,7 +666,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
         map.fitBounds(bounds, { top: 28, right: 28, bottom: 28, left: 28 })
       }
     } catch (e) {
-      console.warn("네이버 지도 fitBounds 실패:", e)
+      console.warn("?ㅼ씠踰?吏??fitBounds ?ㅽ뙣:", e)
     }
   }, [draftPoints, features, fitTrigger, focusPoint, mapReady])
 
@@ -662,29 +675,6 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     if (!mapReady) return
     lastFitTriggerRef.current = 0
   }, [mapReady])
-
-  // Walk route polyline
-  useEffect(() => {
-    if (walkRouteLineRef.current) {
-      walkRouteLineRef.current.setMap(null)
-      walkRouteLineRef.current = null
-    }
-    const map = mapRef.current
-    const naverMaps = getNaverMaps()
-    if (!map || !naverMaps || !walkRoute?.length) return
-
-    const path = walkRoute.map(([lng, lat]) => new naverMaps.LatLng(lat, lng))
-    walkRouteLineRef.current = new naverMaps.Polyline({
-      map,
-      path,
-      strokeColor: "#FF6B35",
-      strokeWeight: 4,
-      strokeOpacity: 0.8,
-      strokeStyle: "shortdash",
-      strokeLineCap: "round",
-      strokeLineJoin: "round",
-    })
-  }, [walkRoute, mapReady])
 
   return (
     <div className={`map-canvas map-canvas--${draftMode || "browse"}`} style={{ position: "relative" }}>
@@ -698,3 +688,5 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     </div>
   )
 })
+
+
