@@ -111,11 +111,57 @@ const EMOJI_TO_CATEGORY = {
   "🌲": "park", "🌳": "park", "⛰️": "mountain", "🌊": "beach", "🏞️": "lake", "🌸": "garden", "🚶": "trail",
   "🖼️": "gallery", "🎨": "gallery", "🏛️": "museum", "🎵": "music", "🎬": "cinema", "📚": "bookstore",
   "🛍️": "shopping", "🏪": "market", "⏰": "vintage", "📦": "selectshop",
-  "📍": "tourism", "🏠": "hanok", "⛪": "hanok", "🔺": "viewpoint",
+  "📍": "tourism", "🏺": "heritage", "🏠": "hanok", "⛪": "hanok", "🔺": "viewpoint", "🏢": "architecture",
   "📷": "photo", "📸": "photo", "🏃": "sports", "🏨": "accommodation", "💧": "spa",
   "❤️": "favorite", "⭐": "recommended", "⚡": "hotplace",
 }
 
+const CATEGORY_TO_EMOJI = {
+  cafe: "☕",
+  tea: "🍵",
+  juice: "🧃",
+  restaurant: "🍽️",
+  fastfood: "🍔",
+  bakery: "🍞",
+  dessert: "🍰",
+  bar: "🍺",
+  park: "🌳",
+  mountain: "⛰️",
+  beach: "🌊",
+  lake: "🏞️",
+  garden: "🌸",
+  trail: "🚶",
+  gallery: "🖼️",
+  museum: "🏛️",
+  music: "🎵",
+  cinema: "🎬",
+  bookstore: "📚",
+  shopping: "🛍️",
+  market: "🏪",
+  vintage: "⏰",
+  selectshop: "📦",
+  tourism: "📍",
+  heritage: "🏺",
+  hanok: "🏠",
+  viewpoint: "🔺",
+  architecture: "🏢",
+  photo: "📸",
+  sports: "🏃",
+  accommodation: "🏨",
+  spa: "💧",
+  favorite: "❤️",
+  recommended: "⭐",
+  hotplace: "⚡",
+}
+
 export function emojiToCategory(emoji) {
   return EMOJI_TO_CATEGORY[emoji] || "tourism"
+}
+
+export function categoryToEmoji(categoryId) {
+  return CATEGORY_TO_EMOJI[categoryId] || "📍"
+}
+
+export function isMappedPinEmoji(emoji) {
+  return Boolean(EMOJI_TO_CATEGORY[emoji])
 }

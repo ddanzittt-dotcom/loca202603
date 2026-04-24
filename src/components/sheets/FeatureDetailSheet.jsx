@@ -1,8 +1,9 @@
-﻿import { useRef, useState } from "react"
-import { ImagePlus, X as XIcon, Mic } from "lucide-react"
+﻿import { useState } from "react"
+import { X as XIcon, Mic } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
 import { PIN_ICON_GROUPS, emojiToCategory, categoryToEmoji } from "../../data/pinIcons"
+import { FEATURE_LINE_STYLE_ITEMS, getFeatureColorPresets, normalizeFeatureStyle } from "../../lib/featureStyle"
 
 function TagInput({ tags, onChange }) {
   const [inputVal, setInputVal] = useState("")
@@ -82,6 +83,71 @@ function IconSelector({ selected, onSelect }) {
   )
 }
 
+function FeatureStyleEditor({ featureSheet, setFeatureSheet, labelPrefix = "" }) {
+  const type = featureSheet?.type || "pin"
+  const currentStyle = normalizeFeatureStyle(featureSheet?.style, type)
+  const colorPresets = getFeatureColorPresets(type)
+
+  const updateStyle = (patch) => {
+    setFeatureSheet((current) => {
+      const nextType = current?.type || type
+      const mergedStyle = {
+        ...normalizeFeatureStyle(current?.style, nextType),
+        ...patch,
+      }
+      return { ...current, style: normalizeFeatureStyle(mergedStyle, nextType) }
+    })
+  }
+
+  return (
+    <div className="fd__style-stack">
+      <div className="fd__field">
+        <span className="fd__label">{labelPrefix}색상</span>
+        <div className="fd__style-swatches">
+          {colorPresets.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`fd__swatch${currentStyle.color === color ? " is-active" : ""}`}
+              style={{ background: color }}
+              onClick={() => updateStyle({ color })}
+              aria-label={`${labelPrefix}색상 ${color}`}
+              title={color}
+            />
+          ))}
+          <label className="fd__color-input-wrap" title="직접 색상 선택">
+            <span>직접</span>
+            <input
+              className="fd__color-input"
+              type="color"
+              value={currentStyle.color}
+              onChange={(e) => updateStyle({ color: e.target.value })}
+            />
+          </label>
+        </div>
+      </div>
+
+      {type === "route" || type === "area" ? (
+        <div className="fd__field">
+          <span className="fd__label">{labelPrefix}선 종류</span>
+          <div className="fd__line-style-row">
+            {FEATURE_LINE_STYLE_ITEMS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={`fd__line-style-btn${currentStyle.lineStyle === item.value ? " is-active" : ""}`}
+                onClick={() => updateStyle({ lineStyle: item.value })}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function FeatureDetailSheet({
   featureSheet,
   setFeatureSheet,
@@ -103,45 +169,18 @@ export function FeatureDetailSheet({
   memoText,
   onMemoTextChange,
   onAddMemo,
+  onRequestCommunityUpdate,
 }) {
   const isCommunity = activeMapSource === "community"
   const canEdit = !readOnly && (activeMapSource === "local" || (isCommunity && featureSheet?.createdBy === currentUserId))
+  const canRequestEdit = isCommunity && !readOnly && !canEdit && typeof onRequestCommunityUpdate === "function"
   const featureMemos = featureSheet?.memos || []
 
   const [detailTab, setDetailTab] = useState("info")
 
-  const commentPhotoRef = useRef(null)
-  const [commentPhotos, setCommentPhotos] = useState([])
-
-  const handleCommentPhotoSelect = (e) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-    const newPhotos = files.slice(0, 3 - commentPhotos.length).map((file) => ({
-      id: `cp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      file,
-      preview: URL.createObjectURL(file),
-    }))
-    setCommentPhotos((prev) => [...prev, ...newPhotos].slice(0, 3))
-    e.target.value = ""
-  }
-
-  const removeCommentPhoto = (id) => {
-    setCommentPhotos((prev) => {
-      const removed = prev.find((p) => p.id === id)
-      if (removed) URL.revokeObjectURL(removed.preview)
-      return prev.filter((p) => p.id !== id)
-    })
-  }
-
-  const handleSubmitComment = () => {
-    if (readOnly) return
-    if (!memoText.trim() && commentPhotos.length === 0) return
-    onAddMemo(featureSheet.id, memoText, commentPhotos.map((p) => p.file))
-    setCommentPhotos((prev) => {
-      prev.forEach((p) => URL.revokeObjectURL(p.preview))
-      return []
-    })
-  }
+  const [requestEditTargetId, setRequestEditTargetId] = useState(null)
+  const [requestMessage, setRequestMessage] = useState("")
+  const isRequestEditMode = requestEditTargetId === featureSheet?.id
 
   const sheetTitle = isCommunity
     ? "장소"
@@ -161,6 +200,7 @@ export function FeatureDetailSheet({
               {canEdit ? (
                 <>
                   <label className="fd__field"><span className="fd__label">이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} /></label>
+                  <label className="fd__field"><span className="fd__label">설명</span><textarea className="fd__textarea" rows="2" value={featureSheet.note || ""} onChange={(e) => setFeatureSheet((c) => ({ ...c, note: e.target.value }))} placeholder="이 장소를 잘 이해할 수 있도록 설명해 주세요." /></label>
                   <label className="fd__field"><span className="fd__label">아이콘</span>
                     <IconSelector
                       selected={featureSheet.category || featureSheet.emoji}
@@ -171,7 +211,48 @@ export function FeatureDetailSheet({
                       }))}
                     />
                   </label>
+                  <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
                   <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
+                </>
+              ) : canRequestEdit ? (
+                <>
+                  {isRequestEditMode ? (
+                    <>
+                      <p className="fd__request-help">내가 등록하지 않은 장소예요. 제안한 수정안은 승인 후 반영돼요.</p>
+                      <label className="fd__field"><span className="fd__label">수정 제안 이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} /></label>
+                      <label className="fd__field"><span className="fd__label">수정 제안 아이콘</span>
+                        <IconSelector
+                          selected={featureSheet.category || featureSheet.emoji}
+                          onSelect={(iconId) => setFeatureSheet((c) => ({
+                            ...c,
+                            category: iconId,
+                            emoji: c?.type === "pin" ? categoryToEmoji(iconId) : c?.emoji,
+                          }))}
+                        />
+                      </label>
+                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
+                      <label className="fd__field"><span className="fd__label">수정 제안 설명</span><textarea className="fd__textarea" rows="2" value={featureSheet.note || ""} onChange={(e) => setFeatureSheet((c) => ({ ...c, note: e.target.value }))} placeholder="이 장소를 더 잘 설명해 주세요." /></label>
+                      <div className="fd__field"><span className="fd__label">수정 제안 태그</span>
+                        <TagInput tags={featureSheet.tagsText || ""} onChange={(val) => setFeatureSheet((c) => ({ ...c, tagsText: val }))} />
+                      </div>
+                      <div className="fd__field"><span className="fd__label">수정 요청 사유 (선택)</span><textarea className="fd__textarea" rows="2" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} placeholder="왜 수정이 필요한지 간단히 남겨주세요." /></div>
+                      <div className="fd__actions">
+                        <button className="fd__btn fd__btn--del" type="button" onClick={() => { setRequestEditTargetId(null); setRequestMessage("") }}>취소</button>
+                        <button className="fd__btn fd__btn--save" type="button" onClick={() => onRequestCommunityUpdate?.(requestMessage)}>수정 요청</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="fd__readonly">
+                        <span className="fd__readonly-emoji">{featureSheet.emoji}</span>
+                        <strong>{featureSheet.title}</strong>
+                        {featureSheet.note ? <p>{featureSheet.note}</p> : null}
+                      </div>
+                      <div className="fd__actions">
+                        <button className="fd__btn fd__btn--save" type="button" onClick={() => { setRequestEditTargetId(featureSheet.id); setRequestMessage("") }}>수정 요청하기</button>
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="fd__readonly">
@@ -181,34 +262,6 @@ export function FeatureDetailSheet({
                 </div>
               )}
 
-              <div className="fd__comments">
-                <span className="fd__sec-label">메모 ({featureMemos.length})</span>
-                {!readOnly ? (
-                  <div className="fd__comment-box">
-                    <textarea className="fd__comment-input" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="메모를 남겨보세요..." />
-                    {commentPhotos.length > 0 ? (
-                      <div className="fd__comment-photos">{commentPhotos.map((p) => (
-                        <div key={p.id} className="fd__comment-thumb"><img src={p.preview} alt="" /><button type="button" className="fd__comment-thumb-x" onClick={() => removeCommentPhoto(p.id)}><XIcon size={10} /></button></div>
-                      ))}</div>
-                    ) : null}
-                    <div className="fd__comment-bar">
-                      <button type="button" className="fd__photo-btn" onClick={() => commentPhotoRef.current?.click()} disabled={commentPhotos.length >= 3}><ImagePlus size={16} /></button>
-                      <input ref={commentPhotoRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleCommentPhotoSelect} />
-                      <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={handleSubmitComment} disabled={!memoText.trim() && commentPhotos.length === 0}>등록</button>
-                    </div>
-                  </div>
-                ) : null}
-                <div className="fd__memo-list">
-                  {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 메모가 없어요.</p> : [...featureMemos].reverse().map((m) => (
-                    <div className="fd__memo-item" key={m.id}>
-                      {m.userName ? <strong className="fd__memo-user">{m.userName}</strong> : null}
-                      <p className="fd__memo-text">{m.text}</p>
-                      {m.photos?.length ? <div className="fd__memo-photos">{m.photos.map((url, i) => <img key={i} src={url} alt="" className="fd__memo-photo" />)}</div> : null}
-                      <span className="fd__memo-date">{new Date(m.date).toLocaleDateString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           ) : (
             <>
@@ -259,6 +312,7 @@ export function FeatureDetailSheet({
                           }))}
                         />
                       </div>
+                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
 
                       <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
                     </>
@@ -290,14 +344,16 @@ export function FeatureDetailSheet({
 
                   <div className="fd__rec-section">
                     <span className="fd__sec-label">음성 메모 ({(featureSheet.voices || []).length})</span>
-                    {canEdit ? (
-                      <button className={`fd__record-btn${isRecording ? " is-recording" : ""}`} type="button" onClick={isRecording ? onStopRecording : onStartRecording}>
-                        <Mic size={12} />{isRecording ? ` 녹음 중... ${recordingSeconds}초` : " 녹음하기"}
-                      </button>
-                    ) : null}
-                    {(featureSheet.voices || []).map((v) => (
-                      <MediaVoice key={v.id} mediaId={v.id} localId={v.localId} duration={v.duration} date={v.date} cloudUrl={v.url} onDelete={canEdit ? () => onDeleteVoice(v.id) : undefined} />
-                    ))}
+                    <div className="fd__voice-row">
+                      {canEdit ? (
+                        <button className={`fd__record-btn${isRecording ? " is-recording" : ""}`} type="button" onClick={isRecording ? onStopRecording : onStartRecording}>
+                          <Mic size={12} />{isRecording ? ` ${recordingSeconds}초` : ""}
+                        </button>
+                      ) : null}
+                      {(featureSheet.voices || []).map((v) => (
+                        <MediaVoice key={v.id} mediaId={v.id} localId={v.localId} duration={v.duration} date={v.date} cloudUrl={v.url} onDelete={canEdit ? () => onDeleteVoice(v.id) : undefined} />
+                      ))}
+                    </div>
                   </div>
 
                   <div className="fd__rec-section">
@@ -326,6 +382,8 @@ export function FeatureDetailSheet({
     </BottomSheet>
   )
 }
+
+
 
 
 

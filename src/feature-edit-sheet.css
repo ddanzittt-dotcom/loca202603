@@ -1,0 +1,869 @@
+/*
+ * FeatureEditSheet — 장소·경로·범위 편집 바텀시트
+ * 시안: design/2.loca_place_card_proposal_v5.html
+ * 브리프: design/2.CLAUDE_CODE_BRIEF_PLACE_CARD.md
+ * 디자인 토큰: design/DESIGN.md
+ *
+ * 클래스 프리픽스: fes- (feature edit sheet)
+ */
+
+:root {
+  --fes-pin-orange: #FF6B35;
+  --fes-pin-green:  #2D4A3E;
+  --fes-pin-blue:   #3B82F6;
+  --fes-pin-red:    #EF4444;
+  --fes-pin-brown:  #854F0B;
+  --fes-pin-purple: #A855F7;
+}
+
+/* ---------- Backdrop · Sheet shell ---------- */
+.fes-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,26,0.32);
+  z-index: 60;
+  animation: fes-fade-in 0.16s ease-out;
+}
+
+.fes-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 24px rgba(26,26,26,0.08);
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  z-index: 61;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
+  color: #1A1A1A;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  letter-spacing: -0.1px;
+}
+
+.fes-sheet::-webkit-scrollbar { width: 0; }
+
+@keyframes fes-slide-up {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes fes-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.fes-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 2px;
+  margin: 10px auto 0;
+}
+
+/* ---------- Header ---------- */
+.fes-head {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 16px 12px;
+  gap: 10px;
+}
+.fes-title-wrap { flex: 1; min-width: 0; }
+.fes-title {
+  font-family: 'Nanum Myeongjo', serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.fes-meta {
+  margin-top: 4px;
+  font-size: 10px;
+  color: #aaaaaa;
+  letter-spacing: 0.2px;
+}
+.fes-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888888;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* ---------- Fields (공통) ---------- */
+.fes-field {
+  padding: 0 16px 14px;
+}
+.fes-label {
+  font-size: 10px;
+  color: #888888;
+  letter-spacing: 0.3px;
+  margin-bottom: 7px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.3;
+}
+.fes-label .fes-hint {
+  color: #aaaaaa;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.fes-input {
+  width: 100%;
+  padding: 11px 13px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1A1A1A;
+  outline: none;
+  transition: border-color .15s, background .15s;
+  -webkit-appearance: none;
+}
+.fes-input.fes-input--bold {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+.fes-input:focus {
+  border-color: rgba(255,107,53,0.4);
+  background: #fff;
+}
+.fes-input::placeholder { color: #aaaaaa; }
+
+.fes-textarea {
+  width: 100%;
+  padding: 11px 13px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: #1A1A1A;
+  outline: none;
+  resize: none;
+  line-height: 1.5;
+}
+.fes-textarea:focus {
+  border-color: rgba(255,107,53,0.4);
+  background: #fff;
+}
+.fes-textarea::placeholder { color: #aaaaaa; }
+
+/* ---------- Emoji button (pin only) ---------- */
+.fes-emoji-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fes-emoji-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #FFF4EB;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  padding: 0;
+}
+.fes-emoji-btn .fes-emoji-glyph {
+  font-size: 24px;
+  line-height: 1;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+.fes-emoji-btn::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  background-image:
+    radial-gradient(circle, rgba(0,0,0,0.4) 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(0,0,0,0.4) 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(0,0,0,0.4) 1px, transparent 1.5px);
+  background-size: 3px 3px;
+  background-position: 2.5px 5.5px, 5px 5.5px, 7.5px 5.5px;
+  background-repeat: no-repeat;
+}
+.fes-emoji-hint { font-size: 11px; color: #666666; line-height: 1.4; }
+.fes-emoji-hint strong {
+  font-weight: 500;
+  color: #1A1A1A;
+  font-size: 12px;
+  display: block;
+}
+
+/* ---------- Color palette ---------- */
+.fes-color-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.fes-color-chip {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  padding: 0;
+  background-clip: padding-box;
+}
+.fes-color-chip.is-selected::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid #FF6B35;
+  pointer-events: none;
+}
+.fes-color-chip-custom {
+  background: #fff;
+  border: 0.5px dashed rgba(45,74,62,0.3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #2D4A3E;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 0 10px;
+  height: 28px;
+  width: auto;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  position: relative;
+}
+.fes-color-chip-custom .fes-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.fes-color-chip-custom input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* ---------- Line style picker ---------- */
+.fes-line-row {
+  display: flex;
+  gap: 6px;
+}
+.fes-line-btn {
+  flex: 1;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #666666;
+  font-family: inherit;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.fes-line-btn.is-active {
+  background: #FFF4EB;
+  color: #993C1D;
+  border-color: transparent;
+}
+.fes-line-preview {
+  width: 28px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+}
+.fes-line-preview svg { width: 100%; height: 100%; }
+
+/* ---------- Tag input ---------- */
+.fes-tag-field {
+  padding: 7px 10px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  min-height: 38px;
+}
+.fes-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #FFF4EB;
+  color: #993C1D;
+  padding: 3px 4px 3px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.fes-tag-chip.fes-tag-chip--mint { background: #E1F5EE; color: #085041; }
+.fes-tag-chip.fes-tag-chip--mint .fes-tag-x { background: rgba(8,80,65,0.15); }
+.fes-tag-chip.fes-tag-chip--amber { background: #FAEEDA; color: #633806; }
+.fes-tag-chip.fes-tag-chip--amber .fes-tag-x { background: rgba(99,56,6,0.15); }
+.fes-tag-x {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(153,60,29,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  color: inherit;
+}
+.fes-tag-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 11px;
+  font-family: inherit;
+  color: #1A1A1A;
+  padding: 3px 4px;
+  min-width: 70px;
+  flex: 1;
+}
+.fes-tag-input::placeholder { color: #aaaaaa; }
+
+/* ---------- Measure info ---------- */
+.fes-measure {
+  padding: 10px 13px;
+  background: #E1F5EE;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #085041;
+}
+.fes-measure svg { opacity: 0.7; flex-shrink: 0; }
+.fes-measure strong {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+
+/* ---------- Media blocks (photos · voices · memos) ---------- */
+.fes-media {
+  padding: 0 16px 14px;
+}
+.fes-media-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: #888888;
+  letter-spacing: 0.3px;
+  font-weight: 500;
+}
+.fes-media-head .fes-count { color: #aaaaaa; }
+
+.fes-photo-grid {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fes-photo-grid::-webkit-scrollbar { display: none; }
+.fes-photo-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  background: #FAF5EE;
+}
+.fes-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fes-photo-rm {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(26,26,26,0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* Audio bars */
+.fes-audio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fes-audio-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px 8px;
+  background: #E1F5EE;
+  border-radius: 10px;
+}
+.fes-audio-play {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #2D4A3E;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.fes-audio-wave {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.5px;
+  height: 14px;
+  min-width: 0;
+}
+.fes-audio-wave span {
+  flex: 1;
+  background: #085041;
+  opacity: 0.65;
+  border-radius: 1px;
+}
+.fes-audio-time {
+  font-size: 10px;
+  color: #085041;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.fes-audio-date {
+  font-size: 9px;
+  color: #085041;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+.fes-audio-rm {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(45,74,62,0.15);
+  color: #2D4A3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+}
+
+/* Memo list */
+.fes-memo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fes-memo-entry {
+  padding: 9px 11px 9px 13px;
+  background: #FAF5EE;
+  border-radius: 10px;
+  border-left: 2px solid #2D4A3E;
+  position: relative;
+}
+.fes-memo-date {
+  font-size: 9px;
+  color: #aaaaaa;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 3px;
+  letter-spacing: 0.3px;
+}
+.fes-memo-text {
+  font-size: 12px;
+  color: #1A1A1A;
+  line-height: 1.5;
+  padding-right: 22px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.fes-memo-rm {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888888;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+/* ---------- Quick attach toolbar ---------- */
+.fes-attach {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px 14px;
+}
+.fes-attach-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  color: #2D4A3E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  padding: 0;
+}
+.fes-attach-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.fes-attach-btn.is-recording { background: #FEE2E2; color: #B91C1C; }
+.fes-attach-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #FF6B35;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fff;
+}
+.fes-attach-hint {
+  font-size: 10px;
+  color: #aaaaaa;
+  margin-left: 2px;
+}
+
+/* ---------- Action bar ---------- */
+.fes-action {
+  display: flex;
+  gap: 8px;
+  padding: 4px 16px 18px;
+}
+.fes-btn {
+  height: 46px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 14px;
+}
+.fes-btn--primary {
+  background: #FF6B35;
+  color: #fff;
+  flex: 1;
+}
+.fes-btn--primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.fes-btn--ghost {
+  background: #fff;
+  color: #2D4A3E;
+  border: 0.5px solid rgba(45,74,62,0.2);
+  flex: 1;
+}
+.fes-btn--danger {
+  background: #fff;
+  color: #E24B4A;
+  border: 0.5px solid rgba(226,75,74,0.3);
+  flex: 0 0 100px;
+}
+
+/* ---------- Location block (pin 편집용) ---------- */
+.fes-location {
+  padding: 10px 13px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fes-location-info { flex: 1; min-width: 0; }
+.fes-location-addr {
+  font-size: 12px;
+  color: #1A1A1A;
+  line-height: 1.4;
+  word-break: break-all;
+}
+.fes-location-coords {
+  font-size: 10px;
+  color: #aaaaaa;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.fes-location-change {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 10px;
+  background: #fff;
+  border: 0.5px solid rgba(45,74,62,0.2);
+  color: #2D4A3E;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ---------- Emoji picker overlay ---------- */
+.fes-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,26,26,0.4);
+  z-index: 70;
+  animation: fes-fade-in 0.16s ease-out;
+}
+.fes-picker {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 24px rgba(26,26,26,0.1);
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 71;
+  padding: 10px 16px 18px;
+  animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
+}
+.fes-picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0 10px;
+}
+.fes-picker-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.fes-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: #FAF5EE;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+.fes-picker-search input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: #1A1A1A;
+}
+.fes-picker-search input::placeholder { color: #aaaaaa; }
+.fes-picker-search svg { color: #aaaaaa; flex-shrink: 0; }
+
+.fes-picker-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px 0 10px;
+  margin-bottom: 4px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.04);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fes-picker-tabs::-webkit-scrollbar { display: none; }
+.fes-picker-tab {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s;
+  position: relative;
+  padding: 0;
+}
+.fes-picker-tab span {
+  font-size: 20px;
+  line-height: 1;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+.fes-picker-tab.is-active { background: #FFF4EB; }
+.fes-picker-tab.is-active::after {
+  content: '';
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: #FF6B35;
+  border-radius: 2px;
+}
+
+.fes-picker-body {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 4px;
+}
+.fes-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.fes-picker-cell {
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: #FAF5EE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: transform .12s, border-color .12s, background .12s;
+  padding: 0;
+}
+.fes-picker-cell span {
+  font-size: 22px;
+  line-height: 1;
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+.fes-picker-cell:hover {
+  transform: scale(1.06);
+  background: #FFF4EB;
+}
+.fes-picker-cell.is-selected {
+  border-color: #FF6B35;
+  background: #FFF4EB;
+}
+.fes-picker-empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 12px;
+  color: #aaaaaa;
+}
+
+/* ---------- Memo input sheet ---------- */
+.fes-memo-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 24px rgba(26,26,26,0.1);
+  z-index: 71;
+  padding: 10px 16px 18px;
+  animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fes-memo-sheet .fes-handle { margin: 0 auto 4px; }
+.fes-memo-sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.fes-memo-sheet-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.fes-memo-sheet textarea {
+  min-height: 140px;
+  padding: 12px 13px;
+}
+.fes-memo-sheet .fes-action {
+  padding: 0;
+}
+
+/* ---------- Mobile tweaks (≤390px) ---------- */
+@media (max-width: 390px) {
+  .fes-color-row { gap: 8px; }
+  .fes-color-chip { width: 26px; height: 26px; }
+  .fes-picker-grid { grid-template-columns: repeat(5, 1fr); }
+}
