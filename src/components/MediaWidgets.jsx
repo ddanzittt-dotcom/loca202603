@@ -63,7 +63,7 @@ export function MediaPhoto({ mediaId, localId, date, onDelete, cloudUrl }) {
   )
 }
 
-export function MediaVoice({ mediaId, localId, duration, date, onDelete, cloudUrl }) {
+export function MediaVoice({ mediaId, localId, duration, onDelete, cloudUrl }) {
   const [localSrc, setLocalSrc] = useState(null)
   const [playing, setPlaying] = useState(false)
   const audioRef = useRef(null)
@@ -90,17 +90,16 @@ export function MediaVoice({ mediaId, localId, duration, date, onDelete, cloudUr
       setPlaying(true)
     }
   }
-  const formattedDate = date ? new Date(date).toLocaleDateString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""
   return (
-    <div className="feature-voice-item">
+    <div className="feature-voice-card">
       {src ? <audio ref={audioRef} src={src} onEnded={() => setPlaying(false)} /> : null}
-      <button className="feature-voice-play" type="button" onClick={togglePlay} disabled={!src}>
+      <button className="feature-voice-card__play" type="button" onClick={togglePlay} disabled={!src}>
         {playing ? "⏸" : "▶"}
       </button>
-      <span className="feature-voice-info">
-        {duration != null ? `${Math.round(duration)}초` : ""} {formattedDate}
+      <span className="feature-voice-card__dur">
+        {duration != null ? `${Math.round(duration)}초` : ""}
       </span>
-      {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
+      {onDelete ? <button className="feature-voice-card__delete" type="button" onClick={onDelete}>&times;</button> : null}
     </div>
   )
 }
