@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+﻿import { useCallback, useEffect, useRef, useState } from "react"
 import { Geolocation } from "@capacitor/geolocation"
 
 export function useGeolocation({ setFocusPoint, showToast }) {
@@ -36,8 +36,9 @@ export function useGeolocation({ setFocusPoint, showToast }) {
     if (watchIdRef.current != null && myLocation) {
       setFocusPoint({ lat: myLocation.lat, lng: myLocation.lng, zoom: 16 })
       showToast("현재 위치로 이동했어요.")
-      return
+      return myLocation
     }
+
     try {
       let firstCoords
       try {
@@ -56,11 +57,14 @@ export function useGeolocation({ setFocusPoint, showToast }) {
         if (!navigator.geolocation) throw new Error("no-geo")
         const position = await new Promise((resolve, reject) =>
           navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true, timeout: 10000, maximumAge: 30000,
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 30000,
           })
         )
         firstCoords = { lat: position.coords.latitude, lng: position.coords.longitude }
       }
+
       prevLocationRef.current = firstCoords
       setMyLocation({ ...firstCoords, heading: 0 })
       setFocusPoint({ ...firstCoords, zoom: 16 })
@@ -73,12 +77,14 @@ export function useGeolocation({ setFocusPoint, showToast }) {
           { enableHighAccuracy: true, maximumAge: 5000 },
         )
       }
+
+      return firstCoords
     } catch {
-      showToast("위치를 가져올 수 없어요. 권한을 확인해주세요.")
+      showToast("위치를 가져올 수 없어요. 권한을 확인해 주세요.")
+      return null
     }
   }
 
-  // 언마운트 시 watch 정리
   useEffect(() => () => {
     if (watchIdRef.current != null) {
       navigator.geolocation?.clearWatch(watchIdRef.current)

@@ -142,7 +142,8 @@ export function NotificationPanel({ notifications, onMarkRead, onMarkAllRead, on
           {notifications.length === 0 ? (
             <div className="noti-dropdown__empty">
               <NotiIcon type="announcement" size={20} />
-              <p>아직 알림이 없어요</p>
+              <p className="noti-dropdown__empty-title">아직 알림이 없어요</p>
+              <p className="noti-dropdown__empty-desc">새로운 소식이 생기면 여기에 표시돼요</p>
             </div>
           ) : (
             sections.map((s, i) =>

@@ -1,4 +1,4 @@
-// ─── 참여자 알림 저장소 (localStorage 기반) ───
+// 참여자 알림 저장소 (localStorage 기반)
 
 const STORE_KEY = "loca.notifications"
 const MAX_ITEMS = 100
@@ -7,6 +7,7 @@ const MAX_ITEMS = 100
 export const NOTI_TYPES = {
   ANNOUNCEMENT: "announcement",
   FEATURE_COMMENT: "feature_comment",
+  FEATURE_UPDATE_REQUEST: "feature_update_request",
   MAP_VIEWED: "map_viewed",
   CHECKIN_REMINDER: "checkin_reminder",
   COMPLETION: "completion",
@@ -29,6 +30,13 @@ export const NOTI_CATEGORY = {
     color: "#0F6E56",
     // chat bubble
     icon: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" fill="currentColor"/>',
+  },
+  [NOTI_TYPES.FEATURE_UPDATE_REQUEST]: {
+    label: "수정 요청",
+    bg: "#FFF4EB",
+    color: "#C2410C",
+    // edit pencil
+    icon: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm14.71-9.04a1.003 1.003 0 000-1.42l-2.5-2.5a1.003 1.003 0 00-1.42 0l-1.83 1.83 3.75 3.75 1.97-1.66z" fill="currentColor"/>',
   },
   [NOTI_TYPES.MAP_VIEWED]: {
     label: "내 지도 공유",
@@ -67,10 +75,11 @@ export const NOTI_CATEGORY = {
   },
 }
 
-/** 알림 설정 키 매핑 (appSettings 키 → 유형) */
+/** 알림 설정 키 매핑 (appSettings key -> type) */
 export const NOTI_SETTING_KEYS = {
   noti_announcement: NOTI_TYPES.ANNOUNCEMENT,
   noti_feature_comment: NOTI_TYPES.FEATURE_COMMENT,
+  noti_feature_update_request: NOTI_TYPES.FEATURE_UPDATE_REQUEST,
   noti_map_viewed: NOTI_TYPES.MAP_VIEWED,
   noti_checkin_reminder: NOTI_TYPES.CHECKIN_REMINDER,
   noti_completion: NOTI_TYPES.COMPLETION,
@@ -78,7 +87,7 @@ export const NOTI_SETTING_KEYS = {
   noti_event_ending: NOTI_TYPES.EVENT_ENDING,
 }
 
-// ─── 내부 헬퍼 ───
+// 내부 helper
 
 function readStore() {
   try {
@@ -96,7 +105,7 @@ function generateId() {
   return `noti_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 }
 
-// ─── 공개 API ───
+// 공개 API
 
 /** 전체 알림 목록 (최신순) */
 export function getAll() {
@@ -115,7 +124,7 @@ export function hasUnread() {
 
 /**
  * 알림 추가.
- * meta.dedup이 있으면 동일 dedup 키가 이미 존재할 때 스킵한다.
+ * `meta.dedup` 이 있으면 같은 dedup 키는 중복 저장하지 않는다.
  * 반환: 추가된 알림 객체 또는 null(중복)
  */
 export function add({ type, mapId, title, body, meta = {} }) {
@@ -180,12 +189,11 @@ export function clearAll() {
   writeStore([])
 }
 
-/**
- * 알림 설정 확인.
- */
+/** 알림 설정 확인 */
 export function isTypeEnabled(appSettings, type) {
   if (appSettings.notifications === false) return false
   const settingKey = Object.entries(NOTI_SETTING_KEYS).find(([, t]) => t === type)?.[0]
   if (!settingKey) return true
   return appSettings[settingKey] !== false
 }
+

@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+﻿import { useCallback } from "react"
 import { logEvent } from "../lib/analytics"
 import {
   followUser as followUserRecord,
@@ -133,7 +133,7 @@ export function useSocialProfile({
       setActiveMapId(targetMapId)
       setActiveMapSource("local")
       setEditorMode("pin")
-      showToast("���도를 탭해서 위���를 지정하세요")
+      showToast("지도를 탭해서 위치를 지정하세요")
     }
   }, [cloudMode, pendingSharePlace, setFeatures, showToast, touchMap, setPendingSharePlace, setActiveTab, setMapsView, setActiveMapId, setActiveMapSource, setSelectedFeatureId, setFeatureSheet, setEditorMode])
 

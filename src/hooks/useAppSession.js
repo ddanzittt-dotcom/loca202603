@@ -18,6 +18,7 @@ import {
   me,
   sharesSeed,
 } from "../data/sampleData"
+import { mergeFeatureListWithLocalMedia } from "../lib/featureMediaMerge"
 
 export function useAppSession({
   setMaps, setFeatures, setShares, setFollowed, setViewerProfile,
@@ -90,12 +91,15 @@ export function useAppSession({
       }
 
       const cloudEmpty = appData.maps.length === 0
+      const appMaps = appData.maps.filter((mapItem) => !mapItem.isCommunity)
+      const appMapIds = new Set(appMaps.map((mapItem) => mapItem.id))
+      const appFeatures = appData.features.filter((featureItem) => appMapIds.has(featureItem.mapId))
       const localData = readLocalImportData()
       const hasLocalData = localData.hasAny && localData.maps.length > 0
         && !localData.maps.every((m) => mapsSeed.some((s) => s.id === m.id))
 
-      setMaps(appData.maps)
-      setFeatures(appData.features)
+      setMaps(appMaps)
+      setFeatures((current) => mergeFeatureListWithLocalMedia(appFeatures, current))
       setShares(appData.shares)
       setFollowed(appData.followed)
       setViewerProfile(nextProfile)
@@ -103,14 +107,14 @@ export function useAppSession({
       updateStreak().catch(() => {})
 
       if (cloudEmpty && hasLocalData) {
-        showToast("��컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
+        showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
       }
 
       setActiveMapId((current) => {
-        if (current && appData.maps.some((mapItem) => mapItem.id === current)) return current
-        return appData.maps[0]?.id ?? null
+        if (current && appMaps.some((mapItem) => mapItem.id === current)) return current
+        return appMaps[0]?.id ?? null
       })
-      if (routeAtLoad?.type === "map" && appData.maps.some((mapItem) => mapItem.id === routeAtLoad.mapId)) {
+      if (routeAtLoad?.type === "map" && appMaps.some((mapItem) => mapItem.id === routeAtLoad.mapId)) {
         setActiveTab("maps")
         setMapsView("editor")
         setActiveMapSource("local")
@@ -202,7 +206,7 @@ export function useAppSession({
     if (!cloudMode) return showToast("먼저 로그인해 주세요.")
     const localData = readLocalImportData()
     if (!localData.hasAny) return showToast("이 기기에서 가져올 로컬 데이터가 없어요.")
-    if (!window.confirm("이 기기에 저장된 로컬 지도를 현재 계정으로 ���져올까요?")) return
+    if (!window.confirm("이 기기에 저장된 로컬 지도를 현재 계정으로 옮겨올까요?")) return
 
     try {
       const mapIdMap = new Map()

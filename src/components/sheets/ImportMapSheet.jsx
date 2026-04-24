@@ -116,7 +116,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
       <div className="import-map-modal">
         {!mode ? (
           <>
-            <h3 className="import-map-modal__title">발행 지도 불러오기</h3>
+            <h3 className="import-map-modal__title">공유 지도 불러오기</h3>
             <div className="import-map-sheet__options">
               <button
                 className="import-map-sheet__option"
@@ -164,7 +164,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
         {mode === "code" ? (
           <div className="import-map-sheet__code">
             <label className="field">
-              <span>발행 코드</span>
+              <span>공유 코드 (발행 코드)</span>
               <input
                 type="text"
                 value={code}
@@ -174,6 +174,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
                 onKeyDown={(e) => { if (e.key === "Enter" && code.trim()) handleImport() }}
               />
             </label>
+            <p className="import-map-sheet__hint">공유 링크가 `/s/my-map-slug`라면 `my-map-slug`를 입력하세요.</p>
             <div className="import-map-sheet__code-actions">
               <button className="button button--ghost" type="button" onClick={() => setMode(null)}>돌아가기</button>
               <button
