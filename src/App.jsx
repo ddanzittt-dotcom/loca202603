@@ -52,6 +52,7 @@ import { useGeolocation } from "./hooks/useGeolocation"
 import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
+import { FeatureEditSheet } from "./components/sheets/FeatureEditSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
@@ -1297,20 +1298,56 @@ export default function App() {
         onSave={saveMapSheet} onDelete={deleteMapAction}
         onClose={() => setMapSheet(null)}
       />
-      <FeatureDetailSheet
-        featureSheet={featureSheet} setFeatureSheet={setFeatureSheet}
-        activeMapSource={activeMapSource} featureEmojiChoices={featureEmojiChoices}
-        readOnly={mapEditorReadOnly}
-        currentUserId={viewerProfile.id}
-        onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
-        onSave={saveFeatureSheet} onDelete={deleteFeature}
-        onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
-        photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}
-        onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
-        onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
-        memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo}
-        onRequestCommunityUpdate={requestCommunityFeatureUpdate}
-      />
+      {(() => {
+        // 시안 v5 신규 편집 시트 (FeatureEditSheet)는 '작성자 편집 전용'.
+        // 비작성자의 커뮤니티 수정 요청은 기존 FeatureDetailSheet가 담당.
+        if (!featureSheet) return null
+        const isCommunityFeature = activeMapSource === "community"
+        const canDirectlyEdit = !mapEditorReadOnly && (
+          activeMapSource === "local"
+          || (isCommunityFeature && (featureSheet.createdBy || null) === viewerProfile.id)
+        )
+        if (canDirectlyEdit) {
+          return (
+            <FeatureEditSheet
+              featureSheet={featureSheet}
+              setFeatureSheet={setFeatureSheet}
+              mapMode={isCommunityFeature ? "community" : "personal"}
+              mapTitle={activeMap?.title || ""}
+              readOnly={mapEditorReadOnly}
+              onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
+              onSave={saveFeatureSheet}
+              onDelete={deleteFeature}
+              onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
+              photoInputRef={photoInputRef}
+              isRecording={isRecording}
+              recordingSeconds={recordingSeconds}
+              onPhotoSelected={handlePhotoSelected}
+              onDeletePhoto={handleDeletePhoto}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onDeleteVoice={handleDeleteVoice}
+              onAddMemo={addMemo}
+            />
+          )
+        }
+        return (
+          <FeatureDetailSheet
+            featureSheet={featureSheet} setFeatureSheet={setFeatureSheet}
+            activeMapSource={activeMapSource} featureEmojiChoices={featureEmojiChoices}
+            readOnly={mapEditorReadOnly}
+            currentUserId={viewerProfile.id}
+            onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
+            onSave={saveFeatureSheet} onDelete={deleteFeature}
+            onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
+            photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}
+            onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
+            onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
+            memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo}
+            onRequestCommunityUpdate={requestCommunityFeatureUpdate}
+          />
+        )
+      })()}
       {coachmarkStep === 3 ? (
         <CoachMark
           step={3}
