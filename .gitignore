@@ -31,3 +31,11 @@ ios/App/Pods
 ios/App/build
 .vercel
 .env*.local
+
+# QA / release artifacts
+.qa-artifacts/
+test-results/
+
+# Supabase CLI cache
+supabase/.temp/
+supabase/.branches/
