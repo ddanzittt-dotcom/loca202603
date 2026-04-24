@@ -134,6 +134,9 @@ export function MapEditorScreen({
   const trimmedSearchQuery = searchQuery.trim()
   const summaryOpen = Boolean(selectedFeatureSummary)
   const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
+  // 내 지도(personal)는 본인 지도이므로 항상 작성자. 커뮤니티는 createdBy 로 판정.
+  // 데모/공유 등 readOnly 환경에서는 작성자 권한을 주지 않는다.
+  const isSummaryAuthor = readOnly ? false : (communityMode ? isSummaryCreator : true)
   const canEditOwnCommunitySummary = communityMode && !readOnly && isSummaryCreator
   const canRequestSummaryEdit = (
     communityMode
@@ -548,7 +551,7 @@ export function MapEditorScreen({
             <FeaturePopupCard
               feature={selectedFeatureSummary}
               mapMode={communityMode ? "community" : "personal"}
-              isAuthor={isSummaryCreator}
+              isAuthor={isSummaryAuthor}
               currentUserId={currentUserId}
               routeLengthKm={
                 selectedFeatureSummary.type === "route"

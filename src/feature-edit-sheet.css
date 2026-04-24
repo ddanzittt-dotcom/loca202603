@@ -17,11 +17,20 @@
 }
 
 /* ---------- Backdrop · Sheet shell ---------- */
+/*
+ * z-index 위계:
+ *   .map-feature-summary-wrap (popup)  = 520
+ *   .fes-backdrop                      = 600
+ *   .fes-sheet                         = 601
+ *   .fes-picker-backdrop (내부)        = 610
+ *   .fes-picker / .fes-memo-sheet      = 611
+ * 편집 시트가 열리면 축약 팝업이 백드롭 아래로 가려진다.
+ */
 .fes-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(26,26,26,0.32);
-  z-index: 60;
+  z-index: 600;
   animation: fes-fade-in 0.16s ease-out;
 }
 
@@ -39,7 +48,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  z-index: 61;
+  z-index: 601;
   padding-bottom: env(safe-area-inset-bottom, 0);
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   color: #1A1A1A;
@@ -684,7 +693,7 @@
   position: fixed;
   inset: 0;
   background: rgba(26,26,26,0.4);
-  z-index: 70;
+  z-index: 610;
   animation: fes-fade-in 0.16s ease-out;
 }
 .fes-picker {
@@ -700,7 +709,7 @@
   max-height: 75vh;
   display: flex;
   flex-direction: column;
-  z-index: 71;
+  z-index: 611;
   padding: 10px 16px 18px;
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
@@ -834,7 +843,7 @@
   background: #fff;
   border-radius: 18px 18px 0 0;
   box-shadow: 0 -4px 24px rgba(26,26,26,0.1);
-  z-index: 71;
+  z-index: 611;
   padding: 10px 16px 18px;
   animation: fes-slide-up 0.22s cubic-bezier(.22,.61,.36,1);
   padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
