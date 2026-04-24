@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>LOCA · 지도 팝업 카드 제안 v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #FF6B35;
+    --color-secondary: #2D4A3E;
+    --color-background: #FAF5EE;
+    --color-card: #FFFFFF;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #888888;
+    --color-text-tertiary: #aaaaaa;
+    --color-text-description: #666666;
+    --color-danger: #E24B4A;
+
+    --accent-warm-bg: #FFF4EB;
+    --accent-warm-fg: #993C1D;
+    --accent-amber-bg: #FAEEDA;
+    --accent-amber-fg: #633806;
+    --accent-mint-bg: #E1F5EE;
+    --accent-mint-fg: #085041;
+
+    --pin: #FF6B35;
+    --route: #0F6E56;
+    --area: #854F0B;
+
+    --border-card: 0.5px solid rgba(0,0,0,.06);
+    --border-card-2: 0.5px solid rgba(0,0,0,.08);
+    --border-divider: 0.5px solid rgba(0,0,0,.04);
+    --border-secondary-btn: 0.5px solid rgba(45,74,62,.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-weight: 400;
+    letter-spacing: -0.1px;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  .wrap { max-width: 1200px; margin: 0 auto; }
+
+  .page-head {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .page-head .kicker {
+    font-size: 10px;
+    color: var(--color-primary);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .page-head h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    letter-spacing: -0.5px;
+    margin-bottom: 10px;
+  }
+  .page-head p {
+    font-size: 12px;
+    color: var(--color-text-description);
+    line-height: 1.6;
+  }
+
+  .section { margin-bottom: 64px; }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+  .section-head h2 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.3px;
+  }
+  .section-head .num {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 11px;
+    color: var(--color-primary);
+    letter-spacing: 1px;
+  }
+  .section-sub {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    padding-left: 4px;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .case { display: flex; flex-direction: column; gap: 10px; }
+  .case-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--color-text-description);
+    letter-spacing: 0.5px;
+  }
+  .case-label .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .case-label .dot.author { background: var(--color-primary); }
+  .case-label .dot.viewer { background: var(--color-secondary); }
+
+  /* ======= POPUP CARD ======= */
+  .popup {
+    background: var(--color-card);
+    border-radius: 14px;
+    border: var(--border-card);
+    box-shadow: 0 8px 28px rgba(26,26,26,0.06), 0 2px 6px rgba(26,26,26,0.03);
+    overflow: hidden;
+  }
+
+  .popup-head {
+    display: flex;
+    align-items: center;
+    padding: 14px 14px 10px;
+    gap: 10px;
+  }
+
+  .type-icon {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .type-icon.pin { background: var(--accent-warm-bg); }
+  .type-icon.route { background: var(--accent-mint-bg); }
+  .type-icon.area { background: var(--accent-amber-bg); }
+
+  .popup-title-wrap { flex: 1; min-width: 0; }
+  .popup-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    line-height: 1.3;
+  }
+  .popup-title + .type-tag { margin-top: 3px; }
+  .type-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+  .type-tag.pin { background: var(--accent-warm-bg); color: var(--accent-warm-fg); }
+  .type-tag.route { background: var(--accent-mint-bg); color: var(--accent-mint-fg); }
+  .type-tag.area { background: var(--accent-amber-bg); color: var(--accent-amber-fg); }
+
+  .popup-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .action-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    background: #fff;
+    color: var(--color-secondary);
+    border: var(--border-secondary-btn);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .action-btn.detail {
+    background: var(--color-secondary);
+    color: #fff;
+    border: none;
+  }
+  .action-btn.import {
+    background: var(--accent-warm-bg);
+    color: var(--accent-warm-fg);
+    border: none;
+  }
+  .action-btn.imported {
+    background: var(--accent-mint-bg);
+    color: var(--accent-mint-fg);
+    border: none;
+  }
+  .action-btn.icon-only {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+  .close-btn {
+    width: 28px; height: 28px;
+    border-radius: 10px;
+    background: #fff;
+    border: var(--border-card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+  }
+
+  .popup-desc {
+    padding: 0 14px 12px;
+    font-size: 12px;
+    color: var(--color-text-description);
+    line-height: 1.5;
+  }
+
+  /* ======== Media Strip ======== */
+  .media-strip {
+    padding: 0 14px 14px;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+  .thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .thumb.ph1 { background: linear-gradient(135deg, #E8BCAD 0%, #D4836B 100%); }
+  .thumb.ph2 { background: linear-gradient(135deg, #C2D6B8 0%, #7A9E6B 100%); }
+  .thumb.ph3 { background: linear-gradient(135deg, #FAEEDA 0%, #D4A06A 100%); }
+  .thumb.ph4 { background: linear-gradient(135deg, #ACD6CC 0%, #5A9E91 100%); }
+  .thumb-count {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 1px 5px;
+    border-radius: 6px;
+  }
+
+  /* '사진 추가' (모두의 지도 전용) */
+  .photo-add {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    background: var(--color-background);
+    border: 0.5px dashed rgba(45,74,62,.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--color-secondary);
+  }
+  .photo-add .lb {
+    font-size: 8px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+  }
+
+  .media-chip {
+    height: 56px;
+    padding: 0 10px;
+    border-radius: 10px;
+    background: var(--color-background);
+    border: var(--border-card);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    min-width: 56px;
+  }
+  .media-chip .icn { color: var(--color-secondary); }
+  .media-chip .lb { font-size: 8px; color: var(--color-text-secondary); }
+
+  .voice-chip {
+    flex: 1;
+    min-width: 0;
+    height: 56px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: var(--accent-mint-bg);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .voice-chip .play {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--color-secondary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .voice-wave {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+  }
+  .voice-wave span {
+    flex: 1;
+    background: var(--accent-mint-fg);
+    border-radius: 1px;
+    opacity: 0.7;
+  }
+  .voice-time {
+    font-size: 10px;
+    color: var(--accent-mint-fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ======= Rich media stack (내 지도) ======= */
+  .media-stack {
+    padding: 0 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Photos: larger thumbs, horizontal scroll */
+  .photos-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 -14px;
+    padding: 0 14px 2px;
+  }
+  .photos-row::-webkit-scrollbar { display: none; }
+
+  .photo-hero {
+    width: 76px;
+    height: 76px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-hero.ph1 { background: linear-gradient(135deg, #E8BCAD 0%, #D4836B 100%); }
+  .photo-hero.ph2 { background: linear-gradient(135deg, #C2D6B8 0%, #7A9E6B 100%); }
+  .photo-hero.ph3 { background: linear-gradient(135deg, #FAEEDA 0%, #D4A06A 100%); }
+  .photo-hero.ph4 { background: linear-gradient(135deg, #ACD6CC 0%, #5A9E91 100%); }
+  .photo-hero.ph5 { background: linear-gradient(135deg, #C8C9DC 0%, #7A7BA5 100%); }
+  .photo-hero .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.45);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Voice player — full width row */
+  .voice-player {
+    width: 100px;
+    height: 48px;
+    padding: 0 8px 0 6px;
+    border-radius: 12px;
+    background: var(--accent-mint-bg);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .voice-player .vp-play {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-secondary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .voice-player .vp-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
+  .voice-player .vp-wave {
+    display: flex;
+    align-items: center;
+    gap: 1.5px;
+    height: 16px;
+  }
+  .voice-player .vp-wave span:nth-child(n+9) { display: none; }
+  .voice-player .vp-wave span {
+    flex: 1;
+    background: var(--accent-mint-fg);
+    border-radius: 1px;
+    opacity: 0.75;
+  }
+  .voice-player .vp-wave span.played { opacity: 1; }
+  .voice-player .vp-time {
+    font-size: 9px;
+    color: var(--accent-mint-fg);
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    line-height: 1;
+    opacity: 0.75;
+  }
+
+
+  /* Item wrapper with date label below (photos/voices) */
+  .media-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+  .media-item .date-label {
+    font-size: 9px;
+    color: var(--color-text-tertiary);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Voices horizontal scroll (내 지도) */
+  .voices-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    margin: 0 -14px;
+    padding: 0 14px 2px;
+    align-items: flex-start;
+  }
+  .voices-row::-webkit-scrollbar { display: none; }
+
+  /* Route length chip — special styling in tag-row */
+  .tag-chip.route-length {
+    background: var(--accent-mint-bg);
+    color: var(--accent-mint-fg);
+    letter-spacing: 0.3px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Memo preview card — shows actual text */
+  .memo-preview {
+    padding: 10px 12px 9px;
+    border-radius: 12px;
+    background: var(--color-background);
+    border-left: 2px solid var(--color-secondary);
+    position: relative;
+  }
+  .memo-preview .mp-icon {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    color: var(--color-text-tertiary);
+    opacity: 0.55;
+  }
+  .memo-preview .mp-text {
+    font-size: 12px;
+    color: var(--color-text-primary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    padding-right: 20px;
+  }
+  .memo-preview .mp-foot {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+  }
+  .memo-preview .mp-foot .more {
+    color: var(--color-secondary);
+    font-weight: 500;
+    margin-left: auto;
+  }
+
+  /* ======== Memo (모두의 지도) ======== */
+  .memo-section {
+    border-top: var(--border-divider);
+    padding: 12px 14px 14px;
+    background: rgba(250,245,238,0.4);
+  }
+  .memo-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .memo-label {
+    font-size: 10px;
+    color: var(--color-text-secondary);
+    letter-spacing: 0.2px;
+  }
+  .memo-count { font-size: 10px; color: var(--color-text-tertiary); }
+
+  .memo-input {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+    align-items: stretch;
+  }
+  .memo-input-field {
+    flex: 1;
+    min-width: 0;
+    background: #fff;
+    border: var(--border-card-2);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .memo-input-row {
+    display: flex;
+    align-items: center;
+    padding: 0 6px 0 8px;
+    gap: 4px;
+  }
+  .memo-photo-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity .15s;
+  }
+  .memo-photo-btn:hover { opacity: 1; background: var(--color-background); }
+  .memo-input-field input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    padding: 9px 4px;
+    font-size: 12px;
+    color: var(--color-text-primary);
+    font-family: inherit;
+    outline: none;
+  }
+  .memo-input-field input::placeholder { color: var(--color-text-tertiary); }
+
+  /* Row of thumbnails under input (작성 중 첨부 미리보기) */
+  .memo-attach-preview {
+    display: flex;
+    gap: 4px;
+    padding: 0 8px 8px;
+    flex-wrap: wrap;
+  }
+  .memo-attach-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .memo-attach-thumb .x {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #1A1A1A;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #fff;
+  }
+
+  .memo-submit-btn {
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* 기존 메모 아이템에 첨부된 사진 */
+  .memo-photos {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .memo-photo {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .memo-photo .more {
+    position: absolute;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.45);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .memo-list { display: flex; flex-direction: column; gap: 8px; }
+  .memo-item { display: flex; gap: 8px; }
+  .memo-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 500;
+  }
+  .memo-avatar.a { background: #C2D6B8; color: #4a6b3a; }
+  .memo-avatar.b { background: #E8BCAD; color: #8a4a30; }
+  .memo-avatar.c { background: #ACD6CC; color: #2d6e5e; }
+  .memo-body { flex: 1; min-width: 0; padding-top: 1px; }
+  .memo-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .memo-author {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  .memo-time { font-size: 9px; color: var(--color-text-tertiary); }
+  .memo-text {
+    font-size: 11px;
+    color: var(--color-text-description);
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .memo-mine-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 6px;
+    font-size: 8px;
+    font-weight: 500;
+    background: var(--accent-mint-bg);
+    color: var(--accent-mint-fg);
+    margin-left: 4px;
+  }
+
+  /* Tags (내 지도) */
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 14px 10px;
+  }
+  .tag-chip {
+    padding: 2px 7px;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: 500;
+    background: var(--color-background);
+    color: var(--color-text-description);
+  }
+  .tag-chip.warm { background: var(--accent-warm-bg); color: var(--accent-warm-fg); }
+  .tag-chip.mint { background: var(--accent-mint-bg); color: var(--accent-mint-fg); }
+  .tag-chip.amber { background: var(--accent-amber-bg); color: var(--accent-amber-fg); }
+
+  .content-text {
+    padding: 0 14px 12px;
+    font-size: 12px;
+    color: var(--color-text-description);
+    line-height: 1.5;
+  }
+
+  /* Notes */
+  .design-notes {
+    background: #fff;
+    border: var(--border-card);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 40px;
+  }
+  .design-notes h3 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    margin-bottom: 10px;
+  }
+  .design-notes ul { list-style: none; }
+  .design-notes li {
+    font-size: 11px;
+    color: var(--color-text-description);
+    line-height: 1.7;
+    padding-left: 12px;
+    position: relative;
+  }
+  .design-notes li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+  }
+  .design-notes li strong { color: var(--color-text-primary); font-weight: 500; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 24px 0 8px;
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 14px;
+    border: var(--border-card);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--color-text-description);
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    body { padding: 24px 14px 60px; }
+    .page-head h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <div class="kicker">LOCA · POPUP CARD PROPOSAL v8</div>
+    <h1>지도 팝업 카드 제안</h1>
+    <p>
+      모두의 지도 · 내 지도 · 작성자 / 비작성자 · 핀 / 경로 / 구역<br>
+      <span style="color:var(--color-primary)">v8 변경: 모두의 지도 → 내 지도 가져오기 버튼 추가</span>
+    </p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background: var(--pin)"></span><span>핀 · #FF6B35 / #FFF4EB</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background: var(--route)"></span><span>경로 · #0F6E56 / #E1F5EE</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background: var(--area)"></span><span>구역 · #854F0B / #FAEEDA</span></div>
+    <div class="legend-item" style="margin-left:auto"><span class="legend-dot" style="background: var(--color-primary)"></span><span>작성자 액션</span></div>
+    <div class="legend-item"><span class="legend-dot" style="background: var(--color-secondary)"></span><span>비작성자 액션</span></div>
+  </div>
+
+  <!-- ============ SECTION 1: 모두의 지도 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <span class="num">01</span>
+      <h2>모두의 지도 · 공용 매핑</h2>
+    </div>
+    <p class="section-sub">
+      헤더(아이콘·제목·액션) → 설명 → 사진 스트립 → 메모 존. 사진은 누구나 추가 가능(점선 테두리 '추가' 칩), 메모도 누구나 작성 가능해 모두가 함께 쌓는 공용 기록의 결을 살립니다.
+    </p>
+
+    <div class="grid">
+
+      <!-- 모두의 지도 · 핀 · 작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot author"></span>핀 · 작성자</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">백석대학교 예술관</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn import">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+                가져오기
+              </button>
+              <button class="action-btn icon-only" title="수정">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="popup-desc">2층 로비에서 열리는 소규모 졸업전시, 저녁 산책 후 들르기 좋아요.</div>
+
+          <div class="media-strip">
+            <div class="media-item">
+              <div class="thumb ph1"></div>
+              <div class="date-label">04.18</div>
+            </div>
+            <div class="media-item">
+              <div class="thumb ph2"><span class="thumb-count">+4</span></div>
+              <div class="date-label">04.20</div>
+            </div>
+            <div class="photo-add" title="사진 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              <span class="lb">추가</span>
+            </div>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-head"><span class="memo-label">메모</span><span class="memo-count">3</span></div>
+            <div class="memo-input">
+              <div class="memo-input-field">
+                <div class="memo-input-row">
+                  <button class="memo-photo-btn" title="사진 첨부">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </button>
+                  <input placeholder="메모 남기기…">
+                </div>
+              </div>
+              <button class="memo-submit-btn">추가</button>
+            </div>
+            <div class="memo-list">
+              <div class="memo-item">
+                <div class="memo-avatar a">박</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">박경주</span><span class="memo-mine-badge">내 메모</span><span class="memo-time">· 2일 전</span></div>
+                  <div class="memo-text">졸업 전시 6/2까지. 입구 바로 옆이라 찾기 쉬움</div>
+                  <div class="memo-photos">
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #E8BCAD 0%, #D4836B 100%)"></div>
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #FAEEDA 0%, #D4A06A 100%)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="memo-item">
+                <div class="memo-avatar b">김</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">김영희</span><span class="memo-time">· 5일 전</span></div>
+                  <div class="memo-text">주차는 뒤쪽 공영주차장이 편해요</div>
+                </div>
+              </div>
+              <div class="memo-item">
+                <div class="memo-avatar c">이</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">이도현</span><span class="memo-time">· 2주 전</span></div>
+                  <div class="memo-text">카페 이디야가 바로 옆이라 세트로 좋음</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모두의 지도 · 핀 · 비작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot viewer"></span>핀 · 비작성자</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">백석대학교 예술관</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn imported">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                저장됨
+              </button>
+              <button class="action-btn icon-only" title="수정요청">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="popup-desc">2층 로비에서 열리는 소규모 졸업전시, 저녁 산책 후 들르기 좋아요.</div>
+
+          <div class="media-strip">
+            <div class="media-item">
+              <div class="thumb ph1"></div>
+              <div class="date-label">04.18</div>
+            </div>
+            <div class="media-item">
+              <div class="thumb ph2"><span class="thumb-count">+4</span></div>
+              <div class="date-label">04.20</div>
+            </div>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-head"><span class="memo-label">메모</span><span class="memo-count">3</span></div>
+            <div class="memo-input">
+              <div class="memo-input-field">
+                <div class="memo-input-row">
+                  <button class="memo-photo-btn" title="사진 첨부">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </button>
+                  <input placeholder="메모 남기기…">
+                </div>
+              </div>
+              <button class="memo-submit-btn">추가</button>
+            </div>
+            <div class="memo-list">
+              <div class="memo-item">
+                <div class="memo-avatar a">박</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">박경주</span><span class="memo-time">· 2일 전</span></div>
+                  <div class="memo-text">졸업 전시 6/2까지. 입구 바로 옆이라 찾기 쉬움</div>
+                  <div class="memo-photos">
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #E8BCAD 0%, #D4836B 100%)"></div>
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #FAEEDA 0%, #D4A06A 100%)"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="memo-item">
+                <div class="memo-avatar b">김</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">김영희</span><span class="memo-time">· 5일 전</span></div>
+                  <div class="memo-text">주차는 뒤쪽 공영주차장이 편해요</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모두의 지도 · 경로 · 작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot author"></span>경로 · 작성자 <span style="color:var(--color-primary)">· 사진 첨부 중</span></div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon route">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">천안천 저녁 산책 코스</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn import">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+                가져오기
+              </button>
+              <button class="action-btn icon-only" title="수정">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag-chip route-length">2.1km</span>
+          </div>
+          <div class="popup-desc">신부동 징검다리 → 중앙공원 → 예술관 앞까지. 평지라 편해요.</div>
+
+          <div class="media-strip">
+            <div class="media-item">
+              <div class="thumb ph4"></div>
+              <div class="date-label">03.22</div>
+            </div>
+            <div class="media-item">
+              <div class="thumb ph2"><span class="thumb-count">+2</span></div>
+              <div class="date-label">04.02</div>
+            </div>
+            <div class="photo-add" title="사진 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              <span class="lb">추가</span>
+            </div>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-head"><span class="memo-label">메모</span><span class="memo-count">2</span></div>
+            <div class="memo-input">
+              <div class="memo-input-field">
+                <div class="memo-input-row">
+                  <button class="memo-photo-btn" title="사진 첨부">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </button>
+                  <input placeholder="메모 남기기…" value="정자 옆 나무 그늘이 시원함">
+                </div>
+                <div class="memo-attach-preview">
+                  <div class="memo-attach-thumb" style="background: linear-gradient(135deg, #C2D6B8 0%, #7A9E6B 100%)">
+                    <span class="x">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
+                  </div>
+                  <div class="memo-attach-thumb" style="background: linear-gradient(135deg, #ACD6CC 0%, #5A9E91 100%)">
+                    <span class="x">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button class="memo-submit-btn">추가</button>
+            </div>
+            <div class="memo-list">
+              <div class="memo-item">
+                <div class="memo-avatar a">박</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">박경주</span><span class="memo-mine-badge">내 메모</span><span class="memo-time">· 어제</span></div>
+                  <div class="memo-text">여름엔 벌레 많아서 긴 팔 추천</div>
+                </div>
+              </div>
+              <div class="memo-item">
+                <div class="memo-avatar c">최</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">최지우</span><span class="memo-time">· 3일 전</span></div>
+                  <div class="memo-text">중간 정자에서 쉬면 좋음</div>
+                  <div class="memo-photos">
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #ACD6CC 0%, #5A9E91 100%)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모두의 지도 · 구역 · 비작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot viewer"></span>구역 · 비작성자</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon area">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">두정동 카페 거리</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn import">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg>
+                가져오기
+              </button>
+              <button class="action-btn icon-only" title="수정요청">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="popup-desc">로스터리 카페가 많은 블록. 주말 오후엔 웨이팅이 꽤 있어요.</div>
+
+          <div class="media-strip">
+            <div class="media-item">
+              <div class="thumb ph3"></div>
+              <div class="date-label">04.10</div>
+            </div>
+            <div class="media-item">
+              <div class="thumb ph1"></div>
+              <div class="date-label">04.15</div>
+            </div>
+            <div class="media-item">
+              <div class="thumb ph4"><span class="thumb-count">+6</span></div>
+              <div class="date-label">04.22</div>
+            </div>
+          </div>
+
+          <div class="memo-section">
+            <div class="memo-head"><span class="memo-label">메모</span><span class="memo-count">4</span></div>
+            <div class="memo-input">
+              <div class="memo-input-field">
+                <div class="memo-input-row">
+                  <button class="memo-photo-btn" title="사진 첨부">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                      <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                  </button>
+                  <input placeholder="메모 남기기…">
+                </div>
+              </div>
+              <button class="memo-submit-btn">추가</button>
+            </div>
+            <div class="memo-list">
+              <div class="memo-item">
+                <div class="memo-avatar c">정</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">정하늘</span><span class="memo-time">· 1일 전</span></div>
+                  <div class="memo-text">블루보틀 쪽 골목이 제일 분위기 좋음</div>
+                  <div class="memo-photos">
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #FAEEDA 0%, #D4A06A 100%)"></div>
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #E8BCAD 0%, #D4836B 100%)"></div>
+                    <div class="memo-photo" style="background: linear-gradient(135deg, #ACD6CC 0%, #5A9E91 100%)">
+                      <span class="more">+2</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="memo-item">
+                <div class="memo-avatar a">윤</div>
+                <div class="memo-body">
+                  <div class="memo-meta"><span class="memo-author">윤서진</span><span class="memo-time">· 4일 전</span></div>
+                  <div class="memo-text">평일 오전이 여유롭고 좋아요</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2: 내 지도 ============ -->
+  <section class="section">
+    <div class="section-head">
+      <span class="num">02</span>
+      <h2>내 지도 · 개인 매핑</h2>
+    </div>
+    <p class="section-sub">
+      멀티미디어가 팝업 안에서 <em>직접 보이고 들리고 읽히도록</em> 재구성. 사진은 76px 큰 썸네일 가로 스크롤, 음성은 팝업 안에서 바로 재생되는 풀 플레이어, 메모는 실제 텍스트 2줄 미리보기로 노출.
+    </p>
+
+    <div class="grid">
+
+      <!-- 내 지도 · 핀 · 작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot author"></span>핀 · 작성자</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">성정동 옛날통닭</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn detail">
+                상세보기
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag-chip amber">로컬 맛집</span>
+            <span class="tag-chip warm">야식</span>
+            <span class="tag-chip">아빠랑</span>
+          </div>
+          <div class="content-text">튀김옷이 얇고 바삭. 마늘소스가 시그니처. 일요일은 휴무.</div>
+
+          <div class="media-stack">
+            <div class="photos-row">
+              <div class="media-item">
+                <div class="photo-hero ph1"></div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph3"></div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph2"></div>
+                <div class="date-label">04.22</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph4"></div>
+                <div class="date-label">04.22</div>
+              </div>
+            </div>
+
+            <div class="voices-row">
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span class="played" style="height: 35%"></span>
+                      <span class="played" style="height: 60%"></span>
+                      <span class="played" style="height: 45%"></span>
+                      <span class="played" style="height: 80%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 75%"></span>
+                    </div>
+                    <span class="vp-time">0:45</span>
+                  </div>
+                </div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 55%"></span>
+                      <span style="height: 75%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 80%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 35%"></span>
+                      <span style="height: 60%"></span>
+                    </div>
+                    <span class="vp-time">1:12</span>
+                  </div>
+                </div>
+                <div class="date-label">04.22</div>
+              </div>
+            </div>
+
+            <div class="memo-preview">
+              <svg class="mp-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <div class="mp-text">처음 왔는데 진짜 맛있어서 놀람. 마늘소스가 시그니처라는 말, 백번 공감. 담엔 콜라 말고 맥주 들고 와야지.</div>
+              <div class="mp-foot">
+                <span>2024. 4. 18.</span>
+                <span class="more">더보기 →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 내 지도 · 핀 · 비작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot viewer"></span>핀 · 비작성자 (구독자 뷰)</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon pin">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#FF6B35"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">성정동 옛날통닭</div>
+            </div>
+            <div class="popup-actions">
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag-chip amber">로컬 맛집</span>
+            <span class="tag-chip warm">야식</span>
+          </div>
+          <div class="content-text">튀김옷이 얇고 바삭. 마늘소스가 시그니처. 일요일은 휴무.</div>
+
+          <div class="media-stack">
+            <div class="photos-row">
+              <div class="media-item">
+                <div class="photo-hero ph1"></div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph3"></div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph2"></div>
+                <div class="date-label">04.22</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph4"></div>
+                <div class="date-label">04.22</div>
+              </div>
+            </div>
+
+            <div class="voices-row">
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 35%"></span>
+                      <span style="height: 60%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 80%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 75%"></span>
+                    </div>
+                    <span class="vp-time">0:45</span>
+                  </div>
+                </div>
+                <div class="date-label">04.18</div>
+              </div>
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 55%"></span>
+                      <span style="height: 75%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 80%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 35%"></span>
+                      <span style="height: 60%"></span>
+                    </div>
+                    <span class="vp-time">1:12</span>
+                  </div>
+                </div>
+                <div class="date-label">04.22</div>
+              </div>
+            </div>
+
+            <div class="memo-preview">
+              <svg class="mp-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <div class="mp-text">처음 왔는데 진짜 맛있어서 놀람. 마늘소스가 시그니처라는 말, 백번 공감. 담엔 콜라 말고 맥주 들고 와야지.</div>
+              <div class="mp-foot">
+                <span>2024. 4. 18.</span>
+                <span class="more">더보기 →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 내 지도 · 경로 · 작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot author"></span>경로 · 작성자</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon route">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">퇴근길 단골 루트</div>
+            </div>
+            <div class="popup-actions">
+              <button class="action-btn detail">
+                상세보기
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag-chip route-length">1.4km</span>
+            <span class="tag-chip mint">산책 코스</span>
+            <span class="tag-chip">혼자</span>
+            <span class="tag-chip">야경</span>
+          </div>
+          <div class="content-text">회사 → 중앙시장 → 집. 저녁 7시 즈음이 딱 좋아요.</div>
+
+          <div class="media-stack">
+            <div class="photos-row">
+              <div class="media-item">
+                <div class="photo-hero ph2"></div>
+                <div class="date-label">04.15</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph3"></div>
+                <div class="date-label">04.17</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph4"></div>
+                <div class="date-label">04.20</div>
+              </div>
+            </div>
+
+            <div class="voices-row">
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 40%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 60%"></span>
+                      <span style="height: 75%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 90%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 80%"></span>
+                    </div>
+                    <span class="vp-time">1:22</span>
+                  </div>
+                </div>
+                <div class="date-label">04.15</div>
+              </div>
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 55%"></span>
+                      <span style="height: 35%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 60%"></span>
+                      <span style="height: 80%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 75%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 85%"></span>
+                    </div>
+                    <span class="vp-time">0:38</span>
+                  </div>
+                </div>
+                <div class="date-label">04.17</div>
+              </div>
+              <div class="media-item">
+                <div class="voice-player">
+                  <div class="vp-play">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                  <div class="vp-main">
+                    <div class="vp-wave">
+                      <span style="height: 45%"></span>
+                      <span style="height: 65%"></span>
+                      <span style="height: 80%"></span>
+                      <span style="height: 50%"></span>
+                      <span style="height: 70%"></span>
+                      <span style="height: 40%"></span>
+                      <span style="height: 85%"></span>
+                      <span style="height: 55%"></span>
+                      <span style="height: 75%"></span>
+                      <span style="height: 45%"></span>
+                      <span style="height: 60%"></span>
+                      <span style="height: 50%"></span>
+                    </div>
+                    <span class="vp-time">2:14</span>
+                  </div>
+                </div>
+                <div class="date-label">04.20</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 내 지도 · 구역 · 비작성자 -->
+      <div class="case">
+        <div class="case-label"><span class="dot viewer"></span>구역 · 비작성자 (구독자 뷰)</div>
+        <div class="popup">
+          <div class="popup-head">
+            <div class="type-icon area">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#854F0B" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+            </div>
+            <div class="popup-title-wrap">
+              <div class="popup-title">이 동네 추천 블록</div>
+            </div>
+            <div class="popup-actions">
+              <button class="close-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          </div>
+          <div class="tag-row">
+            <span class="tag-chip warm">동네 탐험가</span>
+            <span class="tag-chip amber">빵지순례</span>
+          </div>
+          <div class="content-text">작은 베이커리와 독립서점이 모인 골목. 평일 저녁이 한산해요.</div>
+
+          <div class="media-stack">
+            <div class="photos-row">
+              <div class="media-item">
+                <div class="photo-hero ph3"></div>
+                <div class="date-label">03.28</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph1"></div>
+                <div class="date-label">04.05</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph4"></div>
+                <div class="date-label">04.12</div>
+              </div>
+              <div class="media-item">
+                <div class="photo-hero ph2">
+                  <div class="overlay">+4</div>
+                </div>
+                <div class="date-label">04.20</div>
+              </div>
+            </div>
+
+            <div class="memo-preview">
+              <svg class="mp-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <div class="mp-text">베이커리 '오월의 빵'이랑 독립서점 '책과 사람'이 포인트. 평일 늦은 오후가 가장 한산함.</div>
+              <div class="mp-foot">
+                <span>2024. 3. 22.</span>
+                <span class="more">더보기 →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DESIGN NOTES -->
+  <div class="design-notes">
+    <h3>변경 요약 · v8</h3>
+    <ul>
+      <li><strong>'가져오기' 버튼 신설 (모두의 지도)</strong> — 공용 매핑에서 발견한 장소를 내 지도로 복제. 커뮤니티 → 개인 기록의 <em>핵심 연결고리</em>로, 사용자의 실제 가치 흐름(발견 → 저장 → 재방문)을 완성.</li>
+      <li><strong>두 가지 상태</strong> — <em>가져오기</em>(warm tint, 북마크+ 아이콘) / <em>저장됨</em>(mint tint, filled 북마크). Case 2(핀·비작성자)를 저장됨 상태 예시로 노출해 두 상태 비교 가능.</li>
+      <li><strong>위계 정리를 위한 기존 버튼 축약</strong> — 신규 '가져오기'가 주요 액션으로 부각되도록 기존 '수정 / 수정요청' 버튼을 <em>아이콘 전용 28×28</em>로 축약 (펜 vs 깃발 아이콘으로 구분 유지, title 속성으로 접근성 보강). 헤더 가로 공간 확보.</li>
+      <li><strong>버튼 컬러 위계 (모두의 지도)</strong> — 메모 '추가' primary orange (최고 참여 액션) ▸ 가져오기 warm tint (주요 액션) ▸ 저장됨 mint tint (완료 상태) ▸ 수정 / 수정요청 secondary ghost (보조) ▸ 닫기 (기본). 컬러 톤만으로 우선순위가 읽힘.</li>
+      <li><strong>작성자 · 비작성자 공통 노출</strong> — 가져오기는 권한과 무관하게 모두에게 노출. 작성자 본인도 자기가 큐레이션한 공용 장소를 개인 기록으로 담을 수 있게.</li>
+      <li><strong>좋아요(인기도 지표)는 향후 과제로 보류</strong> — 공간 확보와 메모·사진 카운터와의 역할 분리 검토 후 별도 반영 예정.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
