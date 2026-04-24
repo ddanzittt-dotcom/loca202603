@@ -11,7 +11,7 @@
  * - route 존재: 10점
  * - area 존재: 5점
  * - highlight 핀 1개 이상: 10점
- * - 발행됨: 15점
+ * - 공개됨: 15점
  */
 
 /**
@@ -72,10 +72,10 @@ export function getMapCompletionSnapshot(map, features) {
   if (hasHighlight) score += 10
   breakdown.push({ key: "highlight", label: "하이라이트", points: hasHighlight ? 10 : 0, max: 10, done: hasHighlight })
 
-  // 9. 발행
+  // 9. 공개
   const isPublished = Boolean(map.isPublished || map.is_published)
   if (isPublished) score += 15
-  breakdown.push({ key: "published", label: "발행", points: isPublished ? 15 : 0, max: 15, done: isPublished })
+  breakdown.push({ key: "published", label: "공개", points: isPublished ? 15 : 0, max: 15, done: isPublished })
 
   // tier 결정
   let tier = "draft"

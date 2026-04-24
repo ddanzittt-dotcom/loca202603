@@ -175,3 +175,28 @@ describe("toFeaturePatch", () => {
     expect(result.lng).toBe(127.0)
   })
 })
+
+describe("feature style normalization", () => {
+  it("normalizeFeature includes style with defaults", () => {
+    const result = normalizeFeature({ id: "f-style-1", map_id: "m1", type: "route", points: [[127, 37]] })
+    expect(result.style).toEqual({ color: "#0F6E56", lineStyle: "solid" })
+  })
+
+  it("toFeatureInsert stores normalized style", () => {
+    const result = toFeatureInsert({
+      type: "area",
+      title: "test",
+      points: [[127, 37], [127.1, 37.1], [127.2, 37]],
+      style: { color: "not-a-color", lineStyle: "shortdot" },
+    })
+    expect(result.style).toEqual({ color: "#854F0B", lineStyle: "shortdot" })
+  })
+
+  it("toFeaturePatch stores style when provided", () => {
+    const result = toFeaturePatch({
+      type: "pin",
+      style: { color: "#2F80ED", lineStyle: "shortdash" },
+    })
+    expect(result.style).toEqual({ color: "#2F80ED", lineStyle: "solid" })
+  })
+})

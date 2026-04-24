@@ -165,7 +165,12 @@ export async function listMediaForFeatureIds(featureIds) {
     .select("*")
     .in("feature_id", featureIds)
     .order("created_at", { ascending: true })
-  if (error) throw error
+  // feature_media 테이블이 없거나 조회 실패 시 빈 배열로 폴백 (미디어 누락 방지)
+  if (error) {
+    if (isMissingDbObject(error, "feature_media")) return []
+    console.error("listMediaForFeatureIds error:", error)
+    return []
+  }
   return data || []
 }
 
@@ -452,6 +457,26 @@ export async function getPublishedMaps(limit = 10) {
     .limit(limit)
 
   if (error) throw error
+  return (data || []).map((row) => {
+    const pub = row.map_publications?.[0] || row.map_publications || {}
+    return asPublishedViewerMap(normalizeMap(row, normalizePublication(pub)))
+  })
+}
+
+export async function getCuratedMaps(limit = 12) {
+  const supabase = requireSupabase()
+
+  // is_curated 컬럼이 아직 없는 스키마에서는 에러를 삼킨다.
+  const { data, error } = await supabase
+    .from("maps")
+    .select("*, map_publications(likes_count, saves_count)")
+    .eq("is_curated", true)
+    .eq("is_published", true)
+    .in("visibility", ["public", "unlisted"])
+    .order("published_at", { ascending: false })
+    .limit(limit)
+
+  if (error) return []
   return (data || []).map((row) => {
     const pub = row.map_publications?.[0] || row.map_publications || {}
     return asPublishedViewerMap(normalizeMap(row, normalizePublication(pub)))

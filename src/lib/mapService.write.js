@@ -1,4 +1,4 @@
-﻿import { requireSupabase } from "./supabase"
+import { requireSupabase } from "./supabase"
 import {
   DEFAULT_MAP_THEME,
   requireUser,
@@ -11,6 +11,49 @@ import {
   touchMapRecord,
   reverseGeocodeAndTag,
 } from "./mapService.utils"
+import { normalizeFeatureStyle } from "./featureStyle"
+
+function parseRpcResult(data) {
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data)
+    } catch {
+      return null
+    }
+  }
+  return data || null
+}
+
+function buildFeatureConflictError() {
+  const error = new Error("Feature was changed by another editor.")
+  error.code = "LOCA_CONFLICT"
+  return error
+}
+
+function isMissingRpc(error) {
+  if (!error) return false
+  return error.code === "42883" || error.code === "PGRST202"
+}
+
+function isMissingStyleColumn(error) {
+  if (!error) return false
+  if (error.code === "42703") return true
+  const message = `${error.message || ""}`.toLowerCase()
+  return message.includes("style") && message.includes("column")
+}
+
+async function applyFeatureStyleFromRequestPayload(supabase, featureId, payload) {
+  if (!featureId) return
+  if (!payload || typeof payload !== "object") return
+  if (!Object.prototype.hasOwnProperty.call(payload, "style")) return
+  const type = payload.type || "pin"
+  const style = normalizeFeatureStyle(payload.style, type)
+  const { error } = await supabase
+    .from("map_features")
+    .update({ style })
+    .eq("id", featureId)
+  if (error && !isMissingStyleColumn(error)) throw error
+}
 
 // ─── Map CRUD ───
 
@@ -79,7 +122,6 @@ export async function ensureCommunityMap() {
     .single()
 
   if (createRes.error) {
-    // Race: another user created the same slug first.
     if (createRes.error.code === "23505") {
       const refetch = await supabase
         .from("maps")
@@ -131,7 +173,11 @@ export async function updateMap(mapId, updates = {}) {
 export async function deleteMap(mapId) {
   const user = await requireUser()
   const supabase = requireSupabase()
-  const { error } = await supabase.from("maps").delete().eq("id", mapId).eq("user_id", user.id)
+  const { error } = await supabase
+    .from("maps")
+    .delete()
+    .eq("id", mapId)
+    .eq("user_id", user.id)
   if (error) throw error
 }
 
@@ -140,14 +186,24 @@ export async function deleteMap(mapId) {
 export async function createFeature(mapId, featureData) {
   await requireUser()
   const supabase = requireSupabase()
-  const { data, error } = await supabase
+  const featurePayload = {
+    map_id: mapId,
+    ...toFeatureInsert(featureData, featureData.type || "pin"),
+  }
+  let { data, error } = await supabase
     .from("map_features")
-    .insert({
-      map_id: mapId,
-      ...toFeatureInsert(featureData, featureData.type || "pin"),
-    })
+    .insert(featurePayload)
     .select("*")
     .single()
+
+  if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(featurePayload, "style")) {
+    const { style: _style, ...legacyPayload } = featurePayload
+    ;({ data, error } = await supabase
+      .from("map_features")
+      .insert(legacyPayload)
+      .select("*")
+      .single())
+  }
 
   if (error) throw error
   await touchMapRecord(mapId)
@@ -160,33 +216,66 @@ export async function createFeature(mapId, featureData) {
 export async function updateFeature(featureId, updates) {
   await requireUser()
   const supabase = requireSupabase()
-  const mapId = updates.mapId
-  const { data, error } = await supabase
-    .from("map_features")
-    .update(toFeaturePatch(updates))
-    .eq("id", featureId)
-    .select("*")
-    .single()
+  const { mapId, lastKnownUpdatedAt, ...patchSource } = updates || {}
+
+  const buildQuery = (patchPayload) => {
+    let query = supabase
+      .from("map_features")
+      .update(patchPayload)
+      .eq("id", featureId)
+    if (lastKnownUpdatedAt) {
+      query = query.eq("updated_at", lastKnownUpdatedAt)
+    }
+    return query.select("*")
+  }
+
+  const patchPayload = toFeaturePatch(patchSource)
+  let { data, error } = await buildQuery(patchPayload)
+
+  if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(patchPayload, "style")) {
+    const { style: _style, ...legacyPatch } = patchPayload
+    ;({ data, error } = await buildQuery(legacyPatch))
+  }
 
   if (error) throw error
-  if (mapId) await touchMapRecord(mapId)
-  if (("lat" in updates || "lng" in updates) && data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
-    reverseGeocodeAndTag(supabase, data.id, data.lat, data.lng).catch(() => {})
+  if (!Array.isArray(data) || data.length === 0) {
+    throw buildFeatureConflictError()
   }
-  return normalizeFeature(data)
+
+  const savedFeature = data[0]
+  if (mapId) await touchMapRecord(mapId)
+  if (("lat" in patchSource || "lng" in patchSource)
+    && savedFeature.lat
+    && savedFeature.lng
+    && savedFeature.lat !== 0
+    && savedFeature.lng !== 0) {
+    reverseGeocodeAndTag(supabase, savedFeature.id, savedFeature.lat, savedFeature.lng).catch(() => {})
+  }
+  return normalizeFeature(savedFeature)
 }
 
-export async function deleteFeature(featureId, mapId) {
+export async function deleteFeature(featureId, mapId, options = {}) {
   await requireUser()
   const supabase = requireSupabase()
-  const { error } = await supabase.from("map_features").delete().eq("id", featureId)
+  const { lastKnownUpdatedAt } = options || {}
+  let query = supabase
+    .from("map_features")
+    .delete()
+    .eq("id", featureId)
+  if (lastKnownUpdatedAt) {
+    query = query.eq("updated_at", lastKnownUpdatedAt)
+  }
+  const { data, error } = await query.select("id")
   if (error) throw error
+  if (lastKnownUpdatedAt && (!Array.isArray(data) || data.length === 0)) {
+    throw buildFeatureConflictError()
+  }
   if (mapId) await touchMapRecord(mapId)
 }
 
 // ─── Memo ───
 
-export async function addFeatureMemo(featureId, text, userNameOverride = "") {
+export async function addFeatureMemo(featureId, text, userNameOverride = "", photoUrls = []) {
   const user = await requireUser()
   const supabase = requireSupabase()
   const { data: profile, error: profileError } = await supabase
@@ -197,19 +286,103 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "") {
 
   if (profileError) throw profileError
 
-  const { data, error } = await supabase
+  const normalizedPhotoUrls = Array.isArray(photoUrls)
+    ? photoUrls.map((url) => `${url || ""}`.trim()).filter(Boolean).slice(0, 4)
+    : []
+  const payload = {
+    feature_id: featureId,
+    user_id: user.id,
+    user_name: userNameOverride || profile?.nickname || "익명 사용자",
+    text: text.trim(),
+  }
+  if (normalizedPhotoUrls.length > 0) {
+    payload.photo_urls = normalizedPhotoUrls
+  }
+  let { data, error } = await supabase
     .from("feature_memos")
-    .insert({
-      feature_id: featureId,
-      user_id: user.id,
-      user_name: userNameOverride || profile?.nickname || "익명 사용자",
-      text: text.trim(),
-    })
+    .insert(payload)
     .select("*")
     .single()
 
+  const shouldFallbackWithoutPhotoColumn = Boolean(error)
+    && normalizedPhotoUrls.length > 0
+    && (
+      error.code === "42703"
+      || `${error.message || ""}`.toLowerCase().includes("photo_urls")
+    )
+  if (shouldFallbackWithoutPhotoColumn) {
+    const fallback = await supabase
+      .from("feature_memos")
+      .insert({
+        feature_id: featureId,
+        user_id: user.id,
+        user_name: userNameOverride || profile?.nickname || "익명 사용자",
+        text: text.trim(),
+      })
+      .select("*")
+      .single()
+    data = fallback.data
+    error = fallback.error
+  }
+
   if (error) throw error
-  return normalizeMemo(data)
+  const memo = normalizeMemo(data)
+  if (normalizedPhotoUrls.length > 0 && (!memo.photos || memo.photos.length === 0)) {
+    return { ...memo, photos: normalizedPhotoUrls }
+  }
+  return memo
+}
+
+export async function saveFeatureOperatorNote(featureId, note = "") {
+  if (!featureId) return null
+  const user = await requireUser()
+  const supabase = requireSupabase()
+  const normalizedNote = `${note || ""}`.slice(0, 4000)
+
+  const rpcRes = await supabase.rpc("upsert_feature_operator_note", {
+    p_feature_id: featureId,
+    p_note: normalizedNote,
+  })
+  const parsedRpcData = parseRpcResult(rpcRes.data)
+  const rpcSuccess = (
+    !rpcRes.error
+    && (!parsedRpcData || typeof parsedRpcData !== "object" || !("success" in parsedRpcData) || parsedRpcData.success === true)
+  )
+  if (rpcSuccess) {
+    return parsedRpcData || { success: true, feature_id: featureId }
+  }
+
+  const shouldFallback = (
+    (!rpcRes.error && parsedRpcData?.success === false)
+    || rpcRes.error?.code === "42883"
+    || rpcRes.error?.code === "42P01"
+    || rpcRes.error?.code === "42501"
+  )
+  if (!shouldFallback) {
+    throw rpcRes.error || new Error(parsedRpcData?.error || "운영자 메모 저장에 실패했습니다.")
+  }
+
+  const mapRes = await supabase
+    .from("map_features")
+    .select("map_id")
+    .eq("id", featureId)
+    .maybeSingle()
+  if (mapRes.error) throw mapRes.error
+  if (!mapRes.data?.map_id) return null
+
+  const fallbackRes = await supabase
+    .from("feature_operator_notes")
+    .upsert(
+      {
+        feature_id: featureId,
+        map_id: mapRes.data.map_id,
+        note: normalizedNote,
+        updated_by: user.id,
+      },
+      { onConflict: "feature_id" },
+    )
+  if (fallbackRes.error) throw fallbackRes.error
+  return { success: true, feature_id: featureId, map_id: mapRes.data.map_id }
 }
 
 // ─── Media ───
@@ -305,27 +478,30 @@ export async function unfollowUser(targetUserId) {
 
 // ─── Likes ───
 
-/**
- * 발행 지도 좋아요 증가.
- * map_publications.likes_count를 +1 increment한다.
- * publicationId는 map_publications.id (또는 map_id로 조회).
- */
 export async function incrementLike(mapId) {
   const supabase = requireSupabase()
-  // map_publications에서 map_id로 찾아서 likes_count +1
+  const rpcRes = await supabase.rpc("increment_map_publication_like", {
+    p_map_id: mapId,
+  })
+  if (!rpcRes.error) {
+    if (rpcRes.data == null) return null
+    return { likesCount: Number(rpcRes.data) || 0 }
+  }
+  if (!isMissingRpc(rpcRes.error)) {
+    throw rpcRes.error
+  }
+
   const { data: pub, error: findErr } = await supabase
     .from("map_publications")
     .select("id, likes_count")
     .eq("map_id", mapId)
     .single()
-
   if (findErr || !pub) return null
 
   const { error } = await supabase
     .from("map_publications")
     .update({ likes_count: (pub.likes_count || 0) + 1 })
     .eq("id", pub.id)
-
   if (error) throw error
   return { likesCount: (pub.likes_count || 0) + 1 }
 }
@@ -351,12 +527,13 @@ export async function getCollaborators(mapId) {
   }))
 }
 
-export async function addCollaborator(mapId, userId) {
+export async function addCollaborator(mapId, userId, role = "editor") {
   const supabase = requireSupabase()
   const user = await requireUser()
+  const normalizedRole = ["operator", "editor", "viewer"].includes(role) ? role : "editor"
   const { data, error } = await supabase
     .from("map_collaborators")
-    .insert({ map_id: mapId, user_id: userId, role: "editor", invited_by: user.id })
+    .insert({ map_id: mapId, user_id: userId, role: normalizedRole, invited_by: user.id })
     .select("id, user_id, role, created_at")
     .single()
 
@@ -374,6 +551,164 @@ export async function removeCollaborator(collaboratorId) {
   if (error) throw error
 }
 
+export async function createFeatureChangeRequest(mapId, action, featureId = null, payload = {}) {
+  const user = await requireUser()
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("feature_change_requests")
+    .insert({
+      map_id: mapId,
+      feature_id: featureId,
+      action,
+      payload: payload || {},
+      status: "pending",
+      requested_by: user.id,
+    })
+    .select("id,map_id,feature_id,action,status,created_at")
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function resolveFeatureChangeRequest(requestId, decision, reviewNote = "") {
+  const user = await requireUser()
+  const supabase = requireSupabase()
+  const normalizedDecision = decision === "approved" ? "approved" : "rejected"
+  const normalizedReviewNote = `${reviewNote || ""}`.slice(0, 2000)
+
+  const rpcRes = await supabase.rpc("resolve_feature_change_request_tx", {
+    p_request_id: requestId,
+    p_decision: normalizedDecision,
+    p_review_note: normalizedReviewNote,
+  })
+
+  if (!rpcRes.error) {
+    const parsed = parseRpcResult(rpcRes.data)
+    if (!parsed || typeof parsed !== "object" || !("success" in parsed) || parsed.success === true) {
+      if (normalizedDecision === "approved") {
+        try {
+          const requestMetaRes = await supabase
+            .from("feature_change_requests")
+            .select("action,payload")
+            .eq("id", requestId)
+            .maybeSingle()
+          const requestMeta = requestMetaRes.data
+          if (!requestMetaRes.error && requestMeta && (requestMeta.action === "insert" || requestMeta.action === "update")) {
+            await applyFeatureStyleFromRequestPayload(
+              supabase,
+              parsed?.feature_id || null,
+              requestMeta.payload && typeof requestMeta.payload === "object" ? requestMeta.payload : {},
+            )
+          }
+        } catch (styleError) {
+          console.warn("Failed to apply style after RPC resolve:", styleError)
+        }
+      }
+      return parsed || { success: true, id: requestId, status: normalizedDecision }
+    }
+    const err = new Error(parsed.error || "승인 요청 처리에 실패했습니다.")
+    err.code = "LOCA_REQUEST_RESOLVE_FAILED"
+    err.details = parsed
+    throw err
+  }
+  if (!isMissingRpc(rpcRes.error)) {
+    throw rpcRes.error
+  }
+
+  // Legacy fallback when transactional RPC is unavailable.
+  const requestRes = await supabase
+    .from("feature_change_requests")
+    .select("id,map_id,feature_id,action,payload,status")
+    .eq("id", requestId)
+    .single()
+  if (requestRes.error) throw requestRes.error
+  const request = requestRes.data
+  if (!request || request.status !== "pending") {
+    const err = new Error("이미 처리된 요청입니다.")
+    err.code = "LOCA_REQUEST_ALREADY_REVIEWED"
+    throw err
+  }
+
+  const payload = request.payload && typeof request.payload === "object" ? request.payload : {}
+  let appliedFeatureId = request.feature_id
+
+  if (normalizedDecision === "approved") {
+    if (request.action === "insert") {
+      const insertRes = await supabase
+        .from("map_features")
+        .insert({
+          map_id: request.map_id,
+          ...toFeatureInsert(payload, payload.type || "pin"),
+        })
+        .select("id")
+        .single()
+      if (insertRes.error) throw insertRes.error
+      appliedFeatureId = insertRes.data.id
+    } else if (request.action === "update") {
+      if (!request.feature_id) throw new Error("수정 요청에 feature_id가 없습니다.")
+      const updateRes = await supabase
+        .from("map_features")
+        .update(toFeaturePatch(payload))
+        .eq("id", request.feature_id)
+        .eq("map_id", request.map_id)
+        .select("id")
+      if (updateRes.error) throw updateRes.error
+      if (!Array.isArray(updateRes.data) || updateRes.data.length === 0) {
+        throw new Error("수정 대상 항목을 찾을 수 없습니다.")
+      }
+      appliedFeatureId = updateRes.data[0].id
+    } else if (request.action === "delete") {
+      if (!request.feature_id) throw new Error("삭제 요청에 feature_id가 없습니다.")
+      const deleteRes = await supabase
+        .from("map_features")
+        .delete()
+        .eq("id", request.feature_id)
+        .eq("map_id", request.map_id)
+        .select("id")
+      if (deleteRes.error) throw deleteRes.error
+      if (!Array.isArray(deleteRes.data) || deleteRes.data.length === 0) {
+        throw new Error("삭제 대상 항목을 찾을 수 없습니다.")
+      }
+      appliedFeatureId = request.feature_id
+    } else {
+      throw new Error("지원하지 않는 요청 유형입니다.")
+    }
+
+    if (request.action === "insert" || request.action === "update") {
+      await applyFeatureStyleFromRequestPayload(supabase, appliedFeatureId, payload)
+    }
+
+    if ((request.action === "insert" || request.action === "update") && Object.prototype.hasOwnProperty.call(payload, "operatorNote")) {
+      await saveFeatureOperatorNote(appliedFeatureId, `${payload.operatorNote || ""}`)
+    }
+    await touchMapRecord(request.map_id)
+  }
+
+  const now = new Date().toISOString()
+  const resolveRes = await supabase
+    .from("feature_change_requests")
+    .update({
+      status: normalizedDecision,
+      reviewed_by: user.id,
+      review_note: normalizedReviewNote,
+      reviewed_at: now,
+      feature_id: appliedFeatureId || request.feature_id || null,
+      updated_at: now,
+    })
+    .eq("id", request.id)
+    .eq("status", "pending")
+    .select("id,status,reviewed_at,review_note,feature_id")
+
+  if (resolveRes.error) throw resolveRes.error
+  if (!Array.isArray(resolveRes.data) || resolveRes.data.length === 0) {
+    const err = new Error("이미 처리된 요청입니다.")
+    err.code = "LOCA_REQUEST_ALREADY_REVIEWED"
+    throw err
+  }
+  return { success: true, ...resolveRes.data[0] }
+}
+
 // ─── Lineage ───
 
 export async function linkMapLineage(parentMapId, childMapId, relationType = "import") {
@@ -384,5 +719,5 @@ export async function linkMapLineage(parentMapId, childMapId, relationType = "im
     p_relation_type: relationType,
   })
   if (error) throw error
-  return typeof data === "string" ? JSON.parse(data) : data
+  return parseRpcResult(data)
 }

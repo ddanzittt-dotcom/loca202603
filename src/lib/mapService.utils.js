@@ -1,7 +1,8 @@
-import { requireSupabase } from "./supabase"
+﻿import { requireSupabase } from "./supabase"
+import { normalizeFeatureStyle } from "./featureStyle"
 
 /**
- * Supabase 에러를 ���용자 친화적 메시지로 변환한다.
+ * Supabase 에러를 사용자 친화적 메시지로 변환한다.
  */
 export function friendlySupabaseError(error) {
   if (!error) return "알 수 없는 오류가 발생했어요."
@@ -76,6 +77,7 @@ export function normalizePublication(row) {
 }
 
 export function normalizeMap(row, publication = null) {
+  const userRole = row.user_role || (row.user_id ? "owner" : null)
   return {
     id: row.id,
     title: row.title,
@@ -90,17 +92,39 @@ export function normalizeMap(row, publication = null) {
     publishedAt: row.published_at || publication?.publishedAt || null,
     updatedAt: row.updated_at,
     createdAt: row.created_at,
+    ownerId: row.user_id || null,
+    userRole,
+    canManage: !userRole || userRole === "owner",
+    canEditFeatures: userRole !== "viewer",
+    isCommunity: row.slug === "community-map" || row.config?.community === true,
     publication,
   }
 }
 
 export function normalizeMemo(row) {
+  const rawPhotos = row?.photo_urls
+  const parsedPhotos = Array.isArray(rawPhotos)
+    ? rawPhotos
+    : typeof rawPhotos === "string"
+      ? (() => {
+        try {
+          const parsed = JSON.parse(rawPhotos)
+          return Array.isArray(parsed) ? parsed : []
+        } catch {
+          return []
+        }
+      })()
+      : []
+  const photos = parsedPhotos
+    .map((url) => `${url || ""}`.trim())
+    .filter(Boolean)
   return {
     id: row.id,
     userId: row.user_id,
     userName: row.user_name,
     date: row.created_at,
     text: row.text,
+    photos,
   }
 }
 
@@ -134,6 +158,7 @@ export function normalizeFeature(row, memos = [], photos = [], voices = []) {
     createdByName: row.created_by_name || null,
     regionCode: row.region_code || null,
     regionName: row.region_name || null,
+    style: normalizeFeatureStyle(row.style, row.type),
     memos,
     photos,
     voices,
@@ -158,6 +183,7 @@ export function toFeatureInsert(feature = {}, fallbackType = "pin") {
     sort_order: feature.sortOrder || 0,
     created_by: feature.createdBy || null,
     created_by_name: feature.createdByName || null,
+    style: normalizeFeatureStyle(feature.style, type),
     updated_at: new Date().toISOString(),
   }
 
@@ -186,6 +212,7 @@ export function toFeaturePatch(updates = {}) {
   if ("sortOrder" in updates) payload.sort_order = updates.sortOrder || 0
   if ("createdBy" in updates) payload.created_by = updates.createdBy
   if ("createdByName" in updates) payload.created_by_name = updates.createdByName
+  if ("style" in updates) payload.style = normalizeFeatureStyle(updates.style, updates.type || "pin")
   if ("lat" in updates) payload.lat = updates.lat
   if ("lng" in updates) payload.lng = updates.lng
   if ("points" in updates) payload.points = normalizePoints(updates.points)
@@ -300,3 +327,5 @@ export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
     voicesByFeatureId.get(row.id) || [],
   ))
 }
+
+
