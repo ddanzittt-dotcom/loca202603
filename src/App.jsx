@@ -31,6 +31,8 @@ import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, saveMap as saveMapRecord } from "./lib/mapService"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
+import { createMap as createMapRecord } from "./lib/mapService.write"
+import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const WelcomeScreen = lazy(() => import("./screens/WelcomeScreen").then((m) => ({ default: m.WelcomeScreen })))
@@ -53,6 +55,7 @@ import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { FeatureEditSheet } from "./components/sheets/FeatureEditSheet"
+import { ImportTargetMapSheet } from "./components/sheets/ImportTargetMapSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
@@ -124,6 +127,9 @@ export default function App() {
   const [focusPoint, setFocusPoint] = useState(null)
   const [mapSheet, setMapSheet] = useState(null)
   const [featureSheet, setFeatureSheet] = useState(null)
+  // 모두의 지도 → 내 지도 가져오기 타겟 선택 시트
+  const [importTargetSheet, setImportTargetSheet] = useState(null) // { featureId } | null
+  const [importTargetBusy, setImportTargetBusy] = useState(false)
   const [publishSheet, setPublishSheet] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedPostRef, setSelectedPostRef] = useState(null)
@@ -500,6 +506,62 @@ export default function App() {
     setDraftPoints([])
     return createHandleMapTap("pin")({ lat, lng })
   }, [createHandleMapTap])
+
+  // --- 모두의 지도 가져오기: 지도 선택 시트 트리거 + 핸들러 ---
+  // 팝업의 [가져오기] 탭 → 타겟 지도 선택 시트 열기.
+  // 사용자가 기존 지도를 고르거나 '새 지도 만들기'로 신규 지도를 만들고 바로 import 한다.
+  const handleImportCommunityFeatureRequest = useCallback((sourceFeatureId) => {
+    if (!sourceFeatureId) return
+    setImportTargetSheet({ featureId: sourceFeatureId })
+  }, [])
+
+  const handleImportPickMap = useCallback((targetMapId) => {
+    const featureId = importTargetSheet?.featureId
+    if (!featureId || !targetMapId) return
+    const ok = importCommunityFeatureToMine(featureId, targetMapId)
+    if (ok) setImportTargetSheet(null)
+  }, [importTargetSheet, importCommunityFeatureToMine])
+
+  const handleImportCreateMap = useCallback(async (title) => {
+    const featureId = importTargetSheet?.featureId
+    const trimmed = `${title || ""}`.trim()
+    if (!featureId || !trimmed) return
+    setImportTargetBusy(true)
+    try {
+      let nextMap
+      if (cloudMode) {
+        nextMap = await createMapRecord({
+          title: trimmed,
+          description: "",
+          theme: "pastel",
+          category: "personal",
+          config: {},
+        })
+      } else {
+        nextMap = {
+          id: createId("map"),
+          title: trimmed,
+          description: "",
+          theme: "pastel",
+          category: "personal",
+          config: {},
+          updatedAt: new Date().toISOString(),
+        }
+      }
+      setMaps((current) => [nextMap, ...current])
+      // maps state 업데이트 이전에도 import 할 수 있도록 map 객체를 그대로 전달.
+      const ok = importCommunityFeatureToMine(featureId, nextMap)
+      if (ok) {
+        showToast(`'${trimmed}' 지도를 만들고 저장했어요.`)
+        setImportTargetSheet(null)
+      }
+    } catch (error) {
+      console.error("Failed to create map for import", error)
+      showToast("지도를 만들지 못했어요.")
+    } finally {
+      setImportTargetBusy(false)
+    }
+  }, [cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
 
   // --- Social / Profile ---
 
@@ -1191,7 +1253,7 @@ export default function App() {
             onOpenFeatureDetail={openFeatureDetail}
             onAddMemo={addMemo}
             importedCommunityFeatureIds={importedCommunityFeatureIds}
-            onImportCommunityFeature={importCommunityFeatureToMine}
+            onImportCommunityFeature={handleImportCommunityFeatureRequest}
             onUnimportCommunityFeature={unimportCommunityFeature}
             onRequestCommunityUpdateFromSummary={requestCommunityFeatureUpdateById}
             onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
@@ -1348,6 +1410,15 @@ export default function App() {
           />
         )
       })()}
+      <ImportTargetMapSheet
+        open={Boolean(importTargetSheet)}
+        maps={maps}
+        features={features}
+        busy={importTargetBusy}
+        onPick={handleImportPickMap}
+        onCreate={handleImportCreateMap}
+        onClose={() => { if (!importTargetBusy) setImportTargetSheet(null) }}
+      />
       {coachmarkStep === 3 ? (
         <CoachMark
           step={3}

@@ -876,3 +876,168 @@
   .fes-color-chip { width: 26px; height: 26px; }
   .fes-picker-grid { grid-template-columns: repeat(5, 1fr); }
 }
+
+/* ============================================================
+ *  ImportTargetMapSheet — 모두의 지도 → 내 지도 선택 바텀시트
+ * ============================================================ */
+.itm-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 8px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  color: #1A1A1A;
+}
+
+.itm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.itm-empty {
+  padding: 22px 14px;
+  text-align: center;
+  font-size: 12px;
+  color: #888888;
+  line-height: 1.6;
+  background: #FAF5EE;
+  border-radius: 12px;
+}
+.itm-empty strong { color: #1A1A1A; font-weight: 500; }
+
+.itm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 12px;
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .12s, border-color .12s;
+}
+.itm-row:hover:not(:disabled) {
+  background: #FFF4EB;
+  border-color: rgba(255,107,53,0.4);
+}
+.itm-row:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.itm-row__icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #FFF4EB;
+  color: #993C1D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.itm-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.itm-row__body strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1A1A1A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.itm-row__body small {
+  font-size: 10px;
+  color: #aaaaaa;
+}
+
+.itm-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  background: #FFF4EB;
+  color: #993C1D;
+  border: 0.5px dashed rgba(255,107,53,0.4);
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+.itm-new-btn:hover:not(:disabled) {
+  background: #FFE5D1;
+}
+.itm-new-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.itm-create {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 0 8px;
+}
+.itm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.itm-field > span {
+  font-size: 10px;
+  color: #888888;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+.itm-field input {
+  width: 100%;
+  padding: 11px 13px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1A1A1A;
+  outline: none;
+  -webkit-appearance: none;
+}
+.itm-field input:focus {
+  border-color: rgba(255,107,53,0.4);
+  background: #fff;
+}
+.itm-field input::placeholder { color: #aaaaaa; }
+
+.itm-create__actions {
+  display: flex;
+  gap: 8px;
+}
+.itm-btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+.itm-btn--ghost {
+  background: #fff;
+  color: #2D4A3E;
+  border: 0.5px solid rgba(45,74,62,0.2);
+  flex: 0 0 90px;
+}
+.itm-btn--primary {
+  background: #FF6B35;
+  color: #fff;
+}
+.itm-btn--primary:disabled { opacity: 0.55; cursor: not-allowed; }

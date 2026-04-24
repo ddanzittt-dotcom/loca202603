@@ -676,12 +676,12 @@ export function useFeatureEditing({
   // 모두의 지도 → 내 지도 가져오기 / 취소
   //
   // 정책:
-  //   - 타겟 지도: 사용자의 첫 개인 지도 (maps[0]). 없으면 토스트로 안내.
+  //   - 타겟 지도: targetMapId 명시 우선, 없으면 maps[0] 폴백.
   //   - 복제 필드: type, title, emoji, tags, note, highlight, style, lat/lng, points.
   //     memos/photos/voices 는 원본(커뮤니티)에 남겨두고 복제본은 빈 상태로 시작.
   //   - sourceFeatureId 에 원본 id 저장 — '저장됨' 상태 판별과 언임포트 매칭에 사용.
   //   - 현재는 localStorage 상태에만 반영. 클라우드 동기화는 별도 마이그레이션 필요.
-  const importCommunityFeatureToMine = useCallback((sourceFeatureId) => {
+  const importCommunityFeatureToMine = useCallback((sourceFeatureId, targetMapInput = null) => {
     if (!sourceFeatureId) return false
     const source = (communityMapFeatures || []).find((f) => f.id === sourceFeatureId)
     if (!source) { showToast("원본 장소를 찾을 수 없어요."); return false }
@@ -689,7 +689,17 @@ export function useFeatureEditing({
     const alreadyImported = (features || []).some((f) => f.sourceFeatureId === sourceFeatureId)
     if (alreadyImported) { showToast("이미 내 지도에 저장되어 있어요."); return true }
 
-    const targetMap = (maps || [])[0]
+    // targetMapInput 은 mapId(string) 또는 map 객체를 받는다.
+    // map 객체를 직접 받는 케이스는 maps state 업데이트가 아직 반영되지 않은 상황에서
+    // 새로 만든 지도로 바로 import 하기 위함 (App.jsx 의 handleImportCreateMap).
+    let targetMap = null
+    if (targetMapInput && typeof targetMapInput === "object") {
+      targetMap = targetMapInput
+    } else if (typeof targetMapInput === "string") {
+      targetMap = (maps || []).find((m) => m.id === targetMapInput)
+    } else {
+      targetMap = (maps || [])[0]
+    }
     if (!targetMap) { showToast("먼저 내 지도를 만들어 주세요."); return false }
 
     const cloned = {
