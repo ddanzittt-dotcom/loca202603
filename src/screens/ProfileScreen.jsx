@@ -697,6 +697,10 @@ export function ProfileScreen({
                   <span className="settings-toggle-label">내 맵핑 댓글</span>
                   <input type="checkbox" checked={appSettings.noti_feature_comment !== false} onChange={(e) => updateSetting("noti_feature_comment", e.target.checked)} />
                 </label>
+                <label className="settings-toggle-row">
+                  <span className="settings-toggle-label">장소 수정 요청</span>
+                  <input type="checkbox" checked={appSettings.noti_feature_update_request !== false} onChange={(e) => updateSetting("noti_feature_update_request", e.target.checked)} />
+                </label>
               </div>
             )}
           </div>

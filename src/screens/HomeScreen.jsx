@@ -43,6 +43,7 @@ function HeroStatItem({ value, label, tip, isLast, activeTooltip, index, onTap }
 export function HomeScreen({
   recommendedMaps,
   communityMapFeatures,
+  communityRequestSummary = null,
   onOpenMap,
   onOpenCommunityEditor,
   onResumeMyMap,
@@ -63,6 +64,9 @@ export function HomeScreen({
   const recordCount = userStats?.records || userStats?.memos || 0
   const followerCount = viewerProfile?.followers || 0
   const followingCount = followedCount
+  const myPendingRequests = communityRequestSummary?.mine || []
+  const incomingRequests = communityRequestSummary?.incoming || []
+  const hasRequestSummary = myPendingRequests.length > 0 || incomingRequests.length > 0
 
   // "이어서 기록하기" / "첫 기록 시작하기" 분기 계산
   //   분기 A: 내 지도(non-event) 0개                       → 첫 기록 시작하기 카드
@@ -490,6 +494,46 @@ export function HomeScreen({
             />
           </MapErrorBoundary>
         </div>
+        {hasRequestSummary ? (
+          <div className="home-community-requests">
+            {incomingRequests.length > 0 ? (
+              <div className="home-community-requests__group">
+                <div className="home-community-requests__head">
+                  <strong>{"\uB0B4 \uC7A5\uC18C \uC218\uC815 \uC694\uCCAD"}</strong>
+                  <span>{incomingRequests.length}건</span>
+                </div>
+                <ul className="home-community-requests__list">
+                  {incomingRequests.slice(0, 3).map((request) => (
+                    <li key={`incoming-${request.id}`}>
+                      <strong>{request.featureTitle}</strong>
+                      <span>{request.requestedByName} · {request.requestedAtLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {myPendingRequests.length > 0 ? (
+              <div className="home-community-requests__group">
+                <div className="home-community-requests__head">
+                  <strong>{"\uB0B4\uAC00 \uBCF4\uB0B8 \uC218\uC815 \uC694\uCCAD"}</strong>
+                  <span>{myPendingRequests.length}건</span>
+                </div>
+                <ul className="home-community-requests__list">
+                  {myPendingRequests.slice(0, 3).map((request) => (
+                    <li key={`mine-${request.id}`}>
+                      <strong>{request.featureTitle}</strong>
+                      <span>{request.requestedAtLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <button className="home-community-requests__cta" type="button" onClick={onOpenCommunityEditor}>
+              {"\uC694\uCCAD \uD655\uC778\uD558\uAE30"}
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        ) : null}
       </div>{/* /band-community */}
 
       {/* ═══ Band 4: NEARBY (page bg) — 근처 소식 ═══ */}

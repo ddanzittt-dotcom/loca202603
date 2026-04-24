@@ -7,6 +7,7 @@ export function MapsListScreen({
   maps,
   features,
   shares = [],
+  characterImage,
   onCreate,
   onImport,
   onEdit,
@@ -63,17 +64,18 @@ export function MapsListScreen({
           <SkeletonCard count={3} />
         ) : maps.length === 0 ? (
           <EmptyState
-            icon="🗺"
-            title="첫 번째 지도를 만들어보세요"
-            description="나만의 장소를 기록하고, 필요하면 발행해 링크로 공유할 수 있어요."
+            variant="character"
+            characterImage={characterImage || "/characters/cloud_lv1.svg"}
+            title="첫 지도를 만들어볼까요"
+            description="가봤던 곳, 좋았던 곳을 지도에 모아보세요"
             action="새 지도 만들기"
             onAction={onCreate}
           />
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon="🔍"
-            title="검색 결과가 없어요"
-            description="다른 단어로 다시 찾아보세요."
+            icon={<SearchIcon size={22} color="#FF6B35" />}
+            title={`"${query}"에 대한 결과가 없어요`}
+            description="다른 단어로 다시 찾아보세요"
           />
         ) : (
           filtered.map((map) => (

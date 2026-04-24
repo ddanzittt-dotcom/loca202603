@@ -109,8 +109,8 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
             <div className="sr-empty__icon">
               <SearchIcon size={20} color="#FF6B35" />
             </div>
-            <p className="sr-empty__title">"{query}"에 대한 결과가 없어요</p>
-            <p className="sr-empty__desc">다른 키워드로 검색해보세요</p>
+            <p className="sr-empty__title">{`"${query}"에 대한 결과가 없어요`}</p>
+            <p className="sr-empty__desc">다른 단어로 다시 찾아보세요</p>
           </div>
         )
       ) : users.length === 0 ? (
@@ -120,7 +120,7 @@ export function SearchScreen({ users, followed, onToggleFollow, onSelectUser }) 
             <Users size={24} color="#FF6B35" />
           </div>
           <p className="sr-empty__title">아직 에디터가 없어요</p>
-          <p className="sr-empty__desc">친구를 초대해서 서로의 지도를 구독해보세요</p>
+          <p className="sr-empty__desc">사용자나 태그를 검색해보세요</p>
         </div>
       ) : (
         /* ─── 기본: 내 근처 + 추천 ─── */

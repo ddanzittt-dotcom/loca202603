@@ -33,7 +33,7 @@ const TYPE_LABEL = {
   area: { text: "영역", className: "pl-badge--area" },
 }
 
-export function PlacesScreen({ maps, features, onOpenFeature }) {
+export function PlacesScreen({ maps, features, characterImage, onOpenFeature }) {
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState("all")
 
@@ -79,15 +79,21 @@ export function PlacesScreen({ maps, features, onOpenFeature }) {
 
       {features.length === 0 ? (
         <div className="pl-empty">
-          <div className="pl-empty__icon">
-            <MapPin size={24} color="#FF6B35" />
-          </div>
+          <img
+            src={characterImage || "/characters/cloud_lv1.svg"}
+            alt=""
+            className="pl-empty__character"
+          />
           <p className="pl-empty__title">아직 저장한 장소가 없어요</p>
-          <p className="pl-empty__desc">지도에서 핀을 찍거나 경로를 그려보세요</p>
+          <p className="pl-empty__desc">지도에서 핀을 찍으면 여기에 모여요</p>
+          <span className="pl-empty__hint">지도 탭에서 장소를 추가해보세요</span>
         </div>
       ) : filteredFeatures.length === 0 ? (
         <div className="pl-empty">
-          <p className="pl-empty__title">검색 결과가 없어요</p>
+          <div className="pl-empty__icon">
+            <SearchIcon size={20} color="#FF6B35" />
+          </div>
+          <p className="pl-empty__title">{`"${query}"에 대한 결과가 없어요`}</p>
           <p className="pl-empty__desc">다른 단어로 다시 찾아보세요</p>
         </div>
       ) : (
