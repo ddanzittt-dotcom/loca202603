@@ -132,7 +132,7 @@ export const featuresSeed = [
   { id: "feat-it-kebab", mapId: "map-itaewon", type: "pin", title: "이스탄불 케밥", emoji: "🥙", lat: 37.5355, lng: 126.9940, tags: ["터키", "케밥"], note: "양고기 되네르가 시그니처.", highlight: false, updatedAt: "2026-03-30T10:25:00.000Z" },
 
   // ── 이벤트 지도: 2026 성수 봄 축제 (5개 체크포인트) ──
-  { id: "feat-ev1", mapId: "map-event-festival", type: "pin", title: "축제 본부", emoji: "1️⃣", lat: 37.5448, lng: 127.0555, tags: ["스탬프"], note: "축제 안내 부스에서 시작하세요.", highlight: true, updatedAt: "2026-04-01T10:01:00.000Z" },
+  { id: "feat-ev1", mapId: "map-event-festival", type: "pin", title: "축제 본부", emoji: "1️⃣", lat: 37.5448, lng: 127.0555, tags: ["스탬프"], note: "축제 안내 데스크에서 시작하세요.", highlight: true, updatedAt: "2026-04-01T10:01:00.000Z" },
   { id: "feat-ev2", mapId: "map-event-festival", type: "pin", title: "성수 연방", emoji: "2️⃣", lat: 37.5425, lng: 127.0590, tags: ["스탬프"], note: "리노베이션된 공장 건물 카페.", highlight: false, updatedAt: "2026-04-01T10:02:00.000Z" },
   { id: "feat-ev3", mapId: "map-event-festival", type: "pin", title: "아트벙커", emoji: "3️⃣", lat: 37.5410, lng: 127.0565, tags: ["스탬프"], note: "현대미술 전시를 무료로 관람하세요.", highlight: false, updatedAt: "2026-04-01T10:03:00.000Z" },
   { id: "feat-ev4", mapId: "map-event-festival", type: "pin", title: "뚝섬 수제맥주", emoji: "4️⃣", lat: 37.5380, lng: 127.0610, tags: ["스탬프"], note: "축제 참여자 10% 할인 이벤트.", highlight: false, updatedAt: "2026-04-01T10:04:00.000Z" },
@@ -141,7 +141,7 @@ export const featuresSeed = [
   // ── 이벤트 지도: 서울대 캠퍼스 투어 (4개 체크포인트) ──
   { id: "feat-snu1", mapId: "map-event-campus", type: "pin", title: "정문 집합", emoji: "1️⃣", lat: 37.4597, lng: 126.9510, tags: ["스탬프"], note: "투어 시작! 가이드북을 받으세요.", highlight: true, updatedAt: "2026-04-02T09:01:00.000Z" },
   { id: "feat-snu2", mapId: "map-event-campus", type: "pin", title: "중앙도서관", emoji: "2️⃣", lat: 37.4605, lng: 126.9530, tags: ["스탬프"], note: "관악산 전망이 멋진 6층 열람실.", highlight: false, updatedAt: "2026-04-02T09:02:00.000Z" },
-  { id: "feat-snu3", mapId: "map-event-campus", type: "pin", title: "학생회관", emoji: "3️⃣", lat: 37.4590, lng: 126.9545, tags: ["스탬프"], note: "동아리 부스와 학식 체험.", highlight: false, updatedAt: "2026-04-02T09:03:00.000Z" },
+  { id: "feat-snu3", mapId: "map-event-campus", type: "pin", title: "학생회관", emoji: "3️⃣", lat: 37.4590, lng: 126.9545, tags: ["스탬프"], note: "동아리 소개와 학식 체험.", highlight: false, updatedAt: "2026-04-02T09:03:00.000Z" },
   { id: "feat-snu4", mapId: "map-event-campus", type: "pin", title: "샤 연못", emoji: "4️⃣", lat: 37.4580, lng: 126.9520, tags: ["스탬프"], note: "투어 완료! 기념품을 수령하세요.", highlight: true, updatedAt: "2026-04-02T09:04:00.000Z" },
 ]
 

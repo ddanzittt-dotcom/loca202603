@@ -359,7 +359,7 @@ export async function saveFeatureOperatorNote(featureId, note = "") {
     || rpcRes.error?.code === "42501"
   )
   if (!shouldFallback) {
-    throw rpcRes.error || new Error(parsedRpcData?.error || "운영자 메모 저장에 실패했습니다.")
+        throw rpcRes.error || new Error(parsedRpcData?.error || "메모 저장에 실패했습니다.")
   }
 
   const mapRes = await supabase

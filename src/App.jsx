@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Bell, MapPin, Navigation, Search as SearchIcon, Settings as SettingsIcon } from "lucide-react"
-import { BottomNav, BottomSheet, Toast } from "./components/ui"
+import { Bell, Settings as SettingsIcon } from "lucide-react"
+import { BottomNav, Toast } from "./components/ui"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -40,7 +40,7 @@ const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ defa
 const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
 const ExploreScreen = lazy(() => import("./screens/ExploreScreen").then((m) => ({ default: m.ExploreScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
-const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
+const MyArchiveScreen = lazy(() => import("./screens/MyArchiveScreen").then((m) => ({ default: m.MyArchiveScreen })))
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
@@ -56,6 +56,7 @@ import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { FeatureEditSheet } from "./components/sheets/FeatureEditSheet"
 import { ImportTargetMapSheet } from "./components/sheets/ImportTargetMapSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
+import { AddRecordSheet } from "./components/sheets/AddRecordSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
 import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
@@ -70,40 +71,6 @@ const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) =>
 const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
 import "./map-share-editor.css"
-
-function AddPlaceActionSheet({ open, onClose, onSearchPlace, onUseCurrentLocation, onPickOnMap }) {
-  return (
-    <BottomSheet
-      open={open}
-      title="장소 남기기"
-      subtitle="어디서 시작할까요?"
-      onClose={onClose}
-    >
-      <div className="settings-card">
-        <div className="settings-link-list">
-          <button className="settings-link-row" type="button" onClick={onSearchPlace}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <SearchIcon size={16} />
-              장소 검색
-            </span>
-          </button>
-          <button className="settings-link-row" type="button" onClick={onUseCurrentLocation}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <Navigation size={16} />
-              현재 위치
-            </span>
-          </button>
-          <button className="settings-link-row" type="button" onClick={onPickOnMap}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <MapPin size={16} />
-              지도에서 선택
-            </span>
-          </button>
-        </div>
-      </div>
-    </BottomSheet>
-  )
-}
 
 function ScreenFallback() {
   return (
@@ -169,7 +136,10 @@ export default function App() {
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const [importSheetOpen, setImportSheetOpen] = useState(false)
-  const [addPlaceSheetOpen, setAddPlaceSheetOpen] = useState(false)
+  const [recordSheetOpen, setRecordSheetOpen] = useState(false)
+  const [recordSheetInitialView, setRecordSheetInitialView] = useState("target")
+  const [recordTargetMapId, setRecordTargetMapId] = useState(null)
+  const [pendingRecordAfterMapCreate, setPendingRecordAfterMapCreate] = useState(false)
   // 프로필 올리기/내리기 공통 confirm 시트 상태
   const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
   const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
@@ -374,6 +344,12 @@ export default function App() {
     () => (activeMapId ? activeFeaturePool.filter((feature) => feature.mapId === activeMapId) : []),
     [activeFeaturePool, activeMapId],
   )
+  const personalRecordMaps = useMemo(
+    () => maps
+      .filter((mapItem) => !isEventMap(mapItem))
+      .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)),
+    [maps],
+  )
   const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, viewerProfile), [features, maps, shares, viewerProfile])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
   const communityRequestSummary = useMemo(() => {
@@ -503,7 +479,7 @@ export default function App() {
     saveMapSheet, deleteMap: deleteMapAction,
     importSharedMapToLocal, importMapBundleToLocal,
     publishMap, unpublish, addMapToProfile, removeMapFromProfile,
-    handleTabChange,
+    openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
     maps, setMaps, features, setFeatures, shares, setShares,
     cloudMode, mapSheet, setMapSheet, setFeatureSheet,
@@ -673,75 +649,98 @@ export default function App() {
     setActiveMapSource("local")
   }, [activeMapSource, confirmDiscardEditorDraft, maps, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
-  const startAddPlaceFlow = useCallback(async (entryMode = "map") => {
-    setAddPlaceSheetOpen(false)
+  const getRecordToast = useCallback((recordMethod) => {
+    if (recordMethod === "search") return "장소를 검색해 찾은 뒤 지도에 남겨보세요."
+    if (recordMethod === "current") return "현재 위치 주변에 장소를 남겨보세요."
+    return "지도를 탭해 장소를 남겨보세요."
+  }, [])
 
-    if (
-      activeTab === "maps"
-      && mapsView === "editor"
-      && activeMapSource === "local"
-      && activeMapId
-    ) {
-      if (!confirmDiscardEditorDraft()) return
-      setFeatureSheet(null)
-      setSelectedFeatureId(null)
-      setSelectedFeatureSummaryId(null)
-      setDraftPoints([])
-      setEditorMode("pin")
-      if (entryMode === "current") {
-        await locateMe()
-      }
-      showToast(entryMode === "search"
-        ? "주소 또는 장소를 검색해 남겨보세요."
-        : entryMode === "current"
-          ? "현재 위치 주변에 장소를 남겨보세요."
-          : "지도를 탭해 장소를 남겨보세요.")
-      return
+  const startRecordInMap = useCallback(async (mapId, recordMethod = "map") => {
+    const targetMap = maps.find((mapItem) => mapItem.id === mapId && !isEventMap(mapItem))
+    if (!targetMap) {
+      showToast("기록할 지도를 선택해 주세요.")
+      return false
     }
+    if (!confirmDiscardEditorDraft()) return false
 
-    const personalMaps = maps.filter((mapItem) => !isEventMap(mapItem))
-    if (personalMaps.length === 0) {
-      openCreateMapSheet()
-      showToast("먼저 지도를 만들고 첫 장소를 남겨보세요.")
-      return
-    }
-
-    const sortedByRecent = [...personalMaps].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
-    const targetMap = sortedByRecent[0] || personalMaps[0]
-    if (!targetMap?.id) return
+    setRecordSheetOpen(false)
+    setRecordSheetInitialView("target")
+    setRecordTargetMapId(null)
 
     if (activeMapSource === "shared") {
       setSharedMapData(null)
       setActiveMapSource("local")
     }
-    openMapEditor(targetMap.id)
+    if (
+      !(activeTab === "maps"
+        && mapsView === "editor"
+        && activeMapSource === "local"
+        && activeMapId === mapId)
+    ) {
+      openMapEditor(mapId)
+    }
+
     setFeatureSheet(null)
     setSelectedFeatureId(null)
     setSelectedFeatureSummaryId(null)
     setDraftPoints([])
     setEditorMode("pin")
-    if (entryMode === "current") {
-      await locateMe()
-    }
-    showToast(entryMode === "search"
-      ? "주소 또는 장소를 검색해 남겨보세요."
-      : entryMode === "current"
-        ? "현재 위치 주변에 장소를 남겨보세요."
-        : "지도를 탭해 장소를 남겨보세요.")
+    if (recordMethod === "current") await locateMe()
+    showToast(getRecordToast(recordMethod))
+    return true
   }, [
-    activeMapId, activeMapSource, activeTab, confirmDiscardEditorDraft,
-    locateMe, maps, mapsView, openCreateMapSheet, openMapEditor, setDraftPoints,
+    activeMapId, activeMapSource, activeTab, confirmDiscardEditorDraft, getRecordToast,
+    locateMe, maps, mapsView, openMapEditor, setActiveMapSource, setDraftPoints,
     setEditorMode, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId,
-    setActiveMapSource, setSharedMapData, showToast,
+    setSharedMapData, showToast,
   ])
 
-  const openAddPlaceFlow = useCallback(() => {
-    setAddPlaceSheetOpen(true)
+  const openRecordFlow = useCallback(() => {
+    setRecordSheetInitialView("target")
+    setRecordTargetMapId(null)
+    setRecordSheetOpen(true)
   }, [])
 
+  const openRecordMapCreateFlow = useCallback(() => {
+    setPendingRecordAfterMapCreate(true)
+    setRecordSheetOpen(false)
+    setRecordSheetInitialView("target")
+    setRecordTargetMapId(null)
+    setActiveTab("maps")
+    setMapsView("list")
+    setActiveMapSource("local")
+    setMapSheet({
+      mode: "create",
+      id: null,
+      title: "새 장소 지도",
+      description: "",
+      theme: themePalette[0],
+      category: "personal",
+      config: {},
+    })
+  }, [setActiveMapSource, setActiveTab, setMapSheet, setMapsView])
+
+  useEffect(() => {
+    if (!pendingRecordAfterMapCreate) return
+    if (mapSheet) return
+    if (activeTab !== "maps" || mapsView !== "editor" || activeMapSource !== "local" || !activeMapId) return
+
+    setPendingRecordAfterMapCreate(false)
+    setRecordTargetMapId(activeMapId)
+    setRecordSheetInitialView("method")
+    setRecordSheetOpen(true)
+  }, [activeMapId, activeMapSource, activeTab, mapSheet, mapsView, pendingRecordAfterMapCreate])
+
+  const handleMapFormClose = useCallback(() => {
+    if (pendingRecordAfterMapCreate && mapSheet?.mode === "create") {
+      setPendingRecordAfterMapCreate(false)
+    }
+    setMapSheet(null)
+  }, [mapSheet, pendingRecordAfterMapCreate])
+
   const handleBottomNavChange = useCallback((nextTab) => {
-    if (nextTab === "add-place") {
-      openAddPlaceFlow()
+    if (nextTab === "add-record") {
+      openRecordFlow()
       return
     }
     if (nextTab !== activeTab && !confirmDiscardEditorDraft()) return
@@ -751,7 +750,7 @@ export default function App() {
       setActiveMapSource("local")
       setActiveMapId(maps[0]?.id ?? null)
     }
-  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps, openAddPlaceFlow])
+  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps, openRecordFlow])
 
   const handleSavePostMap = useCallback(async (post) => {
     if (!post?.mapId) return
@@ -1276,7 +1275,7 @@ export default function App() {
             features={features}
             recommendedMaps={recommendedMaps}
             onResumeMyMap={openMapEditor}
-            onCreateMap={openAddPlaceFlow}
+            onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
             onNavigateToMaps={() => {
               setActiveTab("maps")
@@ -1299,7 +1298,7 @@ export default function App() {
         ) : null}
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
-          <MapsListScreen
+          <MyArchiveScreen
             maps={maps}
             features={features}
             shares={shares}
@@ -1337,6 +1336,8 @@ export default function App() {
             }}
             onAddToProfile={(mapId) => requestProfilePlacement("add", mapId)}
             onRemoveFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
+            onOpenFeature={openFeatureFromPlaces}
+            onCreateRecord={openRecordFlow}
           />
         ) : null}
 
@@ -1448,7 +1449,6 @@ export default function App() {
             shares={shares}
             maps={maps}
             features={features}
-            followedCount={followed.length}
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
             characterImage={levelEmoji}
@@ -1496,17 +1496,20 @@ export default function App() {
       )}
 
       {/* Sheets */}
-      <AddPlaceActionSheet
-        open={addPlaceSheetOpen}
-        onClose={() => setAddPlaceSheetOpen(false)}
-        onSearchPlace={() => startAddPlaceFlow("search")}
-        onUseCurrentLocation={() => startAddPlaceFlow("current")}
-        onPickOnMap={() => startAddPlaceFlow("map")}
+      <AddRecordSheet
+        key={recordSheetOpen ? `${recordSheetInitialView}-${recordTargetMapId || "none"}` : "closed"}
+        open={recordSheetOpen}
+        maps={personalRecordMaps}
+        initialView={recordSheetInitialView}
+        selectedMapId={recordTargetMapId}
+        onClose={() => setRecordSheetOpen(false)}
+        onCreateMap={openRecordMapCreateFlow}
+        onStartRecord={startRecordInMap}
       />
       <MapFormSheet
         mapSheet={mapSheet} setMapSheet={setMapSheet}
         onSave={saveMapSheet} onDelete={deleteMapAction}
-        onClose={() => setMapSheet(null)}
+        onClose={handleMapFormClose}
       />
       {(() => {
         // 시안 v5 신규 편집 시트 (FeatureEditSheet)는 '작성자 편집 전용'.

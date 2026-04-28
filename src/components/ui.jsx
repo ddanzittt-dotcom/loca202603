@@ -25,11 +25,11 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
   )
 }
 
-const NAV_ICONS = { home: Home, maps: Map, "add-place": PlusCircle, explore: Compass, profile: User }
-const NAV_LABELS = { home: "홈", maps: "내 지도", "add-place": "장소", explore: "탐색", profile: "프로필" }
+const NAV_ICONS = { home: Home, maps: Map, "add-record": PlusCircle, explore: Compass, profile: User }
+const NAV_LABELS = { home: "홈", maps: "내 지도", "add-record": "기록", explore: "탐색", profile: "프로필" }
 
 export function BottomNav({ activeTab, onChange }) {
-  const items = ["home", "maps", "add-place", "explore", "profile"]
+  const items = ["home", "maps", "add-record", "explore", "profile"]
 
   return (
     <nav className="bottom-nav">
@@ -37,8 +37,8 @@ export function BottomNav({ activeTab, onChange }) {
         const Icon = NAV_ICONS[id]
         const label = NAV_LABELS[id] || id
         const isActive = activeTab === id
-        const isAddAction = id === "add-place"
-        const ariaLabel = isAddAction ? "장소 남기기" : label
+        const isAddAction = id === "add-record"
+        const ariaLabel = isAddAction ? "기록 남기기" : label
         return (
           <button
             key={id}

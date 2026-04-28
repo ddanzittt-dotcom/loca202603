@@ -32,19 +32,14 @@ export function MapsListScreen({
   }, [maps, query])
 
   return (
-    <section className="screen screen--scroll">
-      <div className="section-head">
-        <div>
-          <h1 className="section-head__title">내 지도</h1>
-        </div>
-        <div className="section-head__actions">
-          <button className="button button--ghost" type="button" onClick={onImport}>
-            <Download size={15} /> 공유 지도 불러오기
-          </button>
-          <button className="button button--primary" type="button" onClick={onCreate}>
-            <Plus size={15} /> 새 지도
-          </button>
-        </div>
+    <div className="maps-list-view">
+      <div className="maps-list-toolbar">
+        <button className="button button--ghost" type="button" onClick={onImport}>
+          <Download size={15} /> 지도 가져오기
+        </button>
+        <button className="button button--primary" type="button" onClick={onCreate}>
+          <Plus size={15} /> 새 지도 만들기
+        </button>
       </div>
 
       {maps.length > 3 ? (
@@ -96,6 +91,6 @@ export function MapsListScreen({
           ))
         )}
       </div>
-    </section>
+    </div>
   )
 }

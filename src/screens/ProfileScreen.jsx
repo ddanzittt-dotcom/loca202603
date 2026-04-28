@@ -182,7 +182,6 @@ export function ProfileScreen({
   shares,
   maps,
   features,
-  followedCount,
   cloudMode = false,
   cloudEmail = "",
   characterImage,
@@ -370,6 +369,7 @@ export function ProfileScreen({
   ]
 
   const placeCount = features.length
+  const publicMapCount = shares.length
 
   // 프로필 편집 화면
   if (editOpen) {
@@ -564,18 +564,14 @@ export function ProfileScreen({
 
         {/* 통계 */}
         <div className="pf__stats">
-          <div className="pf__stat"><p className="pf__stat-value">{maps.length}</p><p className="pf__stat-label">지도</p></div>
+          <div className="pf__stat"><p className="pf__stat-value">{publicMapCount}</p><p className="pf__stat-label">공개 지도</p></div>
           <div className="pf__stat-divider" />
           <div className="pf__stat"><p className="pf__stat-value">{placeCount}</p><p className="pf__stat-label">장소</p></div>
-          <div className="pf__stat-divider" />
-          <div className="pf__stat"><p className="pf__stat-value">{user.followers || 0}</p><p className="pf__stat-label">팔로워</p></div>
-          <div className="pf__stat-divider" />
-          <div className="pf__stat"><p className="pf__stat-value">{followedCount}</p><p className="pf__stat-label">팔로잉</p></div>
         </div>
 
         {/* 액션 버튼 */}
         <div className="pf__actions">
-          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>+ 지도 올리기</button>
+          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>공개 지도 올리기</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
