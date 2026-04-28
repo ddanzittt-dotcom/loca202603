@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Plus, Download, Search as SearchIcon } from "lucide-react"
+import { Search as SearchIcon } from "lucide-react"
 import { MapCard, EmptyState, SkeletonCard } from "../components/ui"
 import { findPlacementForMap } from "../lib/mapPlacement"
 
@@ -9,7 +9,6 @@ export function MapsListScreen({
   shares = [],
   characterImage,
   onCreate,
-  onImport,
   onEdit,
   onOpen,
   onDelete,
@@ -33,15 +32,6 @@ export function MapsListScreen({
 
   return (
     <div className="maps-list-view">
-      <div className="maps-list-toolbar">
-        <button className="button button--ghost" type="button" onClick={onImport}>
-          <Download size={15} /> 지도 가져오기
-        </button>
-        <button className="button button--primary" type="button" onClick={onCreate}>
-          <Plus size={15} /> 새 지도 만들기
-        </button>
-      </div>
-
       {maps.length > 3 ? (
         <label className="search-box">
           <SearchIcon size={16} aria-hidden="true" />

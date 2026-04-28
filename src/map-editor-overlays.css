@@ -4936,6 +4936,32 @@
 
 .archive-head {
   margin-bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.archive-head__copy {
+  min-width: 0;
+}
+
+.archive-head__actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.archive-head__action {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.archive-head__action svg {
+  flex: 0 0 auto;
 }
 
 .maps-list-view {
@@ -4944,15 +4970,19 @@
   gap: 12px;
 }
 
-.maps-list-toolbar {
-  display: flex;
-  gap: 8px;
-}
+@media (max-width: 380px) {
+  .archive-head {
+    gap: 8px;
+  }
 
-.maps-list-toolbar .button {
-  flex: 1;
-  min-height: 38px;
-  justify-content: center;
+  .archive-head__actions {
+    gap: 6px;
+  }
+
+  .archive-head__action {
+    padding: 0 8px;
+    font-size: 10px;
+  }
 }
 
 .maps-segment {
