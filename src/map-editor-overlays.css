@@ -64,6 +64,11 @@
 .welcome-screen__footer {
   padding: 0 24px calc(40px + env(safe-area-inset-bottom));
 }
+.welcome-screen__cta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .welcome-screen__cta {
   width: 100%;
   height: 54px;
@@ -74,6 +79,11 @@
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
+}
+.welcome-screen__cta--secondary {
+  background: transparent;
+  color: var(--secondary, #2D4A3E);
+  border: 1px solid rgba(45, 74, 62, 0.2);
 }
 
 /* ══════════════════════════════════════════

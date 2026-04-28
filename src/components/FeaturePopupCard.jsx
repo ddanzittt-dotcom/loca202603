@@ -520,7 +520,7 @@ export function FeaturePopupCard({
         ) })
       } else if (!isAuthor && onRequestEdit) {
         list.push({ key: "request-edit", el: (
-          <button key="request-edit" type="button" className="fpc-btn fpc-btn--icon" onClick={onRequestEdit} title="수정요청" aria-label="수정요청">
+          <button key="request-edit" type="button" className="fpc-btn fpc-btn--icon" onClick={onRequestEdit} title="수정 제안" aria-label="수정 제안">
             <IconFlag />
           </button>
         ) })

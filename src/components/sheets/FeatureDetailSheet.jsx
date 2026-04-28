@@ -211,14 +211,14 @@ export function FeatureDetailSheet({
                       }))}
                     />
                   </label>
-                  <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
+                  <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "장소 " : ""} />
                   <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
                 </>
               ) : canRequestEdit ? (
                 <>
                   {isRequestEditMode ? (
                     <>
-                      <p className="fd__request-help">내가 등록하지 않은 장소예요. 제안한 수정안은 승인 후 반영돼요.</p>
+                      <p className="fd__request-help">내가 등록하지 않은 장소예요. 수정 제안을 남기면 검토 후 반영돼요.</p>
                       <label className="fd__field"><span className="fd__label">수정 제안 이름</span><input className="fd__input" value={featureSheet.title} onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))} /></label>
                       <label className="fd__field"><span className="fd__label">수정 제안 아이콘</span>
                         <IconSelector
@@ -230,15 +230,15 @@ export function FeatureDetailSheet({
                           }))}
                         />
                       </label>
-                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
+                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "장소 " : ""} />
                       <label className="fd__field"><span className="fd__label">수정 제안 설명</span><textarea className="fd__textarea" rows="2" value={featureSheet.note || ""} onChange={(e) => setFeatureSheet((c) => ({ ...c, note: e.target.value }))} placeholder="이 장소를 더 잘 설명해 주세요." /></label>
                       <div className="fd__field"><span className="fd__label">수정 제안 태그</span>
                         <TagInput tags={featureSheet.tagsText || ""} onChange={(val) => setFeatureSheet((c) => ({ ...c, tagsText: val }))} />
                       </div>
-                      <div className="fd__field"><span className="fd__label">수정 요청 사유 (선택)</span><textarea className="fd__textarea" rows="2" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} placeholder="왜 수정이 필요한지 간단히 남겨주세요." /></div>
+                      <div className="fd__field"><span className="fd__label">수정 제안 메모 (선택)</span><textarea className="fd__textarea" rows="2" value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} placeholder="왜 수정이 필요한지 간단히 남겨주세요." /></div>
                       <div className="fd__actions">
                         <button className="fd__btn fd__btn--del" type="button" onClick={() => { setRequestEditTargetId(null); setRequestMessage("") }}>취소</button>
-                        <button className="fd__btn fd__btn--save" type="button" onClick={() => onRequestCommunityUpdate?.(requestMessage)}>수정 요청</button>
+                        <button className="fd__btn fd__btn--save" type="button" onClick={() => onRequestCommunityUpdate?.(requestMessage)}>수정 제안 보내기</button>
                       </div>
                     </>
                   ) : (
@@ -249,7 +249,7 @@ export function FeatureDetailSheet({
                         {featureSheet.note ? <p>{featureSheet.note}</p> : null}
                       </div>
                       <div className="fd__actions">
-                        <button className="fd__btn fd__btn--save" type="button" onClick={() => { setRequestEditTargetId(featureSheet.id); setRequestMessage("") }}>수정 요청하기</button>
+                        <button className="fd__btn fd__btn--save" type="button" onClick={() => { setRequestEditTargetId(featureSheet.id); setRequestMessage("") }}>수정 제안하기</button>
                       </div>
                     </>
                   )}
@@ -312,7 +312,7 @@ export function FeatureDetailSheet({
                           }))}
                         />
                       </div>
-                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "핀 " : ""} />
+                      <FeatureStyleEditor featureSheet={featureSheet} setFeatureSheet={setFeatureSheet} labelPrefix={featureSheet.type === "pin" ? "장소 " : ""} />
 
                       <div className="fd__actions"><button className="fd__btn fd__btn--del" type="button" onClick={onDelete}>삭제</button><button className="fd__btn fd__btn--save" type="button" onClick={onSave}>저장</button></div>
                     </>

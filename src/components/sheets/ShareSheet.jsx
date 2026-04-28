@@ -243,10 +243,10 @@ export function ShareSheet({
   }, [map?.id, map?.slug, map?.title, qrDownloading, qrUrl, showToast])
 
   const placement = getProfilePlacementState(map || {}, null)
-  const statusLabel = placement.isPublished ? "발행됨" : "저장용"
+  const statusLabel = placement.isPublished ? "링크 공유 켜짐" : "링크 공유 꺼짐"
   const statusHint = placement.isPublished
-    ? "발행된 링크로 공유할 수 있어요"
-    : "발행하지 않아도 특정 사람과 공유할 수 있어요"
+    ? "공유 링크가 활성화되어 있어요."
+    : "메뉴에서 링크 공유 켜기를 하면 누구나 링크로 볼 수 있어요."
 
   return (
     <BottomSheet open={open} title="공유 링크" onClose={onClose}>
@@ -270,7 +270,7 @@ export function ShareSheet({
           링크를 전달하면 상대가 지도를 바로 열고, 내 라이브러리로 저장할 수 있어요.
         </p>
         <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 12px", lineHeight: 1.4 }}>
-          보여주고 싶은 지도만 프로필에 올릴 수 있어요.
+          보여주고 싶은 지도만 내 프로필에 공개할 수 있어요.
         </p>
 
         {qrUrl ? (

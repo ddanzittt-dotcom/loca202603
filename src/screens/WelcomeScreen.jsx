@@ -1,10 +1,18 @@
 import { useState } from "react"
 import { markWelcomeSeen } from "../lib/onboarding"
 
-export function WelcomeScreen({ onStart }) {
+export function WelcomeScreen({ onStart, onAddFirstPlace }) {
   const [imgError, setImgError] = useState(false)
-  const handleStart = () => {
+  const handleBrowse = () => {
     markWelcomeSeen()
+    onStart?.()
+  }
+  const handleAddFirstPlace = () => {
+    markWelcomeSeen()
+    if (onAddFirstPlace) {
+      onAddFirstPlace()
+      return
+    }
     onStart?.()
   }
 
@@ -23,20 +31,29 @@ export function WelcomeScreen({ onStart }) {
           />
         )}
         <p className="welcome-screen__title">
-          내 장소를 기록하고,{"\n"}하나의 지도로 남겨보세요
+          좋아한 장소를 모아{"\n"}나만의 지도로 남겨보세요.
         </p>
         <p className="welcome-screen__desc">
-          기록은 계정에 안전하게 저장돼요
+          처음은 한 장소면 충분해요.
         </p>
       </div>
       <div className="welcome-screen__footer">
-        <button
-          className="welcome-screen__cta"
-          type="button"
-          onClick={handleStart}
-        >
-          시작하기
-        </button>
+        <div className="welcome-screen__cta-stack">
+          <button
+            className="welcome-screen__cta"
+            type="button"
+            onClick={handleAddFirstPlace}
+          >
+            첫 장소 남기기
+          </button>
+          <button
+            className="welcome-screen__cta welcome-screen__cta--secondary"
+            type="button"
+            onClick={handleBrowse}
+          >
+            둘러보기
+          </button>
+        </div>
       </div>
     </section>
   )

@@ -145,6 +145,7 @@ export default function App() {
   const [savingSharedMap, setSavingSharedMap] = useState(false)
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [welcomeDismissed, setWelcomeDismissed] = useState(() => isWelcomeSeen())
+  const [welcomeIntent, setWelcomeIntent] = useState(null)
   const [coachmarkStep, setCoachmarkStep] = useState(0) // 0=off, 1~3=active step
   const [firstPinHintVisible, setFirstPinHintVisible] = useState(false)
   const [communityPendingRequests, setCommunityPendingRequests] = useState([])
@@ -241,6 +242,34 @@ export default function App() {
     (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
   const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
   const showPersonalLoading = hasSupabaseEnv && (!authReady || cloudLoading) && requiresAuthForCurrentTab
+
+  const openCreateMapSheet = useCallback(() => {
+    setActiveTab("maps")
+    setMapsView("list")
+    setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
+  }, [])
+
+  const handleWelcomeBrowse = useCallback(() => {
+    setWelcomeDismissed(true)
+    setWelcomeIntent(null)
+    setActiveTab("home")
+  }, [])
+
+  const handleWelcomeAddFirstPlace = useCallback(() => {
+    setWelcomeDismissed(true)
+    setWelcomeIntent("first-place")
+    setActiveTab("maps")
+    setMapsView("list")
+    setActiveMapSource("local")
+  }, [])
+
+  useEffect(() => {
+    if (welcomeIntent !== "first-place") return
+    if (!authReady) return
+    if (hasSupabaseEnv && !authUser) return
+    openCreateMapSheet()
+    setWelcomeIntent(null)
+  }, [authReady, authUser, openCreateMapSheet, welcomeIntent])
 
   // --- Gamification ---
 
@@ -1037,7 +1066,10 @@ export default function App() {
   if (showWelcome) {
     return (
       <Suspense fallback={<ScreenFallback />}>
-        <WelcomeScreen onStart={() => setWelcomeDismissed(true)} />
+        <WelcomeScreen
+          onStart={handleWelcomeBrowse}
+          onAddFirstPlace={handleWelcomeAddFirstPlace}
+        />
       </Suspense>
     )
   }
@@ -1148,10 +1180,7 @@ export default function App() {
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
             onResumeMyMap={openMapEditor}
-            onCreateMap={() => {
-              setActiveTab("maps")
-              setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
-            }}
+            onCreateMap={openCreateMapSheet}
           />
         ) : null}
 

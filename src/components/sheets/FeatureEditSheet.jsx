@@ -654,7 +654,7 @@ export function FeatureEditSheet({
           <FieldLabel hint={
             type === "route" ? "지도에 표시될 경로 색"
               : type === "area" ? "지도에 표시될 범위 색"
-                : "지도에 표시될 핀 색"
+                : "지도에 표시될 장소 색"
           }>색상</FieldLabel>
           <ColorPalette value={style.color} onChange={(color) => updateStyle({ color })} />
         </div>
@@ -729,7 +729,7 @@ export function FeatureEditSheet({
         {type === "pin" && featureSheet.lat != null && featureSheet.lng != null
           && (featureSheet.lat !== 0 || featureSheet.lng !== 0) ? (
           <div className="fes-field">
-            <FieldLabel hint="핀이 지도에 찍힌 좌표">위치</FieldLabel>
+            <FieldLabel hint="장소가 지도에 남겨진 좌표">위치</FieldLabel>
             <div className="fes-location">
               <div className="fes-location-info">
                 <div className="fes-location-addr">{featureSheet.address || "주소를 불러오는 중..."}</div>

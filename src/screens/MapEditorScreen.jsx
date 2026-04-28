@@ -149,7 +149,7 @@ export function MapEditorScreen({
 
   const handleSummaryRequestEdit = useCallback(async () => {
     if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
-    const requestMessage = window.prompt("?????곌떽釉붾??????椰????????????????쇨덫櫻????????밸쫫??????萸?? (????壤굿??Β??")
+    const requestMessage = window.prompt("수정 제안 메시지를 남겨주세요. 작성자에게 전달돼요. (선택)")
     if (requestMessage === null) return
     const requested = await onRequestCommunityUpdateFromSummary?.(selectedFeatureSummary.id, requestMessage)
     if (requested) onCloseFeatureSummary?.()
@@ -241,7 +241,7 @@ export function MapEditorScreen({
       const query = trimmedSearchQuery
       setSearching(true)
 
-      // ???????濡?씀?濾????ㅼ굣野????geocode (???????怨뺤른???????깆땠?????????꾩룆梨????
+      // 한국어 검색어는 Naver geocode를 우선 사용
       const tryNaver = () =>
         new Promise((resolve) => {
           const naverMaps = window.naver?.maps
@@ -260,7 +260,7 @@ export function MapEditorScreen({
           })
         })
 
-      // Google Places (?????????????????????????????泥??+ ???????怨뺤른???????깆땠?????????ㅻ깹?????
+      // Google geocode는 보조 결과로 병합
       const tryGoogle = () =>
         new Promise((resolve) => {
           const googleKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
@@ -287,11 +287,11 @@ export function MapEditorScreen({
 
       Promise.all([tryNaver(), tryGoogle()]).then(([naverResults, googleResults]) => {
         if (cancelled || controller.signal.aborted) return
-        // ??? ???뀀맩鍮???癲????????嚥???癲?????쇨덧??????ル??????????????濡?씀?濾????ㅼ굣野?????????????, ????Google ?????????
+        // 검색어 언어에 따라 기본 소스를 선택하고 보조 소스를 병합
         const hasKorean = /[\uAC00-\uD7A3]/.test(query)
         const primary = hasKorean ? naverResults : googleResults
         const secondary = hasKorean ? googleResults : naverResults
-        // ????????썼린?濾?????熬곥끇???????????怨???????(???????????? ?????雅?퍔瑗?땟????0.001???????
+        // 좌표가 거의 같은 결과는 중복 제거
         const merged = [...primary]
         for (const s of secondary) {
           const isDuplicate = merged.some((p) => Math.abs(p.lat - s.lat) < 0.001 && Math.abs(p.lng - s.lng) < 0.001)
@@ -312,7 +312,7 @@ export function MapEditorScreen({
 
   return (
     <section className={`map-editor${summaryOpen ? " map-editor--summary-open" : ""}`}>
-      {/* ?????? ????釉먮폁???????????????? */}
+      {/* 상단 헤더 */}
       <div className="me-bar">
         <div className="me-bar__card">
           <div className="me-bar__left">
@@ -363,21 +363,22 @@ export function MapEditorScreen({
                       >
                         {placement.canPublish && onPublishMap ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onPublishMap(map.id) }}>
-                            ??????꾩룆梨띰쭕?뚢뵾?????????ル뭽癲ル슢??????????款?蹂κ콬?????????獄쏅챶留???????                          </MapMenuItem>
+                            링크 공유 켜기
+                          </MapMenuItem>
                         ) : null}
                         {placement.canAddToProfile && onAddMapToProfile ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onAddMapToProfile(map.id) }}>
-                            ??????熬곣뫖利당춯??쎾퐲??逆????????熬곣뫖利당춯??쎾퐲???????????⑤슢????
+                            내 프로필에 공개
                           </MapMenuItem>
                         ) : null}
                         {placement.canRemoveFromProfile && onRemoveMapFromProfile ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onRemoveMapFromProfile(map.id) }}>
-                            ??????熬곣뫖利당춯??쎾퐲??逆????????熬곣뫖利당춯??쎾퐲?????????????⑤슢????
+                            내 프로필 공개 해제
                           </MapMenuItem>
                         ) : null}
                         {placement.canUnpublish && onUnpublishMap ? (
                           <MapMenuItem variant="danger" onClick={() => { setMapMenuOpen(false); onUnpublishMap(map.id) }}>
-                            ??????꾩룆梨띰쭕?뚢뵾?????????ル뭽癲ル슢??????????款?蹂κ콬??????????썼린?濾?????熬곥끇????
+                            링크 공유 중지
                           </MapMenuItem>
                         ) : null}
                       </div>
@@ -428,8 +429,8 @@ export function MapEditorScreen({
           </div>
           {searchOpen ? (
             <div className="map-search-box__results">
-              {searching && searchResults.length === 0 ? <div className="map-search-box__item">???뀀맩鍮???癲??????..</div> : null}
-              {!searching && searchResults.length === 0 ? <div className="map-search-box__item">???뀀맩鍮???癲???????뀀맩鍮???癲??????饔낅떽?????? ??????嚥싲갭큔?????</div> : null}
+              {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
+              {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요. 다른 주소나 장소 이름으로 다시 검색해 주세요.</div> : null}
               {searchResults.map((result) => (
                 <button
                   key={result.id}
@@ -467,7 +468,7 @@ export function MapEditorScreen({
         {pendingSearchPin && canMapPinFromSearch ? (
           <div className="search-pin-confirm">
             <div className="search-pin-confirm__text">
-              <strong>{"이 위치를 핀으로 맵핑할까요?"}</strong>
+              <strong>{"이 위치를 장소로 남길까요?"}</strong>
               <span>{pendingSearchPin.label}</span>
             </div>
             <div className="search-pin-confirm__actions">
@@ -485,7 +486,7 @@ export function MapEditorScreen({
                 onClick={handleConfirmSearchPin}
                 disabled={mappingSearchPin}
               >
-                {mappingSearchPin ? "추가 중..." : "핀 추가"}
+                {mappingSearchPin ? "남기는 중..." : "장소 남기기"}
               </button>
             </div>
           </div>
@@ -495,21 +496,21 @@ export function MapEditorScreen({
           <button className="me-fab" type="button" onClick={onLocate} aria-label="내 위치로 이동">
             <Navigation size={16} color="#2D4A3E" />
           </button>
-          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="????????">
+          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="이름 라벨 표시 전환">
             <span>이름</span>
           </button>
           {!readOnly ? (
-            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="?? ???????ш끽紐???">
+            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="장소 남기기 모드">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="???뀀맩鍮???癲????????????????ш끽紐???">
+            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="경로 그리기 모드">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
             </button>
           ) : null}
           {!readOnly ? (
-            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="??????????筌?????????ш끽紐???">
+            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="영역 그리기 모드">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
             </button>
           ) : null}
@@ -614,7 +615,7 @@ export function MapEditorScreen({
           {filterOpen ? (
             <>
               <button className={`map-filter-chip${activeFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("all")}>전체</button>
-              <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>핀</button>
+              <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>장소</button>
               <button className={`map-filter-chip${activeFilter === "route" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("route")}>경로</button>
               <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>영역</button>
             </>
@@ -622,9 +623,9 @@ export function MapEditorScreen({
         </div>
 
         {features.length > 0 ? (
-          <div className="map-list-bar" aria-label="맵핑 목록">
+          <div className="map-list-bar" aria-label="지도에 남긴 목록">
             <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
-              맵핑 목록({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▲" : "▼"}</span>
+              지도에 남긴 목록({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▲" : "▼"}</span>
             </button>
             {stripOpen ? (
               <div
@@ -712,7 +713,7 @@ export function MapEditorScreen({
               onOpenShareEditor?.(canvas)
             }
           } catch (err) {
-            console.error("????釉먮폁????????????釉먮폁???????ㅼ뒧?????????????????怨뺤름??", err)
+            console.error("공유용 지도를 캡처하는 중 오류가 발생했습니다.", err)
           } finally {
             setCapturing(false)
           }
@@ -720,13 +721,13 @@ export function MapEditorScreen({
         showToast={showToast}
       />
 
-      {/* ??????袁⑸즴筌?씛彛???????????????亦껋꼦維쀯쭗???????꾩룆梨띰쭕??力?肉??*/}
+      {/* 온보딩 코치마크 */}
       {coachmarkStep === 1 ? (
         <CoachMark
           step={1}
           totalSteps={3}
-          title="핀, 경로, 영역을 자유롭게 추가해 보세요"
-          description="오른쪽 버튼으로 모드를 선택한 뒤 지도를 탭하면 맵핑 요소를 만들 수 있습니다."
+          title="장소, 경로, 영역을 자유롭게 남겨보세요"
+          description="오른쪽 버튼으로 모드를 선택한 뒤 지도를 탭하면 지도에 기록을 남길 수 있습니다."
           onNext={() => onCoachmarkNext?.(2)}
           onSkip={() => onCoachmarkSkip?.()}
         />
@@ -736,19 +737,19 @@ export function MapEditorScreen({
           step={2}
           totalSteps={3}
           title="지도에 등록한 항목을 바로 확인할 수 있어요"
-          description="맵핑한 장소를 누르면 설명, 사진, 음성을 미리보기로 확인할 수 있습니다."
+          description="지도에 남긴 장소를 누르면 설명, 사진, 음성을 미리보기로 확인할 수 있습니다."
           nextLabel="시작하기"
           onNext={() => onCoachmarkNext?.(0)}
           onSkip={() => onCoachmarkSkip?.()}
         />
       ) : null}
 
-      {/* ???? ????????ш끽紐????????嶺뚮ㅎ?볠꽴????*/}
+      {/* 첫 장소 등록 힌트 */}
       {firstPinHintVisible ? (
         <div className="first-pin-hint">
           <img src="/characters/cloud_lv1.svg" alt="" className="first-pin-hint__icon" />
           <div className="first-pin-hint__text">
-            <p className="first-pin-hint__title">첫 핀 등록이 완료됐어요</p>
+            <p className="first-pin-hint__title">첫 장소 남기기가 완료됐어요</p>
             <p className="first-pin-hint__desc">장소에 설명과 사진, 음성을 추가해서 더 풍부하게 기록해 보세요.</p>
           </div>
           <button className="first-pin-hint__close" type="button" onClick={() => onDismissFirstPinHint?.()} aria-label="닫기">
@@ -778,6 +779,3 @@ function MapMenuItem({ onClick, variant = "default", children }) {
     </button>
   )
 }
-
-
-
