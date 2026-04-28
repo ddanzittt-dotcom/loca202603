@@ -16,7 +16,7 @@ function getTagColor(tag) {
   return { bg: "#FFF4EB", text: "#993C1D" }
 }
 
-export function PostDetailSheet({ post, onClose, onOpenMap, onRemoveFromProfile, onSaveMap, saving = false, isFollowing, onToggleFollow, mapFeatures }) {
+export function PostDetailSheet({ post, onClose, onOpenMap, onRemoveFromProfile, onSaveMap, saving = false, mapFeatures }) {
   const isOwn = post?.source === "own"
   const pins = mapFeatures ? mapFeatures.filter((f) => f.type === "pin") : []
   const routes = mapFeatures ? mapFeatures.filter((f) => f.type === "route") : []
@@ -37,11 +37,6 @@ export function PostDetailSheet({ post, onClose, onOpenMap, onRemoveFromProfile,
               <p className="pds__author-name">{post.user.name}</p>
               <p className="pds__author-handle">{post.user.handle || `@${post.user.name}`} · {post.date}</p>
             </div>
-            {!isOwn && !isFollowing ? (
-              <button className="pds__follow-btn" type="button" onClick={() => onToggleFollow(post.user.id)}>
-                + 팔로우
-              </button>
-            ) : null}
           </div>
 
           {/* 지역 컬러 blob 지도 카드 */}

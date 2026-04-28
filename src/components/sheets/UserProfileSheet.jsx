@@ -1,6 +1,6 @@
 import { Avatar, BottomSheet, MapPreview } from "../ui"
 
-export function UserProfileSheet({ user, userPosts, isFollowing, onClose, onToggleFollow, onSelectPost }) {
+export function UserProfileSheet({ user, userPosts = [], onClose, onSelectPost }) {
   return (
     <BottomSheet
       open={Boolean(user)}
@@ -21,17 +21,16 @@ export function UserProfileSheet({ user, userPosts, isFollowing, onClose, onTogg
               <p>{user.bio}</p>
             </div>
           </div>
-          <div className="profile-actions-row">
-            <button className={`button ${isFollowing ? "button--secondary" : "button--primary"}`} type="button" onClick={() => onToggleFollow(user.id)}>
-              {isFollowing ? "팔로잉" : "팔로우"}
-            </button>
-          </div>
           <div className="profile-grid">
-            {userPosts.map((post) => (
-              <button key={post.id} className="profile-grid__item" type="button" onClick={() => onSelectPost({ source: "community", id: post.id })}>
-                <MapPreview title={post.title} emojis={post.emojis} placeCount={post.placeCount} gradient={post.gradient} variant="grid" />
-              </button>
-            ))}
+            {userPosts.length > 0 ? (
+              userPosts.map((post) => (
+                <button key={post.id} className="profile-grid__item" type="button" onClick={() => onSelectPost({ source: "community", id: post.id })}>
+                  <MapPreview title={post.title} emojis={post.emojis} placeCount={post.placeCount} gradient={post.gradient} variant="grid" />
+                </button>
+              ))
+            ) : (
+              <p className="profile-grid__empty">아직 공개한 지도가 없어요.</p>
+            )}
           </div>
         </div>
       ) : null}

@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from "react"
-import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check } from "lucide-react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check, Search, Users } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { getProfilePlacementState } from "../lib/mapPlacement"
+import { hasSupabaseEnv } from "../lib/supabase"
 
 // 미니 지도 카드 (갤러리용)
 const MINI_PALETTES = {
@@ -66,9 +67,9 @@ function saveAppSettings(settings) {
   localStorage.setItem("loca.appSettings", JSON.stringify(settings))
 }
 
-// 프로필 갤러리 빈 상태 (발행 여부에 따라 분기)
+// 프로필 갤러리 빈 상태 (링크 공유 여부에 따라 분기)
 // 빈 공간에는 캐릭터 + 안내 문구만 보여주고 CTA 버튼은 숨긴다.
-// 프로필에 올리는 진입점은 상단 "+ 지도 올리기" 버튼 하나로 통일.
+// 프로필 공개 진입점은 상단 액션 버튼 하나로 통일.
 function ProfileEmptyGallery({ maps, shares, characterImage }) {
   const hasPublishedNotOnProfile = maps.some((m) => {
     const state = getProfilePlacementState(m)
@@ -83,7 +84,7 @@ function ProfileEmptyGallery({ maps, shares, characterImage }) {
         variant="character"
         characterImage={charImg}
         title="프로필을 꾸며볼까요"
-        description="발행한 지도 중에서 보여주고 싶은 것만 프로필에 올릴 수 있어요"
+        description="링크 공유 중인 지도 중에서 보여주고 싶은 것만 프로필에 공개할 수 있어요"
       />
     )
   }
@@ -92,13 +93,13 @@ function ProfileEmptyGallery({ maps, shares, characterImage }) {
     <EmptyState
       variant="character"
       characterImage={charImg}
-      title="아직 프로필에 올릴 지도가 없어요"
-      description="지도를 만들고 발행한 뒤에 프로필에 올릴 수 있어요"
+      title="아직 프로필에 공개한 지도가 없어요"
+      description="지도를 만들고 링크 공유를 켠 뒤 프로필에 공개할 수 있어요"
     />
   )
 }
 
-// 프로필 올리기 피커 시트
+// 프로필 공개 피커 시트
 function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddToProfile }) {
   const [selected, setSelected] = useState(new Set())
 
@@ -127,10 +128,10 @@ function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddT
   if (!open) return null
 
   return (
-    <BottomSheet open={open} title="프로필에 올릴 지도" subtitle="발행한 지도 중 보여주고 싶은 것만 올려보세요" onClose={onClose}>
+    <BottomSheet open={open} title="프로필에 공개할 지도" subtitle="링크 공유 중인 지도 중 보여주고 싶은 것만 공개해보세요" onClose={onClose}>
       <div className="picker-sheet__list">
         {candidates.length === 0 ? (
-          <p className="picker-sheet__empty">올릴 수 있는 지도가 없어요</p>
+          <p className="picker-sheet__empty">공개할 수 있는 지도가 없어요</p>
         ) : (
           candidates.map((map) => {
             const isSelected = selected.has(map.id)
@@ -161,8 +162,133 @@ function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddT
           disabled={selected.size === 0}
           onClick={handleConfirm}
         >
-          선택한 지도 올리기{selected.size > 0 ? ` (${selected.size})` : ""}
+          선택한 지도 공개{selected.size > 0 ? ` (${selected.size})` : ""}
         </button>
+      </div>
+    </BottomSheet>
+  )
+}
+
+function normalizeUserResult(profile) {
+  return {
+    id: profile.id,
+    name: profile.name || profile.nickname || "LOCA 사용자",
+    handle: profile.handle || (profile.slug ? `@${profile.slug}` : ""),
+    bio: profile.bio || "",
+    avatarUrl: profile.avatarUrl || profile.avatar_url || null,
+  }
+}
+
+function ProfileUserSearchSheet({ open, users = [], currentUserId, onClose, onSelectUser }) {
+  const [query, setQuery] = useState("")
+  const [cloudResults, setCloudResults] = useState([])
+  const [searching, setSearching] = useState(false)
+
+  const trimmed = query.trim().toLowerCase()
+  const localResults = useMemo(() => {
+    if (!trimmed) return []
+    return users
+      .filter((candidate) => candidate.id !== currentUserId)
+      .filter((candidate) => {
+        const name = (candidate.name || "").toLowerCase()
+        const handle = (candidate.handle || "").toLowerCase()
+        const id = (candidate.id || "").toLowerCase()
+        return name.includes(trimmed) || handle.includes(trimmed) || id.includes(trimmed)
+      })
+      .map(normalizeUserResult)
+  }, [currentUserId, trimmed, users])
+
+  const searchCloud = useCallback(async (value) => {
+    if (!hasSupabaseEnv || !value.trim()) {
+      setCloudResults([])
+      return
+    }
+    setSearching(true)
+    try {
+      const { searchProfiles } = await import("../lib/mapService")
+      const results = await searchProfiles(value.trim())
+      setCloudResults(results.map(normalizeUserResult))
+    } catch {
+      setCloudResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    if (!trimmed) {
+      setCloudResults([])
+      setSearching(false)
+      return
+    }
+    const timer = window.setTimeout(() => searchCloud(trimmed), 300)
+    return () => window.clearTimeout(timer)
+  }, [open, searchCloud, trimmed])
+
+  const results = hasSupabaseEnv ? cloudResults : localResults
+  const hasQuery = trimmed.length > 0
+
+  const handleSelect = (profile) => {
+    onSelectUser?.(profile)
+    onClose()
+  }
+
+  return (
+    <BottomSheet
+      open={open}
+      title="사용자 찾기"
+      subtitle="닉네임이나 아이디로 찾아보세요"
+      onClose={onClose}
+    >
+      <div className="profile-search-sheet">
+        <label className="profile-search-input">
+          <Search size={15} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="닉네임 또는 아이디"
+            autoFocus
+          />
+        </label>
+
+        {!hasQuery ? (
+          <div className="profile-search-empty">
+            <Users size={20} aria-hidden="true" />
+            <strong>가볍게 찾아보세요</strong>
+            <span>사용자 찾기는 보조 기능이에요. 내 공개 지도는 아래 갤러리에 그대로 있어요.</span>
+          </div>
+        ) : searching ? (
+          <div className="profile-search-empty">
+            <span>검색 중...</span>
+          </div>
+        ) : results.length > 0 ? (
+          <div className="profile-search-results">
+            {results.map((result) => (
+              <button
+                key={result.id}
+                className="profile-search-result"
+                type="button"
+                onClick={() => handleSelect(result)}
+              >
+                <Avatar name={result.name} avatarUrl={result.avatarUrl} size={38} className="profile-search-result__avatar" />
+                <span className="profile-search-result__copy">
+                  <strong>{result.name}</strong>
+                  <small>{result.handle || "아이디 없음"}</small>
+                  {result.bio ? <em>{result.bio}</em> : null}
+                </span>
+                <ChevronRight size={15} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="profile-search-empty">
+            <Search size={20} aria-hidden="true" />
+            <strong>찾는 사용자가 없어요</strong>
+            <span>닉네임이나 아이디를 다시 확인해보세요.</span>
+          </div>
+        )}
       </div>
     </BottomSheet>
   )
@@ -182,6 +308,7 @@ export function ProfileScreen({
   shares,
   maps,
   features,
+  users = [],
   cloudMode = false,
   cloudEmail = "",
   characterImage,
@@ -191,6 +318,7 @@ export function ProfileScreen({
   onSignOut,
   onPublishOpen,
   onSelectPost,
+  onSelectUser,
   onUpdateProfile,
   onBatchAddToProfile,
   onResetCoachmark,
@@ -201,6 +329,7 @@ export function ProfileScreen({
   const settingsOpen = settingsOpenProp ?? settingsOpenLocal
   const setSettingsOpen = onSettingsOpenChange ?? setSettingsOpenLocal
   const [editOpen, setEditOpen] = useState(false)
+  const [userSearchOpen, setUserSearchOpen] = useState(false)
   const [souvenirsPopoverOpen, setSouvenirsPopoverOpen] = useState(false)
   const souvenirsPopoverRef = useRef(null)
   useEffect(() => {
@@ -571,9 +700,18 @@ export function ProfileScreen({
 
         {/* 액션 버튼 */}
         <div className="pf__actions">
-          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>공개 지도 올리기</button>
+          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>내 프로필에 공개</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
+
+        <button className="pf__find-user" type="button" onClick={() => setUserSearchOpen(true)}>
+          <Search size={15} aria-hidden="true" />
+          <span>
+            <strong>사용자 찾기</strong>
+            <small>닉네임이나 아이디로 찾아보세요</small>
+          </span>
+          <ChevronRight size={15} aria-hidden="true" />
+        </button>
 
         {/* 기념 뱃지는 프로필 info 행의 chip + popover 로 간결하게 이동됨. 섹션 형태 렌더 제거. */}
 
@@ -595,7 +733,7 @@ export function ProfileScreen({
                 프로필 구성이 바뀌었어요
               </p>
               <p style={{ fontSize: 11, color: "#666", margin: "4px 0 0", lineHeight: 1.4 }}>
-                보여주고 싶은 지도만 직접 올려보세요.
+                보여주고 싶은 지도만 직접 공개해보세요.
               </p>
             </div>
             <button
@@ -612,7 +750,7 @@ export function ProfileScreen({
           </div>
         ) : null}
 
-        {/* 프로필에 올린 지도 갤러리 */}
+        {/* 프로필 공개 지도 갤러리 */}
         {shares.length > 0 ? (
           <div className="pf__gallery">
             {shares.map((share) => {
@@ -638,6 +776,14 @@ export function ProfileScreen({
         features={features}
         onClose={() => setPickerOpen(false)}
         onBatchAddToProfile={onBatchAddToProfile}
+      />
+
+      <ProfileUserSearchSheet
+        open={userSearchOpen}
+        users={users}
+        currentUserId={user.id}
+        onClose={() => setUserSearchOpen(false)}
+        onSelectUser={onSelectUser}
       />
 
       <BottomSheet

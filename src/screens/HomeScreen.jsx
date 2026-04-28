@@ -30,7 +30,6 @@ export function HomeScreen({
   onResumeMyMap,
   onCreateMap,
   onOpenMap,
-  onNavigateToMaps,
   onNavigateToExplore,
   maps = [],
   features = [],
@@ -70,7 +69,6 @@ export function HomeScreen({
     }
   }, [featureCountByMapId, personalMaps])
 
-  const recentMaps = personalMaps.slice(0, 3)
   const curatedMaps = recommendedMaps.slice(0, 3)
 
   return (
@@ -84,7 +82,7 @@ export function HomeScreen({
           </div>
           <button className="home-start-hero__cta" type="button" onClick={onCreateMap}>
             <PlusCircle size={18} />
-            장소 남기기
+            기록하기
           </button>
         </section>
 
@@ -115,47 +113,6 @@ export function HomeScreen({
             </button>
           </section>
         ) : null}
-
-        <section className="home-section-lite" aria-labelledby="home-recent-title">
-          <div className="home-section-lite__head">
-            <div>
-              <span className="home-section-lite__eyebrow">MY MAPS</span>
-              <h2 id="home-recent-title">최근 내 지도</h2>
-            </div>
-            <button className="home-section-lite__link" type="button" onClick={onNavigateToMaps}>
-              내 지도
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {recentMaps.length > 0 ? (
-            <div className="home-map-list">
-              {recentMaps.map((map) => {
-                const placeCount = featureCountByMapId.get(map.id) || 0
-                return (
-                  <button
-                    key={map.id}
-                    className="home-map-row"
-                    type="button"
-                    onClick={() => onResumeMyMap?.(map.id)}
-                  >
-                    <span className="home-map-row__mark" style={{ background: map.theme || "#2D4A3E" }} aria-hidden="true" />
-                    <span className="home-map-row__body">
-                      <strong>{map.title || "내 지도"}</strong>
-                      <small>{buildMapMeta(map, placeCount)}</small>
-                    </span>
-                    <ChevronRight size={16} className="home-map-row__chevron" aria-hidden="true" />
-                  </button>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="home-quiet-empty">
-              <strong>아직 만든 지도가 없어요</strong>
-              <span>장소 하나를 남기면 여기에 내 지도가 쌓여요.</span>
-            </div>
-          )}
-        </section>
 
         <section className="home-section-lite" aria-labelledby="home-curated-title">
           <div className="home-section-lite__head">

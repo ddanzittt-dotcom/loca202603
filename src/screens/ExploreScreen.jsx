@@ -1,22 +1,48 @@
-import { useEffect, useRef, useState } from "react"
-import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Sparkles } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ArrowLeft, X, MapPin, Navigation, ChevronRight, Sparkles, Search } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
+
+function toSearchText(item) {
+  const placeNames = Array.isArray(item.placeNames) ? item.placeNames : []
+  const places = Array.isArray(item.places)
+    ? item.places.map((place) => (typeof place === "string" ? place : place?.title || place?.name))
+    : []
+  const features = Array.isArray(item.features)
+    ? item.features.map((feature) => feature?.title || feature?.name)
+    : []
+  return [
+    item.title,
+    item.description,
+    item.caption,
+    item.creator,
+    item.creatorName,
+    item.user?.name,
+    item.user?.handle,
+    ...(item.tags || []),
+    ...placeNames,
+    ...places,
+    ...features,
+  ].filter(Boolean).join(" ").toLowerCase()
+}
 
 export function ExploreScreen({
   recommendedMaps = [],
   communityMapFeatures = [],
-  communityRequestSummary = null,
   onOpenMap,
   onOpenCommunityEditor,
+  onCreateRecord,
   levelEmoji,
 }) {
-  const myPendingRequests = communityRequestSummary?.mine || []
-  const incomingRequests = communityRequestSummary?.incoming || []
-  const hasRequestSummary = myPendingRequests.length > 0 || incomingRequests.length > 0
-
+  const [searchQuery, setSearchQuery] = useState("")
   const [myLocation, setMyLocation] = useState(null)
   const [mapFitTrigger, setMapFitTrigger] = useState(0)
+
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const filteredRecommendedMaps = useMemo(() => {
+    if (!normalizedQuery) return recommendedMaps
+    return recommendedMaps.filter((item) => toSearchText(item).includes(normalizedQuery))
+  }, [normalizedQuery, recommendedMaps])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -202,18 +228,39 @@ export function ExploreScreen({
   }
 
   return (
-    <section className="screen screen--scroll home-screen">
+    <section className="screen screen--scroll home-screen explore-screen">
+      <div className="explore-hero">
+        <div className="explore-hero__copy">
+          <span>EXPLORE</span>
+          <h1>어떤 지도를 둘러볼까요?</h1>
+          <p>내 기록 밖의 좋은 지도와 함께 남긴 장소를 발견해보세요.</p>
+        </div>
+        <label className="explore-search">
+          <Search size={15} aria-hidden="true" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="지도 검색"
+          />
+        </label>
+      </div>
+
       <div className="home-band home-band--explore">
         <div className="home-band__head">
           <div className="home-band__head-left">
-            <div className="home-band__eye">EXPLORE</div>
-            <p className="home-band__t">둘러보기 좋은 지도</p>
-            <p className="home-band__s">다른 사람이 남긴 지도에서 영감을 얻어보세요</p>
+            <div className="home-band__eye">{normalizedQuery ? "SEARCH" : "PICKED"}</div>
+            <p className="home-band__t">{normalizedQuery ? "지도 검색 결과" : "둘러보기 좋은 지도"}</p>
+            <p className="home-band__s">
+              {normalizedQuery
+                ? `"${searchQuery.trim()}"로 찾은 공개 지도예요.`
+                : "공개 지도와 LOCA 큐레이션에서 가볍게 골랐어요."}
+            </p>
           </div>
         </div>
-        {recommendedMaps.length > 0 ? (
+        {filteredRecommendedMaps.length > 0 ? (
           <div className="home-map-scroller">
-            {recommendedMaps.map((item) => {
+            {filteredRecommendedMaps.map((item) => {
               const tags = (item.tags || []).slice(0, 2)
               return (
                 <button
@@ -244,6 +291,14 @@ export function ExploreScreen({
               )
             })}
           </div>
+        ) : normalizedQuery ? (
+          <div className="home-curated-empty">
+            <div className="home-curated-empty__icon">
+              <Search size={21} color="#FF6B35" />
+            </div>
+            <p className="home-curated-empty__title">맞는 지도가 아직 없어요</p>
+            <p className="home-curated-empty__desc">지도 제목, 태그, 작성자명으로 다시 찾아보세요.</p>
+          </div>
         ) : (
           <div className="home-curated-empty">
             <div className="home-curated-empty__icon">
@@ -260,11 +315,8 @@ export function ExploreScreen({
           <div className="home-band__head-left">
             <div className="home-band__eye">TOGETHER</div>
             <p className="home-band__t">함께 남긴 지도</p>
-            <p className="home-band__s">다른 사람과 장소를 이어서 남겨보세요</p>
+            <p className="home-band__s">모두가 하나씩 남긴 장소를 둘러보세요.</p>
           </div>
-          <button className="home-band__action--primary" type="button" onClick={onOpenCommunityEditor}>
-            함께 남기기
-          </button>
         </div>
         <div className="home-community-map">
           <MapErrorBoundary>
@@ -283,46 +335,15 @@ export function ExploreScreen({
             />
           </MapErrorBoundary>
         </div>
-        {hasRequestSummary ? (
-          <div className="home-community-requests">
-            {incomingRequests.length > 0 ? (
-              <div className="home-community-requests__group">
-                <div className="home-community-requests__head">
-                  <strong>{"\uB0B4 \uC7A5\uC18C \uC218\uC815 \uC694\uCCAD"}</strong>
-                  <span>{incomingRequests.length}건</span>
-                </div>
-                <ul className="home-community-requests__list">
-                  {incomingRequests.slice(0, 3).map((request) => (
-                    <li key={`incoming-${request.id}`}>
-                      <strong>{request.featureTitle}</strong>
-                      <span>{request.requestedByName} · {request.requestedAtLabel}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            {myPendingRequests.length > 0 ? (
-              <div className="home-community-requests__group">
-                <div className="home-community-requests__head">
-                  <strong>{"\uB0B4\uAC00 \uBCF4\uB0B8 \uC218\uC815 \uC694\uCCAD"}</strong>
-                  <span>{myPendingRequests.length}건</span>
-                </div>
-                <ul className="home-community-requests__list">
-                  {myPendingRequests.slice(0, 3).map((request) => (
-                    <li key={`mine-${request.id}`}>
-                      <strong>{request.featureTitle}</strong>
-                      <span>{request.requestedAtLabel}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-            <button className="home-community-requests__cta" type="button" onClick={onOpenCommunityEditor}>
-              {"\uC694\uCCAD \uD655\uC778\uD558\uAE30"}
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        ) : null}
+        <div className="explore-community-actions">
+          <button className="home-band__action--primary" type="button" onClick={onOpenCommunityEditor}>
+            모두의 지도 열기
+            <ChevronRight size={14} />
+          </button>
+          <button className="home-band__action--ghost" type="button" onClick={onCreateRecord}>
+            장소 하나 남기기
+          </button>
+        </div>
       </div>
 
       <div className="home-band home-band--nearby">
@@ -330,7 +351,7 @@ export function ExploreScreen({
           <div className="home-band__head-left">
             <div className="home-band__eye">NEARBY</div>
             <p className="home-band__t">근처에서 열리는 지도</p>
-            <p className="home-band__s">행사/팝업 기반 지도를 가볍게 둘러보세요</p>
+            <p className="home-band__s">지금 가까운 곳에서 열리는 공개 지도를 둘러보세요</p>
           </div>
           <button className="home-band__action--ghost" type="button" onClick={eventsNearby ? loadAllEvents : loadNearbyEvents}>
             <Navigation size={11} /> {eventsNearby ? "전체 보기" : "내 위치"}

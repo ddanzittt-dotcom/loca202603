@@ -221,10 +221,10 @@ export function MapCard({
         <span className="mc__region-label">{region.name}</span>
       </div>
 
-      {/* 우상단: 단일 상태 뱃지 (저장용 / 발행됨) */}
+      {/* 우상단: 단일 상태 뱃지 (나만 보기 / 링크 공유 중) */}
       <div className="mc__badges">
         <span className={`mc__badge ${placement.isPublished ? "mc__badge--published" : "mc__badge--draft"}`}>
-          {placement.isPublished ? "발행됨" : "저장용"}
+          {placement.isPublished ? "링크 공유 중" : "나만 보기"}
         </span>
       </div>
 
@@ -239,20 +239,20 @@ export function MapCard({
           {placement.isOnProfile ? (
             <span
               className="mc__meta-placement"
-              aria-label="프로필에 올린 지도"
+              aria-label="프로필 공개 지도"
               style={{
                 fontSize: 9, fontWeight: 500,
                 padding: "1px 6px", borderRadius: 8,
                 background: "rgba(255,255,255,.2)", color: "#fff",
               }}
             >
-              프로필에 올림
+              프로필 공개
             </span>
           ) : null}
         </div>
       </div>
 
-      {/* 우하단 overflow menu: 편집/삭제 + 공유/발행/프로필 액션 */}
+      {/* 우하단 overflow menu: 편집/삭제 + 링크 공유/프로필 공개 액션 */}
       {canManage && hasOverflowActions ? (
         <div className="mc__actions" ref={menuRef}>
           <button
@@ -287,12 +287,12 @@ export function MapCard({
               ) : null}
               {placement.canPublish && onPublish ? (
                 <MenuItem onClick={() => { setMenuOpen(false); onPublish(map.id) }}>
-                  발행하기
+                  링크 공유 켜기
                 </MenuItem>
               ) : null}
               {placement.canAddToProfile && onAddToProfile ? (
                 <MenuItem onClick={() => { setMenuOpen(false); onAddToProfile(map.id) }}>
-                  프로필에 올리기
+                  내 프로필에 공개
                 </MenuItem>
               ) : null}
               {placement.canRemoveFromProfile && onRemoveFromProfile ? (
@@ -302,7 +302,7 @@ export function MapCard({
               ) : null}
               {placement.canUnpublish && onUnpublish ? (
                 <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onUnpublish(map.id) }}>
-                  발행 중단
+                  링크 공유 중지
                 </MenuItem>
               ) : null}
               {onEdit ? (
@@ -343,7 +343,7 @@ function MenuItem({ onClick, variant = "default", children }) {
   )
 }
 
-export function CreatorCard({ user, isFollowed, onToggleFollow, onSelect }) {
+export function CreatorCard({ user, onSelect }) {
   return (
     <article className="creator-card">
       <button className="creator-card__tap" type="button" onClick={() => onSelect(user.id)}>
@@ -351,14 +351,11 @@ export function CreatorCard({ user, isFollowed, onToggleFollow, onSelect }) {
         <strong>{user.name}</strong>
         <span>{user.handle}</span>
       </button>
-      <button className={`button ${isFollowed ? "button--secondary" : "button--primary"} creator-card__follow`} type="button" onClick={() => onToggleFollow(user.id)}>
-        {isFollowed ? "팔로잉" : "팔로우"}
-      </button>
     </article>
   )
 }
 
-export function UserRowCard({ user, isFollowed, onToggleFollow, onSelect }) {
+export function UserRowCard({ user, onSelect }) {
   return (
     <article className="user-row-card">
       <button className="user-row-card__tap" type="button" onClick={() => onSelect(user.id)}>
@@ -368,14 +365,11 @@ export function UserRowCard({ user, isFollowed, onToggleFollow, onSelect }) {
           <small>{user.bio}</small>
         </span>
       </button>
-      <button className={`button ${isFollowed ? "button--secondary" : "button--primary"}`} type="button" onClick={() => onToggleFollow(user.id)}>
-        {isFollowed ? "팔로잉" : "팔로우"}
-      </button>
     </article>
   )
 }
 
-export function FeedCard({ post, isFollowed, onToggleFollow, onSelectUser, onSelectPost, onLike, onOpenMap }) {
+export function FeedCard({ post, onSelectUser, onSelectPost, onLike, onOpenMap }) {
   return (
     <article className="feed-card">
       <div className="feed-card__header">
@@ -389,11 +383,6 @@ export function FeedCard({ post, isFollowed, onToggleFollow, onSelectUser, onSel
             <small>{post.user.handle} · {formatFeedDate(post.date)}</small>
           </span>
         </button>
-        {post.user.id !== "me" ? (
-          <button className={`button ${isFollowed ? "button--secondary" : "button--primary"} feed-card__follow`} type="button" onClick={() => onToggleFollow(post.user.id)}>
-            {isFollowed ? "팔로잉" : "팔로우"}
-          </button>
-        ) : null}
       </div>
       <button className="feed-card__preview" type="button" onClick={() => (onOpenMap && post.mapId ? onOpenMap(post.mapId, post.source) : onSelectPost(post.source, post.id))}>
         <MapPreview title={post.title} emojis={post.emojis} placeCount={post.placeCount} gradient={post.gradient} theme={post.theme} variant="card" caption={post.description} />

@@ -1,6 +1,6 @@
 import { BottomSheet } from "../ui"
 
-// 프로필에 올리기 / 프로필에서 내리기 공통 확인 시트.
+// 프로필 공개 / 프로필에서 내리기 공통 확인 시트.
 // 진입점(MapsList / MapEditor / PublishSheet 후속 / Profile 등)에서 동일한 UI 로 재사용한다.
 //
 // props
@@ -12,11 +12,11 @@ import { BottomSheet } from "../ui"
 //   onCancel    () => void
 export function ProfilePlacementConfirmSheet({ open, mode, mapTitle, submitting = false, onConfirm, onCancel }) {
   const isRemove = mode === "remove"
-  const title = isRemove ? "프로필에서 내릴까요?" : "이 지도를 프로필에 올릴까요?"
-  const subtitle = isRemove ? "발행 링크는 그대로 유지돼요" : "이 지도가 내 프로필 갤러리에 나타나요"
+  const title = isRemove ? "프로필에서 내릴까요?" : "이 지도를 내 프로필에 공개할까요?"
+  const subtitle = isRemove ? "링크 공유 상태는 그대로 유지돼요" : "이 지도가 내 프로필 갤러리에 나타나요"
   const primaryLabel = isRemove
     ? (submitting ? "내리는 중..." : "프로필에서 내리기")
-    : (submitting ? "올리는 중..." : "프로필에 올리기")
+    : (submitting ? "공개하는 중..." : "내 프로필에 공개")
 
   return (
     <BottomSheet open={open} title={title} subtitle={subtitle} onClose={onCancel}>

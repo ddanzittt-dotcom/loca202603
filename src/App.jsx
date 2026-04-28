@@ -132,6 +132,7 @@ export default function App() {
   const [importTargetBusy, setImportTargetBusy] = useState(false)
   const [publishSheet, setPublishSheet] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
+  const [selectedUserProfile, setSelectedUserProfile] = useState(null)
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
@@ -140,7 +141,7 @@ export default function App() {
   const [recordSheetInitialView, setRecordSheetInitialView] = useState("target")
   const [recordTargetMapId, setRecordTargetMapId] = useState(null)
   const [pendingRecordAfterMapCreate, setPendingRecordAfterMapCreate] = useState(false)
-  // 프로필 올리기/내리기 공통 confirm 시트 상태
+  // 프로필 공개/내리기 공통 confirm 시트 상태
   const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
   const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
   const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
@@ -403,28 +404,46 @@ export default function App() {
     if (curatedMaps.length > 0) {
       return curatedMaps.map((m) => ({
         id: m.id, mapId: m.id, title: m.title,
+        description: m.description || "",
         creator: m.creatorName || "", emojis: [], placeCount: m.featureCount || 0,
         gradient: m.gradient, tags: m.tags,
+        placeNames: Array.isArray(m.placeNames) ? m.placeNames : [],
       }))
     }
     // 폴백: 기존 컬렉션 + 커뮤니티
-    const fromCollections = collections.map((c) => ({
-      id: c.id, mapId: c.mapId, title: c.title,
-      creator: c.creator, emojis: c.emojis, placeCount: c.places,
-      gradient: c.gradient,
-    }))
+    const fromCollections = collections.map((c) => {
+      const demoMap = demoMaps.find((mapItem) => mapItem.id === c.mapId)
+      const relatedDemoFeatures = demoFeatures.filter((feature) => feature.mapId === c.mapId)
+      const placeNames = relatedDemoFeatures.map((feature) => feature.title)
+      const tags = [...new Set(relatedDemoFeatures.flatMap((feature) => feature.tags || []))].slice(0, 4)
+      return {
+        id: c.id, mapId: c.mapId, title: c.title,
+        description: demoMap?.description || "",
+        creator: c.creator, emojis: c.emojis, placeCount: c.places,
+        tags,
+        gradient: c.gradient,
+        placeNames,
+      }
+    })
     const fromPosts = communityFeed.slice(0, 6).map((p) => ({
       id: p.id, mapId: p.mapId, title: p.title,
+      description: p.description || p.caption || "",
       creator: p.user.name, emojis: p.emojis, placeCount: p.placeCount,
+      tags: p.tags,
       gradient: p.gradient,
+      placeNames: Array.isArray(p.placeNames) ? p.placeNames : [],
     }))
     return [...fromCollections, ...fromPosts]
   }, [communityFeed, curatedMaps])
 
-  const selectedUser = selectedUserId ? users.find((user) => user.id === selectedUserId) : null
+  const selectedUser = selectedUserProfile?.id === selectedUserId
+    ? selectedUserProfile
+    : selectedUserId
+      ? users.find((user) => user.id === selectedUserId) || null
+      : null
   const selectedUserPosts = useMemo(
-    () => communityFeed.filter((post) => post.user.id === selectedUserId),
-    [communityFeed, selectedUserId],
+    () => communityFeed.filter((post) => post.user.id === selectedUser?.id),
+    [communityFeed, selectedUser?.id],
   )
   const selectedPost = useMemo(() => {
     if (!selectedPostRef) return null
@@ -436,9 +455,9 @@ export default function App() {
     return activeFeaturePool.find((feature) => feature.id === selectedFeatureSummaryId) || null
   }, [activeFeaturePool, selectedFeatureSummaryId])
 
-  // "지도 올리기" 시트 후보 = 아직 프로필에 올라가지 않은 지도.
-  // - non-event: 저장용이면 발행 후 올리기 / 이미 발행됐으면 바로 올리기.
-  // - event: 메인 앱에서 발행은 못 하지만, 대시보드에서 이미 발행된 event map 이면 프로필에 올릴 수 있다.
+  // "지도 공개" 시트 후보 = 아직 프로필에 공개되지 않은 지도.
+  // - non-event: 나만 보기면 링크 공유 후 공개 / 이미 링크 공유 중이면 바로 공개.
+  // - event: 메인 앱에서 링크 공유는 못 하지만, 외부 관리 화면에서 이미 공유 중인 event map 이면 프로필에 공개할 수 있다.
   const onProfileMapIds = useMemo(() => new Set(shares.map((share) => share.mapId)), [shares])
   const profileUploadCandidates = useMemo(() => (
     maps.filter((mapItem) => {
@@ -796,7 +815,7 @@ export default function App() {
     }
   }, [publishMap, publishSubmitting])
 
-  // 프로필 올리기/내리기 공통 confirm 진입점.
+  // 프로필 공개/내리기 공통 confirm 진입점.
   // 호출부: MapsList / MapEditor / PublishSheet 성공 후속 / ProfileScreen 내부.
   const requestProfilePlacement = useCallback((mode, mapId, onSuccess) => {
     if (!mapId) return
@@ -843,7 +862,7 @@ export default function App() {
       .then((result) => {
         if (cancelled) return
         if (result?.deleted) {
-          // 대시보드/로컬 상태와 동기화. 화면에 남아있는 shares 가 있을 수 있으므로 비운다.
+          // 외부 관리 화면/로컬 상태와 동기화. 화면에 남아있는 shares 가 있을 수 있으므로 비운다.
           setShares([])
         }
       })
@@ -1277,11 +1296,6 @@ export default function App() {
             onResumeMyMap={openMapEditor}
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
-            onNavigateToMaps={() => {
-              setActiveTab("maps")
-              setMapsView("list")
-              setActiveMapSource("local")
-            }}
             onNavigateToExplore={() => setActiveTab("explore")}
           />
         ) : null}
@@ -1290,9 +1304,9 @@ export default function App() {
           <ExploreScreen
             recommendedMaps={recommendedMaps}
             communityMapFeatures={communityMapFeatures}
-            communityRequestSummary={communityRequestSummary}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
+            onCreateRecord={openRecordFlow}
             levelEmoji={levelEmoji}
           />
         ) : null}
@@ -1331,7 +1345,7 @@ export default function App() {
             }}
             onPublish={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
             onUnpublish={(mapId) => {
-              if (!window.confirm("발행을 중단할까요?\n발행을 중단하면 프로필에서도 내려가요.")) return
+              if (!window.confirm("링크 공유를 중지할까요?\n링크 공유를 중지하면 프로필에서도 내려가요.")) return
               unpublish(mapId)
             }}
             onAddToProfile={(mapId) => requestProfilePlacement("add", mapId)}
@@ -1404,7 +1418,7 @@ export default function App() {
             placementRow={findPlacementForMap(activeMap?.id, shares)}
             onPublishMap={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
             onUnpublishMap={(mapId) => {
-              if (!window.confirm("발행을 중단할까요?\n발행을 중단하면 프로필에서도 내려가요.")) return
+              if (!window.confirm("링크 공유를 중지할까요?\n링크 공유를 중지하면 프로필에서도 내려가요.")) return
               unpublish(mapId)
             }}
             onAddMapToProfile={(mapId) => requestProfilePlacement("add", mapId)}
@@ -1449,6 +1463,7 @@ export default function App() {
             shares={shares}
             maps={maps}
             features={features}
+            users={users}
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
             characterImage={levelEmoji}
@@ -1459,16 +1474,20 @@ export default function App() {
             onSignOut={cloudMode ? handleSignOut : null}
             onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
             onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
+            onSelectUser={(profile) => {
+              setSelectedUserProfile(profile)
+              setSelectedUserId(profile.id)
+            }}
             onUpdateProfile={handleUpdateProfile}
             onBatchAddToProfile={async (mapIds) => {
               const results = await Promise.allSettled(mapIds.map((id) => addMapToProfile(id)))
               const succeeded = results.filter((r) => r.status === "fulfilled").length
               if (succeeded === mapIds.length) {
-                showToast(`${succeeded}개 지도를 프로필에 올렸어요`)
+                showToast(`${succeeded}개 지도를 프로필에 공개했어요`)
               } else if (succeeded > 0) {
-                showToast(`${succeeded}/${mapIds.length}개 지도를 프로필에 올렸어요`)
+                showToast(`${succeeded}/${mapIds.length}개 지도를 프로필에 공개했어요`)
               } else {
-                showToast("프로필에 올리지 못했어요")
+                showToast("프로필에 공개하지 못했어요")
               }
             }}
             onNavigateToMaps={() => setActiveTab("maps")}
@@ -1592,12 +1611,12 @@ export default function App() {
         candidates={profileUploadCandidates} features={features}
         onPublish={handlePublishSubmit}
         onAddToProfile={(mapId) => {
-          // 이미 발행된 지도: 공통 confirm 으로 바로 전환.
+          // 이미 링크 공유 중인 지도: 공통 confirm 으로 바로 전환.
           setPublishSheet(null)
           requestProfilePlacement("add", mapId)
         }}
         onOfferAddToProfile={(mapId) => {
-          // 발행 성공 후 공통 confirm 시트로 전환.
+          // 링크 공유 성공 후 공통 confirm 시트로 전환.
           setPublishSheet(null)
           requestProfilePlacement("add", mapId)
         }}
@@ -1607,7 +1626,10 @@ export default function App() {
       <UserProfileSheet
         user={selectedUser} userPosts={selectedUserPosts}
         isFollowing={selectedUser ? followed.includes(selectedUser.id) : false}
-        onClose={() => setSelectedUserId(null)}
+        onClose={() => {
+          setSelectedUserId(null)
+          setSelectedUserProfile(null)
+        }}
         onToggleFollow={toggleFollow} onSelectPost={setSelectedPostRef}
       />
       <PostDetailSheet

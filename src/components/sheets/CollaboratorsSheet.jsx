@@ -11,7 +11,7 @@ import {
 } from "../../lib/mapService"
 
 const ROLE_OPTIONS = [
-  { value: "operator", label: "운영자" },
+  { value: "operator", label: "관리자" },
   { value: "editor", label: "편집자" },
   { value: "viewer", label: "뷰어" },
 ]
@@ -157,7 +157,7 @@ export function CollaboratorsSheet({ open, mapId, mapRole = "owner", onClose, sh
   }
 
   const subtitle = useMemo(() => {
-    if (canManageCollaborators) return "운영자/편집자/뷰어 권한을 관리하고 승인 요청을 처리하세요."
+    if (canManageCollaborators) return "관리자/편집자/뷰어 권한을 관리하고 승인 요청을 처리하세요."
     if (canReviewRequests) return "편집 요청 승인 상태를 확인하고 처리하세요."
     return "협업자 목록을 확인하세요."
   }, [canManageCollaborators, canReviewRequests])

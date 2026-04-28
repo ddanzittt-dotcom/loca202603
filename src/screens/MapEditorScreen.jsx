@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
@@ -30,6 +30,41 @@ function computeRouteLengthKm(points) {
     km += 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
   }
   return km > 0 ? km : null
+}
+
+const RECORD_FILTERS = [
+  { id: "all", label: "전체" },
+  { id: "pin", label: "장소" },
+  { id: "route", label: "길·코스" },
+  { id: "area", label: "구역" },
+  { id: "photo", label: "사진 있음" },
+  { id: "memory", label: "기억 있음" },
+]
+
+function getFeaturePhotos(feature) {
+  const ownPhotos = Array.isArray(feature?.photos) ? feature.photos : []
+  const memoPhotos = (feature?.memos || []).flatMap((memo) => (
+    Array.isArray(memo.photos) ? memo.photos : []
+  ))
+  return [...ownPhotos, ...memoPhotos].filter(Boolean)
+}
+
+function hasFeatureMemory(feature) {
+  return Boolean(
+    feature?.note?.trim()
+    || (feature?.memos || []).some((memo) => memo.text?.trim() || (memo.photos || []).length > 0)
+    || (feature?.voices || []).length > 0,
+  )
+}
+
+function getFeatureSearchText(feature) {
+  const memoTexts = (feature?.memos || []).map((memo) => memo.text || "")
+  return [
+    feature?.title,
+    feature?.note,
+    ...(Array.isArray(feature?.tags) ? feature.tags : []),
+    ...memoTexts,
+  ].join(" ").toLowerCase()
 }
 
 
@@ -106,15 +141,15 @@ export function MapEditorScreen({
   onDismissFirstPinHint,
 }) {
   const placement = getProfilePlacementState(map, placementRow)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [externalSearchQuery, setExternalSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [searching, setSearching] = useState(false)
   const [pendingSearchPin, setPendingSearchPin] = useState(null)
   const [mappingSearchPin, setMappingSearchPin] = useState(false)
+  const [recordSearchQuery, setRecordSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState("all")
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [stripOpen, setStripOpen] = useState(false)
+  const [stripOpen, setStripOpen] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
@@ -131,7 +166,8 @@ export function MapEditorScreen({
   const voicePlayback = useVoicePlayback()
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
-  const trimmedSearchQuery = searchQuery.trim()
+  const trimmedExternalSearchQuery = externalSearchQuery.trim()
+  const normalizedRecordSearchQuery = recordSearchQuery.trim().toLowerCase()
   const summaryOpen = Boolean(selectedFeatureSummary)
   const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
   // 내 지도(personal)는 본인 지도이므로 항상 작성자. 커뮤니티는 createdBy 로 판정.
@@ -146,6 +182,7 @@ export function MapEditorScreen({
   )
   const canOpenDetailOnHeader = !communityMode && typeof onOpenFeatureDetail === "function"
   const canMapPinFromSearch = !readOnly && typeof onCreatePinAtLocation === "function"
+  const showExternalPlaceSearch = !readOnly && editorMode === "pin"
 
   const handleSummaryRequestEdit = useCallback(async () => {
     if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
@@ -166,7 +203,7 @@ export function MapEditorScreen({
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
     const locationLabel = result?.roadAddress || result?.jibunAddress || "선택한 위치"
     onSearchLocation?.({ lat, lng, zoom: 16 })
-    setSearchQuery(locationLabel)
+    setExternalSearchQuery(locationLabel)
     setSearchOpen(false)
     setSearching(false)
     if (canMapPinFromSearch) {
@@ -230,15 +267,37 @@ export function MapEditorScreen({
     return null
   })() : null
 
-  const visibleFeatures = activeFilter === "all" ? features : features.filter((feature) => feature.type === activeFilter)
+  const visibleFeatures = useMemo(() => (
+    features.filter((feature) => {
+      const matchesFilter = (() => {
+        if (activeFilter === "all") return true
+        if (activeFilter === "photo") return getFeaturePhotos(feature).length > 0
+        if (activeFilter === "memory") return hasFeatureMemory(feature)
+        return feature.type === activeFilter
+      })()
+      if (!matchesFilter) return false
+      if (!normalizedRecordSearchQuery) return true
+      return getFeatureSearchText(feature).includes(normalizedRecordSearchQuery)
+    })
+  ), [activeFilter, features, normalizedRecordSearchQuery])
 
   useEffect(() => {
-    if (!trimmedSearchQuery) return undefined
+    if (showExternalPlaceSearch) return
+    setExternalSearchQuery("")
+    setSearchResults([])
+    setSearchOpen(false)
+    setSearching(false)
+    setPendingSearchPin(null)
+    setMappingSearchPin(false)
+  }, [showExternalPlaceSearch])
+
+  useEffect(() => {
+    if (!showExternalPlaceSearch || !trimmedExternalSearchQuery) return undefined
 
     const controller = new AbortController()
     let cancelled = false
     const timeoutId = window.setTimeout(() => {
-      const query = trimmedSearchQuery
+      const query = trimmedExternalSearchQuery
       setSearching(true)
 
       // 한국어 검색어는 Naver geocode를 우선 사용
@@ -308,10 +367,10 @@ export function MapEditorScreen({
       controller.abort()
       window.clearTimeout(timeoutId)
     }
-  }, [trimmedSearchQuery])
+  }, [showExternalPlaceSearch, trimmedExternalSearchQuery])
 
   return (
-    <section className={`map-editor${summaryOpen ? " map-editor--summary-open" : ""}`}>
+    <section className={`map-editor${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}`}>
       {/* 상단 헤더 */}
       <div className="me-bar">
         <div className="me-bar__card">
@@ -373,7 +432,7 @@ export function MapEditorScreen({
                         ) : null}
                         {placement.canRemoveFromProfile && onRemoveMapFromProfile ? (
                           <MapMenuItem onClick={() => { setMapMenuOpen(false); onRemoveMapFromProfile(map.id) }}>
-                            내 프로필 공개 해제
+                            프로필에서 내리기
                           </MapMenuItem>
                         ) : null}
                         {placement.canUnpublish && onUnpublishMap ? (
@@ -392,59 +451,61 @@ export function MapEditorScreen({
       </div>
 
       <div className="map-editor__canvas-wrap">
-        <div className="map-search-box">
-          <div className="map-search-box__bar">
-            <SearchIcon size={13} color="#aaa" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => {
-                const nextQuery = event.target.value
-                setSearchQuery(nextQuery)
-                setPendingSearchPin(null)
-                if (!nextQuery.trim()) {
-                  setSearchResults([])
-                  setSearchOpen(false)
-                  setSearching(false)
-                }
-              }}
-              placeholder="주소 또는 장소를 검색하세요"
-            />
-            {searchQuery ? (
-              <button
-                className="map-search-box__clear"
-                type="button"
-                onClick={() => {
-                  setSearchQuery("")
-                  setSearchResults([])
-                  setSearchOpen(false)
-                  setSearching(false)
+        {showExternalPlaceSearch ? (
+          <div className="map-search-box map-search-box--external">
+            <div className="map-search-box__bar">
+              <SearchIcon size={13} color="#aaa" />
+              <input
+                type="search"
+                value={externalSearchQuery}
+                onChange={(event) => {
+                  const nextQuery = event.target.value
+                  setExternalSearchQuery(nextQuery)
                   setPendingSearchPin(null)
+                  if (!nextQuery.trim()) {
+                    setSearchResults([])
+                    setSearchOpen(false)
+                    setSearching(false)
+                  }
                 }}
-                aria-label="검색어 지우기"
-              >
-                ×
-              </button>
+                placeholder="주소 또는 장소를 검색하세요"
+              />
+              {externalSearchQuery ? (
+                <button
+                  className="map-search-box__clear"
+                  type="button"
+                  onClick={() => {
+                    setExternalSearchQuery("")
+                    setSearchResults([])
+                    setSearchOpen(false)
+                    setSearching(false)
+                    setPendingSearchPin(null)
+                  }}
+                  aria-label="검색어 지우기"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
+            {searchOpen ? (
+              <div className="map-search-box__results">
+                {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
+                {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요. 다른 주소나 장소 이름으로 다시 검색해 주세요.</div> : null}
+                {searchResults.map((result) => (
+                  <button
+                    key={result.id}
+                    className="map-search-box__item"
+                    type="button"
+                    onClick={() => handleSearchResultSelect(result)}
+                  >
+                    <strong>{result.roadAddress || result.jibunAddress}</strong>
+                    {result.roadAddress && result.jibunAddress ? <span>{result.jibunAddress}</span> : null}
+                  </button>
+                ))}
+              </div>
             ) : null}
           </div>
-          {searchOpen ? (
-            <div className="map-search-box__results">
-              {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
-              {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요. 다른 주소나 장소 이름으로 다시 검색해 주세요.</div> : null}
-              {searchResults.map((result) => (
-                <button
-                  key={result.id}
-                  className="map-search-box__item"
-                  type="button"
-                  onClick={() => handleSearchResultSelect(result)}
-                >
-                  <strong>{result.roadAddress || result.jibunAddress}</strong>
-                  {result.roadAddress && result.jibunAddress ? <span>{result.jibunAddress}</span> : null}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        ) : null}
 
         <MapErrorBoundary>
           <NaverMap
@@ -465,7 +526,7 @@ export function MapEditorScreen({
           />
         </MapErrorBoundary>
 
-        {pendingSearchPin && canMapPinFromSearch ? (
+        {pendingSearchPin && canMapPinFromSearch && showExternalPlaceSearch ? (
           <div className="search-pin-confirm">
             <div className="search-pin-confirm__text">
               <strong>{"이 위치를 장소로 남길까요?"}</strong>
@@ -603,94 +664,121 @@ export function MapEditorScreen({
             />
           </div>
         ) : null}
-
-
-        <div
-          className={`map-filter-bar map-filter-bar--upper${communityMode ? " map-filter-bar--community" : ""}${stripOpen && features.length > 0 ? " map-filter-bar--raised" : ""}`}
-          aria-label="지도 필터"
-        >
-          <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setFilterOpen(!filterOpen)}>
-            필터 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{filterOpen ? "▲" : "▼"}</span>
-          </button>
-          {filterOpen ? (
-            <>
-              <button className={`map-filter-chip${activeFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("all")}>전체</button>
-              <button className={`map-filter-chip${activeFilter === "pin" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("pin")}>장소</button>
-              <button className={`map-filter-chip${activeFilter === "route" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("route")}>경로</button>
-              <button className={`map-filter-chip${activeFilter === "area" ? " is-active" : ""}`} type="button" onClick={() => setActiveFilter("area")}>영역</button>
-            </>
-          ) : null}
-        </div>
-
         {features.length > 0 ? (
-          <div className="map-list-bar" aria-label="지도에 남긴 목록">
-            <button className="map-filter-chip map-filter-toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
-              지도에 남긴 목록({features.length}) <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▲" : "▼"}</span>
-            </button>
+          <div className={`map-list-bar${stripOpen ? " is-open" : " is-collapsed"}`} aria-label="지도 안 기록 목록">
+            <div className="map-list-bar__head">
+              <button className="map-filter-chip map-filter-toggle map-list-bar__toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
+                지도 안 기록 <span className="map-list-bar__count">{visibleFeatures.length}/{features.length}</span>
+                <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▼" : "▲"}</span>
+              </button>
+            </div>
             {stripOpen ? (
-              <div
-                className="map-place-strip"
-                ref={stripRef}
-                onMouseDown={(e) => {
-                  const el = stripRef.current
-                  if (!el) return
-                  stripDragRef.current = { startX: e.pageX, scrollLeft: el.scrollLeft, dragging: true }
-                  el.style.cursor = "grabbing"
-                }}
-                onMouseMove={(e) => {
-                  const d = stripDragRef.current
-                  if (!d.dragging) return
-                  e.preventDefault()
-                  const el = stripRef.current
-                  if (!el) return
-                  el.scrollLeft = d.scrollLeft - (e.pageX - d.startX)
-                }}
-                onMouseUp={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
-                onMouseLeave={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
-                onTouchStart={(e) => {
-                  const el = stripRef.current
-                  if (!el) return
-                  stripDragRef.current = { startX: e.touches[0].pageX, scrollLeft: el.scrollLeft, dragging: true }
-                }}
-                onTouchMove={(e) => {
-                  const d = stripDragRef.current
-                  if (!d.dragging) return
-                  const el = stripRef.current
-                  if (!el) return
-                  el.scrollLeft = d.scrollLeft - (e.touches[0].pageX - d.startX)
-                }}
-                onTouchEnd={() => { stripDragRef.current.dragging = false }}
-              >
-                {features.map((feature) => (
-                  <div
-                    key={feature.id}
-                    className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
-                    onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
-                  >
-                    <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
-                      {(() => {
-                        if (feature.type === "pin") {
-                          const badge = getFeatureBadgeMeta(feature)
-                          if (badge.kind === "emoji") return <span className="me-strip-icon__emoji">{badge.emoji}</span>
-                          if (badge.kind === "icon") return <img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" />
-                          return <span className="me-strip-icon__emoji">{"\u{1F4CD}"}</span>
-                        }
-                        if (feature.type === "route") {
-                          return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
-                        }
-                        return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
-                      })()}
-                    </div>
-                    <div className="me-strip-info">
-                      <strong>{feature.title}</strong>
-                      <span>{feature.note || ""}</span>
-                    </div>
+              <>
+                <label className="map-record-search" aria-label="지도 안 기록 검색">
+                  <SearchIcon size={14} color="#9b938a" />
+                  <input
+                    type="search"
+                    value={recordSearchQuery}
+                    onChange={(event) => setRecordSearchQuery(event.target.value)}
+                    placeholder="장소, 메모, 태그로 찾아보세요"
+                  />
+                  {recordSearchQuery ? (
+                    <button
+                      className="map-record-search__clear"
+                      type="button"
+                      onClick={() => setRecordSearchQuery("")}
+                      aria-label="기록 검색어 지우기"
+                    >
+                      ×
+                    </button>
+                  ) : null}
+                </label>
+
+                <div className="map-record-filters" aria-label="지도 안 기록 필터">
+                  {RECORD_FILTERS.map((filterItem) => (
+                    <button
+                      key={filterItem.id}
+                      className={`map-filter-chip map-filter-chip--record${activeFilter === filterItem.id ? " is-active" : ""}`}
+                      type="button"
+                      data-type={filterItem.id}
+                      onClick={() => setActiveFilter(filterItem.id)}
+                    >
+                      {filterItem.label}
+                    </button>
+                  ))}
+                </div>
+
+                {visibleFeatures.length === 0 ? (
+                  <div className="map-list-empty">
+                    <strong>조건에 맞는 기록이 없어요</strong>
+                    <span>검색어나 필터를 조금 넓혀보세요.</span>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div
+                    className="map-place-strip"
+                    ref={stripRef}
+                    onMouseDown={(e) => {
+                      const el = stripRef.current
+                      if (!el) return
+                      stripDragRef.current = { startX: e.pageX, scrollLeft: el.scrollLeft, dragging: true }
+                      el.style.cursor = "grabbing"
+                    }}
+                    onMouseMove={(e) => {
+                      const d = stripDragRef.current
+                      if (!d.dragging) return
+                      e.preventDefault()
+                      const el = stripRef.current
+                      if (!el) return
+                      el.scrollLeft = d.scrollLeft - (e.pageX - d.startX)
+                    }}
+                    onMouseUp={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+                    onMouseLeave={() => { stripDragRef.current.dragging = false; if (stripRef.current) stripRef.current.style.cursor = "" }}
+                    onTouchStart={(e) => {
+                      const el = stripRef.current
+                      if (!el) return
+                      stripDragRef.current = { startX: e.touches[0].pageX, scrollLeft: el.scrollLeft, dragging: true }
+                    }}
+                    onTouchMove={(e) => {
+                      const d = stripDragRef.current
+                      if (!d.dragging) return
+                      const el = stripRef.current
+                      if (!el) return
+                      el.scrollLeft = d.scrollLeft - (e.touches[0].pageX - d.startX)
+                    }}
+                    onTouchEnd={() => { stripDragRef.current.dragging = false }}
+                  >
+                    {visibleFeatures.map((feature) => (
+                      <div
+                        key={feature.id}
+                        className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                        onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
+                      >
+                        <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
+                          {(() => {
+                            if (feature.type === "pin") {
+                              const badge = getFeatureBadgeMeta(feature)
+                              if (badge.kind === "emoji") return <span className="me-strip-icon__emoji">{badge.emoji}</span>
+                              if (badge.kind === "icon") return <img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" />
+                              return <span className="me-strip-icon__emoji">{"\u{1F4CD}"}</span>
+                            }
+                            if (feature.type === "route") {
+                              return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                            }
+                            return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+                          })()}
+                        </div>
+                        <div className="me-strip-info">
+                          <strong>{feature.title}</strong>
+                          <span>{feature.note || (feature.tags || []).join(" · ") || ""}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : null}
           </div>
         ) : null}

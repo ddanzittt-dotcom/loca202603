@@ -2,19 +2,19 @@ import { BottomSheet } from "../ui"
 import { Check } from "lucide-react"
 import { getProfilePlacementState } from "../../lib/mapPlacement"
 
-// "지도 올리기" 시트
-// - 미발행 지도: 발행 후 프로필에 올리기 제안.
-// - 이미 발행됐지만 프로필 미노출 지도: 바로 프로필에 올리기.
-// - 행사 지도: 대시보드에서 이미 발행된 경우만 후보로 노출. 발행은 불가.
+// "지도 공개" 시트
+// - 링크 공유가 꺼진 지도: 링크 공유 후 프로필 공개 제안.
+// - 링크 공유 중이지만 프로필 미노출 지도: 바로 프로필 공개.
+// - 행사 지도: 외부 관리 화면에서 이미 링크 공유 중인 경우만 후보로 노출.
 //
 // props
 //   publishSheet     { selectedMapId, caption, justPublishedMapId? } | null
 //   setPublishSheet  setter
-//   candidates       후보 지도 목록 (미발행 non-event + 발행됨/프로필 미노출)
+//   candidates       후보 지도 목록 (나만 보기 non-event + 링크 공유 중/프로필 미노출)
 //   features
-//   onPublish        () => Promise<string|null>  — 발행 후 mapId 리턴
-//   onAddToProfile   (mapId) => void  — 이미 발행된 지도를 바로 프로필에 올리는 진입점
-//   onOfferAddToProfile?  (mapId) => void  — 발행 성공 후 "프로필에 올리기" 진입점
+//   onPublish        () => Promise<string|null>  — 링크 공유 후 mapId 리턴
+//   onAddToProfile   (mapId) => void  — 이미 링크 공유 중인 지도를 바로 프로필 공개하는 진입점
+//   onOfferAddToProfile?  (mapId) => void  — 링크 공유 성공 후 "내 프로필에 공개" 진입점
 //   onClose
 //   publishing       boolean
 export function PublishSheet({
@@ -45,34 +45,34 @@ export function PublishSheet({
     if (selectedNeedsPublish) {
       const publishedMapId = await onPublish()
       if (publishedMapId) {
-        // 발행 성공 — 다음 단계로 "프로필에 올리기 제안" 화면으로 전환.
+        // 링크 공유 성공 — 다음 단계로 "프로필 공개 제안" 화면으로 전환.
         setPublishSheet({ selectedMapId: null, caption: "", justPublishedMapId: publishedMapId })
       }
       return
     }
     if (selectedAddsDirectly) {
-      // 이미 발행된 지도: 공통 confirm 으로 바로 전환.
+      // 이미 링크 공유 중인 지도: 공통 confirm 으로 바로 전환.
       onAddToProfile?.(selectedMap.id)
     }
   }
 
   const primaryLabel = publishing
-    ? (selectedNeedsPublish ? "발행 중..." : "올리는 중...")
-    : (selectedNeedsPublish ? "발행하기" : "프로필에 올리기")
+    ? (selectedNeedsPublish ? "링크 공유 켜는 중..." : "공개하는 중...")
+    : (selectedNeedsPublish ? "링크 공유 켜기" : "내 프로필에 공개")
 
-  // ── 발행 성공 후속: 프로필에 올리기 제안 뷰 ──
+  // ── 링크 공유 성공 후속: 프로필 공개 제안 뷰 ──
   if (justPublishedMapId) {
     return (
       <BottomSheet
         open={Boolean(publishSheet)}
-        title="발행이 완료됐어요"
-        subtitle="보여주고 싶은 지도만 프로필에 올릴 수 있어요"
+        title="링크 공유가 켜졌어요"
+        subtitle="보여주고 싶은 지도만 프로필에 공개할 수 있어요"
         onClose={onClose}
       >
         <div className="form-stack">
           <article className="empty-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
             <strong>{justPublishedMap?.title || "지도"}</strong>
-            <p>이제 공개 링크로 누구나 볼 수 있어요. 프로필에 올리면 내 갤러리에도 나타나요.</p>
+            <p>이제 링크를 아는 사람이 볼 수 있어요. 프로필에 공개하면 내 갤러리에도 나타나요.</p>
           </article>
 
           <div className="pds__actions">
@@ -84,7 +84,7 @@ export function PublishSheet({
               type="button"
               onClick={() => onOfferAddToProfile?.(justPublishedMapId)}
             >
-              프로필에 올리기
+              내 프로필에 공개
             </button>
           </div>
         </div>
@@ -96,8 +96,8 @@ export function PublishSheet({
   return (
     <BottomSheet
       open={Boolean(publishSheet)}
-      title="프로필에 어떤 지도를 올릴까요?"
-      subtitle="발행 안 한 지도는 발행 후 올라가요"
+      title="프로필에 어떤 지도를 공개할까요?"
+      subtitle="나만 보기 지도는 링크 공유를 먼저 켜요"
       onClose={onClose}
     >
       {candidates.length === 0 ? (
@@ -108,8 +108,8 @@ export function PublishSheet({
       ) : (
         <div className="form-stack">
           <article className="empty-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
-            <strong>발행과 프로필 올리기는 달라요.</strong>
-            <p>발행은 공개 링크를 만드는 것, 프로필에 올리기는 내 갤러리에 보여주는 것이에요.</p>
+            <strong>링크 공유와 프로필 공개는 달라요.</strong>
+            <p>링크 공유는 볼 수 있는 링크를 만드는 것, 프로필 공개는 내 갤러리에 보여주는 것이에요.</p>
           </article>
 
           <div className="card-list">
@@ -119,7 +119,7 @@ export function PublishSheet({
               const isActive = publishSheet?.selectedMapId === mapItem.id
               const isEmpty = mapFeatures.length === 0
               const placement = getProfilePlacementState(mapItem, null)
-              const statusLabel = placement.isPublished ? "발행됨" : "저장용"
+              const statusLabel = placement.isPublished ? "링크 공유 중" : "나만 보기"
               const statusBg = placement.isPublished ? "#E1F5EE" : "#FAEEDA"
               const statusColor = placement.isPublished ? "#085041" : "#633806"
               return (
