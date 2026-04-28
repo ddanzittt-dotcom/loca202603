@@ -84,21 +84,38 @@
 }
 
 /* 이름 라벨 */
-.loca-pin-label {
+.loca-pin-label,
+.loca-route-label,
+.loca-area-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: #fff;
-  border: 0.5px solid rgba(0,0,0,0.08);
-  border-radius: 6px;
-  color: #1A1A1A;
-  font-size: 10px;
-  font-weight: 600;
   padding: 3px 8px;
+  border-radius: 6px;
+  border: 0.5px solid rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   white-space: nowrap;
+}
+
+.loca-pin-label {
   max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   margin-top: 2px;
   transition: opacity 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.loca-pin-label span,
+.loca-route-label span,
+.loca-area-label span {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.loca-pin-label span {
+  color: #1A1A1A;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 클러스터 마커 */
@@ -154,20 +171,7 @@
 }
 
 /* 경로 라벨 */
-.loca-route-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #fff;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 0.5px solid rgba(0,0,0,0.08);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  white-space: nowrap;
-}
 .loca-route-label span {
-  font-size: 10px;
-  font-weight: 600;
   color: #0F6E56;
 }
 
@@ -180,20 +184,7 @@
 }
 
 /* 구역 라벨 */
-.loca-area-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #fff;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 0.5px solid rgba(0,0,0,0.08);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  white-space: nowrap;
-}
 .loca-area-label span {
-  font-size: 10px;
-  font-weight: 600;
   color: #854F0B;
 }
 

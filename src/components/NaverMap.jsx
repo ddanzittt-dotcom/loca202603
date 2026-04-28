@@ -403,7 +403,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             : ""
           const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;background:${pinColor};${isSelected ? "border-color:#2D4A3E" : ""}`
           const labelHtml = showPinLabel
-            ? `<div class="loca-pin-label">${escapeHtml(feature.title)}</div>`
+            ? `<div class="loca-pin-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-5-5.2-5-9a5 5 0 1 1 10 0c0 3.8-5 9-5 9z"/><circle cx="12" cy="12" r="1.6"/></svg><span style="color:${pinColor}">${escapeHtml(feature.title)}</span></div>`
             : ""
           const markerSize = zoomLevel === 1 ? 20 : zoomLevel === 2 ? 30 : 40
           const anchorY = zoomLevel === 1 ? 10 : zoomLevel === 2 ? 20 : 48
