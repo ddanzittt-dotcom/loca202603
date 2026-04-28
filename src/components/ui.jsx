@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
-import { Home, Map, MapPin, Search, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import { Home, Map, MapPin, PlusCircle, Compass, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 
 export function BottomSheet({ open, title, subtitle, onClose, children }) {
@@ -25,11 +25,11 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
   )
 }
 
-const NAV_ICONS = { home: Home, maps: Map, places: MapPin, search: Search, profile: User }
-const NAV_LABELS = { home: "홈", maps: "지도", places: "장소", search: "검색", profile: "프로필" }
+const NAV_ICONS = { home: Home, maps: Map, "add-place": PlusCircle, explore: Compass, profile: User }
+const NAV_LABELS = { home: "홈", maps: "내 지도", "add-place": "장소", explore: "탐색", profile: "프로필" }
 
 export function BottomNav({ activeTab, onChange }) {
-  const items = ["home", "maps", "places", "search", "profile"]
+  const items = ["home", "maps", "add-place", "explore", "profile"]
 
   return (
     <nav className="bottom-nav">
@@ -37,13 +37,15 @@ export function BottomNav({ activeTab, onChange }) {
         const Icon = NAV_ICONS[id]
         const label = NAV_LABELS[id] || id
         const isActive = activeTab === id
+        const isAddAction = id === "add-place"
+        const ariaLabel = isAddAction ? "장소 남기기" : label
         return (
           <button
             key={id}
-            className={`bottom-nav__item${isActive ? " is-active" : ""}`}
+            className={`bottom-nav__item${isActive ? " is-active" : ""}${isAddAction ? " bottom-nav__item--add" : ""}`}
             type="button"
             onClick={() => onChange(id)}
-            aria-label={label}
+            aria-label={ariaLabel}
           >
             <span className="bottom-nav__icon">
               <Icon size={20} strokeWidth={isActive ? 2.4 : 1.5} fill={isActive ? "currentColor" : "none"} />

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Bell, Settings as SettingsIcon } from "lucide-react"
-import { BottomNav, Toast } from "./components/ui"
+import { Bell, MapPin, Navigation, Search as SearchIcon, Settings as SettingsIcon } from "lucide-react"
+import { BottomNav, BottomSheet, Toast } from "./components/ui"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -38,11 +38,10 @@ import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 const WelcomeScreen = lazy(() => import("./screens/WelcomeScreen").then((m) => ({ default: m.WelcomeScreen })))
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
+const ExploreScreen = lazy(() => import("./screens/ExploreScreen").then((m) => ({ default: m.ExploreScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
 const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
-const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
-const SearchScreen = lazy(() => import("./screens/SearchScreen").then((m) => ({ default: m.SearchScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
@@ -71,6 +70,40 @@ const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) =>
 const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
 import "./map-share-editor.css"
+
+function AddPlaceActionSheet({ open, onClose, onSearchPlace, onUseCurrentLocation, onPickOnMap }) {
+  return (
+    <BottomSheet
+      open={open}
+      title="장소 남기기"
+      subtitle="어디서 시작할까요?"
+      onClose={onClose}
+    >
+      <div className="settings-card">
+        <div className="settings-link-list">
+          <button className="settings-link-row" type="button" onClick={onSearchPlace}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <SearchIcon size={16} />
+              장소 검색
+            </span>
+          </button>
+          <button className="settings-link-row" type="button" onClick={onUseCurrentLocation}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Navigation size={16} />
+              현재 위치
+            </span>
+          </button>
+          <button className="settings-link-row" type="button" onClick={onPickOnMap}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <MapPin size={16} />
+              지도에서 선택
+            </span>
+          </button>
+        </div>
+      </div>
+    </BottomSheet>
+  )
+}
 
 function ScreenFallback() {
   return (
@@ -136,6 +169,7 @@ export default function App() {
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
   const [importSheetOpen, setImportSheetOpen] = useState(false)
+  const [addPlaceSheetOpen, setAddPlaceSheetOpen] = useState(false)
   // 프로필 올리기/내리기 공통 confirm 시트 상태
   const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
   const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
@@ -238,7 +272,6 @@ export default function App() {
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
   const requiresAuthForCurrentTab =
     activeTab === "profile" ||
-    activeTab === "places" ||
     (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
   const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
   const showPersonalLoading = hasSupabaseEnv && (!authReady || cloudLoading) && requiresAuthForCurrentTab
@@ -470,7 +503,7 @@ export default function App() {
     saveMapSheet, deleteMap: deleteMapAction,
     importSharedMapToLocal, importMapBundleToLocal,
     publishMap, unpublish, addMapToProfile, removeMapFromProfile,
-    openFeatureFromPlaces, handleTabChange,
+    handleTabChange,
   } = useMapCRUD({
     maps, setMaps, features, setFeatures, shares, setShares,
     cloudMode, mapSheet, setMapSheet, setFeatureSheet,
@@ -640,7 +673,77 @@ export default function App() {
     setActiveMapSource("local")
   }, [activeMapSource, confirmDiscardEditorDraft, maps, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
+  const startAddPlaceFlow = useCallback(async (entryMode = "map") => {
+    setAddPlaceSheetOpen(false)
+
+    if (
+      activeTab === "maps"
+      && mapsView === "editor"
+      && activeMapSource === "local"
+      && activeMapId
+    ) {
+      if (!confirmDiscardEditorDraft()) return
+      setFeatureSheet(null)
+      setSelectedFeatureId(null)
+      setSelectedFeatureSummaryId(null)
+      setDraftPoints([])
+      setEditorMode("pin")
+      if (entryMode === "current") {
+        await locateMe()
+      }
+      showToast(entryMode === "search"
+        ? "주소 또는 장소를 검색해 남겨보세요."
+        : entryMode === "current"
+          ? "현재 위치 주변에 장소를 남겨보세요."
+          : "지도를 탭해 장소를 남겨보세요.")
+      return
+    }
+
+    const personalMaps = maps.filter((mapItem) => !isEventMap(mapItem))
+    if (personalMaps.length === 0) {
+      openCreateMapSheet()
+      showToast("먼저 지도를 만들고 첫 장소를 남겨보세요.")
+      return
+    }
+
+    const sortedByRecent = [...personalMaps].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+    const targetMap = sortedByRecent[0] || personalMaps[0]
+    if (!targetMap?.id) return
+
+    if (activeMapSource === "shared") {
+      setSharedMapData(null)
+      setActiveMapSource("local")
+    }
+    openMapEditor(targetMap.id)
+    setFeatureSheet(null)
+    setSelectedFeatureId(null)
+    setSelectedFeatureSummaryId(null)
+    setDraftPoints([])
+    setEditorMode("pin")
+    if (entryMode === "current") {
+      await locateMe()
+    }
+    showToast(entryMode === "search"
+      ? "주소 또는 장소를 검색해 남겨보세요."
+      : entryMode === "current"
+        ? "현재 위치 주변에 장소를 남겨보세요."
+        : "지도를 탭해 장소를 남겨보세요.")
+  }, [
+    activeMapId, activeMapSource, activeTab, confirmDiscardEditorDraft,
+    locateMe, maps, mapsView, openCreateMapSheet, openMapEditor, setDraftPoints,
+    setEditorMode, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId,
+    setActiveMapSource, setSharedMapData, showToast,
+  ])
+
+  const openAddPlaceFlow = useCallback(() => {
+    setAddPlaceSheetOpen(true)
+  }, [])
+
   const handleBottomNavChange = useCallback((nextTab) => {
+    if (nextTab === "add-place") {
+      openAddPlaceFlow()
+      return
+    }
     if (nextTab !== activeTab && !confirmDiscardEditorDraft()) return
     handleTabChange(nextTab)
     if (nextTab !== "maps" && activeMapSource === "shared") {
@@ -648,7 +751,7 @@ export default function App() {
       setActiveMapSource("local")
       setActiveMapId(maps[0]?.id ?? null)
     }
-  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps])
+  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps, openAddPlaceFlow])
 
   const handleSavePostMap = useCallback(async (post) => {
     if (!post?.mapId) return
@@ -1169,18 +1272,29 @@ export default function App() {
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "home" ? (
           <HomeScreen
+            maps={maps}
+            features={features}
+            recommendedMaps={recommendedMaps}
+            onResumeMyMap={openMapEditor}
+            onCreateMap={openAddPlaceFlow}
+            onOpenMap={openDemoMap}
+            onNavigateToMaps={() => {
+              setActiveTab("maps")
+              setMapsView("list")
+              setActiveMapSource("local")
+            }}
+            onNavigateToExplore={() => setActiveTab("explore")}
+          />
+        ) : null}
+
+        {!showPersonalLoading && !showPersonalGate && activeTab === "explore" ? (
+          <ExploreScreen
             recommendedMaps={recommendedMaps}
             communityMapFeatures={communityMapFeatures}
             communityRequestSummary={communityRequestSummary}
-            userStats={userStats}
-            viewerProfile={viewerProfile}
-            maps={maps}
-            features={features}
-            followedCount={followed.length}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
-            onResumeMyMap={openMapEditor}
-            onCreateMap={openCreateMapSheet}
+            levelEmoji={levelEmoji}
           />
         ) : null}
 
@@ -1328,8 +1442,6 @@ export default function App() {
           />
         ) : null}
 
-        {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? <PlacesScreen maps={maps} features={features} characterImage={levelEmoji} onOpenFeature={openFeatureFromPlaces} /> : null}
-        {!showPersonalLoading && !showPersonalGate && activeTab === "search" ? <SearchScreen users={users.filter((u) => u.id !== "me")} followed={followed} onToggleFollow={toggleFollow} onSelectUser={setSelectedUserId} /> : null}
         {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
           <ProfileScreen
             user={viewerProfile}
@@ -1384,6 +1496,13 @@ export default function App() {
       )}
 
       {/* Sheets */}
+      <AddPlaceActionSheet
+        open={addPlaceSheetOpen}
+        onClose={() => setAddPlaceSheetOpen(false)}
+        onSearchPlace={() => startAddPlaceFlow("search")}
+        onUseCurrentLocation={() => startAddPlaceFlow("current")}
+        onPickOnMap={() => startAddPlaceFlow("map")}
+      />
       <MapFormSheet
         mapSheet={mapSheet} setMapSheet={setMapSheet}
         onSave={saveMapSheet} onDelete={deleteMapAction}
