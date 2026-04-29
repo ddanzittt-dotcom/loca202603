@@ -1,6 +1,7 @@
 import { useMemo } from "react"
-import { ChevronRight, MapPin, PlusCircle, Sparkles } from "lucide-react"
+import { ChevronRight, MapPin, PlusCircle, Sparkles, Layers, Flame, Star } from "lucide-react"
 import { isEventMap } from "../lib/mapPlacement"
+import { getLevelForXp, getLevelProgress } from "../data/gamification"
 
 function getMapTime(map) {
   const value = map?.updatedAt || map?.updated_at || map?.createdAt || map?.created_at
@@ -34,6 +35,9 @@ export function HomeScreen({
   maps = [],
   features = [],
   recommendedMaps = [],
+  viewerProfile = null,
+  userStats = null,
+  levelEmoji = "",
 }) {
   const featureCountByMapId = useMemo(() => {
     const counts = new Map()
@@ -69,56 +73,154 @@ export function HomeScreen({
     }
   }, [featureCountByMapId, personalMaps])
 
-  const curatedMaps = recommendedMaps.slice(0, 3)
+  const xp = userStats?.xp || 0
+  const levelInfo = useMemo(() => getLevelForXp(xp), [xp])
+  const levelProgress = useMemo(() => getLevelProgress(xp), [xp])
+  const isFirstStep = levelInfo.level === 1
+  const placeCountStat = userStats?.pins || 0
+  const mapCountStat = userStats?.maps ?? personalMaps.length
+  const streakStat = userStats?.streak || 0
+  const progressPct = Math.max(isFirstStep ? 4 : 8, Math.round((levelProgress.progress || 0) * 100))
+  const remainingXp = levelProgress.remaining || 0
+  const nextCloudName = levelProgress.next?.cloudName || ""
+  const userName = viewerProfile?.name || ""
+  const userHandle = viewerProfile?.handle || ""
+  const greetingName = userName ? `${userName} 님,` : ""
+
+  const curatedMaps = recommendedMaps.slice(0, 4)
 
   return (
     <section className="screen screen--scroll home-screen home-record-home">
       <div className="home-record-shell">
-        <section className="home-start-hero" aria-labelledby="home-start-title">
-          <div className="home-start-hero__copy">
-            <span className="home-start-hero__eyebrow">MY LOG</span>
-            <h1 id="home-start-title">오늘 남기고 싶은 장소가 있나요?</h1>
-            <p>좋았던 장소를 하나씩 남기면, 나만의 지도가 됩니다.</p>
-          </div>
-          <button className="home-start-hero__cta" type="button" onClick={onCreateMap}>
-            <PlusCircle size={18} />
-            기록하기
-          </button>
-        </section>
+        {/* 프로필 카드 */}
+        <section className={`pc${isFirstStep ? " pc--new" : ""}`} aria-label="내 프로필 요약">
+          <div className={`pc-glow${isFirstStep ? " new" : ""}`} aria-hidden="true" />
 
-        {resumeState.mode === "resume" ? (
-          <section className="home-section-lite" aria-labelledby="home-resume-title">
-            <div className="home-section-lite__head">
-              <div>
-                <span className="home-section-lite__eyebrow">RESUME</span>
-                <h2 id="home-resume-title">이어서 기록하기</h2>
+          <div className="pc-top">
+            <div className="pc-char">
+              <div className={`pc-cloud${isFirstStep ? " new" : ""}`}>
+                {levelEmoji ? (
+                  <img src={levelEmoji} alt="" className="pc-cloud-img" />
+                ) : (
+                  <span className="pc-cloud-emoji" aria-hidden="true">{levelInfo.emoji || "☁️"}</span>
+                )}
+              </div>
+              <span className={`pc-cloud-name${isFirstStep ? " new" : ""}`}>{levelInfo.cloudName}</span>
+            </div>
+
+            <div className="pc-info">
+              {isFirstStep ? (
+                <div className="pc-greet"><span className="greet-dot" aria-hidden="true" />WELCOME</div>
+              ) : null}
+              <div className="pc-name">{isFirstStep ? greetingName : userName}</div>
+              {userHandle ? <div className="pc-handle">{userHandle}</div> : null}
+              <div className="pc-tier">
+                <span className="pc-lv">Lv {levelInfo.level}</span>
+                <span className="pc-title">{levelInfo.title}</span>
               </div>
             </div>
+          </div>
+
+          <div className="pc-xp">
+            <div className="pc-xp-bar">
+              <div
+                className={`pc-xp-fill${isFirstStep ? " is-empty" : ""}`}
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <div className="pc-xp-meta">
+              <span className="pc-xp-meta-l">
+                {nextCloudName ? `다음 ${nextCloudName}까지` : "최고 레벨"}
+              </span>
+              <span className="pc-xp-meta-r">
+                {nextCloudName ? (
+                  <>
+                    <span className="xp-num">{remainingXp} XP</span> 남음
+                  </>
+                ) : (
+                  <span className="xp-num">MAX</span>
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div className="pc-divider" aria-hidden="true" />
+
+          <div className="pc-stats">
+            <div className="pc-stat">
+              <span className="pc-stat-ico"><MapPin size={13} /></span>
+              <span className="pc-stat-num">{placeCountStat}</span>
+              <span className="pc-stat-label">장소</span>
+            </div>
+            <div className="pc-stat">
+              <span className="pc-stat-ico"><Layers size={13} /></span>
+              <span className="pc-stat-num">{mapCountStat}</span>
+              <span className="pc-stat-label">지도</span>
+            </div>
+            <div className="pc-stat">
+              <span className="pc-stat-ico pc-stat-ico--fire"><Flame size={13} /></span>
+              <span className="pc-stat-num">{streakStat}일</span>
+              <span className="pc-stat-label">연속</span>
+            </div>
+          </div>
+
+          <div className="pc-divider" aria-hidden="true" />
+
+          {resumeState.mode === "resume" ? (
             <button
-              className="home-resume-card"
+              className="pc-resume"
               type="button"
               onClick={() => onResumeMyMap?.(resumeState.map.id)}
             >
-              <span className="home-resume-card__icon" aria-hidden="true">
-                <MapPin size={18} />
+              <span className="pc-resume-ico" aria-hidden="true">
+                <MapPin size={16} />
               </span>
-              <span className="home-resume-card__body">
-                <strong>{resumeState.map.title || "내 지도"}</strong>
-                <small>{buildMapMeta(resumeState.map, resumeState.placeCount)}</small>
+              <span className="pc-resume-tx">
+                <span className="pc-resume-l1">RESUME</span>
+                <span className="pc-resume-name">
+                  {resumeState.map.title || "내 지도"} · {buildMapMeta(resumeState.map, resumeState.placeCount).split(" · ").slice(-1)[0]}
+                </span>
               </span>
-              <span className="home-resume-card__action">
-                계속 남기기
-                <ChevronRight size={15} />
-              </span>
+              <span className="pc-resume-cta">계속 →</span>
             </button>
-          </section>
-        ) : null}
+          ) : (
+            <button className="pc-resume" type="button" onClick={onCreateMap}>
+              <span className="pc-resume-ico new" aria-hidden="true">
+                <Star size={16} />
+              </span>
+              <span className="pc-resume-tx">
+                <span className="pc-resume-l1">FIRST STEP</span>
+                <span className="pc-resume-name">첫 장소를 남겨볼까요?</span>
+              </span>
+              <span className="pc-resume-cta">시작 →</span>
+            </button>
+          )}
+        </section>
+
+        <section className="home-start-hero" aria-labelledby="home-start-title">
+          <span className="home-start-hero__blob1" aria-hidden="true" />
+          <span className="home-start-hero__blob2" aria-hidden="true" />
+          <span className="home-start-hero__blob3" aria-hidden="true" />
+          <div className="home-start-hero__copy">
+            <span className="home-start-hero__eyebrow">MY LOG</span>
+            <h1 id="home-start-title">
+              {isFirstStep ? "오늘부터 나만의 지도" : "오늘은 어디에 다녀왔어요?"}
+            </h1>
+            {isFirstStep ? <p>좋았던 장소 한 곳부터 시작해요</p> : null}
+          </div>
+          <button className="home-start-hero__cta" type="button" onClick={onCreateMap}>
+            <PlusCircle size={18} />
+            {isFirstStep ? "시작하기" : "기록하기"}
+          </button>
+        </section>
 
         <section className="home-section-lite" aria-labelledby="home-curated-title">
           <div className="home-section-lite__head">
             <div>
               <span className="home-section-lite__eyebrow">PICKED</span>
-              <h2 id="home-curated-title">LOCA가 고른 지도</h2>
+              <h2 id="home-curated-title">
+                {isFirstStep ? "이런 지도부터 둘러볼까요" : "LOCA가 고른 지도"}
+              </h2>
             </div>
             <button className="home-section-lite__link" type="button" onClick={onNavigateToExplore}>
               더보기

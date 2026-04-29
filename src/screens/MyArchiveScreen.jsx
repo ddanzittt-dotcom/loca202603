@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Download, Plus } from "lucide-react"
+import { Bell, Download, Plus } from "lucide-react"
 import { MapsListScreen } from "./MapsListScreen"
 import { PlacesScreen } from "./PlacesScreen"
 
@@ -20,27 +20,50 @@ export function MyArchiveScreen({
   onRemoveFromProfile,
   onOpenFeature,
   onCreateRecord,
+  onOpenNotifications,
+  hasUnread = false,
   loading = false,
 }) {
   const [archiveView, setArchiveView] = useState("maps")
 
   return (
     <section className="screen screen--scroll maps-library-screen">
-      <div className="section-head archive-head">
-        <div className="archive-head__copy">
-          <h1 className="section-head__title">내 지도</h1>
-          <p className="section-head__desc">지도와 장소 기록을 함께 보는 내 아카이브.</p>
+      <div className="archive-head">
+        <h1 className="archive-head__title">내 지도</h1>
+        <div className="archive-head__actions" aria-label="내 지도 액션">
+          <button
+            type="button"
+            className="archive-head__icon"
+            aria-label="지도 가져오기"
+            title="지도 가져오기"
+            onClick={onImport}
+          >
+            <Download size={16} strokeWidth={1.8} />
+          </button>
+          {archiveView === "maps" ? (
+            <button
+              type="button"
+              className="archive-head__icon archive-head__icon--primary"
+              aria-label="새 지도 만들기"
+              title="새 지도 만들기"
+              onClick={onCreate}
+            >
+              <Plus size={16} strokeWidth={2.2} />
+            </button>
+          ) : null}
+          {onOpenNotifications ? (
+            <button
+              type="button"
+              className="archive-head__icon"
+              aria-label="알림"
+              title="알림"
+              onClick={onOpenNotifications}
+            >
+              <Bell size={16} strokeWidth={1.8} />
+              {hasUnread ? <span className="archive-head__icon-dot" /> : null}
+            </button>
+          ) : null}
         </div>
-        {archiveView === "maps" ? (
-          <div className="section-head__actions archive-head__actions" aria-label="내 지도 액션">
-            <button className="button button--ghost archive-head__action" type="button" onClick={onImport}>
-              <Download size={14} /> 지도 가져오기
-            </button>
-            <button className="button button--primary archive-head__action" type="button" onClick={onCreate}>
-              <Plus size={14} /> 새 지도 만들기
-            </button>
-          </div>
-        ) : null}
       </div>
 
       <div className="maps-segment" role="tablist" aria-label="내 아카이브 보기">

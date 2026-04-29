@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>LOCA · 홈 탭 리디자인 v4</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #FF6B35;
+    --color-secondary: #2D4A3E;
+    --color-background: #FAF5EE;
+    --color-card: #FFFFFF;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #888888;
+    --color-text-tertiary: #aaaaaa;
+    --color-text-description: #666666;
+
+    --accent-warm-bg: #FFF4EB;
+    --accent-warm-fg: #993C1D;
+    --accent-amber-bg: #FAEEDA;
+    --accent-amber-fg: #633806;
+    --accent-mint-bg: #E1F5EE;
+    --accent-mint-fg: #085041;
+    --accent-sky-bg: #E6F1FB;
+    --accent-sky-fg: #0C447C;
+
+    --xp-gold: #E9B547;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-weight: 400;
+    letter-spacing: -0.1px;
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  .page-head {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .page-head .kicker {
+    font-size: 10px;
+    color: var(--color-primary);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .page-head h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .page-head p {
+    font-size: 12px;
+    color: var(--color-text-description);
+    line-height: 1.6;
+  }
+
+  .compare {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 36px;
+    align-items: start;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  .case {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .case-label {
+    font-size: 10px;
+    color: var(--color-text-description);
+    letter-spacing: 1.4px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+    padding: 0 4px;
+  }
+  .case-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-secondary);
+  }
+  .case-label .dot.new { background: var(--color-primary); }
+
+  /* ================== PHONE FRAME ================== */
+  .frame {
+    width: 100%;
+    max-width: 360px;
+    background: var(--color-background);
+    border-radius: 30px;
+    overflow: hidden;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    box-shadow: 0 12px 32px rgba(26,26,26,0.06), 0 2px 8px rgba(26,26,26,0.04);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen {
+    padding: 12px 14px 0;
+    flex: 1;
+    background: var(--color-background);
+  }
+
+  /* ================== HEADER ================== */
+  .h-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px 16px;
+  }
+  .h-logo {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--color-secondary);
+  }
+  .h-bell {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-secondary);
+    position: relative;
+    cursor: pointer;
+  }
+  .h-bell .dot {
+    position: absolute;
+    top: 8px; right: 9px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 1px solid #fff;
+  }
+
+  /* ================== PROFILE CARD ================== */
+  .pc {
+    background: #fff;
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+    border: 0.5px solid rgba(0,0,0,0.05);
+  }
+  .pc-glow {
+    position: absolute;
+    top: -36px; right: -32px;
+    width: 130px; height: 130px;
+    border-radius: 50%;
+    background: var(--accent-warm-bg);
+    opacity: 0.55;
+  }
+  .pc-glow.new {
+    background: var(--accent-sky-bg);
+    opacity: 0.7;
+  }
+
+  /* 상단 row: 캐릭터 + 정보 */
+  .pc-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .pc-char {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .pc-cloud {
+    width: 72px; height: 72px;
+    border-radius: 18px;
+    background: var(--accent-warm-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.5px solid rgba(245,196,179,0.5);
+  }
+  .pc-cloud.new {
+    background: var(--accent-sky-bg);
+    border-color: rgba(133,183,235,0.4);
+  }
+  .pc-cloud-name {
+    font-size: 10.5px;
+    color: var(--accent-warm-fg);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+  }
+  .pc-cloud-name.new {
+    color: var(--accent-sky-fg);
+  }
+
+  .pc-info {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+  }
+  .pc-greet {
+    font-size: 10px;
+    color: var(--color-primary);
+    font-weight: 500;
+    letter-spacing: 1.4px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pc-greet .greet-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--color-primary);
+  }
+  .pc-name {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.3px;
+    margin-bottom: 2px;
+  }
+  .pc-handle {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    margin-bottom: 11px;
+  }
+  .pc-tier {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pc-lv {
+    font-size: 10px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--color-secondary);
+    padding: 2px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.3px;
+  }
+  .pc-title {
+    font-size: 11.5px;
+    color: var(--color-secondary);
+    font-weight: 500;
+  }
+
+  /* XP 바 */
+  .pc-xp {
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .pc-xp-bar {
+    width: 100%;
+    height: 5px;
+    background: var(--color-background);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 7px;
+    border: 0.5px solid rgba(0,0,0,0.04);
+  }
+  .pc-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--xp-gold) 0%, #F2C870 100%);
+    border-radius: 3px;
+  }
+  .pc-xp-fill.full { width: 62.5%; }
+  .pc-xp-fill.empty { width: 4%; }
+  .pc-xp-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10.5px;
+    color: var(--color-text-tertiary);
+  }
+  .pc-xp-meta-l {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pc-xp-meta-r .xp-num {
+    color: var(--color-secondary);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2px;
+  }
+
+  /* 구분선 */
+  .pc-divider {
+    height: 0.5px;
+    background: rgba(0,0,0,0.06);
+    margin: 0 -2px;
+  }
+
+  /* 통계 3개 */
+  .pc-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 14px 0;
+    position: relative;
+  }
+  .pc-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+  }
+  .pc-stat:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.5px;
+    height: 16px;
+    background: rgba(0,0,0,0.08);
+  }
+  .pc-stat-ico {
+    color: var(--color-text-description);
+    display: flex;
+    align-items: center;
+  }
+  .pc-stat-ico.fire {
+    color: var(--color-primary);
+  }
+  .pc-stat-num {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+  }
+  .pc-stat-label {
+    font-size: 10.5px;
+    color: var(--color-text-tertiary);
+    margin-left: 2px;
+  }
+
+  /* RESUME / FIRST STEP 모듈 */
+  .pc-resume {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0 2px;
+  }
+  .pc-resume-ico {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: var(--accent-warm-bg);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pc-resume-ico.new {
+    background: var(--accent-amber-bg);
+    color: var(--accent-amber-fg);
+  }
+  .pc-resume-tx {
+    flex: 1;
+    min-width: 0;
+  }
+  .pc-resume-l1 {
+    font-size: 9.5px;
+    color: var(--color-text-tertiary);
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+  .pc-resume-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.1px;
+    line-height: 1.3;
+  }
+  .pc-resume-cta {
+    font-size: 11.5px;
+    color: var(--color-primary);
+    font-weight: 500;
+    flex-shrink: 0;
+    letter-spacing: -0.1px;
+  }
+
+  /* ================== HERO CTA (MY LOG) ================== */
+  .hero {
+    background: var(--color-secondary);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-blob1 {
+    position: absolute;
+    top: -22px; right: -28px;
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: rgba(255,107,53,0.18);
+  }
+  .hero-blob2 {
+    position: absolute;
+    top: 14px; right: 24px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(233,181,71,0.55);
+  }
+  .hero-blob3 {
+    position: absolute;
+    top: 32px; right: 56px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(233,181,71,0.4);
+  }
+  .hero-tag {
+    position: relative;
+    font-size: 10px;
+    color: var(--xp-gold);
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .hero-title {
+    position: relative;
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.3px;
+    line-height: 1.4;
+  }
+  .hero-title.with-sub {
+    margin-bottom: 4px;
+  }
+  .hero-title.no-sub {
+    margin-bottom: 14px;
+  }
+  .hero-sub {
+    position: relative;
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 14px;
+    letter-spacing: -0.1px;
+  }
+  .hero-cta {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-primary);
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 0;
+    cursor: pointer;
+    letter-spacing: -0.1px;
+  }
+
+  /* ================== PICKED MAPS ================== */
+  .pk {
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
+    border: 0.5px solid rgba(0,0,0,0.05);
+  }
+  .pk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .pk-tag {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    letter-spacing: 1.2px;
+    font-weight: 500;
+  }
+  .pk-more {
+    font-size: 10.5px;
+    color: var(--color-text-description);
+    cursor: pointer;
+  }
+  .pk-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.2px;
+    margin-bottom: 12px;
+  }
+  .pk-row {
+    display: flex;
+    gap: 9px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: 0 -2px;
+    padding: 0 2px 2px;
+  }
+  .pk-row::-webkit-scrollbar { display: none; }
+  .pk-card {
+    flex: 0 0 96px;
+  }
+  .pk-thumb {
+    width: 100%;
+    height: 64px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .pk-thumb.t1 { background: linear-gradient(135deg, #FFE0C0 0%, #FCC57A 100%); }
+  .pk-thumb.t2 { background: linear-gradient(135deg, #DCD0F0 0%, #C8B8E8 100%); }
+  .pk-thumb.t3 { background: linear-gradient(135deg, #C5E5E5 0%, #A8D5D5 100%); }
+  .pk-thumb.t4 { background: linear-gradient(135deg, #E5C8B8 0%, #C99878 100%); }
+  .pk-pin {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 1px solid #fff;
+  }
+  .pk-name {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.1px;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+  .pk-author {
+    font-size: 9.5px;
+    color: var(--color-text-tertiary);
+  }
+
+  /* ================== TAB BAR ================== */
+  .tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 10px 14px 14px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    align-items: center;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+  }
+  .tab.active {
+    color: var(--color-secondary);
+  }
+  .tab-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--color-primary);
+  }
+  .tab-fab {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -8px auto 0;
+    border: 0;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 4px 14px rgba(255,107,53,0.32);
+  }
+  .tab-fab.pulse::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-primary);
+    opacity: 0.4;
+    animation: pulse 1.8s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0; transform: scale(1.18); }
+  }
+
+  /* ================== DESIGN NOTES ================== */
+  .notes {
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-top: 50px;
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .notes h3 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+  }
+  .notes ul { list-style: none; }
+  .notes li {
+    font-size: 11.5px;
+    color: var(--color-text-description);
+    line-height: 1.75;
+    padding-left: 14px;
+    position: relative;
+    margin-bottom: 4px;
+  }
+  .notes li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+  }
+  .notes li strong { color: var(--color-text-primary); font-weight: 500; }
+  .notes li em { font-style: normal; color: var(--color-primary); font-weight: 500; }
+
+  @media (max-width: 780px) {
+    .compare { grid-template-columns: 1fr; gap: 32px; }
+    body { padding: 24px 14px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <div class="kicker">LOCA · HOME REDESIGN v4</div>
+    <h1>홈 탭 리디자인</h1>
+    <p>
+      기존 구조 100% 유지 · 시각 디자인만 정돈<br>
+      <span style="color:var(--color-primary)">캐릭터 카드 · MY LOG · PICKED 3섹션 그대로</span>
+    </p>
+  </header>
+
+  <div class="compare">
+
+    <!-- ============== 기존 사용자 ============== -->
+    <div class="case">
+      <div class="case-label"><span class="dot"></span>EXISTING USER · Lv 5 거리 탐험가</div>
+      <div class="frame">
+        <div class="screen">
+
+          <!-- 헤더 -->
+          <div class="h-row">
+            <span class="h-logo">LOCA</span>
+            <button class="h-bell" aria-label="알림">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span class="dot"></span>
+            </button>
+          </div>
+
+          <!-- 프로필 카드 -->
+          <div class="pc">
+            <div class="pc-glow"></div>
+
+            <div class="pc-top">
+              <div class="pc-char">
+                <div class="pc-cloud">
+                  <svg viewBox="0 0 200 200" width="60" height="60">
+                    <ellipse cx="100" cy="128" rx="68" ry="44" fill="#fff"/>
+                    <ellipse cx="58" cy="100" rx="38" ry="30" fill="#fff"/>
+                    <ellipse cx="145" cy="102" rx="34" ry="27" fill="#fff"/>
+                    <ellipse cx="100" cy="88" rx="42" ry="30" fill="#fff"/>
+                    <ellipse cx="68" cy="72" rx="26" ry="18" fill="#fff"/>
+                    <ellipse cx="130" cy="76" rx="22" ry="16" fill="#fff"/>
+                    <ellipse cx="100" cy="65" rx="18" ry="13" fill="#fff"/>
+                    <path d="M40 52 Q60 32 80 42 Q90 30 108 42" fill="#2D4A3E"/>
+                    <rect x="148" y="95" width="30" height="38" rx="8" fill="#D4836B"/>
+                    <line x1="148" y1="110" x2="178" y2="110" stroke="#B8713A" stroke-width="2"/>
+                    <line x1="148" y1="120" x2="178" y2="120" stroke="#B8713A" stroke-width="1"/>
+                    <circle cx="82" cy="116" r="10" fill="#378ADD"/>
+                    <circle cx="118" cy="116" r="10" fill="#378ADD"/>
+                    <circle cx="85" cy="113.5" r="3.5" fill="#fff"/>
+                    <circle cx="121" cy="113.5" r="3.5" fill="#fff"/>
+                    <path d="M90 138 Q100 148 110 138" fill="#378ADD"/>
+                    <ellipse cx="65" cy="130" rx="16" ry="8" fill="#FCCCC4" opacity=".45"/>
+                    <ellipse cx="135" cy="130" rx="16" ry="8" fill="#FCCCC4" opacity=".45"/>
+                    <circle cx="55" cy="50" r="5" fill="#EF9F27" opacity=".5"/>
+                    <circle cx="148" cy="45" r="4" fill="#EF9F27" opacity=".4"/>
+                  </svg>
+                </div>
+                <span class="pc-cloud-name">모험 뭉게</span>
+              </div>
+              <div class="pc-info">
+                <div class="pc-name">수아</div>
+                <div class="pc-handle">@sua_walks</div>
+                <div class="pc-tier">
+                  <span class="pc-lv">Lv 5</span>
+                  <span class="pc-title">거리 탐험가</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- XP 바 -->
+            <div class="pc-xp">
+              <div class="pc-xp-bar"><div class="pc-xp-fill full"></div></div>
+              <div class="pc-xp-meta">
+                <span class="pc-xp-meta-l">
+                  <svg viewBox="0 0 200 200" width="11" height="11">
+                    <ellipse cx="100" cy="128" rx="68" ry="44" fill="#FCCCC4"/>
+                    <ellipse cx="58" cy="100" rx="38" ry="30" fill="#F5C4B3"/>
+                    <ellipse cx="145" cy="102" rx="34" ry="27" fill="#FCCCC4"/>
+                    <ellipse cx="100" cy="88" rx="42" ry="30" fill="#F5C4B3"/>
+                  </svg>
+                  다음 노을 뭉게까지
+                </span>
+                <span class="pc-xp-meta-r"><span class="xp-num">300 XP</span> 남음</span>
+              </div>
+            </div>
+
+            <div class="pc-divider"></div>
+
+            <!-- 통계 3개 -->
+            <div class="pc-stats">
+              <div class="pc-stat">
+                <span class="pc-stat-ico">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </span>
+                <span class="pc-stat-num">87</span>
+                <span class="pc-stat-label">장소</span>
+              </div>
+              <div class="pc-stat">
+                <span class="pc-stat-ico">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                </span>
+                <span class="pc-stat-num">12</span>
+                <span class="pc-stat-label">지도</span>
+              </div>
+              <div class="pc-stat">
+                <span class="pc-stat-ico fire">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67z"/></svg>
+                </span>
+                <span class="pc-stat-num">7일</span>
+                <span class="pc-stat-label">연속</span>
+              </div>
+            </div>
+
+            <div class="pc-divider"></div>
+
+            <!-- RESUME -->
+            <div class="pc-resume">
+              <div class="pc-resume-ico">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              </div>
+              <div class="pc-resume-tx">
+                <div class="pc-resume-l1">RESUME</div>
+                <div class="pc-resume-name">성수 카페 산책 · 장소 3개</div>
+              </div>
+              <span class="pc-resume-cta">계속 →</span>
+            </div>
+          </div>
+
+          <!-- MY LOG 히어로 -->
+          <div class="hero">
+            <div class="hero-blob1"></div>
+            <div class="hero-blob2"></div>
+            <div class="hero-tag">MY LOG</div>
+            <div class="hero-title no-sub">오늘은 어디에 다녀왔어요?</div>
+            <button class="hero-cta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              기록하기
+            </button>
+          </div>
+
+          <!-- PICKED 추천 지도 -->
+          <div class="pk">
+            <div class="pk-header">
+              <span class="pk-tag">PICKED</span>
+              <span class="pk-more">더보기 →</span>
+            </div>
+            <h3 class="pk-title">LOCA가 고른 지도</h3>
+            <div class="pk-row">
+              <div class="pk-card">
+                <div class="pk-thumb t1">
+                  <span class="pk-pin" style="top:32%;left:28%"></span>
+                  <span class="pk-pin" style="top:58%;left:65%"></span>
+                  <span class="pk-pin" style="top:70%;left:38%"></span>
+                </div>
+                <div class="pk-name">성수 감성카페</div>
+                <div class="pk-author">@seongsu_lover</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t2">
+                  <span class="pk-pin" style="top:28%;left:50%"></span>
+                  <span class="pk-pin" style="top:60%;left:32%"></span>
+                  <span class="pk-pin" style="top:65%;left:70%"></span>
+                </div>
+                <div class="pk-name">익선동 골목</div>
+                <div class="pk-author">@hanok_walk</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t3">
+                  <span class="pk-pin" style="top:40%;left:50%"></span>
+                  <span class="pk-pin" style="top:65%;left:35%"></span>
+                </div>
+                <div class="pk-name">부산 해안 산책</div>
+                <div class="pk-author">@busan_w</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t4">
+                  <span class="pk-pin" style="top:38%;left:42%"></span>
+                  <span class="pk-pin" style="top:55%;left:60%"></span>
+                </div>
+                <div class="pk-name">전주 한옥마을</div>
+                <div class="pk-author">@jeonju_local</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 탭바 -->
+        <div class="tabbar">
+          <div class="tab active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12L12 4l9 8v9h-6v-6h-6v6H3z"/></svg>
+            <span class="tab-dot"></span>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          </div>
+          <button class="tab-fab">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== 신규 사용자 ============== -->
+    <div class="case">
+      <div class="case-label"><span class="dot new"></span>NEW USER · Lv 1 씨앗 탐험가</div>
+      <div class="frame">
+        <div class="screen">
+
+          <!-- 헤더 -->
+          <div class="h-row">
+            <span class="h-logo">LOCA</span>
+            <button class="h-bell" aria-label="알림">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- 프로필 카드 (신규) -->
+          <div class="pc">
+            <div class="pc-glow new"></div>
+
+            <div class="pc-top">
+              <div class="pc-char">
+                <div class="pc-cloud new">
+                  <svg viewBox="0 0 200 200" width="60" height="60">
+                    <ellipse cx="100" cy="130" rx="50" ry="35" fill="#fff" stroke="#B5D4F4" stroke-width="2.5"/>
+                    <ellipse cx="78" cy="112" rx="28" ry="22" fill="#fff" stroke="#B5D4F4" stroke-width="2.5"/>
+                    <ellipse cx="122" cy="114" rx="25" ry="20" fill="#fff" stroke="#B5D4F4" stroke-width="2.5"/>
+                    <circle cx="90" cy="128" r="5" fill="#85B7EB"/>
+                    <circle cx="110" cy="128" r="5" fill="#85B7EB"/>
+                  </svg>
+                </div>
+                <span class="pc-cloud-name new">아기 뭉게</span>
+              </div>
+              <div class="pc-info">
+                <div class="pc-greet"><span class="greet-dot"></span>WELCOME</div>
+                <div class="pc-name">수아 님,</div>
+                <div class="pc-handle">@sua_walks</div>
+                <div class="pc-tier">
+                  <span class="pc-lv">Lv 1</span>
+                  <span class="pc-title">씨앗 탐험가</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- XP 바 (빈) -->
+            <div class="pc-xp">
+              <div class="pc-xp-bar"><div class="pc-xp-fill empty"></div></div>
+              <div class="pc-xp-meta">
+                <span class="pc-xp-meta-l">
+                  <svg viewBox="0 0 200 200" width="11" height="11">
+                    <ellipse cx="100" cy="125" rx="55" ry="38" fill="#B5D4F4"/>
+                    <ellipse cx="72" cy="108" rx="32" ry="25" fill="#85B7EB"/>
+                    <ellipse cx="130" cy="110" rx="28" ry="23" fill="#B5D4F4"/>
+                    <ellipse cx="100" cy="100" rx="30" ry="22" fill="#85B7EB"/>
+                  </svg>
+                  다음 맑은 뭉게까지
+                </span>
+                <span class="pc-xp-meta-r"><span class="xp-num">30 XP</span> 남음</span>
+              </div>
+            </div>
+
+            <div class="pc-divider"></div>
+
+            <!-- FIRST STEP 모듈 (신규는 통계 자리에 안내) -->
+            <div class="pc-resume">
+              <div class="pc-resume-ico new">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </div>
+              <div class="pc-resume-tx">
+                <div class="pc-resume-l1">FIRST STEP</div>
+                <div class="pc-resume-name">첫 장소를 남겨볼까요?</div>
+              </div>
+              <span class="pc-resume-cta">시작 →</span>
+            </div>
+          </div>
+
+          <!-- MY LOG 히어로 (신규) -->
+          <div class="hero">
+            <div class="hero-blob1"></div>
+            <div class="hero-blob2"></div>
+            <div class="hero-blob3"></div>
+            <div class="hero-tag">MY LOG</div>
+            <div class="hero-title with-sub">오늘부터 나만의 지도</div>
+            <div class="hero-sub">좋았던 장소 한 곳부터 시작해요</div>
+            <button class="hero-cta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              시작하기
+            </button>
+          </div>
+
+          <!-- PICKED 추천 지도 -->
+          <div class="pk">
+            <div class="pk-header">
+              <span class="pk-tag">PICKED</span>
+              <span class="pk-more">더보기 →</span>
+            </div>
+            <h3 class="pk-title">이런 지도부터 둘러볼까요</h3>
+            <div class="pk-row">
+              <div class="pk-card">
+                <div class="pk-thumb t1">
+                  <span class="pk-pin" style="top:32%;left:28%"></span>
+                  <span class="pk-pin" style="top:58%;left:65%"></span>
+                  <span class="pk-pin" style="top:70%;left:38%"></span>
+                </div>
+                <div class="pk-name">성수 감성카페</div>
+                <div class="pk-author">@seongsu_lover</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t2">
+                  <span class="pk-pin" style="top:28%;left:50%"></span>
+                  <span class="pk-pin" style="top:60%;left:32%"></span>
+                  <span class="pk-pin" style="top:65%;left:70%"></span>
+                </div>
+                <div class="pk-name">익선동 골목</div>
+                <div class="pk-author">@hanok_walk</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t3">
+                  <span class="pk-pin" style="top:40%;left:50%"></span>
+                  <span class="pk-pin" style="top:65%;left:35%"></span>
+                </div>
+                <div class="pk-name">부산 해안 산책</div>
+                <div class="pk-author">@busan_w</div>
+              </div>
+              <div class="pk-card">
+                <div class="pk-thumb t4">
+                  <span class="pk-pin" style="top:38%;left:42%"></span>
+                  <span class="pk-pin" style="top:55%;left:60%"></span>
+                </div>
+                <div class="pk-name">전주 한옥마을</div>
+                <div class="pk-author">@jeonju_local</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 탭바 (신규: FAB pulse) -->
+        <div class="tabbar">
+          <div class="tab active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12L12 4l9 8v9h-6v-6h-6v6H3z"/></svg>
+            <span class="tab-dot"></span>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          </div>
+          <button class="tab-fab pulse">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 설계 노트 -->
+  <div class="notes">
+    <h3>설계 노트 · Home v4 (시각 리디자인 only)</h3>
+    <ul>
+      <li><strong>구조 100% 유지</strong> — 헤더 / 캐릭터 카드 / MY LOG 히어로 / PICKED 추천 / 탭바 5개 섹션 그대로. 내 지도·모두의 지도·이벤트 배너는 추가하지 않음.</li>
+      <li><strong>로고 · 섹션 헤더 → 명조체 통일</strong> — LOCA 로고, 사용자 이름(<em>수아</em>), MY LOG 히어로 타이틀, PICKED 섹션 타이틀에 모두 Nanum Myeongjo 적용. 영문 태그(MY LOG, RESUME, PICKED, FIRST STEP)는 보조로만 작게.</li>
+      <li><strong>카드 radius 재정렬</strong> — 22px → <em>18px</em>로 통일 (DESIGN.md 카드 14px과의 중간값). 이전 시안의 들쭉날쭉한 radius(22/22/22/12)를 정돈.</li>
+      <li><strong>프로필 카드 시각 재구성</strong> — glow 블롭을 우상단에 배치하여 카드에 잔잔한 깊이감. 이전엔 30×30 작은 원이었는데 130×130으로 키워서 부드러운 분위기. 신규 사용자는 sky 톤(<em>#E6F1FB</em>), 기존은 warm 톤(<em>#FFF4EB</em>)으로 캐릭터 컬러와 맞춤.</li>
+      <li><strong>이름 중복 제거</strong> — 이전 시안은 캐릭터 옆 큰 이름과 캐릭터 위 작은 이름이 모호하게 공존. v4에선 캐릭터 아래엔 <em>캐릭터 이름</em>(모험 뭉게)만, 우측엔 <em>사용자 이름</em>(수아)만 두어 역할이 명확해짐.</li>
+      <li><strong>레벨 칩 다이어트</strong> — 이전 12px → <em>10px / padding 2px 9px</em>. 시각적 강도 낮춰서 통계·XP 위계와 맞물리게.</li>
+      <li><strong>XP 바 마감</strong> — 단색 골드 → <em>골드 그라데이션</em>(<code>#E9B547 → #F2C870</code>) + 0.5px border. 5px 두께 유지하되 윤곽이 살짝 살아있게.</li>
+      <li><strong>통계 영역 구분선 추가</strong> — 3개 통계 사이에 <em>16px 세로 디바이더</em>. 이전엔 그냥 grid로 나열되어 있어 카운트 사이 경계가 흐릿했음.</li>
+      <li><strong>RESUME 모듈 정돈</strong> — 아이콘 36×36, radius 12px, warm bg. CTA 색을 primary orange로 통일(이전 같은 컬러였지만 한 줄 짜리 정보가 더 깔끔하게 정렬됨).</li>
+      <li><strong>히어로 블롭 3개로 조정</strong> — 이전엔 1+1, 신규에만 3개였던 걸 둘 다 사용. 신규는 살짝 더 활기 있는 톤. 골드 점이 secondary 그린 위에서 따뜻한 액센트 역할.</li>
+      <li><strong>PICKED 카드 약간 확대</strong> — 94px → 96px 폭, 썸네일 60px → 64px. 첫 카드 옆에 4번째 카드(전주 한옥마을) 추가해 가로 스크롤 어포던스 강화.</li>
+      <li><strong>탭바 FAB 그림자 강화</strong> — primary orange에 <code>0 4px 14px rgba(255,107,53,0.32)</code>. 이전은 그림자가 거의 없어서 얇은 느낌이었음. 신규 사용자에겐 pulse 애니메이션 유지.</li>
+      <li><strong>변경 안 한 것</strong> — 정보 우선순위, 컴포넌트 구성, 라벨 텍스트, 인터랙션, 캐릭터 SVG는 모두 그대로. 한 마디로 <em>옷만 다림질</em>한 수준.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

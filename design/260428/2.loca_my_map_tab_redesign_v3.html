@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>LOCA · 내 지도 탭 리디자인</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-primary: #FF6B35;
+    --color-secondary: #2D4A3E;
+    --color-background: #FAF5EE;
+    --color-card: #FFFFFF;
+    --color-text-primary: #1A1A1A;
+    --color-text-secondary: #888888;
+    --color-text-tertiary: #aaaaaa;
+    --color-text-description: #666666;
+
+    --accent-warm-bg: #FFF4EB;
+    --accent-warm-fg: #993C1D;
+    --accent-amber-bg: #FAEEDA;
+    --accent-amber-fg: #633806;
+    --accent-mint-bg: #E1F5EE;
+    --accent-mint-fg: #085041;
+    --accent-sky-bg: #E6F1FB;
+    --accent-sky-fg: #0C447C;
+
+    --pin-fg: #FF6B35;
+    --pin-bg: #FFF4EB;
+    --route-fg: #0F6E56;
+    --route-bg: #E1F5EE;
+    --area-fg: #854F0B;
+    --area-bg: #FAEEDA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-weight: 400;
+    letter-spacing: -0.1px;
+    min-height: 100vh;
+    padding: 32px 16px 80px;
+  }
+
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  .page-head {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .page-head .kicker {
+    font-size: 10px;
+    color: var(--color-primary);
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  .page-head h1 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .page-head p {
+    font-size: 12px;
+    color: var(--color-text-description);
+    line-height: 1.6;
+  }
+
+  .compare {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 36px;
+    align-items: start;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+
+  .case {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .case-label {
+    font-size: 10px;
+    color: var(--color-text-description);
+    letter-spacing: 1.4px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+    padding: 0 4px;
+  }
+  .case-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-secondary);
+  }
+  .case-label .dot.b { background: var(--color-primary); }
+
+  /* ================== PHONE FRAME ================== */
+  .frame {
+    width: 100%;
+    max-width: 360px;
+    background: var(--color-background);
+    border-radius: 30px;
+    overflow: hidden;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    box-shadow: 0 12px 32px rgba(26,26,26,0.06), 0 2px 8px rgba(26,26,26,0.04);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen {
+    padding: 12px 14px 0;
+    flex: 1;
+    background: var(--color-background);
+    overflow: hidden;
+  }
+
+  /* ================== HEADER (compact) ================== */
+  /* 기존: LOCA 로고 + 큰 H1 "내 지도" + 부제 + 우측 버튼 2개 (4단)
+     수정: H1 + 우측 아이콘 2개 (1단) + 새 지도 만들기 CTA (전폭) */
+  .h-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 4px 12px;
+  }
+  .h-title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.4px;
+  }
+  .h-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .h-icon-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-secondary);
+    position: relative;
+    cursor: pointer;
+  }
+  .h-icon-btn .dot {
+    position: absolute;
+    top: 7px; right: 8px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    border: 1px solid #fff;
+  }
+  /* primary 변형: 새 지도 만들기 같은 메인 액션 */
+  .h-icon-btn.primary {
+    background: var(--color-primary);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(255,107,53,0.28);
+  }
+  .h-icon-btn.primary:hover {
+    background: #ff7e4f;
+  }
+
+  /* ================== TAB SWITCHER (segmented) ================== */
+  .tab-seg {
+    background: #fff;
+    border-radius: 14px;
+    padding: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    border: 0.5px solid rgba(0,0,0,0.05);
+    margin-bottom: 12px;
+  }
+  .tab-seg button {
+    height: 36px;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    letter-spacing: -0.1px;
+    transition: background .15s;
+  }
+  .tab-seg button.active {
+    background: var(--color-secondary);
+    color: #fff;
+  }
+  .tab-seg .num {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+  .tab-seg button.active .num {
+    color: rgba(255,255,255,0.65);
+  }
+
+  /* ================== SEARCH ================== */
+  .search-bar {
+    background: #fff;
+    border-radius: 12px;
+    padding: 10px 13px;
+    border: 0.5px solid rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .search-bar input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--color-text-primary);
+  }
+  .search-bar input::placeholder {
+    color: var(--color-text-tertiary);
+  }
+
+  /* ================== INLINE ACTIONS (지도 탭 전용) ================== */
+  .inline-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .action-btn {
+    flex: 1;
+    height: 38px;
+    border-radius: 10px;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    letter-spacing: -0.1px;
+  }
+  .action-btn.primary {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .action-btn.ghost {
+    background: #fff;
+    color: var(--color-secondary);
+    border: 0.5px solid rgba(45,74,62,0.2);
+  }
+
+  /* ================== MAP CARDS (지도 탭) ================== */
+  .map-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .map-card {
+    height: 168px;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .map-card.r-seoul { background: #E8BCAD; }
+  .map-card.r-busan { background: #ABC6DC; }
+  .map-card.r-sejong { background: #BCD3BD; }
+  .map-card.r-jeju { background: #E8C8BE; }
+
+  /* 추상 blob 패턴 (DESIGN.md §5.5 따라) */
+  .map-card .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+  }
+  .map-card.r-seoul .b1 { left: -28px; bottom: -38px; width: 130px; height: 130px; background: #D4836B; opacity: 0.45; }
+  .map-card.r-seoul .b2 { right: -22px; top: -28px; width: 92px; height: 92px; background: #E8BCAD; opacity: 0.5; }
+  .map-card.r-seoul .b3 { left: 40%; top: 36%; width: 70px; height: 70px; background: #D99580; opacity: 0.3; }
+  .map-card.r-busan .b1 { left: -26px; bottom: -36px; width: 130px; height: 130px; background: #5B7EA5; opacity: 0.45; }
+  .map-card.r-busan .b2 { right: -20px; top: -26px; width: 90px; height: 90px; background: #ABC6DC; opacity: 0.5; }
+  .map-card.r-busan .b3 { left: 42%; top: 32%; width: 68px; height: 68px; background: #7596B8; opacity: 0.3; }
+  .map-card.r-sejong .b1 { left: -26px; bottom: -36px; width: 130px; height: 130px; background: #6E9470; opacity: 0.45; }
+  .map-card.r-sejong .b2 { right: -20px; top: -26px; width: 90px; height: 90px; background: #BCD3BD; opacity: 0.5; }
+  .map-card.r-sejong .b3 { left: 42%; top: 32%; width: 68px; height: 68px; background: #88AA89; opacity: 0.3; }
+
+  .map-card .top-row {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .region-chip {
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .vis-badge {
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .vis-badge.private {
+    background: rgba(255,255,255,0.85);
+    color: var(--color-text-description);
+  }
+  .vis-badge.shared {
+    background: var(--accent-mint-fg);
+    color: var(--accent-mint-bg);
+  }
+
+  /* 카드 하단 정보 (gradient overlay) */
+  .map-card .bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 28px 14px 12px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.55) 100%);
+  }
+  .map-card .title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .map-card .title-block { flex: 1; min-width: 0; }
+  .map-card .title {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+    margin-bottom: 6px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .map-card .meta {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .map-card .count {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: rgba(255,255,255,0.92);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .map-card .count.pin { color: rgba(255,255,255,0.92); }
+  .map-card .updated {
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.65);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .map-more-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.2);
+    border: 0;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    margin-bottom: -2px;
+  }
+
+  /* ================== FILTER CHIPS (장소 탭 전용) ================== */
+  /* 핵심 변경: 2단 빽빽한 칩 → 1단 stack 레이블 + 가로 스크롤 */
+  .filter-stack {
+    margin-bottom: 12px;
+  }
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 1px 0;
+  }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-row + .filter-row {
+    margin-top: 7px;
+  }
+  .filter-row .group-label {
+    font-size: 9.5px;
+    color: var(--color-text-tertiary);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    flex-shrink: 0;
+    align-self: center;
+    padding: 0 4px 0 2px;
+  }
+
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 11px;
+    border-radius: 999px;
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-text-description);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    letter-spacing: -0.1px;
+    transition: all .15s;
+  }
+  .chip:hover {
+    border-color: rgba(0,0,0,0.16);
+  }
+  .chip.active {
+    background: var(--color-secondary);
+    color: #fff;
+    border-color: transparent;
+  }
+  .chip .num {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+  .chip.active .num {
+    color: rgba(255,255,255,0.7);
+  }
+  .chip.empty .num {
+    color: var(--color-text-tertiary);
+    opacity: 0.5;
+  }
+
+  /* type chip dots */
+  .chip-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .chip-dot.pin { background: var(--pin-fg); }
+  .chip-dot.route { background: var(--route-fg); }
+  .chip-dot.area { background: var(--area-fg); }
+
+  /* ================== PLACE LIST (장소 탭) ================== */
+  .place-section {
+    background: #fff;
+    border-radius: 14px;
+    border: 0.5px solid rgba(0,0,0,0.05);
+    padding: 4px 0;
+  }
+  .place-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    border-bottom: 0.5px solid rgba(0,0,0,0.04);
+  }
+  .place-row:last-child {
+    border-bottom: 0;
+  }
+  .place-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--pin-bg);
+    color: var(--pin-fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .place-icon.route {
+    background: var(--route-bg);
+    color: var(--route-fg);
+  }
+  .place-icon.area {
+    background: var(--area-bg);
+    color: var(--area-fg);
+  }
+  .place-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .place-name {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    letter-spacing: -0.1px;
+    line-height: 1.3;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .place-name.empty {
+    color: var(--color-text-tertiary);
+    font-style: italic;
+  }
+  .place-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+  }
+  .place-meta .map-name {
+    color: var(--color-text-description);
+  }
+  .place-meta .dot {
+    width: 2px; height: 2px;
+    border-radius: 50%;
+    background: var(--color-text-tertiary);
+  }
+  .place-meta .has-media {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--color-text-description);
+  }
+  .place-arrow {
+    color: var(--color-text-tertiary);
+    flex-shrink: 0;
+  }
+
+  /* ================== TAB BAR ================== */
+  .tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 10px 14px 14px;
+    background: #fff;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    align-items: center;
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+  }
+  .tab.active {
+    color: var(--color-secondary);
+  }
+  .tab-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--color-primary);
+  }
+  .tab-fab {
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -8px auto 0;
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(255,107,53,0.32);
+  }
+
+  /* ================== DESIGN NOTES ================== */
+  .notes {
+    background: #fff;
+    border: 0.5px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-top: 50px;
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .notes h3 {
+    font-family: 'Nanum Myeongjo', serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-secondary);
+    margin-bottom: 14px;
+    letter-spacing: -0.3px;
+  }
+  .notes ul { list-style: none; }
+  .notes li {
+    font-size: 11.5px;
+    color: var(--color-text-description);
+    line-height: 1.75;
+    padding-left: 14px;
+    position: relative;
+    margin-bottom: 4px;
+  }
+  .notes li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: var(--color-primary);
+  }
+  .notes li strong { color: var(--color-text-primary); font-weight: 500; }
+  .notes li em { font-style: normal; color: var(--color-primary); font-weight: 500; }
+  .notes code {
+    background: var(--color-background);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-family: ui-monospace, Menlo, monospace;
+  }
+
+  @media (max-width: 780px) {
+    .compare { grid-template-columns: 1fr; gap: 32px; }
+    body { padding: 24px 14px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <div class="kicker">LOCA · MY MAP TAB REDESIGN</div>
+    <h1>내 지도 탭 리디자인</h1>
+    <p>
+      두 화면의 정보 위계 정돈 · 헤더 압축 · 필터 칩 단순화 · 카드 시각 마감
+    </p>
+  </header>
+
+  <div class="compare">
+
+    <!-- ============== A. 지도 화면 ============== -->
+    <div class="case">
+      <div class="case-label"><span class="dot"></span>A. MAPS · 지도 7개</div>
+      <div class="frame">
+        <div class="screen">
+
+          <!-- 헤더: H1 + 우측 아이콘 (지도 가져오기 + 새 지도 + 알림) -->
+          <div class="h-row">
+            <h1 class="h-title">내 지도</h1>
+            <div class="h-actions">
+              <button class="h-icon-btn" title="지도 가져오기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+              <button class="h-icon-btn primary" title="새 지도 만들기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+              <button class="h-icon-btn" title="알림" aria-label="알림">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="dot"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 탭 -->
+          <div class="tab-seg">
+            <button class="active">지도 <span class="num">7</span></button>
+            <button>장소 <span class="num">52</span></button>
+          </div>
+
+          <!-- 검색바 -->
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-text-tertiary)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input placeholder="이름, 지역, 태그로 검색" />
+          </div>
+
+          <!-- 지도 카드 리스트 -->
+          <div class="map-list">
+
+            <div class="map-card r-seoul">
+              <div class="blob b1"></div>
+              <div class="blob b2"></div>
+              <div class="blob b3"></div>
+              <div class="top-row">
+                <span class="region-chip">서울</span>
+                <span class="vis-badge private">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  나만 보기
+                </span>
+              </div>
+              <div class="bottom">
+                <div class="title-row">
+                  <div class="title-block">
+                    <div class="title">성수 카페 산책</div>
+                    <div class="meta">
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>2</span>
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19L10 7L16 14L20 5"/></svg>1</span>
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>0</span>
+                      <span class="updated">오늘</span>
+                    </div>
+                  </div>
+                  <button class="map-more-btn" aria-label="더보기">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="map-card r-busan">
+              <div class="blob b1"></div>
+              <div class="blob b2"></div>
+              <div class="blob b3"></div>
+              <div class="top-row">
+                <span class="region-chip">부산</span>
+                <span class="vis-badge private">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  나만 보기
+                </span>
+              </div>
+              <div class="bottom">
+                <div class="title-row">
+                  <div class="title-block">
+                    <div class="title">바다 보러 가는 길</div>
+                    <div class="meta">
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>1</span>
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19L10 7L16 14L20 5"/></svg>0</span>
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>0</span>
+                      <span class="updated">어제</span>
+                    </div>
+                  </div>
+                  <button class="map-more-btn" aria-label="더보기">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="map-card r-sejong">
+              <div class="blob b1"></div>
+              <div class="blob b2"></div>
+              <div class="blob b3"></div>
+              <div class="top-row">
+                <span class="region-chip">세종</span>
+                <span class="vis-badge shared">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+                  링크 공유 중
+                </span>
+              </div>
+              <div class="bottom">
+                <div class="title-row">
+                  <div class="title-block">
+                    <div class="title">새 참여 지도</div>
+                    <div class="meta">
+                      <span class="count"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/></svg>7</span>
+                      <span class="updated">3일 전</span>
+                    </div>
+                  </div>
+                  <button class="map-more-btn" aria-label="더보기">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 하단 액션: FAB 외에 sticky 인라인 -->
+          <div style="height: 60px;"></div>
+        </div>
+
+        <!-- 탭바 -->
+        <div class="tabbar">
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12L12 4l9 8v9h-6v-6h-6v6H3z"/></svg>
+          </div>
+          <div class="tab active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18" stroke="#fff" stroke-width="0.5"/><line x1="16" y1="6" x2="16" y2="22" stroke="#fff" stroke-width="0.5"/></svg>
+            <span class="tab-dot"></span>
+          </div>
+          <button class="tab-fab">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ============== B. 장소 화면 ============== -->
+    <div class="case">
+      <div class="case-label"><span class="dot b"></span>B. PLACES · 장소 52개</div>
+      <div class="frame">
+        <div class="screen">
+
+          <!-- 헤더 -->
+          <div class="h-row">
+            <h1 class="h-title">내 지도</h1>
+            <div class="h-actions">
+              <button class="h-icon-btn" title="지도 가져오기">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              </button>
+              <button class="h-icon-btn" title="알림" aria-label="알림">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span class="dot"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 탭 -->
+          <div class="tab-seg">
+            <button>지도 <span class="num">7</span></button>
+            <button class="active">장소 <span class="num">52</span></button>
+          </div>
+
+          <!-- 검색바 -->
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--color-text-tertiary)"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input placeholder="이름, 메모로 검색" />
+          </div>
+
+          <!-- 필터 스택 (그룹 라벨 + 가로 스크롤 칩) -->
+          <div class="filter-stack">
+            <!-- 1단: 지도별 -->
+            <div class="filter-row">
+              <span class="group-label">지도</span>
+              <button class="chip active">전체 <span class="num">52</span></button>
+              <button class="chip">성수 카페 산책 <span class="num">3</span></button>
+              <button class="chip">바다 보러 가는 길 <span class="num">1</span></button>
+              <button class="chip">천안지도 <span class="num">7</span></button>
+              <button class="chip">새 참여 지도 <span class="num">12</span></button>
+              <button class="chip">반니절 코스 <span class="num">23</span></button>
+            </div>
+
+            <!-- 2단: 타입 + 상태 (구분선 sty) -->
+            <div class="filter-row">
+              <span class="group-label">타입</span>
+              <button class="chip active">전체 <span class="num">52</span></button>
+              <button class="chip"><span class="chip-dot pin"></span>장소 <span class="num">34</span></button>
+              <button class="chip"><span class="chip-dot route"></span>경로 <span class="num">10</span></button>
+              <button class="chip"><span class="chip-dot area"></span>범위 <span class="num">8</span></button>
+            </div>
+
+            <!-- 3단: 기록 상태 (선택적, 빈 상태 시 가시성 낮게) -->
+            <div class="filter-row">
+              <span class="group-label">기록</span>
+              <button class="chip empty">사진 있음 <span class="num">0</span></button>
+              <button class="chip">메모 있음 <span class="num">26</span></button>
+              <button class="chip">음성 있음 <span class="num">4</span></button>
+            </div>
+          </div>
+
+          <!-- 장소 리스트 -->
+          <div class="place-section">
+            <div class="place-row">
+              <div class="place-icon">☕</div>
+              <div class="place-info">
+                <div class="place-name">경주관</div>
+                <div class="place-meta">
+                  <span class="map-name">성수 카페 산책</span>
+                  <span class="dot"></span>
+                  <span class="has-media">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    메모 1
+                  </span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="place-row">
+              <div class="place-icon route">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+              </div>
+              <div class="place-info">
+                <div class="place-name">한강공원 자전거 루트</div>
+                <div class="place-meta">
+                  <span class="map-name">성수 카페 산책</span>
+                  <span class="dot"></span>
+                  <span>1.4km</span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="place-row">
+              <div class="place-icon">🥖</div>
+              <div class="place-info">
+                <div class="place-name">호두과자 본가</div>
+                <div class="place-meta">
+                  <span class="map-name">천안지도</span>
+                  <span class="dot"></span>
+                  <span class="has-media">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    사진 3
+                  </span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="place-row">
+              <div class="place-icon area">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+              </div>
+              <div class="place-info">
+                <div class="place-name">두정동 카페 거리</div>
+                <div class="place-meta">
+                  <span class="map-name">천안지도</span>
+                  <span class="dot"></span>
+                  <span>약 12,400㎡</span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="place-row">
+              <div class="place-icon">🌸</div>
+              <div class="place-info">
+                <div class="place-name">독립서점 책과 사람</div>
+                <div class="place-meta">
+                  <span class="map-name">반니절 코스</span>
+                  <span class="dot"></span>
+                  <span class="has-media">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    메모 2
+                  </span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+
+            <div class="place-row">
+              <div class="place-icon">🙂</div>
+              <div class="place-info">
+                <div class="place-name empty">이름 없는 장소 · 직접 입력하기</div>
+                <div class="place-meta">
+                  <span class="map-name">천안지도</span>
+                </div>
+              </div>
+              <span class="place-arrow">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div style="height: 24px;"></div>
+        </div>
+
+        <!-- 탭바 -->
+        <div class="tabbar">
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12L12 4l9 8v9h-6v-6h-6v6H3z"/></svg>
+          </div>
+          <div class="tab active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/></svg>
+            <span class="tab-dot"></span>
+          </div>
+          <button class="tab-fab">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="tab">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 설계 노트 -->
+  <div class="notes">
+    <h3>설계 노트 · 내 지도 탭 리디자인</h3>
+    <ul>
+      <li><strong>헤더 압축</strong> — 4단(LOCA 로고 + H1 + 부제 + 텍스트 버튼 2개) → <em>1단</em>으로. <code>LOCA</code> 로고는 제거(홈 탭 정체성 신호와 중복), 부제도 제거. 좌측 <strong>H1 "내 지도"</strong>, 우측 아이콘 그룹.</li>
+
+      <li><strong>새 지도 만들기 = primary 아이콘 버튼</strong> — A 화면(지도 탭) 우측에 <em>지도 가져오기 → 새 지도(+) → 알림</em> 3개 아이콘. "새 지도 만들기"는 primary 오렌지 배경의 + 버튼으로 노출하여 시각적으로 가장 강한 액션임을 표시. <em>새 지도 만들기 ≠ FAB</em>: FAB는 현재 지도 안에서 마커(장소/경로/범위) 추가, 헤더의 +는 새로운 지도 컨테이너 생성. 두 액션의 결과물이 다르므로 위치도 분리. <strong>B 화면(장소 탭)에는 노출 안 함</strong>(장소 탭에서 "새 지도 만들기"는 맥락에 안 맞음, 가져오기/알림만 유지).</li>
+
+      <li><strong>탭 스위처 segmented 스타일</strong> — 이전엔 좌우로 분리된 알약 버튼이라 활성/비활성 차이가 너무 강했음. 흰색 컨테이너 안에 secondary 그린 슬라이더 형태로 변경하여 <em>iOS segmented control</em> 패턴 적용. 우측에 카운트 노출.</li>
+
+      <li><strong>지도 카드: 한 카드 = 한 지역 컬러</strong> — DESIGN.md §2.5 Regional Color System 적용. 카드 배경을 region pale 톤(<code>#E8BCAD</code> 서울, <code>#ABC6DC</code> 부산, <code>#BCD3BD</code> 세종)으로 깔고, blob 3개를 살짝 흩뿌려 부드러운 분위기. 단색 회색이었던 이전 시안 대비 <em>지역감</em>이 시각적으로 살아남.</li>
+
+      <li><strong>카드 정보 통일</strong> — 좌상단 region 칩 + 우상단 visibility 뱃지(<em>나만 보기</em> / <em>링크 공유 중</em> / <em>프로필 공개</em>) 위치 고정. 하단은 그라데이션 오버레이 위에 명조체 제목 + <em>장소·경로·범위 카운트 3종</em>(타입 아이콘 + 숫자) + 수정일. 우측에 더보기(··) 버튼.</li>
+
+      <li><strong>3종 마커 카운트 노출</strong> — 보고서 P0(용어 분리) 결과 적용. 핀 아이콘 + 폴리라인 + 점선 사각형 SVG. 카운트가 0인 타입은 표기하되 흐리게(예: <em>구역 0</em>). 사용자가 자신의 지도 구성을 한눈에 파악.</li>
+
+      <li><strong>수정일 텍스트 짧게</strong> — "오늘 13:24" 같은 절대시간 → <em>오늘 / 어제 / 3일 전</em>처럼 상대시간. 모바일 카드 좁은 영역에서 가독성 우위.</li>
+
+      <li><strong>장소 탭: 3단 필터 시스템</strong> — 이전 2단 빽빽한 칩 스택 → <em>그룹 라벨 + 가로 스크롤</em> 3단. 좌측에 회색 그룹 라벨(<em>지도 / 타입 / 기록</em>)을 두어 각 칩 row의 의미를 명확히. 빽빽한 칩 클러스터의 <strong>판단 비용 절반 감소</strong>.</li>
+
+      <li><strong>"전체" 칩 활성 상태 명확화</strong> — 이전엔 "전체 52"가 두 줄에 모두 active 상태로 있어 "둘 다 활성?"으로 헷갈렸음. v2에선 각 row마다 독립적인 active 상태(현재 모두 "전체" 선택 상태). 한 row 내 칩은 <em>단일 선택</em>이라는 시각 신호 강화.</li>
+
+      <li><strong>타입 칩에 컬러 닷</strong> — <span style="color:#FF6B35;">●</span> 장소 / <span style="color:#0F6E56;">●</span> 경로 / <span style="color:#854F0B;">●</span> 범위. DESIGN.md §2.3 마커 컬러를 칩에 동기화. 사용자가 색을 보고 빠르게 식별.</li>
+
+      <li><strong>장소 row 컴팩트화</strong> — 이전 row 높이 ~70px → <em>~58px</em>. 우측 "장소" 라벨을 제거하고(필터 칩에 이미 정보 있음), 대신 <em>소속 지도 이름 + 메모/사진 개수</em>를 메타 라인에 노출. 한 화면에 보이는 row 수 30%↑.</li>
+
+      <li><strong>핀 아이콘 박스에 이모지 노출</strong> — 이전은 단조로운 오렌지 핀만 반복 → 사용자 선택 이모지(☕ 🥖 🌸) 노출. 시각 다양성 + 사용자가 의도한 카테고리감 즉시 인지. 경로/범위는 SVG로 유지(이모지 없음).</li>
+
+      <li><strong>"새 장소" 안티패턴 처리</strong> — DESIGN.md §14 Don'ts에 명시된 <em>"새 장소를 기본 이름으로 방치 금지"</em> 적용. 장소 이름이 비어있으면 <em>이탤릭 회색 톤</em>으로 "이름 없는 장소 · 직접 입력하기"라고 표기. 사용자에게 입력 유도.</li>
+
+      <li><strong>장소 row 우측 chevron</strong> — 우측에 ›(chevron) 아이콘 추가. 탭 가능 어포던스 + 상세 진입점이 명확해짐.</li>
+
+      <li><strong>변경 안 한 것</strong> — 정보 우선순위, 탭 구조(지도/장소), 검색 위치, 탭바, FAB 위치는 그대로. <em>옷만 다림질</em>한 수준이라 개발팀이 받아서 스타일만 교체 가능.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

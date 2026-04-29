@@ -33,13 +33,13 @@ export function MapsListScreen({
   return (
     <div className="maps-list-view">
       {maps.length > 3 ? (
-        <label className="search-box">
-          <SearchIcon size={16} aria-hidden="true" />
+        <label className="archive-search">
+          <SearchIcon size={13} aria-hidden="true" />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="지도 검색"
+            placeholder="이름, 지역, 태그로 검색"
           />
         </label>
       ) : null}

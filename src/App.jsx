@@ -1214,9 +1214,11 @@ export default function App() {
       {!isOnline ? (
         <div className="offline-banner">오프라인 모드 - 데이터가 자동 저장됩니다</div>
       ) : null}
-      <header className="top-bar">
+      <header className={`top-bar${(activeTab === "maps" && mapsView === "list") || activeTab === "explore" ? " top-bar--blank" : ""}`}>
         <div>
-          <strong className="brand">LOCA</strong>
+          {!((activeTab === "maps" && mapsView === "list") || activeTab === "explore") ? (
+            <strong className="brand">LOCA</strong>
+          ) : null}
           {!(activeTab === "maps" && mapsView === "list") && headerConfig.subtitle ? (
             <span className="top-bar__subtitle">{headerConfig.subtitle}</span>
           ) : null}
@@ -1241,7 +1243,7 @@ export default function App() {
             >
               <SettingsIcon size={18} />
             </button>
-          ) : !(activeTab === "maps" && mapsView === "editor") ? (
+          ) : !(activeTab === "maps" && mapsView === "editor") && !(activeTab === "maps" && mapsView === "list") && activeTab !== "explore" ? (
             <button
               className="top-bar__noti-btn"
               type="button"
@@ -1293,6 +1295,9 @@ export default function App() {
             maps={maps}
             features={features}
             recommendedMaps={recommendedMaps}
+            viewerProfile={viewerProfile}
+            userStats={userStats}
+            levelEmoji={levelEmoji}
             onResumeMyMap={openMapEditor}
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
@@ -1303,11 +1308,16 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "explore" ? (
           <ExploreScreen
             recommendedMaps={recommendedMaps}
-            communityMapFeatures={communityMapFeatures}
             onOpenMap={openDemoMap}
             onOpenCommunityEditor={openCommunityMapEditor}
-            onCreateRecord={openRecordFlow}
-            levelEmoji={levelEmoji}
+            users={users}
+            followed={followed}
+            onSelectUser={(profile) => {
+              setSelectedUserProfile(profile)
+              setSelectedUserId(profile.id)
+            }}
+            onOpenNotifications={() => setNotiPanelOpen(true)}
+            hasUnread={notiHasUnread}
           />
         ) : null}
 
@@ -1352,6 +1362,8 @@ export default function App() {
             onRemoveFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
             onOpenFeature={openFeatureFromPlaces}
             onCreateRecord={openRecordFlow}
+            onOpenNotifications={() => setNotiPanelOpen(true)}
+            hasUnread={notiHasUnread}
           />
         ) : null}
 
@@ -1511,6 +1523,7 @@ export default function App() {
       <BottomNav
         activeTab={activeTab}
         onChange={handleBottomNavChange}
+        pulseAdd={(userStats?.xp || 0) < 30}
       />
       )}
 
