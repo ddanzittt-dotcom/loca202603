@@ -17,13 +17,11 @@ import {
   submitSurveyReward as rpcSubmitSurveyReward,
   getMyCheckins as rpcGetMyCheckins,
   awardSouvenir as rpcAwardSouvenir,
-  getUserBadges as rpcGetUserBadges,
-  awardBadge as rpcAwardBadge,
   updateStreak as rpcUpdateStreak,
 } from "./mapService"
-import { computeStatsFromLocal, BADGES, MILESTONE_SOUVENIRS } from "../data/gamification"
+import { computeStatsFromLocal, MILESTONE_SOUVENIRS } from "../data/gamification"
 // re-export for convenience
-export { LEVELS, BADGES, MILESTONE_SOUVENIRS, XP_VALUES, getLevelForXp, getNextLevel, getLevelProgress, getEarnedBadges, getNextEarnableBadge } from "../data/gamification"
+export { LEVELS, MILESTONE_SOUVENIRS, XP_VALUES, getLevelForXp, getNextLevel, getLevelProgress } from "../data/gamification"
 
 // ─── Profile shape normalizer ───
 // DB snake_case → JS camelCase 통일
@@ -147,30 +145,6 @@ export async function getUserSouvenirs() {
 }
 
 /**
- * 뱃지 목록 조회
- */
-export async function getUserBadges() {
-  if (!hasSupabaseEnv) return []
-  try {
-    return await rpcGetUserBadges()
-  } catch {
-    return []
-  }
-}
-
-/**
- * 뱃지 부여
- */
-export async function awardBadge(badgeId) {
-  if (!hasSupabaseEnv) return null
-  try {
-    return await rpcAwardBadge(badgeId)
-  } catch {
-    return null
-  }
-}
-
-/**
  * 기념 뱃지 발급.
  * 내부 저장은 user_souvenirs 테이블 — API 명은 하위 호환을 위해 souvenir 유지.
  */
@@ -205,24 +179,6 @@ export async function updateStreak() {
   } catch {
     // silent
   }
-}
-
-/**
- * 배지 자동 체크 + 부여
- * @param {object} stats - normalized stats (camelCase)
- * @param {string[]} earnedBadgeIds - 이미 획득한 badge_id 목록
- * @returns {string[]} 새로 획득한 badge_id 목록
- */
-export async function checkAndAwardBadges(stats, earnedBadgeIds) {
-  const newBadges = []
-  for (const badge of BADGES) {
-    if (earnedBadgeIds.includes(badge.id)) continue
-    if (badge.condition(stats)) {
-      const result = await awardBadge(badge.id)
-      if (result) newBadges.push(badge.id)
-    }
-  }
-  return newBadges
 }
 
 /**

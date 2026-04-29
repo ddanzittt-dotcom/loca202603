@@ -91,6 +91,24 @@ function haversineKm(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+// 모두의 지도 — 현재 위치 기준 반경 2km 안에서만 기록한다.
+// 보고서 11.2: "경험은 데이터가 아니라 몸이 그 자리에 있었던 흔적이다."
+const COMMUNITY_DISTANCE_LIMIT_KM = 2
+
+function checkCommunityDistance(activeMapSource, myLocation, lat, lng, showToast) {
+  if (activeMapSource !== "community") return true
+  if (!myLocation) {
+    showToast("위치 권한을 허용하면 내 주변 장소만 남길 수 있어요.")
+    return false
+  }
+  const dist = haversineKm(myLocation.lat, myLocation.lng, lat, lng)
+  if (dist > COMMUNITY_DISTANCE_LIMIT_KM) {
+    showToast(`내 위치에서 ${dist.toFixed(1)}km 떨어져 있어요. 2km 이내만 남길 수 있어요.`)
+    return false
+  }
+  return true
+}
+
 /**
  * DB에서 반환된 feature(memos/photos/voices가 빈 배열일 수 있음)와
  * 로컬 state의 기존 feature를 병합한다.
@@ -822,16 +840,8 @@ export function useFeatureEditing({
     }
 
     if (editorMode === "pin") {
-      // 커뮤니티 모드: 내 위치 1km 이내만 핀 추가 가능
-      if (activeMapSource === "community") {
-        if (!myLocation) {
-          return showToast("위치 권한을 허용하면 내 주변 장소만 추가할 수 있어요.")
-        }
-        const dist = haversineKm(myLocation.lat, myLocation.lng, sc.lat, sc.lng)
-        if (dist > 1) {
-          return showToast(`내 위치에서 ${dist.toFixed(1)}km 떨어져 있어요. 1km 이내만 추가할 수 있어요.`)
-        }
-      }
+      // 모두의 지도: 내 위치 2km 이내만 핀 추가 가능 (보고서 11.2)
+      if (!checkCommunityDistance(activeMapSource, myLocation, sc.lat, sc.lng, showToast)) return
 
       let nextFeature = {
         id: createId("feat"),
@@ -936,6 +946,8 @@ export function useFeatureEditing({
     }
 
     if (editorMode === "route" || editorMode === "area") {
+      // 모두의 지도: 경로/영역의 각 점도 2km 이내여야 한다 (보고서 11.2)
+      if (!checkCommunityDistance(activeMapSource, myLocation, sc.lat, sc.lng, showToast)) return
       setDraftPoints((current) => [...current, [sc.lng, sc.lat]])
     }
   }
@@ -1021,12 +1033,12 @@ export function useFeatureEditing({
   }
 
   const completeArea = async (draftPoints) => {
-    if (!activeMapId || draftPoints.length < 3) return showToast("범위는 최소 3개 꼭짓점이 필요해요.")
+    if (!activeMapId || draftPoints.length < 3) return showToast("영역은 최소 3개 꼭짓점이 필요해요.")
     let nextFeature = {
       id: createId("feat"),
       mapId: activeMapId,
       type: "area",
-      title: "새 범위",
+      title: "새 영역",
       emoji: "\uD83D\uDFE9",
       style: getDefaultFeatureStyle("area"),
       points: sanitizePoints(draftPoints),
@@ -1048,7 +1060,7 @@ export function useFeatureEditing({
           })
         } catch (error) {
           console.error("Failed to create community area", error)
-          return showToast("범위를 저장하지 못했어요.")
+          return showToast("영역을 저장하지 못했어요.")
         }
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
@@ -1077,7 +1089,7 @@ export function useFeatureEditing({
           nextFeature = await createFeatureRecord(activeMapId, nextFeature)
         } catch (error) {
           console.error("Failed to create area", error)
-          return showToast("범위를 저장하지 못했어요.")
+          return showToast("영역을 저장하지 못했어요.")
         }
       }
       setFeatures((current) => [nextFeature, ...current])
@@ -1097,7 +1109,7 @@ export function useFeatureEditing({
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
     setFeatureSheet(toEditableFeature(nextFeature))
-    showToast("범위를 저장했어요.")
+    showToast("영역을 저장했어요.")
   }
 
   return {

@@ -1,4 +1,4 @@
-// ─── 게이미피케이션 카탈로그 ───
+﻿// ─── 게이미피케이션 카탈로그 ───
 // 서버 authoritative: XP/레벨/배지는 서버(gamificationService.js)가 source of truth
 // 이 파일은 카탈로그 정의 + local fallback 전용
 
@@ -29,25 +29,6 @@ export const XP_VALUES = {
   map_import: 10,
   survey_submit: 5,
 }
-
-// ─── 뱃지 정의 ───
-// 업적 = 활동 성취 (창작/커뮤니티/연속). 행사 참여 이정표는 MILESTONE_SOUVENIRS (기념 뱃지) 로 이관됨.
-export const BADGES = [
-  // 창작 계열
-  { id: "ten_pins",        emoji: "📍", name: "핀 초보",   desc: "핀 10개 추가",             category: "create", condition: (s) => s.pins >= 10 },
-  { id: "fifty_pins",      emoji: "📌", name: "핀 장인",   desc: "핀 50개 추가",             category: "create", condition: (s) => s.pins >= 50 },
-  { id: "five_maps",       emoji: "🗺",  name: "지도장인",  desc: "지도 5개 생성",             category: "create", condition: (s) => s.maps >= 5 },
-  { id: "three_publishes", emoji: "📢", name: "공유왕",    desc: "지도 3개 발행",             category: "create", condition: (s) => s.publishes >= 3 },
-
-  // 커뮤니티 계열
-  { id: "ten_memos",       emoji: "💬", name: "수다쟁이",  desc: "메모 10개 작성",            category: "community", condition: (s) => s.memos >= 10 },
-  { id: "five_imports",    emoji: "📥", name: "수집가",    desc: "다른 지도 5개 가져오기",     category: "community", condition: (s) => s.imports >= 5 },
-
-  // 연속 기록
-  { id: "streak_3",        emoji: "🔥", name: "3일 연속",  desc: "3일 연속 활동",             category: "streak", condition: (s) => s.streak >= 3 },
-  { id: "streak_7",        emoji: "🔥", name: "7일 연속",  desc: "7일 연속 활동",             category: "streak", condition: (s) => s.streak >= 7 },
-  { id: "streak_30",       emoji: "💎", name: "30일 연속", desc: "30일 연속 활동",            category: "streak", condition: (s) => s.streak >= 30 },
-]
 
 // ─── 기념 뱃지 milestone 정의 ───
 // 행사 참여 경험을 기념하는 자동 발급 뱃지. user_souvenirs 테이블에 souvenir_code 로 저장된다.
@@ -91,13 +72,6 @@ export function getLevelProgress(xp) {
   }
 }
 
-export function getEarnedBadges(stats) {
-  return BADGES.filter((b) => b.condition(stats))
-}
-
-export function getNextEarnableBadge(stats) {
-  return BADGES.find((b) => !b.condition(stats)) || null
-}
 
 /** local fallback: 로컬 데이터로 통계 계산 (cloud mode에서는 서버 stats 사용) */
 export function computeStatsFromLocal({ maps, features, checkins, completions, memos, imports, publishes, streak, regions }) {
@@ -140,3 +114,4 @@ export function computeStatsFromLocal({ maps, features, checkins, completions, m
 
   return { ...stats, xp }
 }
+

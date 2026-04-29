@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo } from "react"
+﻿import { useCallback, useEffect, useMemo } from "react"
 import {
   getGameProfile as fetchGameProfile,
-  checkAndAwardBadges,
   checkAndAwardMilestoneSouvenirs,
   computeLocalStats,
 } from "../lib/gamificationService"
@@ -34,21 +33,8 @@ export function useGamification({
     const lvl = getLevelForXp(userStats?.xp || 0)
     return lvl.icon || lvl.emoji
   }, [userStats])
-
-  const userBadges = useMemo(() => gameProfile?.badges || [], [gameProfile])
-  const userBadgeIds = useMemo(() => userBadges.map((b) => b.badge_id), [userBadges])
   const souvenirs = useMemo(() => gameProfile?.souvenirs || [], [gameProfile])
   const souvenirCodes = useMemo(() => souvenirs.map((s) => s.souvenir_code).filter(Boolean), [souvenirs])
-
-  // 배지 자동 체크 + 부여
-  useEffect(() => {
-    if (!cloudMode || !gameProfile?.stats) return
-    checkAndAwardBadges(userStats, userBadgeIds).then((newIds) => {
-      if (newIds.length > 0) {
-        refreshGameProfile()
-      }
-    })
-  }, [cloudMode, gameProfile, userStats, userBadgeIds, refreshGameProfile])
 
   // 기념 뱃지 milestone 자동 체크 + 발급 (구 행사성 업적 4종 이관분)
   useEffect(() => {
@@ -67,3 +53,6 @@ export function useGamification({
     souvenirs,
   }
 }
+
+
+

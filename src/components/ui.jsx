@@ -28,7 +28,7 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
 const NAV_ICONS = { home: Home, maps: Map, "add-record": PlusCircle, explore: Compass, profile: User }
 const NAV_LABELS = { home: "홈", maps: "내 지도", "add-record": "기록", explore: "탐색", profile: "프로필" }
 
-export function BottomNav({ activeTab, onChange }) {
+export function BottomNav({ activeTab, onChange, pulseAdd = false }) {
   const items = ["home", "maps", "add-record", "explore", "profile"]
 
   return (
@@ -39,10 +39,11 @@ export function BottomNav({ activeTab, onChange }) {
         const isActive = activeTab === id
         const isAddAction = id === "add-record"
         const ariaLabel = isAddAction ? "기록 남기기" : label
+        const addPulse = isAddAction && pulseAdd
         return (
           <button
             key={id}
-            className={`bottom-nav__item${isActive ? " is-active" : ""}${isAddAction ? " bottom-nav__item--add" : ""}`}
+            className={`bottom-nav__item${isActive ? " is-active" : ""}${isAddAction ? " bottom-nav__item--add" : ""}${addPulse ? " bottom-nav__item--pulse" : ""}`}
             type="button"
             onClick={() => onChange(id)}
             aria-label={ariaLabel}
@@ -204,6 +205,10 @@ export function MapCard({
   const hash = (map.title || "").length % 4
   const blobOffsets = [hash * 5, (hash + 1) * 4, (hash + 2) * 3]
 
+  // visibility 3상태 매핑: 프로필 공개 > 링크 공유 중 > 나만 보기
+  const visState = placement.isOnProfile ? "public" : placement.isPublished ? "shared" : "private"
+  const visLabel = visState === "public" ? "프로필 공개" : visState === "shared" ? "링크 공유 중" : "나만 보기"
+
   return (
     <article
       className="mc"
@@ -211,114 +216,128 @@ export function MapCard({
       style={{ background: pal[3], overflow: menuOpen ? "visible" : "hidden" }}
     >
       {/* Blobs */}
-      <div className="mc__blob" style={{ left: -15 + blobOffsets[0], bottom: -15, width: 160, height: 100, background: `${pal[0]}73` }} />
-      <div className="mc__blob" style={{ right: -10 + blobOffsets[1], top: -10, width: 130, height: 85, background: `${pal[3]}80` }} />
-      <div className="mc__blob" style={{ left: `${35 + blobOffsets[2]}%`, top: "30%", width: 90, height: 60, background: `${pal[1]}4D` }} />
+      <div className="mc__blob mc__blob--b1" style={{ left: -28 + blobOffsets[0], bottom: -38, width: 130, height: 130, background: pal[0], opacity: 0.45 }} />
+      <div className="mc__blob mc__blob--b2" style={{ right: -22 + blobOffsets[1], top: -28, width: 92, height: 92, background: pal[3], opacity: 0.5 }} />
+      <div className="mc__blob mc__blob--b3" style={{ left: `${40 + blobOffsets[2] / 2}%`, top: "36%", width: 70, height: 70, background: pal[1], opacity: 0.3 }} />
 
-      {/* 좌상단: 지역 칩 */}
-      <div className="mc__region">
-        <span className="mc__region-dot" style={{ background: `${pal[0]}66` }} />
-        <span className="mc__region-label">{region.name}</span>
-      </div>
-
-      {/* 우상단: 단일 상태 뱃지 (나만 보기 / 링크 공유 중) */}
-      <div className="mc__badges">
-        <span className={`mc__badge ${placement.isPublished ? "mc__badge--published" : "mc__badge--draft"}`}>
-          {placement.isPublished ? "링크 공유 중" : "나만 보기"}
+      {/* 상단: 지역 칩 + visibility 뱃지 */}
+      <div className="mc__top">
+        <span className="mc__region-chip">{region.name}</span>
+        <span className={`mc__vis-badge mc__vis-badge--${visState}`}>
+          {visState === "private" ? (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          ) : visState === "shared" ? (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+              <line x1="15.4" y1="6.5" x2="8.6" y2="10.5" />
+            </svg>
+          ) : (
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M3 12h18" />
+              <path d="M12 3a13 13 0 0 1 0 18a13 13 0 0 1 0 -18" />
+            </svg>
+          )}
+          {visLabel}
         </span>
       </div>
 
       {/* 하단 오버레이 */}
       <div className="mc__bottom">
-        <p className="mc__title">{map.title}</p>
-        <div className="mc__meta">
-          <span><MapPin size={10} fill="#fff" stroke="#fff" /> {pins.length}</span>
-          <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1,8 4,3 7,6 9,2" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg> {routes.length}</span>
-          <span><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><rect x="1" y="1" width="8" height="8" rx="2" stroke="#fff" strokeWidth="1" strokeDasharray="2 1.5"/></svg> {areas.length}</span>
-          <span className="mc__meta-sep">· {lastMod}</span>
-          {placement.isOnProfile ? (
-            <span
-              className="mc__meta-placement"
-              aria-label="프로필 공개 지도"
-              style={{
-                fontSize: 9, fontWeight: 500,
-                padding: "1px 6px", borderRadius: 8,
-                background: "rgba(255,255,255,.2)", color: "#fff",
-              }}
-            >
-              프로필 공개
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      {/* 우하단 overflow menu: 편집/삭제 + 링크 공유/프로필 공개 액션 */}
-      {canManage && hasOverflowActions ? (
-        <div className="mc__actions" ref={menuRef}>
-          <button
-            type="button"
-            aria-label="더보기"
-            onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev) }}
-          >
-            <MoreHorizontal size={14} color="#fff" />
-          </button>
-          {menuOpen ? (
-            <div
-              className="mc__menu"
-              role="menu"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: "absolute",
-                right: 0, bottom: "calc(100% + 6px)",
-                background: "#fff",
-                borderRadius: 12,
-                padding: 6,
-                minWidth: 160,
-                boxShadow: "0 10px 24px rgba(0,0,0,.15)",
-                border: "0.5px solid rgba(0,0,0,.06)",
-                display: "flex", flexDirection: "column", gap: 2,
-                zIndex: 3,
-              }}
-            >
-              {onShare ? (
-                <MenuItem onClick={() => { setMenuOpen(false); onShare(map.id) }}>
-                  {placement.isPublished ? "링크 공유" : "공유하기"}
-                </MenuItem>
-              ) : null}
-              {placement.canPublish && onPublish ? (
-                <MenuItem onClick={() => { setMenuOpen(false); onPublish(map.id) }}>
-                  링크 공유 켜기
-                </MenuItem>
-              ) : null}
-              {placement.canAddToProfile && onAddToProfile ? (
-                <MenuItem onClick={() => { setMenuOpen(false); onAddToProfile(map.id) }}>
-                  내 프로필에 공개
-                </MenuItem>
-              ) : null}
-              {placement.canRemoveFromProfile && onRemoveFromProfile ? (
-                <MenuItem onClick={() => { setMenuOpen(false); onRemoveFromProfile(map.id) }}>
-                  프로필에서 내리기
-                </MenuItem>
-              ) : null}
-              {placement.canUnpublish && onUnpublish ? (
-                <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onUnpublish(map.id) }}>
-                  링크 공유 중지
-                </MenuItem>
-              ) : null}
-              {onEdit ? (
-                <MenuItem onClick={() => { setMenuOpen(false); onEdit(map.id) }}>
-                  <Pencil size={12} /> 지도 설정
-                </MenuItem>
-              ) : null}
-              {onDelete ? (
-                <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onDelete(map.id, map.title) }}>
-                  <Trash2 size={12} /> 삭제
-                </MenuItem>
+        <div className="mc__title-row">
+          <div className="mc__title-block">
+            <p className="mc__title">{map.title}</p>
+            <div className="mc__meta">
+              <span className="mc__count" aria-label={`장소 ${pins.length}`}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /></svg>
+                {pins.length}
+              </span>
+              <span className="mc__count" aria-label={`경로 ${routes.length}`}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19L10 7L16 14L20 5" /></svg>
+                {routes.length}
+              </span>
+              <span className="mc__count" aria-label={`영역 ${areas.length}`}>
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="3 2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                {areas.length}
+              </span>
+              {lastMod ? <span className="mc__updated">{lastMod}</span> : null}
+            </div>
+          </div>
+          {canManage && hasOverflowActions ? (
+            <div className="mc__more" ref={menuRef}>
+              <button
+                type="button"
+                className="mc__more-btn"
+                aria-label="더보기"
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev) }}
+              >
+                <MoreHorizontal size={13} />
+              </button>
+              {menuOpen ? (
+                <div
+                  className="mc__menu"
+                  role="menu"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: "absolute",
+                    right: 0, bottom: "calc(100% + 6px)",
+                    background: "#fff",
+                    borderRadius: 12,
+                    padding: 6,
+                    minWidth: 160,
+                    boxShadow: "0 10px 24px rgba(0,0,0,.15)",
+                    border: "0.5px solid rgba(0,0,0,.06)",
+                    display: "flex", flexDirection: "column", gap: 2,
+                    zIndex: 3,
+                  }}
+                >
+                  {onShare ? (
+                    <MenuItem onClick={() => { setMenuOpen(false); onShare(map.id) }}>
+                      {placement.isPublished ? "링크 공유" : "공유하기"}
+                    </MenuItem>
+                  ) : null}
+                  {placement.canPublish && onPublish ? (
+                    <MenuItem onClick={() => { setMenuOpen(false); onPublish(map.id) }}>
+                      링크 공유 켜기
+                    </MenuItem>
+                  ) : null}
+                  {placement.canAddToProfile && onAddToProfile ? (
+                    <MenuItem onClick={() => { setMenuOpen(false); onAddToProfile(map.id) }}>
+                      내 프로필에 공개
+                    </MenuItem>
+                  ) : null}
+                  {placement.canRemoveFromProfile && onRemoveFromProfile ? (
+                    <MenuItem onClick={() => { setMenuOpen(false); onRemoveFromProfile(map.id) }}>
+                      프로필에서 내리기
+                    </MenuItem>
+                  ) : null}
+                  {placement.canUnpublish && onUnpublish ? (
+                    <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onUnpublish(map.id) }}>
+                      링크 공유 중지
+                    </MenuItem>
+                  ) : null}
+                  {onEdit ? (
+                    <MenuItem onClick={() => { setMenuOpen(false); onEdit(map.id) }}>
+                      <Pencil size={12} /> 지도 설정
+                    </MenuItem>
+                  ) : null}
+                  {onDelete ? (
+                    <MenuItem variant="danger" onClick={() => { setMenuOpen(false); onDelete(map.id, map.title) }}>
+                      <Trash2 size={12} /> 삭제
+                    </MenuItem>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
         </div>
-      ) : null}
+      </div>
     </article>
   )
 }

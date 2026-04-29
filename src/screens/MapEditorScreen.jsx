@@ -36,7 +36,7 @@ const RECORD_FILTERS = [
   { id: "all", label: "전체" },
   { id: "pin", label: "장소" },
   { id: "route", label: "길·코스" },
-  { id: "area", label: "구역" },
+  { id: "area", label: "영역" },
   { id: "photo", label: "사진 있음" },
   { id: "memory", label: "기억 있음" },
 ]

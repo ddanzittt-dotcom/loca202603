@@ -60,7 +60,7 @@ export async function publishMap(mapId, options = {}) {
 
     const result = parseRpcResult(data)
     if (!result?.success) {
-      throw new Error(result?.error || "발행에 실패했습니다.")
+      throw new Error(result?.error || "링크 공유 켜기에 실패했어요.")
     }
 
     // 발행은 프로필 노출과 분리된다. 레거시 RPC 가 publication row 를 만들었을 수 있으므로 즉시 제거.
@@ -121,7 +121,7 @@ export async function unpublishMap(mapId) {
 
     const result = parseRpcResult(data)
     if (!result?.success) {
-      throw new Error(result?.error || "발행 중단에 실패했습니다.")
+      throw new Error(result?.error || "링크 공유 중지에 실패했어요.")
     }
     // 발행을 중단하면 프로필에서도 내려간다. RPC 여부와 무관하게 publication row 를 정리한다.
     await dropPublicationRowIfAny(supabase, mapId)

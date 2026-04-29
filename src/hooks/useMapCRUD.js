@@ -16,6 +16,7 @@ import {
   removeMapFromProfile as removeMapFromProfileRecord,
 } from "../lib/mapService"
 import { recordMapAction } from "../lib/gamificationService"
+import { toEditableFeature } from "./useFeatureEditing"
 
 export function useMapCRUD({
   maps,
@@ -262,16 +263,16 @@ export function useMapCRUD({
   // 발행 = 공개 링크(/s/:slug) 를 가진 상태로 전환. 프로필 노출을 자동으로 하지 않는다.
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
-    if (!effectiveMapId) return showToast("발행할 지도를 먼저 선택해 주세요.")
+    if (!effectiveMapId) return showToast("링크를 켤 지도를 먼저 선택해 주세요.")
     const targetMap = maps.find((item) => item.id === effectiveMapId)
     // 행사지도 발행은 대시보드 전용 — 메인 앱 발행 흐름에서 차단
     if (isEventMap(targetMap)) {
       setPublishSheet(null)
       return null
     }
-    if (targetMap?.isPublished) return showToast("이미 발행된 지도예요.")
+    if (targetMap?.isPublished) return showToast("이미 링크 공유 중인 지도예요.")
     const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
-    if (mapFeatureCount === 0) return showToast("장소를 추가해야 발행할 수 있어요.")
+    if (mapFeatureCount === 0) return showToast("장소를 추가해야 링크를 켤 수 있어요.")
 
     try {
       if (cloudMode) {
@@ -291,7 +292,7 @@ export function useMapCRUD({
       logEvent("map_publish", { map_id: effectiveMapId })
       if (cloudMode) recordMapAction({ actionType: "map_publish", eventKey: `publish:${effectiveMapId}`, mapId: effectiveMapId }).then(() => refreshGameProfile?.()).catch(() => {})
       setPublishSheet(null)
-      showToast("지도를 발행했어요.")
+      showToast("링크 공유를 켰어요.")
       return effectiveMapId
     } catch (error) {
       console.error("Failed to publish map", error)
@@ -325,7 +326,7 @@ export function useMapCRUD({
         if (current.source === "own" && (current.id === idOrPostId || current.id === targetMapId)) return null
         return current
       })
-      showToast("발행을 중단했어요. 프로필에서도 내려갔어요.")
+      showToast("링크 공유를 중지했어요. 프로필에서도 내려갔어요.")
     } catch (error) {
       console.error("Failed to unpublish map", error)
       showToast(friendlySupabaseError(error))
@@ -338,7 +339,7 @@ export function useMapCRUD({
     const targetMap = maps.find((item) => item.id === mapId)
     if (!targetMap) return false
     if (!targetMap.isPublished) {
-      showToast("먼저 지도를 발행해 주세요.")
+      showToast("먼저 링크 공유를 켜 주세요.")
       return false
     }
     if (shares.some((share) => share.mapId === mapId)) {
@@ -398,7 +399,7 @@ export function useMapCRUD({
     }
   }, [cloudMode, setSelectedPostRef, setShares, shares, showToast])
 
-  const openFeatureFromPlaces = useCallback((featureId) => {
+  const openFeatureFromPlaces = useCallback((featureId, options) => {
     const feature = features.find((item) => item.id === featureId)
     if (!feature) return
     setActiveTab("maps")
@@ -408,6 +409,10 @@ export function useMapCRUD({
     resetEditorState()
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
+    // 빈 이름 row에서 진입한 경우, 편집 시트를 즉시 열어 이름 입력으로 유도.
+    if (options?.focusName) {
+      setFeatureSheet({ ...toEditableFeature(feature), _focusName: true })
+    }
     // Cannot call getFeatureCenter here - import it
     if (feature.type === "pin") {
       setFocusPoint({ lat: feature.lat, lng: feature.lng, zoom: 16 })
@@ -423,7 +428,7 @@ export function useMapCRUD({
       })
     }
     setFitTrigger((value) => value + 1)
-  }, [features, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setFocusPoint, setMapsView, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [features, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFeatureSheet, setFitTrigger, setFocusPoint, setMapsView, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const handleTabChange = useCallback((nextTab) => {
     setActiveTab(nextTab)

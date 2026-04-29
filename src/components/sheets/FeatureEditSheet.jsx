@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { X as XIcon, Camera, Mic, FileText, Play } from "lucide-react"
 import { FeatureEmojiPicker } from "../FeatureEmojiPicker"
 import { lookupEmojiName } from "../../lib/emojiCatalog"
@@ -11,7 +11,7 @@ import {
 } from "../../lib/featureStyle"
 
 /*
- * FeatureEditSheet — 장소 · 경로 · 범위 편집 바텀시트 (작성자 편집 전용).
+ * FeatureEditSheet — 장소 · 경로 · 영역 편집 바텀시트 (작성자 편집 전용).
  *
  * 시안: design/2.loca_place_card_proposal_v5.html
  * 브리프: design/2.CLAUDE_CODE_BRIEF_PLACE_CARD.md
@@ -25,7 +25,7 @@ import {
  * 기존 useFeatureEditing 훅의 save/delete/addMemo 핸들러를 그대로 재사용한다.
  */
 
-// 핀 색상 팔레트 — 공통 6색 (장소·경로·범위 전부 동일). 시안 기준.
+// 핀 색상 팔레트 — 공통 6색 (장소·경로·영역 전부 동일). 시안 기준.
 const PIN_COLOR_PALETTE = [
   "#FF6B35", // orange
   "#2D4A3E", // green
@@ -46,7 +46,7 @@ const TAG_TONES = ["", "mint", "amber"]
 function tagToneByIndex(idx) { return TAG_TONES[idx % TAG_TONES.length] }
 
 // 지도 기본 이름 ("새 장소" 등) 탐지 — 빈 상태 UI 분기용
-const DEFAULT_TITLE_TOKENS = new Set(["", "새 장소", "새 경로", "새 범위"])
+const DEFAULT_TITLE_TOKENS = new Set(["", "새 장소", "새 경로", "새 영역"])
 function isCreatingState(feature) {
   const t = (feature?.title || "").trim()
   return DEFAULT_TITLE_TOKENS.has(t)
@@ -316,7 +316,7 @@ function MeasureInfo({ type, feature }) {
           <rect x="4" y="4" width="16" height="16" rx="3" />
         </svg>
         <span>
-          범위 면적 <strong>{label}</strong>
+          영역 면적 <strong>{label}</strong>
           {mins ? <> · 도보 {mins}분 권역</> : null}
         </span>
       </div>
@@ -551,6 +551,23 @@ export function FeatureEditSheet({
   const open = Boolean(featureSheet)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [memoSheetOpen, setMemoSheetOpen] = useState(false)
+  const nameInputRef = useRef(null)
+  const focusNameSignal = featureSheet?._focusName ? featureSheet?.id || true : null
+
+  // 빈 이름 row에서 진입한 경우, 시트 열릴 때 이름 input에 포커스하고 플래그를 한 번만 소비.
+  useEffect(() => {
+    if (!focusNameSignal) return
+    const timer = setTimeout(() => {
+      nameInputRef.current?.focus()
+      nameInputRef.current?.select?.()
+    }, 80)
+    setFeatureSheet((current) => {
+      if (!current?._focusName) return current
+      const { _focusName, ...rest } = current
+      return rest
+    })
+    return () => clearTimeout(timer)
+  }, [focusNameSignal, setFeatureSheet])
 
   if (!open) return null
 
@@ -560,7 +577,7 @@ export function FeatureEditSheet({
   const creating = isCreatingState(featureSheet)
   const style = normalizeFeatureStyle(featureSheet.style, type)
 
-  const sheetTitle = type === "route" ? "경로" : type === "area" ? "범위" : "장소"
+  const sheetTitle = type === "route" ? "경로" : type === "area" ? "영역" : "장소"
   const metaLine = (() => {
     if (isCommunity) {
       const authorName = featureSheet.createdByName
@@ -653,16 +670,16 @@ export function FeatureEditSheet({
         <div className="fes-field">
           <FieldLabel hint={
             type === "route" ? "지도에 표시될 경로 색"
-              : type === "area" ? "지도에 표시될 범위 색"
+              : type === "area" ? "지도에 표시될 영역 색"
                 : "지도에 표시될 장소 색"
           }>색상</FieldLabel>
           <ColorPalette value={style.color} onChange={(color) => updateStyle({ color })} />
         </div>
 
-        {/* --- 선 종류 (경로·범위만) --- */}
+        {/* --- 선 종류 (경로·영역만) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
-            <FieldLabel hint={type === "area" ? "범위 외곽선 스타일" : "경로의 선 스타일"}>선 종류</FieldLabel>
+            <FieldLabel hint={type === "area" ? "영역 외곽선 스타일" : "경로의 선 스타일"}>선 종류</FieldLabel>
             <LineStylePicker value={style.lineStyle} onChange={(lineStyle) => updateStyle({ lineStyle })} />
           </div>
         ) : null}
@@ -671,6 +688,7 @@ export function FeatureEditSheet({
         <div className="fes-field">
           <FieldLabel>이름</FieldLabel>
           <input
+            ref={nameInputRef}
             className="fes-input fes-input--bold"
             // 기본 placeholder 이름("새 장소" 등)은 빈 상태로 렌더해 사용자가 바로 타이핑하도록.
             // 저장 시 useFeatureEditing.saveFeatureSheet 가 `title.trim()` 검증.
@@ -678,7 +696,7 @@ export function FeatureEditSheet({
             placeholder={
               type === "pin" ? "장소 이름"
                 : type === "route" ? "경로 이름"
-                  : "범위 이름"
+                  : "영역 이름"
             }
             onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))}
             disabled={readOnly}
@@ -704,7 +722,7 @@ export function FeatureEditSheet({
           ) : (
             <FieldLabel hint={
               type === "route" ? "어떤 경로인지 짧게"
-                : type === "area" ? "어떤 범위인지 짧게"
+                : type === "area" ? "어떤 영역인지 짧게"
                   : "어떤 장소인지 짧게"
             }>한 줄 소개</FieldLabel>
           )}
@@ -771,7 +789,7 @@ export function FeatureEditSheet({
           </>
         ) : null}
 
-        {/* --- 측정 정보 (경로·범위) --- */}
+        {/* --- 측정 정보 (경로·영역) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
             <MeasureInfo type={type} feature={featureSheet} />

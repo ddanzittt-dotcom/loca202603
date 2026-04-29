@@ -164,7 +164,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
         {mode === "code" ? (
           <div className="import-map-sheet__code">
             <label className="field">
-              <span>공유 코드 (발행 코드)</span>
+              <span>공유 코드</span>
               <input
                 type="text"
                 value={code}
