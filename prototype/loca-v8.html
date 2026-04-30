@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOCA v8 · Final — 실제 화면 적용</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --paper:      #FCFAF6;
+    --paper-100:  #F6F2EA;
+    --paper-200:  #EFE9DD;
+    --surface:    #FFFFFF;
+    --ink-900: #1F1B16;
+    --ink-700: #58524A;
+    --ink-500: #908A80;
+    --ink-300: #C2BCB1;
+    --ember-600: #BF5A2B;
+    --ember-500: #E26F3C;
+    --ember-300: #F2A57B;
+    --ember-100: #FAE3D2;
+    --ember-50:  #FDF3EA;
+    --moss-700: #3B5841;
+    --moss-600: #4A6B52;
+    --moss-100: #E3EAE0;
+    --dusk-400: #8896A4;
+    --dusk-200: #C8D0D8;
+    --indigo-500: #6B5DC8;
+    --map-bg:    #ECE7DA;
+
+    --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+    --sh-xs: 0 1px 2px rgba(31,27,22,0.04);
+    --sh-sm: 0 4px 12px rgba(31,27,22,0.06);
+    --sh-md: 0 12px 28px rgba(31,27,22,0.08);
+    --sh-lift: 0 20px 40px rgba(31,27,22,0.10);
+    --sh-ember: 0 8px 20px rgba(226,111,60,0.32);
+    --sh-card: 0 8px 24px rgba(31,27,22,0.10);
+
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px; line-height: 1.6;
+    color: var(--ink-900);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.005em;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  h1, h2, h3 { margin: 0; }
+  .num { font-feature-settings: 'tnum' 1; font-variant-numeric: tabular-nums; }
+
+  .page { max-width: 1280px; margin: 0 auto; padding: 72px 28px; }
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; margin-bottom: 56px; padding-bottom: 36px;
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 32px;
+    color: var(--ink-900); letter-spacing: -0.04em; line-height: 1;
+  }
+  .wordmark .glyph {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ember-500);
+    box-shadow: 0 0 0 1px var(--paper), 0 0 0 2px var(--ember-500);
+    margin-right: 2px;
+  }
+  .wordmark-tag {
+    font-size: 11px; color: var(--ember-500); letter-spacing: 0.06em;
+    margin-top: 8px; text-transform: uppercase; font-weight: 700;
+  }
+  .page-title {
+    font-weight: 800; font-size: 36px; line-height: 44px;
+    color: var(--ink-900); letter-spacing: -0.035em; margin-top: 18px;
+  }
+  .page-title .accent { color: var(--ember-500); }
+  .page-sub {
+    margin-top: 14px; color: var(--ink-700);
+    font-size: 16px; line-height: 26px; max-width: 600px; font-weight: 500;
+  }
+  .page-meta {
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+    color: var(--ink-500); font-size: 11px; letter-spacing: 0.04em; font-weight: 500;
+  }
+  .page-meta .stamp {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--ember-300);
+    border-radius: 4px; color: var(--ember-600); background: var(--ember-50);
+    font-weight: 700;
+  }
+
+  .section { margin-bottom: 72px; }
+  .section-head {
+    display: flex; align-items: baseline; gap: 16px;
+    margin-bottom: 32px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .section-head .num-tag {
+    font-size: 11px; color: var(--ember-500);
+    letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  }
+  .section-head h2 {
+    font-weight: 800; font-size: 24px; line-height: 30px;
+    color: var(--ink-900); letter-spacing: -0.03em;
+  }
+  .section-head .desc {
+    color: var(--ink-700); font-size: 14px; margin-left: auto;
+    max-width: 460px; text-align: right; line-height: 22px; font-weight: 500;
+  }
+
+  .phones {
+    display: flex; gap: 36px;
+    overflow-x: auto; padding: 12px 8px 40px;
+    scroll-snap-type: x mandatory;
+  }
+  .phone { flex: 0 0 auto; width: 380px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 14px; }
+  .phone-caption {
+    display: flex; align-items: baseline; gap: 8px;
+    color: var(--ink-500); font-size: 11px; letter-spacing: 0.04em; font-weight: 500;
+  }
+  .phone-caption .idx { color: var(--ember-500); font-weight: 700; }
+  .phone-caption .name {
+    color: var(--ink-900); font-weight: 700;
+    font-size: 14px; letter-spacing: -0.02em;
+  }
+  .phone-frame {
+    width: 380px; height: 780px;
+    background: var(--paper); border-radius: 40px;
+    box-shadow: var(--sh-lift); overflow: hidden;
+    position: relative; border: 7px solid #14110C;
+  }
+  .phone-screen {
+    width: 100%; height: 100%; overflow: hidden; position: relative;
+    background: var(--paper); display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 32px; padding: 0 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 600; color: var(--ink-900); flex-shrink: 0;
+  }
+  .status-bar .right { display: inline-flex; align-items: center; gap: 6px; }
+  .status-bar .right svg { width: 13px; height: 13px; stroke-width: 1.75; }
+
+  /* BottomNav with center FAB (matches actual LOCA layout) */
+  .bnav {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 64px; background: var(--surface);
+    border-top: 1px solid var(--paper-200);
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    align-items: center; flex-shrink: 0; padding-bottom: 4px;
+    z-index: 10;
+  }
+  .bnav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--ink-300); font-size: 10px; font-weight: 600;
+    letter-spacing: -0.01em; transition: color 200ms var(--ease);
+    position: relative;
+  }
+  .bnav-item svg { width: 22px; height: 22px; stroke-width: 1.75; }
+  .bnav-item.active { color: var(--ink-900); }
+  .bnav-item.active svg { stroke-width: 2.25; }
+  .bnav-item.active::after {
+    content: ''; position: absolute; bottom: 4px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--ember-500);
+  }
+  .bnav-fab {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--ember-500); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--sh-ember);
+    margin-top: -8px;
+  }
+  .bnav-fab svg { width: 24px; height: 24px; stroke-width: 2.25; }
+
+  .gallery { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .gcard {
+    background: var(--surface); border: 1px solid var(--paper-200);
+    border-radius: 16px; padding: 24px;
+  }
+  .gcard h3 {
+    font-weight: 700; font-size: 13px; color: var(--ink-900);
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--paper-200); letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .gcard h3 .ix {
+    font-size: 11px; color: var(--ember-500); font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .page-footer {
+    margin-top: 72px; padding-top: 28px;
+    border-top: 1px solid var(--paper-200);
+    color: var(--ink-500); font-size: 12px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    letter-spacing: 0.04em; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="wordmark"><span class="glyph"></span>LOCA</div>
+        <div class="wordmark-tag">FINAL · APPLIED TO ACTUAL SCREENS</div>
+        <h1 class="page-title">실제 화면에 입힌<br/><span class="accent">최종 톤</span>.</h1>
+        <p class="page-sub">
+          공유해주신 4가지 화면(지도 에디터 · 모두의 지도 · 핀 상세 카드 · 탐색)에 v7의 톤을 적용했습니다.
+          헤더 카운터 · 검색바 · 필터 칩 · FAB · 가운데 + 버튼 — 현재 구조 그대로, 시각만 정돈.
+        </p>
+      </div>
+      <div class="page-meta">
+        <span class="stamp">v8 · FINAL · ACTUAL SCREENS</span>
+        <span>EMBER · MAP-FORWARD · 5-TAB + CENTER FAB</span>
+        <span>FILE · prototype/loca-v8.html</span>
+      </div>
+    </header>
+
+    <section class="section" id="section-screens">
+      <div class="section-head">
+        <span class="num-tag">SCREENS · 4</span>
+        <h2>리디자인된 핵심 화면</h2>
+        <span class="desc">현재 앱의 헤더·검색바·핀카드·시트 구조 그대로, v7 톤만 적용.</span>
+      </div>
+      <div class="phones">
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">01</span><span class="name">Map Editor</span><span>· 성수 반나절 코스</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <!-- Map background -->
+            <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
+              <svg viewBox="0 0 380 740" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <rect width="380" height="740" fill="#ECE7DA"/>
+                <rect width="380" height="740" fill="url(#dotE8)" opacity="0.15"/>
+                <defs>
+                  <pattern id="dotE8" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.4" fill="#C2BCB1"/></pattern>
+                  <pattern id="hatchE8" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#4A6B52" stroke-width="0.5" opacity="0.3"/></pattern>
+                  <filter id="psE8"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/></filter>
+                </defs>
+                <!-- river (한강) -->
+                <path d="M -20 480 Q 100 460 200 490 Q 300 510 400 495 L 400 600 L -20 600 Z" fill="#D6DFEB" opacity="0.85"/>
+                <text x="100" y="555" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#4A7AA8" letter-spacing="0.04em">한강</text>
+                <!-- park (서울숲) -->
+                <path d="M 220 280 Q 290 260 320 320 Q 320 380 270 390 Q 220 380 220 320 Z" fill="#4A6B52" fill-opacity="0.13"/>
+                <path d="M 220 280 Q 290 260 320 320 Q 320 380 270 390 Q 220 380 220 320 Z" fill="url(#hatchE8)"/>
+                <path d="M 220 280 Q 290 260 320 320 Q 320 380 270 390 Q 220 380 220 320 Z" fill="none" stroke="#4A6B52" stroke-width="1" opacity="0.4"/>
+                <rect x="232" y="320" width="76" height="20" rx="4" fill="#FCFAF6" opacity="0.92"/>
+                <text x="270" y="334" font-family="Pretendard Variable" font-style="italic" font-size="11" font-weight="600" fill="#4A6B52" text-anchor="middle">서울숲</text>
+                <!-- roads -->
+                <path d="M 0 380 Q 100 360 200 390 T 380 410" stroke="#FFFFFF" stroke-width="7" fill="none"/>
+                <path d="M 0 380 Q 100 360 200 390 T 380 410" stroke="#D2C8B5" stroke-width="0.5" fill="none"/>
+                <path d="M 0 240 Q 120 220 240 250 T 380 270" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+                <path d="M 0 240 Q 120 220 240 250 T 380 270" stroke="#D2C8B5" stroke-width="0.5" fill="none"/>
+                <path d="M 130 100 Q 140 280 130 460" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 130 100 Q 140 280 130 460" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+                <path d="M 280 100 Q 270 280 290 460" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 280 100 Q 270 280 290 460" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+                <!-- subway hint (purple line) -->
+                <path d="M 30 200 Q 100 195 180 210 T 350 230" stroke="#9B7FCC" stroke-width="2" fill="none" opacity="0.55"/>
+                <!-- path (route) -->
+                <path d="M 100 320 Q 160 340 220 360 Q 270 380 310 420" stroke="#FFFFFF" stroke-width="5" fill="none" stroke-linecap="round"/>
+                <path d="M 100 320 Q 160 340 220 360 Q 270 380 310 420" stroke="#4A6B52" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+                <polygon points="168,338 174,343 168,348" fill="#4A6B52"/>
+                <polygon points="262,378 268,382 262,386" fill="#4A6B52"/>
+                <rect x="96" y="316" width="8" height="8" rx="1" fill="#4A6B52" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="310" cy="420" r="5" fill="#FFFFFF" stroke="#4A6B52" stroke-width="2"/>
+                <!-- pins -->
+                <g filter="url(#psE8)"><circle cx="100" cy="320" r="9" fill="#FFFFFF"/><circle cx="100" cy="320" r="6" fill="#E26F3C"/></g>
+                <g filter="url(#psE8)"><circle cx="160" cy="280" r="9" fill="#FFFFFF"/><circle cx="160" cy="280" r="6" fill="#E26F3C"/></g>
+                <g filter="url(#psE8)">
+                  <circle cx="220" cy="360" r="22" fill="none" stroke="#E26F3C" stroke-width="1" opacity="0.25"/>
+                  <circle cx="220" cy="360" r="14" fill="none" stroke="#E26F3C" stroke-width="1.5" opacity="0.5"/>
+                  <circle cx="220" cy="360" r="11" fill="#FFFFFF"/>
+                  <circle cx="220" cy="360" r="7.5" fill="#E26F3C"/>
+                  <circle cx="220" cy="360" r="2.5" fill="#FFFFFF"/>
+                </g>
+                <g filter="url(#psE8)"><circle cx="310" cy="420" r="9" fill="#FFFFFF"/><circle cx="310" cy="420" r="6" fill="#E26F3C"/></g>
+                <!-- cluster -->
+                <g filter="url(#psE8)"><circle cx="270" cy="340" r="14" fill="#1F1B16" stroke="#FFFFFF" stroke-width="2"/><text x="270" y="345" font-family="Pretendard Variable" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">2</text></g>
+                <!-- labels -->
+                <g><rect x="113" y="310" width="64" height="18" rx="3" fill="#FCFAF6" opacity="0.92"/><text x="116" y="323" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#1F1B16">카페 어반</text></g>
+                <g><rect x="232" y="350" width="100" height="20" rx="3" fill="#1F1B16"/><text x="237" y="364" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#FCFAF6">블루보틀 성수</text></g>
+                <g><rect x="320" y="412" width="60" height="18" rx="3" fill="#FCFAF6" opacity="0.92"/><text x="323" y="425" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#1F1B16">디터러</text></g>
+              </svg>
+            </div>
+
+            <!-- Top header card (floating) -->
+            <div style="position:absolute;top:42px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-card)">
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);flex-shrink:0"><i data-lucide="chevron-left" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <div style="flex:1;font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">성수 반나절 코스</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--ink-700)">
+                <span style="display:inline-flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:var(--ember-500);box-shadow:0 0 0 1px #fff,0 0 0 1.5px var(--ember-500)"></div>14</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;color:var(--moss-600)"><svg width="12" height="6" viewBox="0 0 12 6"><path d="M 1 4 Q 4 1 7 3 T 11 2" stroke="#4A6B52" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>5</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;color:var(--ink-700)"><i data-lucide="link" style="width:11px;height:11px;stroke-width:2"></i>4</span>
+              </div>
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0"><i data-lucide="more-horizontal" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Search bar -->
+            <div style="position:absolute;top:108px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm)">
+              <i data-lucide="search" style="width:14px;height:14px;color:var(--ink-500);stroke-width:1.75"></i>
+              <span style="font-size:13px;color:var(--ink-500);font-weight:500">주소 또는 장소를 검색하세요</span>
+            </div>
+
+            <!-- Right FABs -->
+            <div style="position:absolute;right:14px;top:280px;display:flex;flex-direction:column;gap:8px">
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="navigation" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <button style="padding:0 14px;height:44px;background:var(--ember-500);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember);font-size:13px;font-weight:700;letter-spacing:-0.01em">이름</button>
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="map-pin" style="width:18px;height:18px;stroke-width:1.75;color:var(--ember-500)"></i></button>
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><svg width="18" height="14" viewBox="0 0 18 14"><path d="M 1 11 Q 5 4 9 8 T 17 5" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="locate-fixed" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Bottom card (records list) -->
+            <div style="position:absolute;left:0;right:0;bottom:64px;background:var(--surface);border-radius:20px 20px 0 0;border-top:1px solid var(--paper-200);box-shadow:0 -8px 24px rgba(31,27,22,0.10);padding:14px 18px 18px">
+              <!-- count + filter row -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:999px;font-size:12px;font-weight:700;color:var(--ember-600)">지도 안 기록 <span class="num">23</span>/<span class="num">23</span> <i data-lucide="chevron-down" style="width:11px;height:11px;stroke-width:2"></i></button>
+              </div>
+
+              <!-- filter chips -->
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px">
+                <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:-0.01em">전체</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">장소</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">길·코스</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">영역</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">사진 있음</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">기억 있음</span>
+              </div>
+
+              <!-- horizontal pin cards -->
+              <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
+                <div style="flex:0 0 168px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+                  <div style="width:28px;height:28px;border-radius:8px;background:var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:14px;height:14px;color:var(--ember-500);stroke-width:2"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">서울숲 남문</div>
+                    <div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:1px">햇살 좋은 날 가면 맛이 좋다.</div>
+                  </div>
+                </div>
+                <div style="flex:0 0 168px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+                  <div style="width:28px;height:28px;border-radius:8px;background:var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="coffee" style="width:14px;height:14px;color:var(--ember-500);stroke-width:2"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">블루보틀 성수</div>
+                    <div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:1px">주말 오픈 직후가 가장 여유로움.</div>
+                  </div>
+                </div>
+                <div style="flex:0 0 44px;background:var(--moss-100);border:1px solid var(--paper-200);border-radius:12px;display:flex;align-items:center;justify-content:center"><svg width="18" height="14" viewBox="0 0 18 14"><path d="M 1 11 Q 5 4 9 8 T 17 5" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+              </div>
+            </div>
+
+            <!-- BottomNav -->
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
+              <div class="bnav-item active"><i data-lucide="map" style="color:var(--ember-500);fill:var(--ember-500);fill-opacity:0.15"></i><span>지도</span></div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i><span>탐색</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">02</span><span class="name">Community Map</span><span>· 모두의 지도 · 새 장소</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <!-- Map background -->
+            <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
+              <svg viewBox="0 0 380 740" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <rect width="380" height="740" fill="#ECE7DA"/>
+                <rect width="380" height="740" fill="url(#dotC)" opacity="0.15"/>
+                <defs>
+                  <pattern id="dotC" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.4" fill="#C2BCB1"/></pattern>
+                  <pattern id="proposed" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#E26F3C" stroke-width="0.6" opacity="0.4"/></pattern>
+                  <filter id="psC"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/></filter>
+                </defs>
+                <!-- 새 범위 area (proposed) -->
+                <path d="M 80 320 Q 180 280 280 310 Q 320 360 290 410 Q 200 440 110 420 Q 60 380 80 320 Z" fill="#E26F3C" fill-opacity="0.10"/>
+                <path d="M 80 320 Q 180 280 280 310 Q 320 360 290 410 Q 200 440 110 420 Q 60 380 80 320 Z" fill="url(#proposed)"/>
+                <path d="M 80 320 Q 180 280 280 310 Q 320 360 290 410 Q 200 440 110 420 Q 60 380 80 320 Z" fill="none" stroke="#E26F3C" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>
+                <!-- roads -->
+                <path d="M 0 250 Q 100 230 200 260 T 380 280" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+                <path d="M 0 250 Q 100 230 200 260 T 380 280" stroke="#D2C8B5" stroke-width="0.5" fill="none"/>
+                <path d="M 0 480 Q 100 460 200 490 T 380 510" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 0 480 Q 100 460 200 490 T 380 510" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+                <path d="M 130 100 Q 140 320 130 540" stroke="#FFFFFF" stroke-width="4" fill="none"/>
+                <path d="M 130 100 Q 140 320 130 540" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+                <path d="M 280 100 Q 270 320 290 540" stroke="#FFFFFF" stroke-width="4" fill="none"/>
+                <path d="M 280 100 Q 270 320 290 540" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+
+                <!-- "새 장소" markers (proposed pins — outline + dashed) -->
+                <g filter="url(#psC)">
+                  <circle cx="160" cy="180" r="9" fill="#FFFFFF"/>
+                  <circle cx="160" cy="180" r="6" fill="none" stroke="#E26F3C" stroke-width="1.5" stroke-dasharray="2 1.5"/>
+                  <circle cx="160" cy="180" r="3" fill="#E26F3C"/>
+                </g>
+                <g filter="url(#psC)">
+                  <circle cx="220" cy="370" r="9" fill="#FFFFFF"/>
+                  <circle cx="220" cy="370" r="6" fill="none" stroke="#E26F3C" stroke-width="1.5" stroke-dasharray="2 1.5"/>
+                  <circle cx="220" cy="370" r="3" fill="#E26F3C"/>
+                </g>
+                <g filter="url(#psC)">
+                  <circle cx="270" cy="380" r="9" fill="#FFFFFF"/>
+                  <circle cx="270" cy="380" r="6" fill="none" stroke="#E26F3C" stroke-width="1.5" stroke-dasharray="2 1.5"/>
+                  <circle cx="270" cy="380" r="3" fill="#E26F3C"/>
+                </g>
+                <!-- selected proposed pin -->
+                <g filter="url(#psC)">
+                  <circle cx="180" cy="370" r="22" fill="none" stroke="#E26F3C" stroke-width="1" opacity="0.25" stroke-dasharray="3 2"/>
+                  <circle cx="180" cy="370" r="11" fill="#FFFFFF"/>
+                  <circle cx="180" cy="370" r="7.5" fill="none" stroke="#E26F3C" stroke-width="1.75" stroke-dasharray="2 1.5"/>
+                  <circle cx="180" cy="370" r="3" fill="#E26F3C"/>
+                </g>
+                <!-- approved/existing pin (filled) -->
+                <g filter="url(#psC)"><circle cx="240" cy="280" r="9" fill="#FFFFFF"/><circle cx="240" cy="280" r="6" fill="#E26F3C"/></g>
+                <!-- cluster -->
+                <g filter="url(#psC)"><circle cx="290" cy="340" r="14" fill="#1F1B16" stroke="#FFFFFF" stroke-width="2"/><text x="290" y="345" font-family="Pretendard Variable" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">3</text></g>
+
+                <!-- labels for proposed -->
+                <g><rect x="173" y="170" width="56" height="18" rx="3" fill="#FCFAF6" opacity="0.92"/><text x="176" y="183" font-family="Pretendard Variable" font-size="10.5" font-weight="700" fill="#E26F3C">★ 새 장소</text></g>
+                <g><rect x="232" y="360" width="56" height="18" rx="3" fill="#FCFAF6" opacity="0.92"/><text x="235" y="373" font-family="Pretendard Variable" font-size="10.5" font-weight="700" fill="#E26F3C">★ 새 장소</text></g>
+                <g><rect x="282" y="370" width="56" height="18" rx="3" fill="#FCFAF6" opacity="0.92"/><text x="285" y="383" font-family="Pretendard Variable" font-size="10.5" font-weight="700" fill="#E26F3C">★ 새 장소</text></g>
+              </svg>
+
+              <!-- "새 범위" badge bottom-left of map -->
+              <div style="position:absolute;bottom:240px;left:14px;display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--ember-300);border-radius:999px;padding:6px 11px;box-shadow:var(--sh-sm)">
+                <svg width="14" height="6" viewBox="0 0 14 6"><path d="M 1 4 Q 4 1 7 3 T 13 2" stroke="#E26F3C" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="2 1.5"/></svg>
+                <span style="font-size:11px;color:var(--ember-600);font-weight:700;letter-spacing:-0.01em">새 범위</span>
+              </div>
+            </div>
+
+            <!-- Top header card -->
+            <div style="position:absolute;top:42px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-card)">
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);flex-shrink:0"><i data-lucide="chevron-left" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <div style="flex:1">
+                <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">모두의 지도</div>
+                <div style="font-size:10px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px">동네 사람들이 함께 만들어가는 지도</div>
+              </div>
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0"><i data-lucide="more-horizontal" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Search bar -->
+            <div style="position:absolute;top:108px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm)">
+              <i data-lucide="search" style="width:14px;height:14px;color:var(--ink-500);stroke-width:1.75"></i>
+              <span style="font-size:13px;color:var(--ink-500);font-weight:500">주소 또는 장소를 검색하세요</span>
+            </div>
+
+            <!-- Right FABs -->
+            <div style="position:absolute;right:14px;top:280px;display:flex;flex-direction:column;gap:8px">
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="navigation" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <button style="padding:0 14px;height:44px;background:var(--ember-500);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember);font-size:13px;font-weight:700;letter-spacing:-0.01em">이름</button>
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="map-pin" style="width:18px;height:18px;stroke-width:1.75;color:var(--ember-500)"></i></button>
+              <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="locate-fixed" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Bottom card -->
+            <div style="position:absolute;left:0;right:0;bottom:64px;background:var(--surface);border-radius:20px 20px 0 0;border-top:1px solid var(--paper-200);box-shadow:0 -8px 24px rgba(31,27,22,0.10);padding:14px 18px 18px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:999px;font-size:12px;font-weight:700;color:var(--ember-600)">지도 안 기록 <span class="num">11</span>/<span class="num">11</span> <i data-lucide="chevron-down" style="width:11px;height:11px;stroke-width:2"></i></button>
+              </div>
+
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px">
+                <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:-0.01em">전체</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">장소</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">길·코스</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">영역</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">사진 있음</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">기억 있음</span>
+              </div>
+
+              <!-- proposed pins (outline cards) -->
+              <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
+                <div style="flex:0 0 156px;background:var(--surface);border:1.5px dashed var(--ember-300);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+                  <div style="width:26px;height:26px;border-radius:8px;background:var(--ember-50);border:1px dashed var(--ember-300);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:13px;height:13px;color:var(--ember-500);stroke-width:2"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px;color:var(--ember-600);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">★ 새 장소</div>
+                    <div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:1px">제안 · 1시간 전</div>
+                  </div>
+                </div>
+                <div style="flex:0 0 156px;background:var(--surface);border:1.5px dashed var(--ember-300);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+                  <div style="width:26px;height:26px;border-radius:8px;background:var(--ember-50);border:1px dashed var(--ember-300);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:13px;height:13px;color:var(--ember-500);stroke-width:2"></i></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:700;font-size:13px;color:var(--ember-600);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">★ 새 장소</div>
+                    <div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:1px">제안 · 3시간 전</div>
+                  </div>
+                </div>
+                <div style="flex:0 0 100px;background:var(--surface);border:1.5px dashed var(--ember-300);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
+                  <div style="width:26px;height:26px;border-radius:8px;background:var(--ember-50);border:1px dashed var(--ember-300);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:13px;height:13px;color:var(--ember-500);stroke-width:2"></i></div>
+                  <div style="flex:1;min-width:0;font-weight:700;font-size:13px;color:var(--ember-600);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden">★ 새 장</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
+              <div class="bnav-item active"><i data-lucide="map" style="color:var(--ember-500);fill:var(--ember-500);fill-opacity:0.15"></i><span>지도</span></div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i><span>탐색</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">03</span><span class="name">Pin Card</span><span>· 예산 지도 · 코리안바베큐</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <!-- Map background -->
+            <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
+              <svg viewBox="0 0 380 740" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <rect width="380" height="740" fill="#ECE7DA"/>
+                <rect width="380" height="740" fill="url(#dotP)" opacity="0.15"/>
+                <defs><pattern id="dotP" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.4" fill="#C2BCB1"/></pattern><filter id="psP"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/></filter></defs>
+                <!-- roads -->
+                <path d="M -20 200 Q 100 180 220 210 T 400 230" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+                <path d="M -20 200 Q 100 180 220 210 T 400 230" stroke="#D2C8B5" stroke-width="0.4" fill="none"/>
+                <path d="M 100 100 Q 110 280 100 460" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 280 100 Q 290 280 280 460" stroke="#FFFFFF" stroke-width="4" fill="none"/>
+                <!-- selected pin (purple - "리무소카페") -->
+                <g filter="url(#psP)">
+                  <circle cx="220" cy="180" r="22" fill="none" stroke="#6B5DC8" stroke-width="1" opacity="0.25"/>
+                  <circle cx="220" cy="180" r="11" fill="#FFFFFF"/>
+                  <circle cx="220" cy="180" r="7.5" fill="#6B5DC8"/>
+                </g>
+                <g><rect x="232" y="170" width="78" height="20" rx="3" fill="#FCFAF6" opacity="0.95"/><text x="241" y="184" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#6B5DC8"><tspan>📍</tspan> 리무소카페</text></g>
+              </svg>
+            </div>
+
+            <!-- Top header card -->
+            <div style="position:absolute;top:42px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-card)">
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-900);flex-shrink:0"><i data-lucide="chevron-left" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <div style="flex:1;font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">예산 지도</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--ink-700)">
+                <span style="display:inline-flex;align-items:center;gap:3px"><div style="width:8px;height:8px;border-radius:50%;background:var(--ember-500);box-shadow:0 0 0 1px #fff,0 0 0 1.5px var(--ember-500)"></div>6</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;color:var(--moss-600)"><svg width="12" height="6" viewBox="0 0 12 6"><path d="M 1 4 Q 4 1 7 3 T 11 2" stroke="#4A6B52" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>1</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;color:var(--moss-600)"><div style="width:9px;height:7px;border:1.2px solid #4A6B52;border-radius:1.5px"></div>1</span>
+              </div>
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0"><i data-lucide="link" style="width:16px;height:16px;stroke-width:1.75"></i></button>
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0"><i data-lucide="more-horizontal" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Search bar -->
+            <div style="position:absolute;top:108px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-sm)">
+              <i data-lucide="search" style="width:14px;height:14px;color:var(--ink-500);stroke-width:1.75"></i>
+              <span style="font-size:13px;color:var(--ink-500);font-weight:500">주소 또는 장소를 검색하세요</span>
+            </div>
+
+            <!-- BIG PIN DETAIL CARD (centered floating) -->
+            <div style="position:absolute;top:220px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:18px;padding:18px 18px 16px;box-shadow:var(--sh-card)">
+              <!-- header row -->
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div style="width:40px;height:40px;border-radius:10px;background:var(--ember-50);border:1px solid var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:18px;height:18px;color:var(--ember-500);stroke-width:2.25;fill:var(--ember-100)"></i></div>
+                <div style="flex:1;font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em">코리안바베큐</div>
+                <button style="display:inline-flex;align-items:center;gap:5px;padding:9px 14px;background:var(--moss-700);color:#fff;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:-0.01em">상세보기 <i data-lucide="chevron-right" style="width:11px;height:11px;stroke-width:2.5"></i></button>
+                <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-500);background:var(--paper-100);border-radius:50%;flex-shrink:0"><i data-lucide="x" style="width:14px;height:14px;stroke-width:2"></i></button>
+              </div>
+
+              <!-- category chip -->
+              <div style="margin-bottom:10px">
+                <span style="display:inline-block;padding:4px 10px;background:var(--paper-100);color:var(--ink-700);border-radius:6px;font-size:11px;font-weight:600">바베큐</span>
+              </div>
+
+              <!-- subtitle -->
+              <p style="font-size:14px;color:var(--ink-700);font-weight:600;line-height:20px;margin-bottom:14px">오븐치킨 맛집 본치킨 맛집</p>
+
+              <!-- photos -->
+              <div style="display:flex;gap:8px;margin-bottom:14px">
+                <div style="flex:1;text-align:center">
+                  <div style="aspect-ratio:1;background:linear-gradient(135deg,#1F1B16,#2A2520);border-radius:10px;border:1px solid var(--paper-200);overflow:hidden;display:flex;align-items:center;justify-content:center"><div style="width:65%;height:60%;background:linear-gradient(180deg,#3B5841,#1F1B16);border-radius:4px;opacity:0.7"></div></div>
+                  <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:4px">05.01</div>
+                </div>
+                <div style="flex:1;text-align:center">
+                  <div style="aspect-ratio:1;background:linear-gradient(135deg,#1F1B16,#2A2520);border-radius:10px;border:1px solid var(--paper-200);overflow:hidden;display:flex;align-items:center;justify-content:center"><div style="width:60%;height:65%;background:linear-gradient(180deg,#5C544A,#2A2520);border-radius:4px;opacity:0.7"></div></div>
+                  <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:4px">05.01</div>
+                </div>
+                <div style="flex:1;text-align:center">
+                  <div style="aspect-ratio:1;background:var(--paper-100);border:1px dashed var(--paper-200);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink-500)"><i data-lucide="plus" style="width:18px;height:18px;stroke-width:1.5"></i></div>
+                  <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:4px">추가</div>
+                </div>
+              </div>
+
+              <!-- voice memos -->
+              <div style="display:flex;gap:8px;margin-bottom:14px">
+                <div style="flex:1;background:var(--moss-100);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:8px">
+                  <button style="width:28px;height:28px;border-radius:50%;background:var(--moss-700);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="play" style="width:11px;height:11px;stroke-width:2;fill:currentColor"></i></button>
+                  <svg width="56" height="20" viewBox="0 0 56 20" style="flex:1"><g fill="#4A6B52"><rect x="0" y="7" width="2" height="6" rx="1"/><rect x="4" y="3" width="2" height="14" rx="1"/><rect x="8" y="5" width="2" height="10" rx="1"/><rect x="12" y="2" width="2" height="16" rx="1"/><rect x="16" y="6" width="2" height="8" rx="1"/><rect x="20" y="4" width="2" height="12" rx="1"/><rect x="24" y="7" width="2" height="6" rx="1"/><rect x="28" y="3" width="2" height="14" rx="1"/><rect x="32" y="5" width="2" height="10" rx="1"/><rect x="36" y="6" width="2" height="8" rx="1"/><rect x="40" y="4" width="2" height="12" rx="1"/><rect x="44" y="7" width="2" height="6" rx="1"/><rect x="48" y="5" width="2" height="10" rx="1"/><rect x="52" y="3" width="2" height="14" rx="1"/></g></svg>
+                  <span class="num" style="font-size:11px;color:var(--moss-700);font-weight:700">0:03</span>
+                </div>
+                <div style="flex:1;background:var(--moss-100);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:8px">
+                  <button style="width:28px;height:28px;border-radius:50%;background:var(--moss-700);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="play" style="width:11px;height:11px;stroke-width:2;fill:currentColor"></i></button>
+                  <svg width="56" height="20" viewBox="0 0 56 20" style="flex:1"><g fill="#4A6B52" opacity="0.4"><rect x="0" y="7" width="2" height="6" rx="1"/><rect x="4" y="3" width="2" height="14" rx="1"/><rect x="8" y="5" width="2" height="10" rx="1"/><rect x="12" y="2" width="2" height="16" rx="1"/><rect x="16" y="6" width="2" height="8" rx="1"/><rect x="20" y="4" width="2" height="12" rx="1"/><rect x="24" y="7" width="2" height="6" rx="1"/><rect x="28" y="3" width="2" height="14" rx="1"/><rect x="32" y="5" width="2" height="10" rx="1"/><rect x="36" y="6" width="2" height="8" rx="1"/><rect x="40" y="4" width="2" height="12" rx="1"/><rect x="44" y="7" width="2" height="6" rx="1"/><rect x="48" y="5" width="2" height="10" rx="1"/><rect x="52" y="3" width="2" height="14" rx="1"/></g></svg>
+                  <span class="num" style="font-size:11px;color:var(--moss-700);font-weight:700">0:02</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:14px">
+                <div style="flex:1;font-size:10px;color:var(--ink-500);text-align:center;font-weight:500">04.30</div>
+                <div style="flex:1;font-size:10px;color:var(--ink-500);text-align:center;font-weight:500">04.30</div>
+              </div>
+
+              <!-- text memo -->
+              <div style="background:var(--ember-50);border-left:3px solid var(--ember-500);border-radius:0 10px 10px 0;padding:11px 14px;display:flex;align-items:flex-start;gap:8px">
+                <div style="flex:1;min-width:0">
+                  <p style="font-size:13px;color:var(--ink-900);font-weight:600;line-height:19px;margin-bottom:3px">처음 바베큐집 간날, 무조건 파채 추가 필요</p>
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:11px;color:var(--ink-500);font-weight:500">2026년 4월 30일</span>
+                    <span style="font-size:11px;color:var(--ember-600);font-weight:700">더보기 →</span>
+                  </div>
+                </div>
+                <i data-lucide="file-text" style="width:14px;height:14px;color:var(--ink-500);stroke-width:1.75;flex-shrink:0;margin-top:2px"></i>
+              </div>
+            </div>
+
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
+              <div class="bnav-item active"><i data-lucide="map" style="color:var(--ember-500);fill:var(--ember-500);fill-opacity:0.15"></i><span>지도</span></div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i><span>탐색</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">04</span><span class="name">Explore</span><span>· 탐색 · 함께 · 근처</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <div style="flex:1;overflow-y:auto;background:linear-gradient(180deg,var(--ember-50) 0%,var(--paper) 280px)">
+              <!-- header -->
+              <div style="padding:24px 24px 6px;display:flex;justify-content:space-between;align-items:center">
+                <h1 style="font-weight:800;font-size:24px;color:var(--ink-900);letter-spacing:-0.03em">탐색</h1>
+                <button style="width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--paper-200);display:flex;align-items:center;justify-content:center;color:var(--ink-700);box-shadow:var(--sh-xs);position:relative">
+                  <i data-lucide="bell" style="width:17px;height:17px;stroke-width:1.75"></i>
+                  <span style="position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--ember-500);border:2px solid var(--surface)"></span>
+                </button>
+              </div>
+
+              <!-- title -->
+              <div style="padding:8px 24px 16px">
+                <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700;margin-bottom:6px;text-transform:uppercase">Explore</div>
+                <h2 style="font-weight:800;font-size:24px;line-height:32px;color:var(--ink-900);letter-spacing:-0.03em">어떤 지도를 둘러볼까요?</h2>
+                <p style="font-size:13px;color:var(--ink-700);margin-top:6px;font-weight:500">태그·동네·에디터로 검색해보세요</p>
+              </div>
+
+              <!-- search bar -->
+              <div style="padding:0 24px 14px">
+                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-xs)">
+                  <i data-lucide="search" style="width:14px;height:14px;color:var(--ink-500);stroke-width:1.75"></i>
+                  <span style="font-size:13px;color:var(--ink-500);font-weight:500;flex:1">지도, 에디터 검색</span>
+                  <span class="num" style="padding:2px 7px;background:var(--paper-100);border-radius:5px;font-size:10px;color:var(--ink-500);font-weight:700">⌘K</span>
+                </div>
+              </div>
+
+              <!-- category chips -->
+              <div style="padding:0 24px 28px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+                <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:-0.01em;display:inline-flex;align-items:center;gap:4px"><i data-lucide="trending-up" style="width:11px;height:11px;stroke-width:2.5"></i>인기</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">벚꽃</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">성수동</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">한옥</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">감성카페</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">제주 동쪽</span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">독립서점</span>
+              </div>
+
+              <!-- TOGETHER section -->
+              <div style="padding:0 24px 28px">
+                <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700;margin-bottom:6px;text-transform:uppercase">Together</div>
+                <h3 style="font-weight:800;font-size:18px;line-height:24px;color:var(--ink-900);letter-spacing:-0.025em">모두의 지도</h3>
+                <p style="font-size:13px;color:var(--ink-700);margin-top:4px;font-weight:500;margin-bottom:14px">동네 사람들이 함께 만들어가는 지도</p>
+
+                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;overflow:hidden;box-shadow:var(--sh-sm)">
+                  <div style="aspect-ratio:16/9;background:#ECE7DA;position:relative;border-bottom:1px solid var(--paper-200)">
+                    <svg viewBox="0 0 320 180" style="width:100%;height:100%">
+                      <rect width="320" height="180" fill="#ECE7DA"/>
+                      <path d="M 0 90 Q 100 70 180 100 T 320 110" stroke="#D6DFEB" stroke-width="14" fill="none" opacity="0.85"/>
+                      <path d="M 0 50 Q 80 40 160 60 T 320 70" stroke="#FFFFFF" stroke-width="3" fill="none"/>
+                      <path d="M 0 130 Q 100 120 200 140 T 320 145" stroke="#FFFFFF" stroke-width="2.5" fill="none"/>
+                      <circle cx="60" cy="65" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/>
+                      <circle cx="130" cy="100" r="5" fill="#4A6B52" stroke="#FFFFFF" stroke-width="1.5"/>
+                      <circle cx="180" cy="80" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/>
+                      <circle cx="220" cy="120" r="5" fill="#BF5A2B" stroke="#FFFFFF" stroke-width="1.5"/>
+                      <circle cx="270" cy="95" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/>
+                    </svg>
+                    <div style="position:absolute;bottom:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;padding:5px 10px;box-shadow:var(--sh-xs)">
+                      <i data-lucide="map-pin" style="width:11px;height:11px;color:var(--ember-500);stroke-width:2"></i>
+                      <span style="font-size:11px;color:var(--ink-900);font-weight:700">내 동네 · 지난 주 새로 기록됨</span>
+                    </div>
+                  </div>
+                  <button style="width:100%;padding:14px;background:var(--moss-700);color:#fff;font-size:14px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;justify-content:center;gap:6px"><i data-lucide="map-pin" style="width:14px;height:14px;stroke-width:2.25;fill:currentColor"></i>모두의 지도 둘러보기</button>
+                </div>
+              </div>
+
+              <!-- NEARBY section -->
+              <div style="padding:0 24px 16px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:12px">
+                  <div>
+                    <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700;margin-bottom:6px;text-transform:uppercase">Nearby</div>
+                    <h3 style="font-weight:800;font-size:18px;line-height:24px;color:var(--ink-900);letter-spacing:-0.025em">근처에서 기록해볼 만한 행사</h3>
+                  </div>
+                  <span style="font-size:12px;color:var(--ink-700);font-weight:600">더보기 →</span>
+                </div>
+
+                <!-- location filter -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                  <button style="display:inline-flex;align-items:center;gap:5px;padding:6px 11px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:11px;color:var(--ink-700);font-weight:600"><i data-lucide="map-pin" style="width:11px;height:11px;color:var(--ember-500);stroke-width:2"></i>내 위치 근처 <i data-lucide="chevron-down" style="width:10px;height:10px;stroke-width:2"></i></button>
+                  <span style="font-size:11px;color:var(--ink-500);font-weight:500">총 30개 · 가까운 순</span>
+                </div>
+
+                <!-- event cards -->
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:var(--sh-xs)">
+                    <div style="width:60px;height:60px;border-radius:10px;background:linear-gradient(135deg,#87A088,#4A6B52);flex-shrink:0;position:relative;overflow:hidden"><div style="position:absolute;bottom:6px;left:6px;font-size:18px;line-height:1">🌳</div></div>
+                    <div style="flex:1;min-width:0">
+                      <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.02em">5.1 — 5.2</div>
+                      <div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;margin-top:2px">과천재즈피크닉</div>
+                      <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:3px">경기 과천시 광운로 64 (중앙동)</div>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--moss-100);border:1px solid #B5CCB9;border-radius:999px;font-size:10px;color:var(--moss-700);font-weight:700"><div style="width:5px;height:5px;border-radius:50%;background:var(--moss-700)"></div>진행중</span>
+                  </div>
+
+                  <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:var(--sh-xs)">
+                    <div style="width:60px;height:60px;border-radius:10px;background:linear-gradient(135deg,#F2A57B,#E26F3C);flex-shrink:0;position:relative;overflow:hidden"><div style="position:absolute;bottom:6px;left:6px;font-size:18px;line-height:1">🍎</div></div>
+                    <div style="flex:1;min-width:0">
+                      <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.02em">5.15 — 5.17</div>
+                      <div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;margin-top:2px">가리왕산 봄나물축제</div>
+                      <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:3px">강원특별자치도 정선군 정선읍 봉양7길 43</div>
+                    </div>
+                    <span class="num" style="display:inline-flex;align-items:center;padding:4px 10px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:10px;font-weight:700">D-14</span>
+                  </div>
+
+                  <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;box-shadow:var(--sh-xs)">
+                    <div style="width:60px;height:60px;border-radius:10px;background:linear-gradient(135deg,#FAEAD9,#E26F3C);flex-shrink:0;position:relative;overflow:hidden"><div style="position:absolute;bottom:6px;left:6px;font-size:18px;line-height:1">🎈</div></div>
+                    <div style="flex:1;min-width:0">
+                      <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.02em">5.4 — 5.4</div>
+                      <div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;margin-top:2px">제104회 어린이날 기념행사</div>
+                      <div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:3px">서울특별시 중구 소공로 106 (소공동)</div>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;padding:4px 10px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:999px;font-size:10px;color:var(--ember-600);font-weight:700">곧 시작</span>
+                  </div>
+                </div>
+
+                <button style="width:100%;margin-top:16px;padding:13px;background:var(--surface);border:1.5px dashed var(--paper-200);border-radius:14px;font-size:13px;color:var(--ink-700);font-weight:600;letter-spacing:-0.01em">더보기 30개 →</button>
+              </div>
+            </div>
+
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
+              <div class="bnav-item"><i data-lucide="map"></i><span>지도</span></div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item active"><i data-lucide="compass" style="color:var(--ember-500)"></i><span>탐색</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="section-changes">
+      <div class="section-head">
+        <span class="num-tag">CHANGES</span>
+        <h2>화면별 변경 포인트</h2>
+        <span class="desc">현재 화면에서 어떤 부분이 정확히 바뀌는가.</span>
+      </div>
+      <div class="gallery">
+        <div class="gcard">
+          <h3><span class="ix">01</span>Map Editor — 성수 반나절 코스</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:20px">
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">헤더 카드</strong> · 라운드 14, 카운터(📍/경로/링크) Ember 도트, 일관 활자</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">검색바</strong> · 별도 카드로 분리, 14px 라운드 + xs 그림자</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">지도 핀</strong> · 10px Ember + 흰 헤일로 + drop-shadow, 선택 핀은 2단 외곽 링</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">경로</strong> · 2.8px Moss + 흰 헤일로 + 시작/끝 마커 + 화살표</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"이름" FAB</strong> · 큰 주황 → Ember + sh-ember 그림자, pill 형태</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">기록 카운터</strong> · 흰 점 → Ember soft 칩 + dropdown</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">필터 칩</strong> · 활성 잉크 검정, pill 라운드</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">핀 카드</strong> · paper-100 배경 + ember-100 아이콘 박스</div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">02</span>Community Map — 모두의 지도</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:20px">
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"새 장소" 핀</strong> · 푸른 핀+점 → <strong style="color:var(--ember-500)">대시 외곽 + 흰 채움 + ember 작은 점</strong>으로 "제안 상태" 시각화</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"새 범위" 영역</strong> · ember 사선 hatch + 점선 외곽 → 진행 중인 제안 영역</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"새 범위" 뱃지</strong> · 좌하단 floating, ember outline pill</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">새 장소 카드</strong> · 얇은 outline → <strong style="color:var(--ember-500)">대시 ember 보더</strong> + ember-50 아이콘 박스 (제안 상태 명확)</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">서브타이틀</strong> · "동네 사람들이 함께 만들어가는 지도" 추가 (헤더 안)</div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">03</span>Pin Card — 코리안바베큐</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:20px">
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">핀 아이콘 박스</strong> · ember-50 배경 + ember 아이콘 (현재 살구색 박스 → 톤 일관)</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">상세보기 버튼</strong> · 진녹색 → <strong style="color:var(--moss-700)">Moss 700</strong> + pill + 화살표 아이콘</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">사진 그리드</strong> · 3열 (사진 2 + 추가 버튼) · 라운드 10px · 날짜 캡션</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">음성 메모</strong> · Moss-100 배경 + Moss-700 재생 버튼 + 정확한 파형 (현재 톤 그대로)</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">메모 카드</strong> · 살구 배경 → <strong style="color:var(--ember-500)">ember-50 + 좌측 ember 3px bar</strong> · "더보기" Ember</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">선택 핀 라벨</strong> · "리무소카페" 보라 → 카테고리별 색 유지(보라 = 카페), Pretendard 700 + 흰 박스</div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">04</span>Explore — 탐색</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:20px">
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">상단 그라디언트</strong> · ember-50 → paper, "온기" 시각 톤</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">EXPLORE/TOGETHER/NEARBY 라벨</strong> · 모두 Ember 700 weight, 일관 위계</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">검색바</strong> · ⌘K 키 힌트 paper-100 칩 + tabular-nums</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"인기" 칩</strong> · 활성 검정 + ↗ 아이콘 인라인</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">모두의 지도 카드</strong> · 미니맵 SVG (실제 핀 패턴 반영) + Moss-700 CTA</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">행사 카드</strong> · 썸네일 라운드 10, 날짜 num font + ember 강조, 상태 칩 (진행중/D-14/곧 시작) 의미별 색</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900)">"더보기 30개"</strong> · 대시 보더 outline 버튼 (목록 끝 표시)</div>
+          </div>
+        </div>
+
+        <div class="gcard" style="grid-column:1 / -1;background:var(--ember-50);border:1px solid var(--ember-300)">
+          <h3 style="color:var(--ember-600)"><span class="ix" style="color:var(--ember-600)">★</span>공통 — BottomNav 가운데 + 버튼</h3>
+          <div style="display:flex;align-items:center;gap:24px;padding:14px 0">
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:18px;align-items:center;background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;padding:12px 18px;flex:1;max-width:380px;position:relative">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-300);font-size:10px;font-weight:600"><i data-lucide="home" style="width:20px;height:20px;stroke-width:1.75"></i>홈</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-900);font-size:10px;font-weight:600;position:relative"><i data-lucide="map" style="width:20px;height:20px;stroke-width:2.25;color:var(--ember-500)"></i>지도<div style="position:absolute;bottom:-3px;width:4px;height:4px;border-radius:50%;background:var(--ember-500)"></div></div>
+              <div style="display:flex;flex-direction:column;align-items:center"><div style="width:48px;height:48px;border-radius:50%;background:var(--ember-500);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember);margin-top:-12px"><i data-lucide="plus" style="width:22px;height:22px;stroke-width:2.25"></i></div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-300);font-size:10px;font-weight:600"><i data-lucide="compass" style="width:20px;height:20px;stroke-width:1.75"></i>탐색</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-300);font-size:10px;font-weight:600"><i data-lucide="user" style="width:20px;height:20px;stroke-width:1.75"></i>나</div>
+            </div>
+            <div style="flex:1;font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500">
+              가운데 <strong style="color:var(--ember-500)">+ 버튼</strong>은 모든 화면 공통 — Ember 56px 원 + sh-ember 그림자 + -8px 띄움.
+              현재 앱과 동일한 위치/크기. 활성 탭은 잉크 검정 + Ember 도트 표시.
+            </div>
+          </div>
+        </div>
+
+        <div class="gcard" style="grid-column:1 / -1">
+          <h3><span class="ix">DELTA</span>실제 src/ 변경 포인트</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/screens/MapEditorScreen.jsx</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">헤더 카드 div 마크업 (라운드 + 카운터 칩) · "이름" FAB Ember + sh-ember · 검색바 분리 카드 · 핀 카운터 칩 ember-50</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/components/NaverMap.jsx</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">⭐ 마커 SVG 4종 (기본/선택/제안/사라진), 라벨 흰 박스 헤일로, 클러스터 잉크 톤</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/screens/SharedMapViewer.jsx</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">"새 범위" 뱃지 ember pill · 새 장소 카드 dashed ember border · 모두의 지도 변형</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/components/sheets/FeatureDetailSheet.jsx</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">아이콘 박스 ember-50 · 상세보기 Moss-700 pill · 음성메모 Moss-100 + 파형 SVG · 메모 카드 ember 좌측 bar</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/screens/HomeScreen.jsx (또는 SearchScreen)</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">탐색 페이지 — 그라디언트 배경, EXPLORE/TOGETHER/NEARBY 섹션 라벨 ember, 행사 카드 상태 칩 의미별 색</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border-radius:10px">
+              <div style="font-weight:700;font-size:13px;color:var(--ink-900);letter-spacing:-0.01em;margin-bottom:6px">src/components/ui.jsx — BottomNav</div>
+              <div style="font-size:12px;color:var(--ink-700);line-height:18px;font-weight:500">가운데 칸을 + FAB로 (Ember + sh-ember + -8px margin-top), 활성 탭 ember 도트</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding:12px 14px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:10px;font-size:12px;line-height:19px;color:var(--ink-900);font-weight:500">
+            <strong style="color:var(--ember-600);font-weight:700">유지</strong> · App.jsx 라우팅 · 5탭 구조 · Supabase 스키마 · useMapCRUD/useFeatureEditing 훅 · NaverMap zoom 분기 로직 · analytics 그대로
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span>v8 · FINAL · BUILT ON ACTUAL LOCA SCREENS</span>
+      <span>NEXT · DESIGN.md → styles.css → ui.jsx · NaverMap.jsx · screen JSX 마이그레이션</span>
+    </footer>
+  </div>
+
+<script>
+  if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>
