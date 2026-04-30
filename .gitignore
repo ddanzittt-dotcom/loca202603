@@ -39,3 +39,6 @@ test-results/
 # Supabase CLI cache
 supabase/.temp/
 supabase/.branches/
+
+# Prototype preview screenshots (generated)
+prototype/preview-*.png
