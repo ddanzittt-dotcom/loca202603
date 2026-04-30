@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOCA · Final Proposal</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  /* ============================================================
+     LOCA · FINAL — "조용한 잡지로서의 지도 아카이브"
+     ============================================================ */
+  :root {
+    /* Paper · 배경 (종이감) */
+    --paper-50:  #FBF9F4;
+    --paper-100: #F5F1E8;
+    --paper-200: #EAE3D2;
+
+    /* Ink · 텍스트 (warm brown-black) */
+    --ink-900: #2A2520;
+    --ink-700: #5C544A;
+    --ink-500: #8C8278;
+    --ink-300: #BDB5A8;
+
+    /* Moss · 메인 액센트 (지도·핀) */
+    --moss-600: #4A6B52;
+    --moss-400: #87A088;
+    --moss-100: #E3EAE0;
+
+    /* Ember · 보조 포인트 (CTA 보조·새 알림) */
+    --ember-500: #C97B4A;
+    --ember-100: #F5E6DA;
+
+    /* Dusk · 사라진 장소 */
+    --dusk-400: #8896A4;
+    --dusk-200: #C8D0D8;
+
+    /* Fonts */
+    --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-serif: 'Noto Serif KR', 'Nanum Myeongjo', serif;
+
+    /* Type scale */
+    --fs-display: 32px; --lh-display: 40px;
+    --fs-h1: 26px;      --lh-h1: 34px;
+    --fs-h2: 21px;      --lh-h2: 29px;
+    --fs-body: 15px;    --lh-body: 26px;  /* 1.7 line-height */
+    --fs-caption: 12px; --lh-caption: 18px;
+    --fs-meta: 11px;    --lh-meta: 16px;
+
+    /* Spacing */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
+    --s-9: 48px; --s-10: 64px;
+
+    /* Radius (절제) */
+    --r-xs: 4px;
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-pill: 999px;
+
+    /* Shadow (거의 없음) */
+    --sh-hairline: 0 0 0 1px var(--paper-200);
+    --sh-paper: 0 1px 2px rgba(42, 37, 32, 0.04);
+    --sh-lift: 0 8px 24px rgba(42, 37, 32, 0.08);
+
+    /* Motion */
+    --ease-quiet: cubic-bezier(0.32, 0.72, 0, 1);
+    --dur-fast: 200ms;
+    --dur-base: 280ms;
+    --dur-slow: 420ms;
+  }
+
+  /* Subtle paper noise */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    color: var(--ink-900);
+    background: var(--paper-50);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'tnum' 1;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 500; }
+  .serif { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.02em; }
+  .serif-i { font-family: var(--font-serif); font-style: italic; font-weight: 400; }
+  .num { font-feature-settings: 'tnum' 1; font-variant-numeric: tabular-nums; }
+
+  /* ============================================================
+     PAGE LAYOUT
+     ============================================================ */
+  .page { max-width: 1280px; margin: 0 auto; padding: var(--s-10) var(--s-6) var(--s-10); }
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: var(--s-6);
+    margin-bottom: var(--s-9);
+    padding-bottom: var(--s-7);
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 32px;
+    color: var(--ink-900);
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .wordmark .glyph {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--moss-600);
+    box-shadow: 0 0 0 1px var(--paper-50), 0 0 0 2px var(--moss-600);
+    margin-right: 2px;
+  }
+  .wordmark-tag {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-500);
+    letter-spacing: 0.06em;
+    margin-top: var(--s-2);
+    text-transform: uppercase;
+  }
+  .page-title {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: var(--fs-display);
+    line-height: var(--lh-display);
+    color: var(--ink-900);
+    letter-spacing: -0.025em;
+    margin-top: var(--s-4);
+  }
+  .page-sub {
+    margin-top: var(--s-3);
+    color: var(--ink-700);
+    font-size: 16px;
+    line-height: 26px;
+    max-width: 580px;
+  }
+  .page-quote {
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--ink-700);
+    font-size: 17px;
+    line-height: 28px;
+    margin-top: var(--s-3);
+    max-width: 480px;
+  }
+  .page-meta {
+    display: flex; flex-direction: column; gap: var(--s-2); align-items: flex-end;
+    color: var(--ink-500);
+    font-size: var(--fs-meta);
+    letter-spacing: 0.04em;
+  }
+  .page-meta .stamp {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px;
+    border: 1px solid var(--paper-200);
+    border-radius: var(--r-xs);
+    color: var(--ink-700);
+    background: var(--paper-50);
+  }
+
+  .section { margin-bottom: var(--s-10); }
+  .section-head {
+    display: flex; align-items: baseline; gap: var(--s-4);
+    margin-bottom: var(--s-7);
+    padding-bottom: var(--s-3);
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .section-head .num-tag {
+    font-size: var(--fs-meta);
+    color: var(--ink-500);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .section-head h2 {
+    font-family: var(--font-serif);
+    font-size: var(--fs-h1);
+    line-height: var(--lh-h1);
+    color: var(--ink-900);
+    letter-spacing: -0.02em;
+  }
+  .section-head .desc {
+    color: var(--ink-700);
+    font-size: 14px;
+    margin-left: auto;
+    max-width: 460px;
+    text-align: right;
+    line-height: 22px;
+  }
+
+  /* ============================================================
+     PHONE FRAME
+     ============================================================ */
+  .phones {
+    display: flex; gap: var(--s-7);
+    overflow-x: auto; padding: var(--s-3) var(--s-2) var(--s-7);
+    scroll-snap-type: x mandatory;
+  }
+  .phone { flex: 0 0 auto; width: 360px; scroll-snap-align: start; display: flex; flex-direction: column; gap: var(--s-3); }
+  .phone-caption {
+    display: flex; align-items: baseline; gap: 8px;
+    color: var(--ink-500);
+    font-size: var(--fs-meta);
+    letter-spacing: 0.04em;
+  }
+  .phone-caption .idx { color: var(--moss-600); font-weight: 600; }
+  .phone-caption .name {
+    color: var(--ink-900);
+    font-family: var(--font-serif);
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .phone-frame {
+    width: 360px; height: 740px;
+    background: var(--paper-50);
+    border-radius: 38px;
+    box-shadow: var(--sh-lift);
+    overflow: hidden; position: relative;
+    border: 7px solid #1a1714;
+  }
+  .phone-screen {
+    width: 100%; height: 100%;
+    overflow: hidden; position: relative;
+    background: var(--paper-50);
+    display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 32px; padding: 0 var(--s-5);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: var(--fs-meta); font-weight: 500; color: var(--ink-900);
+    flex-shrink: 0;
+  }
+  .status-bar .right { display: inline-flex; align-items: center; gap: 6px; }
+  .status-bar .right svg { width: 13px; height: 13px; stroke-width: 1.5; }
+  .screen-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* Bottom nav */
+  .bnav {
+    height: 60px;
+    background: var(--paper-50);
+    border-top: 1px solid var(--paper-200);
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    align-items: center; flex-shrink: 0; padding-bottom: 4px;
+  }
+  .bnav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; color: var(--ink-300);
+    font-size: 10px; font-weight: 500;
+    transition: color var(--dur-fast) var(--ease-quiet);
+    letter-spacing: -0.01em;
+  }
+  .bnav-item svg { width: 18px; height: 18px; stroke-width: 1.5; }
+  .bnav-item.active { color: var(--ink-900); }
+  .bnav-item.active svg { stroke-width: 1.75; }
+
+  /* Token cards */
+  .tokens-grid { display: grid; gap: var(--s-5); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .tcard {
+    background: var(--paper-50);
+    border: 1px solid var(--paper-200);
+    border-radius: var(--r-md);
+    padding: var(--s-6);
+  }
+  .tcard h3 {
+    font-family: var(--font-serif); font-weight: 500;
+    font-size: 16px; color: var(--ink-900);
+    margin-bottom: var(--s-4);
+    padding-bottom: var(--s-3);
+    border-bottom: 1px solid var(--paper-200);
+    letter-spacing: -0.01em;
+  }
+  .tcard h3 .ix {
+    font-family: var(--font-sans); font-size: 11px;
+    color: var(--ink-500); font-weight: 500;
+    letter-spacing: 0.06em; margin-right: 6px;
+    text-transform: uppercase;
+  }
+
+  .swatch-row { display: flex; align-items: center; gap: var(--s-3); padding: 7px 0; }
+  .swatch-row + .swatch-row { border-top: 1px dashed var(--paper-200); }
+  .swatch { width: 22px; height: 22px; border-radius: var(--r-xs); flex-shrink: 0; border: 1px solid rgba(0,0,0,.05); }
+  .swatch-info { flex: 1; min-width: 0; }
+  .swatch-name { font-weight: 500; color: var(--ink-900); font-size: 13px; letter-spacing: -0.01em; }
+  .swatch-hex { font-size: 11px; color: var(--ink-500); margin-top: 1px; letter-spacing: 0.02em; }
+
+  .type-row { padding: 8px 0; }
+  .type-row + .type-row { border-top: 1px dashed var(--paper-200); }
+  .type-tag {
+    font-size: 10px; color: var(--ink-500);
+    font-weight: 500; letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .type-sample { color: var(--ink-900); margin-top: 4px; }
+
+  /* Component gallery */
+  .gallery { display: grid; gap: var(--s-5); grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .gcard {
+    background: var(--paper-50);
+    border: 1px solid var(--paper-200);
+    border-radius: var(--r-md);
+    padding: var(--s-6);
+  }
+  .gcard h3 {
+    font-family: var(--font-serif); font-weight: 500;
+    font-size: 16px; color: var(--ink-900);
+    margin-bottom: var(--s-4);
+    padding-bottom: var(--s-3);
+    border-bottom: 1px solid var(--paper-200);
+    letter-spacing: -0.01em;
+  }
+  .grow { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-3); }
+  .grow:last-child { margin-bottom: 0; }
+  .glabel {
+    font-size: 10px; color: var(--ink-500);
+    font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.06em; width: 64px; flex-shrink: 0;
+  }
+
+  /* Footer */
+  .page-footer {
+    margin-top: var(--s-10);
+    padding-top: var(--s-6);
+    border-top: 1px solid var(--paper-200);
+    color: var(--ink-500);
+    font-size: var(--fs-meta);
+    display: flex; justify-content: space-between; gap: var(--s-4); flex-wrap: wrap;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="wordmark">
+          <span class="glyph"></span>LOCA
+        </div>
+        <div class="wordmark-tag">PLACE · MEMORY · QUIET MAP</div>
+        <h1 class="page-title">좋아한 장소는 취향이 되고,<br/>취향은 지도가 된다.</h1>
+        <p class="page-quote">— 그중 어떤 장소는 더 이상 거기에 없을 수도 있다.</p>
+        <p class="page-sub">
+          20–30대 여성을 위한 로컬 경험 아카이브. 잡지의 결을 가진 모바일 앱과 라이트웹 공유 페이지.
+        </p>
+      </div>
+      <div class="page-meta">
+        <span class="stamp">FINAL PROPOSAL · v4 · 2026.04</span>
+        <span>PRETENDARD &nbsp;·&nbsp; NOTO SERIF KR &nbsp;·&nbsp; LUCIDE</span>
+        <span>FILE &nbsp;·&nbsp; prototype/loca-v4.html</span>
+      </div>
+    </header>
+
+    <!-- 01 TOKENS -->
+    <section class="section" id="section-tokens">
+      <div class="section-head">
+        <span class="num-tag">01 / TOKENS</span>
+        <h2>디자인 토큰</h2>
+        <span class="desc">Paper · Ink · Moss · Ember · Dusk. 한 화면에 액센트 컬러는 한 곳, 사라진 장소만이 별도의 결을 가진다.</span>
+      </div>
+      <div class="tokens-grid">
+        <div class="tcard">
+          <h3><span class="ix">01</span>Paper · 종이감</h3>
+          <div class="swatch-row"><div class="swatch" style="background:#FBF9F4"></div><div class="swatch-info"><div class="swatch-name">Paper 50</div><div class="swatch-hex">#FBF9F4 · 메인 배경</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#F5F1E8"></div><div class="swatch-info"><div class="swatch-name">Paper 100</div><div class="swatch-hex">#F5F1E8 · 카드 · 시트 배경</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#EAE3D2"></div><div class="swatch-info"><div class="swatch-name">Paper 200</div><div class="swatch-hex">#EAE3D2 · 보더 · 디바이더</div></div></div>
+          <div style="margin-top:var(--s-4);padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            배경에 2.5% 노이즈 텍스처를 얹어 종이의 결을 만든다.
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">02</span>Ink · 텍스트</h3>
+          <div class="swatch-row"><div class="swatch" style="background:#2A2520"></div><div class="swatch-info"><div class="swatch-name">Ink 900</div><div class="swatch-hex">#2A2520 · 본문 (warm brown-black)</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#5C544A"></div><div class="swatch-info"><div class="swatch-name">Ink 700</div><div class="swatch-hex">#5C544A · 보조 텍스트</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#8C8278"></div><div class="swatch-info"><div class="swatch-name">Ink 500</div><div class="swatch-hex">#8C8278 · 캡션 · placeholder</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#BDB5A8"></div><div class="swatch-info"><div class="swatch-name">Ink 300</div><div class="swatch-hex">#BDB5A8 · disabled · 사라진 톤</div></div></div>
+          <div style="margin-top:var(--s-4);padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            검정이 아닌 따뜻한 brown-black. 종이 위 잉크 같은 톤.
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">03</span>Moss · 메인 액센트</h3>
+          <div class="swatch-row"><div class="swatch" style="background:#4A6B52"></div><div class="swatch-info"><div class="swatch-name">Moss 600</div><div class="swatch-hex">#4A6B52 · 핀 · 링크 · 강조</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#87A088"></div><div class="swatch-info"><div class="swatch-name">Moss 400</div><div class="swatch-hex">#87A088 · 호버 · 보조</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#E3EAE0"></div><div class="swatch-info"><div class="swatch-name">Moss 100</div><div class="swatch-hex">#E3EAE0 · 면 · 영역(area) 채움</div></div></div>
+          <div style="margin-top:var(--s-4);padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            지도와 자연의 결. 한 화면에 한 곳에서만 등장한다.
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">04</span>Ember · 보조 포인트</h3>
+          <div class="swatch-row"><div class="swatch" style="background:#C97B4A"></div><div class="swatch-info"><div class="swatch-name">Ember 500</div><div class="swatch-hex">#C97B4A · CTA 보조 · 새 알림</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#F5E6DA"></div><div class="swatch-info"><div class="swatch-name">Ember 100</div><div class="swatch-hex">#F5E6DA · 강조 면</div></div></div>
+          <div style="margin-top:var(--s-4);padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            따뜻한 점 하나. Moss와 함께 쓰지 않는다 — 둘 중 하나만.
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">05</span>Dusk · 사라진 장소</h3>
+          <div class="swatch-row"><div class="swatch" style="background:#8896A4"></div><div class="swatch-info"><div class="swatch-name">Dusk 400</div><div class="swatch-hex">#8896A4 · 사라진 장소 텍스트·아이콘</div></div></div>
+          <div class="swatch-row"><div class="swatch" style="background:#C8D0D8"></div><div class="swatch-info"><div class="swatch-name">Dusk 200</div><div class="swatch-hex">#C8D0D8 · 사라진 영역의 면 톤</div></div></div>
+          <div style="margin-top:var(--s-4);padding:14px;border:1px dashed var(--dusk-200);border-radius:var(--r-xs);background:rgba(200,208,216,0.18)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              <div style="width:6px;height:6px;border-radius:50%;background:var(--dusk-400);opacity:0.5"></div>
+              <span style="font-size:13px;color:var(--dusk-400);letter-spacing:-0.01em">옛 골목 책방</span>
+            </div>
+            <div style="font-family:var(--font-serif);font-style:italic;font-size:12px;color:var(--ink-700);line-height:18px">
+              이곳은 더 이상 거기에 없지만,<br/>당신의 지도에는 남아 있어요.
+            </div>
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">06</span>Typography</h3>
+          <div class="type-row"><div class="type-tag">DISPLAY · NOTO SERIF KR · 32 / 40</div><div class="type-sample serif" style="font-size:32px;line-height:40px">좋아한 장소는<br/>취향이 된다</div></div>
+          <div class="type-row"><div class="type-tag">H1 · SERIF · 26 / 34</div><div class="type-sample serif" style="font-size:26px;line-height:34px">성수동의 햇살카페</div></div>
+          <div class="type-row"><div class="type-tag">H2 · SERIF · 21 / 29</div><div class="type-sample serif" style="font-size:21px;line-height:29px">이 골목에 머물던 시절</div></div>
+          <div class="type-row"><div class="type-tag">QUOTE · SERIF ITALIC · 18</div><div class="type-sample serif-i" style="font-size:18px;line-height:28px;color:var(--ink-700)">창가에 햇살이 길게 머무는 시간이 있어요.</div></div>
+          <div class="type-row"><div class="type-tag">BODY · PRETENDARD · 15 / 26</div><div class="type-sample" style="font-size:15px;line-height:26px;font-weight:400">문장 사이의 줄간격은 1.7. 잡지의 호흡은 줄간격에서 나온다.</div></div>
+          <div class="type-row"><div class="type-tag">CAPTION · SANS · 12 / 18</div><div class="type-sample" style="font-size:12px;line-height:18px;color:var(--ink-500)">2025년 4월 3일 화요일 · 성수동</div></div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">07</span>Spacing · Radius · Motion</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--s-4);align-items:flex-end">
+            <div style="text-align:center"><div style="width:48px;height:48px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:4px"></div><div style="font-size:10px;color:var(--ink-500);margin-top:4px;letter-spacing:0.04em">4</div></div>
+            <div style="text-align:center"><div style="width:48px;height:48px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px"></div><div style="font-size:10px;color:var(--ink-500);margin-top:4px;letter-spacing:0.04em">8</div></div>
+            <div style="text-align:center"><div style="width:48px;height:48px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:12px"></div><div style="font-size:10px;color:var(--ink-500);margin-top:4px;letter-spacing:0.04em">12</div></div>
+            <div style="text-align:center"><div style="width:48px;height:24px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:999px"></div><div style="font-size:10px;color:var(--ink-500);margin-top:4px;letter-spacing:0.04em">pill</div></div>
+          </div>
+          <div class="type-row"><div class="type-tag">EASE · cubic-bezier(.32, .72, 0, 1)</div></div>
+          <div class="type-row"><div class="type-tag">FAST · 200ms</div><div class="type-sample" style="font-size:13px;color:var(--ink-700)">버튼 · 칩 · 인풋 포커스</div></div>
+          <div class="type-row"><div class="type-tag">BASE · 280ms</div><div class="type-sample" style="font-size:13px;color:var(--ink-700)">바텀시트 슬라이드 · 페이지 페이드</div></div>
+          <div class="type-row"><div class="type-tag">SLOW · 420ms</div><div class="type-sample" style="font-size:13px;color:var(--ink-700)">스켈레톤 → 사진 페이드인</div></div>
+          <div style="margin-top:var(--s-4);padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            튕김 · 스프링 · 회전 모두 금지. LOCA는 조용한 앱이다.
+          </div>
+        </div>
+
+        <div class="tcard">
+          <h3><span class="ix">08</span>핀 · 경로 · 영역</h3>
+          <!-- pin -->
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--paper-200)">
+            <div style="width:60px;display:flex;justify-content:center"><div style="width:8px;height:8px;border-radius:50%;background:var(--moss-600);box-shadow:0 0 0 1px var(--paper-50),0 0 0 2px var(--moss-600)"></div></div>
+            <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">핀 — 순간</div><div style="font-size:12px;color:var(--ink-500);margin-top:2px">8px · 작은 도장 같은 표식</div></div>
+          </div>
+          <!-- path -->
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--paper-200)">
+            <div style="width:60px;display:flex;justify-content:center"><svg width="60" height="20" viewBox="0 0 60 20"><path d="M 4 12 Q 18 4 30 10 T 56 8" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg></div>
+            <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">경로 — 흐름</div><div style="font-size:12px;color:var(--ink-500);margin-top:2px">2px 곡선 · 살짝 흔들리는 손맛</div></div>
+          </div>
+          <!-- area -->
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px dashed var(--paper-200)">
+            <div style="width:60px;display:flex;justify-content:center"><svg width="50" height="30" viewBox="0 0 50 30"><path d="M 8 10 Q 18 4 30 8 Q 44 14 38 22 Q 24 28 12 22 Q 4 16 8 10 Z" fill="#4A6B52" fill-opacity="0.1"/></svg></div>
+            <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">영역 — 시절</div><div style="font-size:12px;color:var(--ink-500);margin-top:2px">5% opacity 면 · 외곽선 없음</div></div>
+          </div>
+          <!-- disappeared -->
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0">
+            <div style="width:60px;display:flex;justify-content:center;gap:6px;align-items:center">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--dusk-400);opacity:0.5"></div>
+              <svg width="20" height="20" viewBox="0 0 20 20"><path d="M 1 12 Q 6 4 12 10 T 19 8" stroke="#8896A4" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="2 2"/></svg>
+            </div>
+            <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--dusk-400);letter-spacing:-0.01em">사라진 장소</div><div style="font-size:12px;color:var(--ink-500);margin-top:2px">Dusk 톤 · 점선 · 50% opacity</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 SCREENS -->
+    <section class="section" id="section-screens">
+      <div class="section-head">
+        <span class="num-tag">02 / SCREENS</span>
+        <h2>핵심 화면 일곱</h2>
+        <span class="desc">온보딩 · 홈 · 첫 장소 남기기 · 내 지도 · 장소 상세 · 라이트웹 공유 · 프로필.</span>
+      </div>
+      <div class="phones">
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">01</span><span class="name">Onboarding</span><span>· 한 화면 한 문장</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0">
+
+              <!-- Photo (4:5) -->
+              <div style="width:100%;aspect-ratio:4/5;background:linear-gradient(160deg,#EAE3D2 0%,#D4CDB9 50%,#BCB39B 100%);position:relative;overflow:hidden">
+                <!-- subtle photo evocation -->
+                <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 40%,rgba(251,249,244,0.4),transparent 60%)"></div>
+                <div style="position:absolute;bottom:30%;left:50%;transform:translateX(-50%);width:40%;height:1px;background:rgba(42,37,32,0.15)"></div>
+                <div style="position:absolute;top:14px;left:18px;font-size:10px;color:var(--ink-500);letter-spacing:0.08em">SEONGSU · 2025.04.03</div>
+              </div>
+
+              <!-- Text block -->
+              <div style="padding:40px 28px 0;flex:1">
+                <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:16px">01 / 03</div>
+                <h1 class="serif" style="font-size:30px;line-height:42px;color:var(--ink-900);letter-spacing:-0.025em">
+                  좋아한 장소는<br/>취향이 되고,
+                </h1>
+                <p style="font-family:var(--font-serif);font-style:italic;font-size:16px;color:var(--ink-700);line-height:26px;margin-top:16px">
+                  당신이 머물렀던 한 시절의 결을<br/>조용히 모아둘 자리가 있어요.
+                </p>
+              </div>
+
+              <!-- Progress + next -->
+              <div style="padding:24px 28px 32px">
+                <div style="height:1px;background:var(--paper-200);margin-bottom:20px;position:relative">
+                  <div style="position:absolute;top:0;left:0;width:33%;height:1px;background:var(--ink-900)"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:13px;color:var(--ink-500);letter-spacing:-0.01em">건너뛰기</span>
+                  <span style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;font-weight:500">다음 →</span>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">02</span><span class="name">Home</span><span>· 기록의 입구</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0;overflow-y:auto">
+
+              <!-- Greeting -->
+              <div style="padding:36px 24px 24px">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+                  <div class="wordmark" style="font-size:18px"><span class="glyph" style="width:7px;height:7px;box-shadow:0 0 0 1px var(--paper-50),0 0 0 1.5px var(--moss-600);margin-right:1px"></span>LOCA</div>
+                  <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700)"><i data-lucide="search" style="width:18px;height:18px;stroke-width:1.5"></i></button>
+                </div>
+                <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em;margin-bottom:6px">2025년 4월 3일 화요일</div>
+                <p class="serif-i" style="font-size:18px;line-height:28px;color:var(--ink-700);font-weight:400">
+                  오늘은 천천히 걸어보세요,<br/>지유님.
+                </p>
+              </div>
+
+              <!-- Latest record (the hero) -->
+              <div style="padding:0 24px 32px">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.1em;margin-bottom:10px">MOST RECENT</div>
+                <!-- Photo 4:5 -->
+                <div style="width:100%;aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9 0%,#9CA68F 100%);border-radius:8px;position:relative;overflow:hidden;margin-bottom:16px">
+                  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(251,249,244,0.35),transparent 50%)"></div>
+                  <div style="position:absolute;top:14px;right:16px;display:inline-flex;align-items:center;gap:5px;background:rgba(251,249,244,0.92);padding:4px 8px;border-radius:4px"><div style="width:5px;height:5px;border-radius:50%;background:var(--moss-600)"></div><span style="font-size:10px;color:var(--ink-700);letter-spacing:0.04em">PIN · 12</span></div>
+                </div>
+                <h2 class="serif" style="font-size:22px;line-height:30px;color:var(--ink-900)">햇살카페</h2>
+                <p class="serif-i" style="font-size:15px;line-height:24px;color:var(--ink-700);margin-top:8px">
+                  창가에 햇살이 길게 머무는 시간이 있어요.
+                </p>
+                <div style="font-size:12px;color:var(--ink-500);letter-spacing:0.04em;margin-top:12px">
+                  성수동 · 2025년 4월 3일
+                </div>
+              </div>
+
+              <!-- Magazine TOC links -->
+              <div style="padding:0 24px 32px;border-top:1px solid var(--paper-200);padding-top:24px">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--paper-200)">
+                  <span style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">내 지도 둘러보기</span>
+                  <i data-lucide="arrow-right" style="width:14px;height:14px;stroke-width:1.5;color:var(--ink-500)"></i>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--paper-200)">
+                  <span style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">새 장소 남기기</span>
+                  <i data-lucide="arrow-right" style="width:14px;height:14px;stroke-width:1.5;color:var(--ink-500)"></i>
+                </div>
+              </div>
+
+              <!-- Recent list -->
+              <div style="padding:8px 24px 16px">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.1em;margin-bottom:14px">최근에 남긴 장소들</div>
+                <div style="display:flex;gap:12px;margin-bottom:18px">
+                  <div style="width:80px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#87A088);border-radius:6px;flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="serif" style="font-size:15px;color:var(--ink-900)">서울숲 메타세콰이어 길</div>
+                    <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:4px">새벽 비 끝, 안개 살짝.</div>
+                    <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em;margin-top:6px">3월 29일</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:12px;margin-bottom:18px">
+                  <div style="width:80px;aspect-ratio:4/5;background:linear-gradient(150deg,#E5DDC8,#BDB5A8);border-radius:6px;flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="serif" style="font-size:15px;color:var(--ink-900)">옥상의 작은 작업실</div>
+                    <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:4px">먼지 쌓인 책상 위의 봄.</div>
+                    <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em;margin-top:6px">3월 24일</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disappeared section -->
+              <div style="padding:24px 24px 32px;margin-top:8px;border-top:1px solid var(--paper-200);background:rgba(200,208,216,0.06)">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div>
+                  <span style="font-size:10px;color:var(--dusk-400);letter-spacing:0.1em">DISAPPEARED · 2</span>
+                </div>
+                <p class="serif-i" style="font-size:15px;color:var(--ink-700);line-height:23px">
+                  이곳들은 더 이상 거기에 없어요.
+                </p>
+                <div style="margin-top:12px;display:flex;align-items:center;gap:10px">
+                  <span style="font-size:13px;color:var(--dusk-400);letter-spacing:-0.01em;border-bottom:1px dashed var(--dusk-200);padding-bottom:1px">옛 골목 책방</span>
+                  <span style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em">2024년 11월</span>
+                </div>
+              </div>
+              <div style="height:8px"></div>
+            </div>
+            <div class="bnav">
+              <div class="bnav-item active"><i data-lucide="book-open"></i><span>홈</span></div>
+              <div class="bnav-item"><i data-lucide="map"></i><span>내 지도</span></div>
+              <div class="bnav-item"><i data-lucide="plus"></i><span>남기기</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">03</span><span class="name">Add Place</span><span>· 한 줄 경험 (Step 2 / 4)</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0">
+              <!-- Top -->
+              <div style="padding:14px 24px 0;display:flex;justify-content:space-between;align-items:center">
+                <button style="font-size:13px;color:var(--ink-700);letter-spacing:-0.01em;display:inline-flex;align-items:center;gap:4px"><i data-lucide="chevron-left" style="width:14px;height:14px;stroke-width:1.5"></i>이전</button>
+                <span style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em">02 / 04</span>
+                <button style="font-size:13px;color:var(--ink-500);letter-spacing:-0.01em">건너뛰기</button>
+              </div>
+
+              <!-- Question -->
+              <div style="padding:32px 24px 0">
+                <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:12px">한 줄 경험</div>
+                <h1 class="serif" style="font-size:24px;line-height:34px;color:var(--ink-900)">
+                  이곳에서 무엇을<br/>살아냈나요?
+                </h1>
+                <p class="serif-i" style="font-size:14px;color:var(--ink-500);margin-top:10px">
+                  한 문장이면 충분해요.
+                </p>
+              </div>
+
+              <!-- Photo thumbnail (from step 1) -->
+              <div style="padding:24px 24px 0">
+                <div style="display:flex;gap:10px;align-items:center;padding:10px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px">
+                  <div style="width:42px;aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:4px;flex-shrink:0"></div>
+                  <div style="flex:1">
+                    <div style="font-size:12px;color:var(--ink-900);letter-spacing:-0.01em">사진 1장</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:2px">방금 전 추가됨</div>
+                  </div>
+                  <button style="font-size:12px;color:var(--ink-700);letter-spacing:-0.01em">변경</button>
+                </div>
+              </div>
+
+              <!-- Textarea -->
+              <div style="padding:24px 24px 0;flex:1;display:flex;flex-direction:column">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.06em;margin-bottom:8px">기록</div>
+                <div style="border-bottom:1px solid var(--ink-900);padding-bottom:14px;flex:1;position:relative">
+                  <p class="serif" style="font-size:18px;line-height:30px;color:var(--ink-900);letter-spacing:-0.01em;font-weight:400">
+                    창가에 햇살이 길게 머무는 시간이 있어요. 라떼는 부드럽고, 토스트는 단단하다.
+                    <span style="display:inline-block;width:1px;height:22px;background:var(--ink-900);vertical-align:middle;animation:blink 1s infinite"></span>
+                  </p>
+                  <style>@keyframes blink { 50% { opacity: 0; } }</style>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:10px">
+                  <span class="serif-i" style="font-size:12px;color:var(--ink-500)">한 문장이면 충분해요.</span>
+                  <span class="num" style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em">52 / 280</span>
+                </div>
+              </div>
+
+              <!-- CTA -->
+              <div style="padding:20px 24px 28px">
+                <div style="height:1px;background:var(--paper-200);margin-bottom:18px;position:relative">
+                  <div style="position:absolute;top:0;left:0;width:50%;height:1px;background:var(--ink-900)"></div>
+                </div>
+                <button style="width:100%;padding:14px 24px;background:var(--ink-900);color:var(--paper-50);border-radius:8px;font-size:14px;letter-spacing:-0.01em;font-weight:500">다음 — 장소 정하기</button>
+              </div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">04</span><span class="name">My Map</span><span>· 핀·경로·영역 + 사라진 장소</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#EDEAE0">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <!-- Map (top 60%) -->
+            <div style="position:absolute;top:32px;left:0;right:0;height:430px;overflow:hidden;background:#EDEAE0">
+              <!-- Map base — gray-cream -->
+              <svg viewBox="0 0 360 430" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <!-- subtle blocks -->
+                <rect width="360" height="430" fill="#EDEAE0"/>
+                <rect x="0" y="0" width="360" height="430" fill="url(#dotPattern)" opacity="0.15"/>
+                <defs>
+                  <pattern id="dotPattern" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="0.4" fill="#BDB5A8"/>
+                  </pattern>
+                </defs>
+
+                <!-- area (시절) -->
+                <path d="M 50 90 Q 100 60 160 80 Q 210 100 200 160 Q 180 210 110 200 Q 50 180 50 130 Z"
+                      fill="#4A6B52" fill-opacity="0.10"/>
+                <text x="125" y="145" font-family="Noto Serif KR" font-style="italic" font-size="11" fill="#5C544A" text-anchor="middle">2024 봄의 골목</text>
+
+                <!-- disappeared area (사라진 시절) -->
+                <path d="M 220 230 Q 270 220 290 260 Q 280 290 240 290 Q 210 270 220 230 Z"
+                      fill="#8896A4" fill-opacity="0.08" stroke="#C8D0D8" stroke-width="0.8" stroke-dasharray="3 3"/>
+
+                <!-- roads (very faint) -->
+                <path d="M 0 220 Q 100 200 200 230 T 360 250" stroke="#FBF9F4" stroke-width="6" fill="none"/>
+                <path d="M 0 220 Q 100 200 200 230 T 360 250" stroke="#D8D0BC" stroke-width="0.5" fill="none"/>
+                <path d="M 0 340 Q 120 320 240 350 T 360 360" stroke="#FBF9F4" stroke-width="5" fill="none"/>
+                <path d="M 0 340 Q 120 320 240 350 T 360 360" stroke="#D8D0BC" stroke-width="0.4" fill="none"/>
+                <path d="M 130 0 Q 145 180 130 380" stroke="#FBF9F4" stroke-width="4" fill="none"/>
+                <path d="M 130 0 Q 145 180 130 380" stroke="#D8D0BC" stroke-width="0.4" fill="none"/>
+                <path d="M 260 0 Q 250 180 270 380" stroke="#FBF9F4" stroke-width="4" fill="none"/>
+                <path d="M 260 0 Q 250 180 270 380" stroke="#D8D0BC" stroke-width="0.4" fill="none"/>
+
+                <!-- path (흐름) -->
+                <path d="M 90 130 Q 130 170 160 200 Q 200 230 240 270" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+                <!-- disappeared path (점선) -->
+                <path d="M 240 270 Q 280 290 300 320" stroke="#8896A4" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3 3" opacity="0.7"/>
+
+                <!-- pins -->
+                <circle cx="90" cy="130" r="4" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1.5"/>
+                <circle cx="160" cy="200" r="4" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1.5"/>
+                <circle cx="240" cy="270" r="4" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1.5"/>
+                <!-- selected pin (slightly larger ring) -->
+                <circle cx="160" cy="200" r="9" fill="none" stroke="#4A6B52" stroke-width="1" opacity="0.4"/>
+                <!-- another -->
+                <circle cx="200" cy="100" r="4" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1.5"/>
+                <!-- disappeared pin -->
+                <circle cx="300" cy="320" r="4" fill="#8896A4" stroke="#FBF9F4" stroke-width="1.5" opacity="0.5"/>
+
+                <!-- place names — small serif -->
+                <text x="98" y="124" font-family="Noto Serif KR" font-size="9.5" fill="#2A2520">햇살카페</text>
+                <text x="168" y="194" font-family="Noto Serif KR" font-size="10" font-weight="500" fill="#2A2520">서울숲 메타세콰이어</text>
+                <text x="248" y="266" font-family="Noto Serif KR" font-size="9.5" fill="#2A2520">옥상의 작업실</text>
+                <text x="208" y="96" font-family="Noto Serif KR" font-size="9.5" fill="#2A2520">우물각 책방</text>
+                <text x="306" y="318" font-family="Noto Serif KR" font-size="9.5" font-style="italic" fill="#8896A4">옛 골목 책방</text>
+              </svg>
+
+              <!-- Top filter button -->
+              <div style="position:absolute;top:14px;right:14px;display:inline-flex;gap:6px">
+                <button style="padding:6px 12px;background:var(--paper-50);border:1px solid var(--paper-200);border-radius:999px;font-size:11px;color:var(--ink-700);letter-spacing:-0.01em;display:inline-flex;align-items:center;gap:4px"><i data-lucide="sliders-horizontal" style="width:11px;height:11px;stroke-width:1.5"></i>필터</button>
+              </div>
+            </div>
+
+            <!-- Bottom sheet -->
+            <div style="position:absolute;left:0;right:0;bottom:60px;top:462px;background:var(--paper-50);border-radius:20px 20px 0 0;border-top:1px solid var(--paper-200);overflow:hidden">
+              <!-- handle -->
+              <div style="width:32px;height:3px;background:var(--paper-200);border-radius:999px;margin:8px auto 12px"></div>
+
+              <div style="padding:0 20px;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+                <h2 class="serif" style="font-size:16px;color:var(--ink-900);letter-spacing:-0.01em">2025년 봄의 지도</h2>
+                <span style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em">12 핀 · 1 경로</span>
+              </div>
+
+              <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;height:calc(100% - 50px)">
+                <!-- selected entry -->
+                <div style="display:flex;gap:12px;padding:10px;background:var(--moss-100);border-radius:8px">
+                  <div style="width:56px;aspect-ratio:4/5;background:linear-gradient(150deg,#9CA68F,#5C7461);border-radius:4px;flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">서울숲 메타세콰이어</div>
+                    <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px">새벽 비 끝, 안개 살짝.</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:6px;letter-spacing:0.04em">3월 29일 · 산책</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--paper-200)">
+                  <div style="width:56px;aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:4px;flex-shrink:0"></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">햇살카페</div>
+                    <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px">창가에 햇살이 길게 머무는 시간.</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:6px;letter-spacing:0.04em">4월 3일 · 카페</div>
+                  </div>
+                </div>
+                <!-- disappeared -->
+                <div style="display:flex;gap:12px;opacity:0.7">
+                  <div style="width:56px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#A5AEB8);border-radius:4px;flex-shrink:0;position:relative"><div style="position:absolute;inset:0;background:rgba(251,249,244,0.3);border:1px dashed rgba(136,150,164,0.5);border-radius:4px"></div></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="serif" style="font-size:14px;color:var(--dusk-400);letter-spacing:-0.01em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+                    <div class="serif-i" style="font-size:11px;color:var(--ink-700);line-height:17px;margin-top:4px">이곳은 더 이상 거기에 없어요.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="book-open"></i><span>홈</span></div>
+              <div class="bnav-item active"><i data-lucide="map"></i><span>내 지도</span></div>
+              <div class="bnav-item"><i data-lucide="plus"></i><span>남기기</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">05</span><span class="name">Place</span><span>· 잡지 페이지로서의 상세</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0;overflow-y:auto">
+              <!-- top bar -->
+              <div style="position:absolute;top:32px;left:0;right:0;display:flex;justify-content:space-between;padding:14px 20px;z-index:5">
+                <button style="width:36px;height:36px;background:rgba(251,249,244,0.94);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-900);backdrop-filter:blur(8px);border:1px solid rgba(234,227,210,0.6)"><i data-lucide="chevron-left" style="width:16px;height:16px;stroke-width:1.5"></i></button>
+                <button style="width:36px;height:36px;background:rgba(251,249,244,0.94);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-900);backdrop-filter:blur(8px);border:1px solid rgba(234,227,210,0.6)"><i data-lucide="more-horizontal" style="width:16px;height:16px;stroke-width:1.5"></i></button>
+              </div>
+
+              <!-- Big photo (4:5) -->
+              <div style="width:100%;aspect-ratio:4/5;background:linear-gradient(160deg,#C8D0D8 0%,#A5AEB8 50%,#7E8893 100%);position:relative;flex-shrink:0">
+                <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 60% 30%,rgba(251,249,244,0.3),transparent 60%)"></div>
+              </div>
+
+              <!-- Body -->
+              <div style="padding:28px 24px 0;background:var(--paper-50)">
+                <!-- meta -->
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+                  <div style="width:6px;height:6px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div>
+                  <span style="font-size:11px;color:var(--dusk-400);letter-spacing:0.06em">DISAPPEARED · 2024.11</span>
+                </div>
+
+                <!-- name -->
+                <h1 class="serif" style="font-size:28px;line-height:36px;color:var(--ink-900);letter-spacing:-0.025em">
+                  옛 골목 책방
+                </h1>
+
+                <!-- meta line -->
+                <div style="font-size:12px;color:var(--ink-500);margin-top:8px;letter-spacing:0.04em">
+                  성수동 골목 · 2024년 7월 12일 방문
+                </div>
+
+                <!-- disappeared note -->
+                <div style="margin-top:16px;padding:14px 16px;background:rgba(200,208,216,0.18);border-left:1px solid var(--dusk-400);border-radius:0 4px 4px 0">
+                  <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">
+                    이곳은 더 이상 거기에 없지만,<br/>당신의 지도에는 남아 있어요.
+                  </p>
+                </div>
+
+                <!-- Quote (한 줄 경험) -->
+                <div style="margin-top:28px">
+                  <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.1em;margin-bottom:10px">한 줄 경험</div>
+                  <p class="serif-i" style="font-size:18px;line-height:30px;color:var(--ink-700);font-weight:400">
+                    낡은 책꽂이 사이에서 책방 주인이 천천히 추천한 시집을 받아 들었어요. 햇살이 길게 들어오던 오후.
+                  </p>
+                </div>
+
+                <!-- Photo strip horizontal -->
+                <div style="margin-top:28px">
+                  <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none">
+                    <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#A5AEB8,#7E8893);border-radius:4px;flex-shrink:0"></div>
+                    <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#A5AEB8);border-radius:4px;flex-shrink:0"></div>
+                    <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:4px;flex-shrink:0"></div>
+                  </div>
+                </div>
+
+                <!-- Notes -->
+                <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--paper-200)">
+                  <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.1em;margin-bottom:10px">메모</div>
+                  <p style="font-size:15px;line-height:26px;color:var(--ink-900);font-weight:400">
+                    주인장이 추천한 책: 김행숙 시집 『이별의 능력』.
+                    문 닫기 전 마지막 방문 때 작은 봉투에 시집과 손편지가 함께 들어 있었다.
+                  </p>
+                </div>
+
+                <!-- Actions -->
+                <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--paper-200);padding-bottom:32px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+                    <span style="font-size:13px;color:var(--ink-700);letter-spacing:-0.01em">이 장소 수정</span>
+                    <i data-lucide="arrow-right" style="width:13px;height:13px;stroke-width:1.5;color:var(--ink-500)"></i>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-top:1px solid var(--paper-200)">
+                    <span style="font-size:13px;color:var(--ink-700);letter-spacing:-0.01em">내 지도에서 보기</span>
+                    <i data-lucide="arrow-right" style="width:13px;height:13px;stroke-width:1.5;color:var(--ink-500)"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">06</span><span class="name">Light Web</span><span>· 건네받은 지도</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0;overflow-y:auto;background:var(--paper-50)">
+              <!-- Curator strip -->
+              <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--paper-200)">
+                <div class="wordmark" style="font-size:13px;flex-shrink:0"><span class="glyph" style="width:6px;height:6px;box-shadow:0 0 0 1px var(--paper-50),0 0 0 1.5px var(--moss-600);margin-right:1px"></span>LOCA</div>
+                <span style="color:var(--paper-200);font-size:12px">/</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;color:var(--ink-900);letter-spacing:-0.01em">@jiyu</div>
+                  <div class="serif-i" style="font-size:11px;color:var(--ink-700);line-height:14px">성수동 골목 큐레이터</div>
+                </div>
+              </div>
+
+              <!-- Title spread -->
+              <div style="padding:48px 28px 36px;text-align:left">
+                <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.12em;margin-bottom:14px">A QUIET MAP · 2025</div>
+                <h1 class="serif" style="font-size:32px;line-height:42px;color:var(--ink-900);letter-spacing:-0.025em">
+                  성수동의<br/>한낮 골목들
+                </h1>
+                <p class="serif-i" style="font-size:16px;line-height:26px;color:var(--ink-700);margin-top:16px">
+                  햇살이 길게 머무는 카페 여덟 곳과,<br/>
+                  지금은 사라진 골목 책방 한 곳.
+                </p>
+                <div style="font-size:11px;color:var(--ink-500);margin-top:18px;letter-spacing:0.06em">
+                  2025년 봄 · 14곳 · 4.2km
+                </div>
+              </div>
+
+              <!-- Hero photo -->
+              <div style="width:100%;aspect-ratio:3/4;background:linear-gradient(155deg,#D4CDB9 0%,#9CA68F 60%,#5C7461 100%);position:relative">
+                <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(251,249,244,0.25),transparent 60%)"></div>
+              </div>
+
+              <!-- Magazine TOC -->
+              <div style="padding:36px 28px 0">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.12em;margin-bottom:14px">CONTENTS</div>
+
+                <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--paper-200)">
+                  <div style="display:flex;align-items:baseline;gap:14px">
+                    <span class="num serif" style="font-size:13px;color:var(--ink-500);min-width:18px">01</span>
+                    <div>
+                      <div class="serif" style="font-size:15px;color:var(--ink-900);letter-spacing:-0.01em">햇살카페</div>
+                      <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px">창가에 햇살이 길게 머무는 시간이 있어요.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--paper-200)">
+                  <div style="display:flex;align-items:baseline;gap:14px">
+                    <span class="num serif" style="font-size:13px;color:var(--ink-500);min-width:18px">02</span>
+                    <div>
+                      <div class="serif" style="font-size:15px;color:var(--ink-900);letter-spacing:-0.01em">서울숲 메타세콰이어 길</div>
+                      <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px">새벽 비 끝, 안개 살짝.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--paper-200)">
+                  <div style="display:flex;align-items:baseline;gap:14px">
+                    <span class="num serif" style="font-size:13px;color:var(--ink-500);min-width:18px">03</span>
+                    <div>
+                      <div class="serif" style="font-size:15px;color:var(--ink-900);letter-spacing:-0.01em">옥상의 작은 작업실</div>
+                      <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px">먼지 쌓인 책상 위의 봄.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- disappeared entry -->
+                <div style="display:flex;align-items:baseline;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--paper-200)">
+                  <div style="display:flex;align-items:baseline;gap:14px">
+                    <span class="num serif" style="font-size:13px;color:var(--dusk-400);min-width:18px">04</span>
+                    <div>
+                      <div class="serif" style="font-size:15px;color:var(--dusk-400);letter-spacing:-0.01em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+                      <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:4px">이곳은 더 이상 거기에 없어요.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mini map preview -->
+              <div style="padding:32px 28px 0">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.12em;margin-bottom:14px">MAP</div>
+                <div style="aspect-ratio:4/3;background:#EDEAE0;border:1px solid var(--paper-200);border-radius:6px;position:relative;overflow:hidden">
+                  <svg viewBox="0 0 280 210" style="width:100%;height:100%">
+                    <rect width="280" height="210" fill="#EDEAE0"/>
+                    <path d="M 0 80 Q 80 70 160 90 T 280 100" stroke="#FBF9F4" stroke-width="3" fill="none"/>
+                    <path d="M 100 0 Q 110 100 100 210" stroke="#FBF9F4" stroke-width="3" fill="none"/>
+                    <path d="M 60 80 Q 100 110 140 130 Q 180 145 220 130" stroke="#4A6B52" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                    <circle cx="60" cy="80" r="3" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1"/>
+                    <circle cx="140" cy="130" r="3" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1"/>
+                    <circle cx="220" cy="130" r="3" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1"/>
+                    <circle cx="180" cy="60" r="3" fill="#4A6B52" stroke="#FBF9F4" stroke-width="1"/>
+                    <circle cx="240" cy="170" r="3" fill="#8896A4" stroke="#FBF9F4" stroke-width="1" opacity="0.5"/>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Quiet invite -->
+              <div style="padding:28px 28px 24px;text-align:center;border-top:1px solid var(--paper-200);margin-top:32px">
+                <p class="serif-i" style="font-size:14px;color:var(--ink-700);line-height:22px">
+                  이 지도가 마음에 드셨다면,
+                </p>
+                <a href="#" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;border-bottom:1px solid var(--ink-900);padding-bottom:1px;display:inline-block;margin-top:6px">내 지도로 가져오기</a>
+              </div>
+
+              <!-- Footer -->
+              <div style="padding:24px 28px 32px;border-top:1px solid var(--paper-200);text-align:center">
+                <div class="serif-i" style="font-size:11px;color:var(--ink-500);letter-spacing:0.04em">LOCA에서 만들어진 지도</div>
+                <div style="margin-top:14px;display:flex;gap:10px;justify-content:center">
+                  <div style="width:64px;aspect-ratio:4/5;background:linear-gradient(150deg,#E5DDC8,#BDB5A8);border-radius:4px"></div>
+                  <div style="width:64px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#87A088);border-radius:4px"></div>
+                </div>
+                <div style="font-size:11px;color:var(--ink-500);margin-top:8px;letter-spacing:0.04em">@jiyu의 다른 지도</div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">07</span><span class="name">Profile</span><span>· 호칭 시스템 · 작은 위계</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div class="screen-body" style="padding:0;overflow-y:auto">
+              <!-- Top bar -->
+              <div style="padding:12px 20px;display:flex;justify-content:flex-end">
+                <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700)"><i data-lucide="settings" style="width:18px;height:18px;stroke-width:1.5"></i></button>
+              </div>
+
+              <!-- Header (centered, magazine-like) -->
+              <div style="padding:20px 24px 36px;text-align:center;border-bottom:1px solid var(--paper-200)">
+                <!-- avatar (subtle, optional) -->
+                <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(150deg,#D4CDB9,#9CA68F);margin:0 auto 18px;border:1px solid var(--paper-200)"></div>
+                <h1 class="serif" style="font-size:22px;color:var(--ink-900);letter-spacing:-0.02em">지유</h1>
+                <div style="font-size:12px;color:var(--ink-500);margin-top:4px;letter-spacing:0.02em">@jiyu</div>
+                <p class="serif-i" style="font-size:13px;color:var(--ink-700);margin-top:14px;line-height:20px">
+                  성수동 골목 큐레이터
+                </p>
+                <p style="font-size:13px;color:var(--ink-700);margin-top:10px;line-height:20px;max-width:240px;margin-left:auto;margin-right:auto">
+                  사라지는 동네에서 잠깐 머문 자리를<br/>천천히 모아두고 있어요.
+                </p>
+
+                <!-- single external link -->
+                <a href="#" style="display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:12px;color:var(--ink-500);letter-spacing:0.02em;border-bottom:1px solid var(--paper-200);padding-bottom:2px">
+                  <i data-lucide="link" style="width:11px;height:11px;stroke-width:1.5"></i>jiyu.bear-blog.dev
+                </a>
+
+                <!-- minimal stats -->
+                <div style="margin-top:24px;display:flex;justify-content:center;gap:20px;font-size:11px;color:var(--ink-500);letter-spacing:0.04em">
+                  <span><span class="num" style="color:var(--ink-900);font-weight:500">8</span> 공개 지도</span>
+                  <span style="color:var(--paper-200)">·</span>
+                  <span><span class="num" style="color:var(--ink-900);font-weight:500">147</span> 장소</span>
+                </div>
+              </div>
+
+              <!-- Public maps grid -->
+              <div style="padding:24px 24px 16px">
+                <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.12em;margin-bottom:14px">공개 지도</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                  <!-- map card -->
+                  <div>
+                    <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:6px;margin-bottom:10px"></div>
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;line-height:18px">성수동의 한낮 골목들</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:4px;letter-spacing:0.02em">14곳 · 2025 봄</div>
+                  </div>
+                  <div>
+                    <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:6px;margin-bottom:10px"></div>
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;line-height:18px">서울숲 산책 노트</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:4px;letter-spacing:0.02em">8곳 · 2024 가을</div>
+                  </div>
+                  <div>
+                    <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#E5DDC8,#BDB5A8);border-radius:6px;margin-bottom:10px"></div>
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;line-height:18px">옥상에서 만난 사람들</div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:4px;letter-spacing:0.02em">6곳 · 2024 여름</div>
+                  </div>
+                  <div>
+                    <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:6px;margin-bottom:10px;position:relative"><div style="position:absolute;top:8px;right:8px;width:5px;height:5px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div></div>
+                    <div class="serif" style="font-size:14px;color:var(--ink-900);letter-spacing:-0.01em;line-height:18px">사라진 동네 가게들</div>
+                    <div class="serif-i" style="font-size:11px;color:var(--dusk-400);margin-top:4px;letter-spacing:-0.01em">3곳이 더 이상 없어요</div>
+                  </div>
+                </div>
+              </div>
+              <div style="height:24px"></div>
+            </div>
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="book-open"></i><span>홈</span></div>
+              <div class="bnav-item"><i data-lucide="map"></i><span>내 지도</span></div>
+              <div class="bnav-item"><i data-lucide="plus"></i><span>남기기</span></div>
+              <div class="bnav-item active"><i data-lucide="user"></i><span>나</span></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 COMPONENTS -->
+    <section class="section" id="section-components">
+      <div class="section-head">
+        <span class="num-tag">03 / COMPONENTS</span>
+        <h2>컴포넌트</h2>
+        <span class="desc">버튼 · 인풋 · 칩 · 핀/경로/영역 · 사라진 장소 표기 · 카드 · 토스트.</span>
+      </div>
+      <style>
+        .v4-btn { padding: 14px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: -0.01em; transition: all var(--dur-fast) var(--ease-quiet); }
+        .v4-btn-primary { background: var(--ink-900); color: var(--paper-50); }
+        .v4-btn-primary:hover { background: #1c1815; }
+        .v4-btn-outline { background: transparent; color: var(--ink-900); border: 1px solid var(--ink-900); }
+        .v4-btn-outline:hover { background: var(--ink-900); color: var(--paper-50); }
+        .v4-btn-ghost { background: transparent; color: var(--ink-700); }
+        .v4-btn-ghost:hover { color: var(--ink-900); }
+        .v4-btn-link { background: transparent; color: var(--ink-900); padding: 4px 0; border-bottom: 1px solid var(--ink-900); border-radius: 0; font-weight: 400; }
+        .v4-btn-disabled { background: var(--paper-100); color: var(--ink-300); border: 1px solid var(--paper-200); cursor: not-allowed; }
+
+        .v4-input { padding: 8px 0; border: none; border-bottom: 1px solid var(--paper-200); background: transparent; color: var(--ink-900); font-family: inherit; font-size: 15px; outline: none; transition: border-color var(--dur-fast) var(--ease-quiet); width: 100%; }
+        .v4-input::placeholder { color: var(--ink-500); font-style: italic; font-family: var(--font-serif); font-weight: 400; }
+        .v4-input:focus { border-bottom-color: var(--ink-900); }
+
+        .v4-chip { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: 400; transition: all var(--dur-fast) var(--ease-quiet); border: 1px solid var(--paper-200); background: transparent; color: var(--ink-700); letter-spacing: -0.01em; }
+        .v4-chip-active { border-color: var(--ink-900); color: var(--ink-900); }
+
+        .v4-icon-tile { width: 40px; height: 40px; border-radius: 8px; background: var(--paper-100); border: 1px solid var(--paper-200); display: flex; align-items: center; justify-content: center; color: var(--ink-700); transition: all var(--dur-fast) var(--ease-quiet); }
+        .v4-icon-tile:hover { background: var(--ink-900); color: var(--paper-50); border-color: var(--ink-900); }
+        .v4-icon-tile svg { stroke-width: 1.5; }
+      </style>
+
+      <div class="gallery">
+        <!-- Buttons -->
+        <div class="gcard">
+          <h3>BUTTON</h3>
+          <div class="grow"><span class="glabel">Primary</span><button class="v4-btn v4-btn-primary">이 장소를 남기기</button></div>
+          <div class="grow"><span class="glabel">Outline</span><button class="v4-btn v4-btn-outline">또 남기기</button></div>
+          <div class="grow"><span class="glabel">Ghost</span><button class="v4-btn v4-btn-ghost">건너뛰기</button></div>
+          <div class="grow"><span class="glabel">Link</span><button class="v4-btn v4-btn-link">내 지도로 가져오기</button></div>
+          <div class="grow"><span class="glabel">Disabled</span><button class="v4-btn v4-btn-disabled" disabled>저장 중</button></div>
+          <div style="margin-top:12px;padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            CTA는 화면당 한 곳. Outline이 LOCA의 기본 결.
+          </div>
+        </div>
+
+        <!-- Inputs -->
+        <div class="gcard">
+          <h3>INPUT · FORM</h3>
+          <div class="grow" style="flex-direction:column;align-items:stretch;gap:0">
+            <span class="glabel" style="width:auto;margin-bottom:4px">기록</span>
+            <input class="v4-input" placeholder="한 문장이면 충분해요" />
+          </div>
+          <div class="grow" style="flex-direction:column;align-items:stretch;gap:0;margin-top:14px">
+            <span class="glabel" style="width:auto;margin-bottom:4px">장소 이름</span>
+            <input class="v4-input" value="햇살카페" />
+          </div>
+          <div class="grow" style="flex-direction:column;align-items:stretch;gap:0;margin-top:14px">
+            <span class="glabel" style="width:auto;margin-bottom:4px">검색</span>
+            <input class="v4-input" placeholder="기억하고 싶은 장소를 찾아보세요" style="border-bottom-color:var(--ink-900)" />
+          </div>
+          <div class="grow" style="flex-direction:column;align-items:stretch;gap:0;margin-top:14px">
+            <span class="glabel" style="width:auto;margin-bottom:4px">이메일</span>
+            <input class="v4-input" value="@잘못된이메일" style="border-bottom-color:var(--ember-500)" />
+            <span class="serif-i" style="font-size:12px;color:var(--ember-500);margin-top:4px">올바른 형식이 아니에요.</span>
+          </div>
+        </div>
+
+        <!-- Chip / Tag -->
+        <div class="gcard">
+          <h3>CHIP · TAG</h3>
+          <div class="grow"><span class="glabel">Filter</span><span class="v4-chip v4-chip-active">전체</span><span class="v4-chip">핀</span><span class="v4-chip">경로</span><span class="v4-chip">영역</span></div>
+          <div class="grow"><span class="glabel">Tag</span><span class="v4-chip">한적함</span><span class="v4-chip">창가자리</span><span class="v4-chip">평일오후</span></div>
+          <div class="grow"><span class="glabel">Disappeared</span><span class="v4-chip" style="border-color:var(--dusk-200);color:var(--dusk-400);border-style:dashed">사라진 장소</span></div>
+          <div style="margin-top:12px;padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            네모 모서리(4px). 채워진 칩은 사용하지 않는다.
+          </div>
+        </div>
+
+        <!-- Pin / Path / Area -->
+        <div class="gcard">
+          <h3>PIN · PATH · AREA</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <!-- pin -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--moss-600);box-shadow:0 0 0 1.5px var(--paper-100),0 0 0 2.5px var(--moss-600)"></div>
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em">PIN · 8PX</div>
+            </div>
+            <!-- selected pin -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative">
+              <div style="position:relative">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--moss-600);box-shadow:0 0 0 1.5px var(--paper-100),0 0 0 2.5px var(--moss-600)"></div>
+                <div style="position:absolute;top:-7px;left:-7px;width:22px;height:22px;border-radius:50%;border:1px solid var(--moss-600);opacity:0.4"></div>
+              </div>
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em">SELECTED</div>
+            </div>
+            <!-- path -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <svg width="80" height="20" viewBox="0 0 80 20"><path d="M 4 12 Q 24 4 40 10 T 76 8" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em">PATH</div>
+            </div>
+            <!-- area -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <svg width="60" height="30" viewBox="0 0 60 30"><path d="M 8 10 Q 22 4 38 10 Q 52 18 44 24 Q 28 30 14 22 Q 4 16 8 10 Z" fill="#4A6B52" fill-opacity="0.10"/></svg>
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.06em">AREA</div>
+            </div>
+            <!-- disappeared pin -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--dusk-400);opacity:0.5;box-shadow:0 0 0 1.5px var(--paper-100),0 0 0 2.5px var(--dusk-400)"></div>
+              <div style="font-size:11px;color:var(--dusk-400);letter-spacing:0.06em;font-style:italic;font-family:var(--font-serif)">disappeared</div>
+            </div>
+            <!-- disappeared path -->
+            <div style="padding:20px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:10px">
+              <svg width="80" height="20" viewBox="0 0 80 20"><path d="M 4 12 Q 24 4 40 10 T 76 8" stroke="#8896A4" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="3 3" opacity="0.7"/></svg>
+              <div style="font-size:11px;color:var(--dusk-400);letter-spacing:0.06em;font-style:italic;font-family:var(--font-serif)">disappeared path</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card -->
+        <div class="gcard">
+          <h3>CARD · 사진 위주</h3>
+          <!-- regular -->
+          <div style="background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;overflow:hidden;margin-bottom:12px">
+            <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F)"></div>
+            <div style="padding:14px 16px">
+              <div class="serif" style="font-size:15px;color:var(--ink-900);letter-spacing:-0.01em">햇살카페</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:4px">창가에 햇살이 길게 머무는 시간.</div>
+              <div style="font-size:11px;color:var(--ink-500);margin-top:8px;letter-spacing:0.02em">2025년 4월 3일</div>
+            </div>
+          </div>
+          <!-- disappeared card -->
+          <div style="background:rgba(200,208,216,0.08);border:1px dashed var(--dusk-200);border-radius:8px;overflow:hidden">
+            <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#A5AEB8);position:relative"><div style="position:absolute;inset:0;background:rgba(251,249,244,0.3)"></div></div>
+            <div style="padding:14px 16px">
+              <div class="serif" style="font-size:15px;color:var(--dusk-400);letter-spacing:-0.01em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:6px">이곳은 더 이상 거기에 없어요.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty / Toast -->
+        <div class="gcard">
+          <h3>EMPTY · TOAST</h3>
+          <div style="padding:32px 20px;text-align:center;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px;margin-bottom:16px">
+            <!-- subtle illustration -->
+            <svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:14px">
+              <circle cx="24" cy="24" r="14" fill="none" stroke="#BDB5A8" stroke-width="1"/>
+              <circle cx="24" cy="24" r="2.5" fill="#4A6B52"/>
+              <path d="M 24 6 L 24 10 M 24 38 L 24 42 M 6 24 L 10 24 M 38 24 L 42 24" stroke="#BDB5A8" stroke-width="1" stroke-linecap="round"/>
+            </svg>
+            <p class="serif" style="font-size:15px;color:var(--ink-900);line-height:23px">아직 남긴 장소가 없어요.</p>
+            <p class="serif-i" style="font-size:13px;color:var(--ink-500);margin-top:6px;line-height:20px">처음 좋아한 장소부터 천천히 남겨보세요.</p>
+            <button class="v4-btn v4-btn-link" style="margin-top:18px">새 장소 남기기</button>
+          </div>
+          <!-- toast -->
+          <div style="padding:12px 16px;background:var(--ink-900);color:var(--paper-50);border-radius:8px;font-size:13px;letter-spacing:-0.01em;display:inline-flex;align-items:center;gap:8px">
+            <i data-lucide="check" style="width:14px;height:14px;stroke-width:1.5"></i>이 장소를 남겼어요.
+          </div>
+          <div style="padding:12px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;font-size:12px;color:var(--ink-900);margin-top:8px;font-family:var(--font-serif);font-style:italic">
+            좋아하던 곳에 변화가 있어요.
+          </div>
+        </div>
+
+        <!-- Icons -->
+        <div class="gcard">
+          <h3>ICON · LUCIDE 1.5 STROKE</h3>
+          <p class="serif-i" style="font-size:12px;color:var(--ink-700);line-height:20px;margin-bottom:14px">
+            모든 기능 아이콘은 lucide. <strong style="color:var(--ink-900);font-style:normal;font-weight:500">stroke 1.5px</strong>로 통일해 잡지 픽토그램의 결.
+          </p>
+          <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:6px">
+            <div class="v4-icon-tile"><i data-lucide="book-open"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="map"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="map-pin"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="plus"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="user"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="search"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="bookmark"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="share-2"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="settings"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="camera"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="image"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="link"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="arrow-right"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="chevron-left"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="more-horizontal"></i></div>
+            <div class="v4-icon-tile"><i data-lucide="sliders-horizontal"></i></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 VOICE & MOTION -->
+    <section class="section" id="section-voice">
+      <div class="section-head">
+        <span class="num-tag">04 / VOICE</span>
+        <h2>보이스 · 모션 · 의사결정</h2>
+        <span class="desc">조용히 닿는 카피, 200~300ms의 절제된 전환, 막힐 때 돌아오는 체크리스트.</span>
+      </div>
+      <div class="gallery">
+        <!-- Voice -->
+        <div class="gcard">
+          <h3>VOICE · 마이크로카피</h3>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="padding:14px 16px;background:var(--paper-100);border-left:1px solid var(--ink-900);border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:6px">EMPTY MAP</div>
+              <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">아직 남긴 장소가 없어요.<br/>처음 좋아한 장소부터 천천히 남겨보세요.</p>
+            </div>
+            <div style="padding:14px 16px;background:var(--paper-100);border-left:1px solid var(--ink-900);border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:6px">SAVED</div>
+              <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">이 장소를 남겼어요.</p>
+            </div>
+            <div style="padding:14px 16px;background:rgba(200,208,216,0.18);border-left:1px solid var(--dusk-400);border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--dusk-400);letter-spacing:0.08em;margin-bottom:6px">DISAPPEARED</div>
+              <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">이곳은 더 이상 거기에 없지만,<br/>당신의 지도에는 남아 있어요.</p>
+            </div>
+            <div style="padding:14px 16px;background:var(--paper-100);border-left:1px solid var(--ink-900);border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:6px">SHARE</div>
+              <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">이 지도를 누군가에게 건네볼까요?</p>
+            </div>
+            <div style="padding:14px 16px;background:var(--paper-100);border-left:1px solid var(--ink-900);border-radius:0 6px 6px 0">
+              <div style="font-size:10px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:6px">SHARE NOTE</div>
+              <p class="serif-i" style="font-size:14px;line-height:22px;color:var(--ink-700)">링크를 받은 사람만 이 지도를 볼 수 있어요.<br/>언제든 공유를 중지할 수 있어요.</p>
+            </div>
+          </div>
+          <div style="margin-top:14px;padding:10px 12px;background:var(--paper-100);border-radius:var(--r-xs);font-size:11px;line-height:18px;color:var(--ink-700);font-family:var(--font-serif);font-style:italic">
+            평서 ~해요 체. 명령형 ~하세요, 광고형 ~해보세요!, 느낌표 모두 금지.
+          </div>
+        </div>
+
+        <!-- Hard NO -->
+        <div class="gcard">
+          <h3>HARD NO · 절대 하지 말 것</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:22px">
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 그라데이션 보라/핑크 (Y2K · MZ감성)</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 캐릭터 · 마스코트 · 둥근 거품 일러스트</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 이모지 도배 · 컬러풀 뱃지 · 컨페티</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 진한 그림자 · 네온 컬러 · 글래스모피즘</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 🎉 첫 장소를 등록했어요! (느낌표 + 축하)</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> 팔로워 · 좋아요 카운트 · 랭킹</div>
+            <div style="padding:10px 14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:6px;color:var(--ink-900)"><strong style="font-weight:500">×</strong> "오늘의 추천" · "인기 지도" 같은 추천 섹션</div>
+          </div>
+        </div>
+
+        <!-- Motion -->
+        <div class="gcard">
+          <h3>MOTION · 절제된 전환</h3>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="padding:14px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px">
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:4px">01 · 200ms</div>
+              <div style="font-size:13px;color:var(--ink-900);letter-spacing:-0.01em">버튼 · 칩 · 인풋 포커스</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);margin-top:4px">손이 닿는 즉시.</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px">
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:4px">02 · 280ms</div>
+              <div style="font-size:13px;color:var(--ink-900);letter-spacing:-0.01em">바텀시트 · 페이지 페이드 · 6px 위 슬라이드</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);margin-top:4px">잡지를 넘기는 결.</div>
+            </div>
+            <div style="padding:14px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:8px">
+              <div style="font-size:11px;color:var(--ink-500);letter-spacing:0.08em;margin-bottom:4px">03 · 420ms</div>
+              <div style="font-size:13px;color:var(--ink-900);letter-spacing:-0.01em">스켈레톤 → 사진 페이드인</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);margin-top:4px">사진은 천천히 나타난다.</div>
+            </div>
+            <div style="padding:14px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:8px">
+              <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.08em;margin-bottom:4px">× FORBIDDEN</div>
+              <div style="font-size:13px;color:var(--ink-900);letter-spacing:-0.01em">스프링 · 바운스 · 회전 · 확대</div>
+              <div class="serif-i" style="font-size:12px;color:var(--ink-700);margin-top:4px">LOCA는 조용한 앱이다.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decision checklist -->
+        <div class="gcard">
+          <h3>의사결정 체크리스트</h3>
+          <p class="serif-i" style="font-size:12px;color:var(--ink-500);line-height:18px;margin-bottom:14px">새 컴포넌트 · 화면을 만들 때마다 멈추고 묻는다.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;line-height:20px;color:var(--ink-900)">
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>이 화면이 <strong style="font-weight:500">잡지 페이지</strong>처럼 보이는가, 앱 화면처럼 보이는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>한 화면의 정보가 너무 많지 않은가? <strong style="font-weight:500">빼면 더 좋아지는</strong> 요소가 없는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>사진이 충분히 큰가? 텍스트와 사진의 위계가 명확한가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>색을 너무 많이 쓰지 않았는가? 액센트는 한 곳뿐인가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span><strong style="font-weight:500">사라진 장소</strong>도 이 화면 안에서 자연스럽게 다뤄지는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>마이크로카피가 광고 같지 않은가? <strong style="font-weight:500">조용한가</strong>?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>결과물을 <strong style="font-weight:500">인스타에 캡쳐해 올렸을 때</strong> 부끄럽지 않은가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>숫자 / 카운트 / 뱃지 / 랭킹이 들어가지 않았는가?</label>
+            <label style="display:flex;align-items:flex-start;gap:8px"><span style="display:inline-block;width:14px;height:14px;border:1px solid var(--ink-700);border-radius:2px;flex-shrink:0;margin-top:3px"></span>핀 / 경로 / 영역 세 형식 모두에 일관되게 적용되는가?</label>
+          </div>
+          <div style="margin-top:14px;padding:10px 12px;background:var(--ember-100);border:1px solid var(--ember-500);border-radius:var(--r-xs);font-size:12px;line-height:18px;color:var(--ink-900);font-family:var(--font-serif);font-style:italic">
+            하나라도 어긋나면 멈추고 다시 고민한다.
+          </div>
+        </div>
+
+        <!-- Migration -->
+        <div class="gcard">
+          <h3>NEXT · src/ 적용 순서</h3>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--paper-200)">
+              <span class="num serif" style="font-size:18px;color:var(--ink-500);min-width:26px;line-height:1">01</span>
+              <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">디자인 토큰</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px"><code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">src/styles/tokens.css</code> + <code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">tailwind.config</code>에 paper / ink / moss / ember / dusk 등록.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--paper-200)">
+              <span class="num serif" style="font-size:18px;color:var(--ink-500);min-width:26px;line-height:1">02</span>
+              <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">폰트 셋업</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px">Pretendard + Noto Serif KR. <code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">font-serif</code> 유틸 클래스 추가.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--paper-200)">
+              <span class="num serif" style="font-size:18px;color:var(--ink-500);min-width:26px;line-height:1">03</span>
+              <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">공용 컴포넌트 4개</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px"><code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">Button</code> · <code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">Input</code> · <code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">Card</code> · <code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">BottomSheet</code>. 이 4개로 80% 화면이 만들어진다.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--paper-200)">
+              <span class="num serif" style="font-size:18px;color:var(--ink-500);min-width:26px;line-height:1">04</span>
+              <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">핀 시스템 교체</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px"><code style="background:var(--paper-100);padding:1px 5px;border-radius:3px;font-size:11px">NaverMap.jsx</code>의 캐릭터 마커 → 8px 도트. 사라진 장소 표기 추가.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span class="num serif" style="font-size:18px;color:var(--ink-500);min-width:26px;line-height:1">05</span>
+              <div><div style="font-family:var(--font-serif);font-size:14px;color:var(--ink-900);letter-spacing:-0.01em">화면 점진 마이그레이션</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:2px">Onboarding → Home → 첫 장소 → My Map → 상세 → Light Web → Profile 순. 각 PR은 한 화면.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span>LOCA · QUIET MAP OF LOVED PLACES</span>
+      <span>NEXT &middot; src/styles/tokens.css → Button/Input/Card/BottomSheet → 4.1 Onboarding · 4.2 Home</span>
+    </footer>
+  </div>
+
+<script>
+  if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>
