@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LOCA v10 · Final · 모바일 네이티브 + 아이덴티티</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --paper: #FCFAF6;
+    --paper-100: #F6F2EA;
+    --paper-200: #EFE9DD;
+    --surface: #FFFFFF;
+    --ink-900: #1F1B16;
+    --ink-700: #58524A;
+    --ink-500: #908A80;
+    --ink-300: #C2BCB1;
+    --ember-600: #BF5A2B;
+    --ember-500: #E26F3C;
+    --ember-300: #F2A57B;
+    --ember-100: #FAE3D2;
+    --ember-50:  #FDF3EA;
+    --moss-800: #2D4232;
+    --moss-700: #3B5841;
+    --moss-600: #4A6B52;
+    --moss-100: #E3EAE0;
+    --dusk-400: #8896A4;
+    --dusk-200: #C8D0D8;
+    --gold-500: #E5A93A;
+    --gold-100: #FBEBC4;
+    --map-bg: #ECE7DA;
+
+    --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+    --sh-xs: 0 1px 2px rgba(31,27,22,0.04);
+    --sh-sm: 0 4px 12px rgba(31,27,22,0.06);
+    --sh-md: 0 12px 28px rgba(31,27,22,0.08);
+    --sh-lift: 0 20px 40px rgba(31,27,22,0.10);
+    --sh-ember: 0 8px 20px rgba(226,111,60,0.32);
+    --sh-card: 0 8px 24px rgba(31,27,22,0.10);
+    --sh-deep: 0 24px 48px rgba(31,27,22,0.18);
+
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px; line-height: 1.6;
+    color: var(--ink-900);
+    background: var(--paper);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'tnum' 1;
+    letter-spacing: -0.005em;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  h1, h2, h3 { margin: 0; }
+  .num { font-feature-settings: 'tnum' 1; font-variant-numeric: tabular-nums; }
+
+  .page { max-width: 1280px; margin: 0 auto; padding: 72px 28px; }
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 24px; margin-bottom: 56px; padding-bottom: 36px;
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 800; font-size: 32px;
+    color: var(--ink-900); letter-spacing: -0.04em; line-height: 1;
+  }
+  .wordmark .glyph {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--ember-500);
+    box-shadow: 0 0 0 1px var(--paper), 0 0 0 2px var(--ember-500);
+    margin-right: 2px;
+  }
+  .wordmark-tag {
+    font-size: 11px; color: var(--ember-500); letter-spacing: 0.06em;
+    margin-top: 8px; text-transform: uppercase; font-weight: 700;
+  }
+  .page-title {
+    font-weight: 800; font-size: 40px; line-height: 48px;
+    color: var(--ink-900); letter-spacing: -0.04em; margin-top: 18px;
+  }
+  .page-title .accent { color: var(--ember-500); }
+  .page-sub {
+    margin-top: 14px; color: var(--ink-700);
+    font-size: 16px; line-height: 26px; max-width: 600px; font-weight: 500;
+  }
+  .page-meta {
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+    color: var(--ink-500); font-size: 11px; letter-spacing: 0.04em; font-weight: 500;
+  }
+  .page-meta .stamp {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--ember-300);
+    border-radius: 4px; color: var(--ember-600); background: var(--ember-50); font-weight: 700;
+  }
+
+  .section { margin-bottom: 80px; }
+  .section-head {
+    display: flex; align-items: baseline; gap: 16px;
+    margin-bottom: 36px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--paper-200);
+  }
+  .section-head .num-tag {
+    font-size: 11px; color: var(--ember-500);
+    letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  }
+  .section-head h2 {
+    font-weight: 800; font-size: 26px; line-height: 32px;
+    color: var(--ink-900); letter-spacing: -0.03em;
+  }
+  .section-head .desc {
+    color: var(--ink-700); font-size: 14px; margin-left: auto;
+    max-width: 460px; text-align: right; line-height: 22px; font-weight: 500;
+  }
+
+  .phones {
+    display: flex; gap: 36px;
+    overflow-x: auto; padding: 12px 8px 40px;
+    scroll-snap-type: x mandatory;
+  }
+  .phone { flex: 0 0 auto; width: 380px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 14px; }
+  .phone-caption {
+    display: flex; align-items: baseline; gap: 8px;
+    color: var(--ink-500); font-size: 11px; letter-spacing: 0.04em; font-weight: 500;
+  }
+  .phone-caption .idx { color: var(--ember-500); font-weight: 700; }
+  .phone-caption .name {
+    color: var(--ink-900); font-weight: 700;
+    font-size: 14px; letter-spacing: -0.02em;
+  }
+  .phone-frame {
+    width: 380px; height: 800px;
+    background: var(--paper); border-radius: 40px;
+    box-shadow: var(--sh-lift); overflow: hidden;
+    position: relative; border: 7px solid #14110C;
+  }
+  .phone-screen {
+    width: 100%; height: 100%; overflow: hidden; position: relative;
+    background: var(--paper); display: flex; flex-direction: column;
+  }
+  .status-bar {
+    height: 32px; padding: 0 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-weight: 600; color: var(--ink-900); flex-shrink: 0;
+    z-index: 5;
+  }
+  .status-bar.over-photo { color: #fff; }
+  .status-bar .right { display: inline-flex; align-items: center; gap: 6px; }
+  .status-bar .right svg { width: 13px; height: 13px; stroke-width: 1.75; }
+
+  /* Floating BottomNav (v10 — less chrome) */
+  .bnav-float {
+    position: absolute; left: 14px; right: 14px; bottom: 14px;
+    height: 60px; background: var(--surface);
+    border: 1px solid var(--paper-200);
+    border-radius: 26px;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    align-items: center; flex-shrink: 0;
+    z-index: 10;
+    box-shadow: var(--sh-md);
+  }
+  .bnav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--ink-300); font-size: 9px; font-weight: 600;
+    letter-spacing: -0.01em; transition: color 200ms var(--ease);
+    position: relative;
+  }
+  .bnav-item svg { width: 20px; height: 20px; stroke-width: 1.75; }
+  .bnav-item.active { color: var(--ink-900); }
+  .bnav-item.active svg { stroke-width: 2.25; color: var(--ember-500); }
+  .bnav-item.active::after {
+    content: ''; position: absolute; bottom: -2px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--ember-500);
+  }
+  .bnav-fab {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--ember-500); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--sh-ember);
+    margin-top: -16px;
+  }
+  .bnav-fab svg { width: 22px; height: 22px; stroke-width: 2.25; }
+
+  .gallery { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .gcard {
+    background: var(--surface); border: 1px solid var(--paper-200);
+    border-radius: 16px; padding: 24px;
+  }
+  .gcard h3 {
+    font-weight: 700; font-size: 13px; color: var(--ink-900);
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--paper-200); letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .gcard h3 .ix {
+    font-size: 11px; color: var(--ember-500); font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .page-footer {
+    margin-top: 80px; padding-top: 28px;
+    border-top: 1px solid var(--paper-200);
+    color: var(--ink-500); font-size: 12px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    letter-spacing: 0.04em; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <div class="wordmark"><span class="glyph"></span>LOCA</div>
+        <div class="wordmark-tag">FINAL · MOBILE-NATIVE · IDENTITY-FIRST</div>
+        <h1 class="page-title">기록은 자랑이 아니라,<br/><span class="accent">조용한 아카이브.</span></h1>
+        <p class="page-sub">
+          v9는 reskin에 가까웠어요. v10에서는 화면 구조 자체를 다시 짭니다 —
+          edge-to-edge 사진, hero 우선, chrome 최소화. 잡지·다이어리·작은 책의 결을 모바일 네이티브 패턴으로.
+        </p>
+      </div>
+      <div class="page-meta">
+        <span class="stamp">v10 · TRUE REDESIGN</span>
+        <span>HERO PHOTOS · FLOATING NAV · MAGAZINE LAYOUT</span>
+        <span>FILE · prototype/loca-v10.html</span>
+      </div>
+    </header>
+
+    <section class="section" id="section-principles">
+      <div class="section-head">
+        <span class="num-tag">01 / PRINCIPLES</span>
+        <h2>v10이 따르는 5가지 원칙</h2>
+        <span class="desc">실제 LOCA의 결로 가져오는 모바일 네이티브 디자인 결정.</span>
+      </div>
+      <div class="gallery">
+        <div class="gcard">
+          <h3><span class="ix">01</span>Hero Photo First</h3>
+          <p style="font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500;margin-bottom:14px">사진이 화면을 먼저 점령. 사용자의 마지막 기록(혹은 오늘 추천)이 edge-to-edge로 들어와 글보다 먼저 말한다.</p>
+          <div style="aspect-ratio:16/9;background:linear-gradient(160deg,#D4CDB9 0%,#9CA68F 60%,#5C7461 100%);border-radius:10px;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(31,27,22,0.6) 100%)"></div>
+            <div style="position:absolute;bottom:14px;left:16px;color:#fff">
+              <div style="font-size:10px;letter-spacing:0.08em;opacity:0.85;font-weight:600">YESTERDAY · 14:22</div>
+              <div style="font-weight:800;font-size:18px;letter-spacing:-0.025em;margin-top:2px">햇살카페</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">02</span>Floating Navigation</h3>
+          <p style="font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500;margin-bottom:14px">BottomNav는 떠 있는 캡슐로. 양 옆 14px 떨어뜨려 콘텐츠가 끝나는 느낌이 살아있고, 아래로 손가락이 닿기 쉬움.</p>
+          <div style="background:var(--paper-100);border-radius:14px;padding:14px;display:flex;justify-content:center">
+            <div style="width:280px;height:54px;background:var(--surface);border:1px solid var(--paper-200);border-radius:24px;box-shadow:var(--sh-md);display:grid;grid-template-columns:repeat(5,1fr);align-items:center">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ember-500);font-size:9px;font-weight:700;position:relative"><i data-lucide="home" style="width:18px;height:18px;stroke-width:2.25"></i>홈<div style="position:absolute;bottom:-2px;width:4px;height:4px;border-radius:50%;background:var(--ember-500)"></div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-300);font-size:9px;font-weight:600"><i data-lucide="map" style="width:18px;height:18px;stroke-width:1.75"></i>지도</div>
+              <div style="display:flex;flex-direction:column;align-items:center"><div style="width:46px;height:46px;border-radius:50%;background:var(--ember-500);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember);margin-top:-14px"><i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.5"></i></div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-300);font-size:9px;font-weight:600"><i data-lucide="compass" style="width:18px;height:18px;stroke-width:1.75"></i>탐색</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink-300);font-size:9px;font-weight:600"><i data-lucide="user" style="width:18px;height:18px;stroke-width:1.75"></i>나</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">03</span>Less Chrome, More Story</h3>
+          <p style="font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500;margin-bottom:14px">고정 헤더·필터바를 빼고 hero 사진 위에 작은 칩만 띄움. 스크롤로 화면 전체가 호흡한다.</p>
+          <div style="display:flex;gap:8px;align-items:center;background:var(--paper-100);border-radius:10px;padding:14px">
+            <div style="text-align:center"><div style="font-weight:800;font-size:13px;color:var(--ember-500);text-decoration:line-through 1.5px var(--ink-300)">v9</div><div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:2px">고정 헤더 + 검색바 + 필터칩 + 시트</div></div>
+            <i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--ink-500);stroke-width:2"></i>
+            <div style="text-align:center;flex:1"><div style="font-weight:800;font-size:13px;color:var(--moss-700)">v10</div><div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:2px">hero + floating pill 헤더 + swipe-up 시트</div></div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">04</span>Magazine Layout</h3>
+          <p style="font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500;margin-bottom:14px">화면을 잡지 페이지처럼 — Display 800 · 40px · 짧은 카피. 썸네일 4:5, 카드 16:9, 폴라로이드 살짝 회전.</p>
+          <div style="position:relative;height:120px">
+            <div style="position:absolute;left:0;top:8px;width:80px;height:100px;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:8px;transform:rotate(-3deg);box-shadow:var(--sh-sm);border:4px solid #fff"></div>
+            <div style="position:absolute;left:60px;top:14px;width:80px;height:100px;background:linear-gradient(150deg,#FAEAD9,#E26F3C);border-radius:8px;transform:rotate(2deg);box-shadow:var(--sh-sm);border:4px solid #fff"></div>
+            <div style="position:absolute;left:120px;top:6px;width:80px;height:100px;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:8px;transform:rotate(-1deg);box-shadow:var(--sh-sm);border:4px solid #fff"></div>
+            <div style="position:absolute;right:0;top:14px;width:140px">
+              <div class="num" style="font-size:10px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">2026 SPRING · 14</div>
+              <div style="font-weight:800;font-size:20px;color:var(--ink-900);letter-spacing:-0.03em;line-height:24px;margin-top:4px">성수<br/>반나절</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <h3><span class="ix">05</span>사라진 장소가 살아있는 곳</h3>
+          <p style="font-size:13px;line-height:21px;color:var(--ink-700);font-weight:500;margin-bottom:14px">LOCA만의 시그니처. 모든 화면에서 사라진 장소는 Dusk 톤 + 점선으로 — "여기 있었어요"의 흔적이 남는다.</p>
+          <div style="background:var(--paper-100);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border-radius:8px;border:1px dashed var(--dusk-200)">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--dusk-200);border:1px dashed var(--dusk-400);flex-shrink:0;display:flex;align-items:center;justify-content:center"><i data-lucide="map-pin" style="width:14px;height:14px;color:var(--dusk-400);stroke-width:2"></i></div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px;color:var(--dusk-400);letter-spacing:-0.01em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+                <div style="font-size:11px;color:var(--ink-500);font-weight:500;font-style:italic;margin-top:2px">2024년 11월에 문을 닫았어요</div>
+              </div>
+            </div>
+            <p style="font-size:11px;color:var(--ink-500);font-weight:500;font-style:italic;text-align:center">"이곳은 더 이상 거기에 없지만, 당신의 지도에는 남아 있어요."</p>
+          </div>
+        </div>
+
+        <div class="gcard" style="background:linear-gradient(160deg,var(--moss-800),var(--moss-700));color:#fff;border:none">
+          <h3 style="color:#fff;border-bottom-color:rgba(255,255,255,0.15)"><span class="ix" style="color:var(--ember-300)">★</span>한 줄 요약</h3>
+          <div style="font-size:18px;line-height:28px;font-weight:800;letter-spacing:-0.025em">기능을 SaaS처럼 보여주지 말고, 기록을 잡지처럼 보여줘라.</div>
+          <div style="margin-top:14px;font-size:12px;color:var(--ember-300);font-weight:600;letter-spacing:0.06em;text-transform:uppercase">v10 design philosophy</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="section-screens">
+      <div class="section-head">
+        <span class="num-tag">02 / SCREENS · 7</span>
+        <h2>다시 짠 화면 일곱</h2>
+        <span class="desc">Home과 Profile은 완전 재설계. 나머지는 같은 원칙으로 정돈.</span>
+      </div>
+      <div class="phones">
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">01</span><span class="name">Home</span><span>· hero 사진 + 저널 스크롤</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <!-- HERO photo as top half -->
+            <div style="position:absolute;top:0;left:0;right:0;height:54%;background:linear-gradient(160deg,#3B5841 0%,#2D4232 50%,#1F1B16 100%);overflow:hidden">
+              <!-- subtle texture -->
+              <svg viewBox="0 0 380 432" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.4">
+                <defs><radialGradient id="glow" cx="70%" cy="35%"><stop offset="0%" stop-color="#FAEAD9" stop-opacity="0.4"/><stop offset="100%" stop-color="#FAEAD9" stop-opacity="0"/></radialGradient></defs>
+                <rect width="380" height="432" fill="url(#glow)"/>
+                <circle cx="280" cy="120" r="40" fill="#FAEAD9" opacity="0.08"/>
+                <circle cx="80" cy="280" r="60" fill="#E26F3C" opacity="0.06"/>
+              </svg>
+
+              <div class="status-bar over-photo"><span class="num">9:41</span><span class="right" style="color:#fff"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+              <!-- Top: brand + bell -->
+              <div style="position:absolute;top:38px;left:22px;right:22px;display:flex;align-items:center;justify-content:space-between">
+                <div class="wordmark" style="font-size:20px;color:#fff"><span class="glyph" style="background:var(--ember-500);box-shadow:0 0 0 1px transparent,0 0 0 1.5px var(--ember-500);margin-right:1px"></span>LOCA</div>
+                <button style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);color:#fff;display:flex;align-items:center;justify-content:center;position:relative"><i data-lucide="bell" style="width:16px;height:16px;stroke-width:1.75"></i><span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--ember-500);border:1.5px solid var(--moss-800)"></span></button>
+              </div>
+
+              <!-- Editorial overlay text -->
+              <div style="position:absolute;left:22px;right:22px;bottom:90px;color:#fff">
+                <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;color:var(--ember-300);text-transform:uppercase">2026 · APRIL · THU</div>
+                <h1 style="font-weight:800;font-size:36px;line-height:42px;letter-spacing:-0.04em;margin-top:8px">박경주님,<br/>오늘은 어디로<br/>가볼까요?</h1>
+              </div>
+
+              <!-- Hero CTA -->
+              <button style="position:absolute;left:22px;right:22px;bottom:24px;padding:14px 22px;background:var(--ember-500);color:#fff;border-radius:16px;font-size:15px;font-weight:800;letter-spacing:-0.02em;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh-ember)">
+                <span style="display:inline-flex;align-items:center;gap:10px"><span style="width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center"><i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i></span>지금 기록하기</span>
+                <span style="font-size:11px;color:rgba(255,255,255,0.85);font-weight:600">4일 연속 🔥</span>
+              </button>
+            </div>
+
+            <!-- BOTTOM SCROLL CONTENT -->
+            <div style="position:absolute;left:0;right:0;top:54%;bottom:0;background:var(--paper);border-radius:24px 24px 0 0;overflow-y:auto;padding-bottom:90px">
+              <!-- Resume strip -->
+              <div style="margin:18px 18px 0;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+                <div style="width:36px;height:36px;border-radius:10px;background:#fff;border:1px solid var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative">
+                  <i data-lucide="map-pin" style="width:16px;height:16px;color:var(--ember-500);stroke-width:2.25"></i>
+                  <div style="position:absolute;bottom:-3px;right:-3px;width:14px;height:14px;border-radius:50%;background:var(--ember-500);border:2px solid var(--ember-50);display:flex;align-items:center;justify-content:center"><span class="num" style="font-size:8px;color:#fff;font-weight:800">8</span></div>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="num" style="font-size:10px;color:var(--ember-600);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">RESUME · 작성 중</div>
+                  <div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;margin-top:1px">예산 지도</div>
+                </div>
+                <button style="padding:7px 12px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:11px;font-weight:700">계속 →</button>
+              </div>
+
+              <!-- Recent records section -->
+              <div style="padding:24px 22px 8px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px">
+                  <div>
+                    <div class="num" style="font-size:10px;color:var(--ember-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase">최근 기록</div>
+                    <h2 style="font-weight:800;font-size:20px;color:var(--ink-900);letter-spacing:-0.03em;margin-top:2px">지난 일주일</h2>
+                  </div>
+                  <span style="font-size:11px;color:var(--ink-700);font-weight:600">전체 →</span>
+                </div>
+
+                <!-- polaroid stack horizontal scroll -->
+                <div style="display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;padding:8px 0 14px;margin:0 -22px;padding-left:22px;padding-right:22px">
+                  <div style="flex:0 0 132px;background:#fff;border:1px solid var(--paper-200);border-radius:8px;padding:8px 8px 12px;box-shadow:var(--sh-sm);transform:rotate(-2deg)">
+                    <div style="aspect-ratio:1;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:4px;margin-bottom:8px"></div>
+                    <div style="font-weight:700;font-size:12px;color:var(--ink-900);letter-spacing:-0.02em;line-height:15px">햇살카페</div>
+                    <div class="num" style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:2px">04.30</div>
+                  </div>
+                  <div style="flex:0 0 132px;background:#fff;border:1px solid var(--paper-200);border-radius:8px;padding:8px 8px 12px;box-shadow:var(--sh-sm);transform:rotate(1.5deg);margin-top:6px">
+                    <div style="aspect-ratio:1;background:linear-gradient(150deg,#FAEAD9,#E26F3C);border-radius:4px;margin-bottom:8px"></div>
+                    <div style="font-weight:700;font-size:12px;color:var(--ink-900);letter-spacing:-0.02em;line-height:15px">서울숲 산책</div>
+                    <div class="num" style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:2px">04.28</div>
+                  </div>
+                  <div style="flex:0 0 132px;background:#fff;border:1px solid var(--paper-200);border-radius:8px;padding:8px 8px 12px;box-shadow:var(--sh-sm);transform:rotate(-1deg)">
+                    <div style="aspect-ratio:1;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:4px;margin-bottom:8px"></div>
+                    <div style="font-weight:700;font-size:12px;color:var(--ink-900);letter-spacing:-0.02em;line-height:15px">옥상 작업실</div>
+                    <div class="num" style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:2px">04.24</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Picked editorial -->
+              <div style="padding:20px 22px 0">
+                <div class="num" style="font-size:10px;color:var(--ember-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">LOCA가 골랐어요</div>
+                <h2 style="font-weight:800;font-size:20px;color:var(--ink-900);letter-spacing:-0.03em;margin-bottom:14px">오늘 갈 만한 동네</h2>
+
+                <!-- single big editorial card -->
+                <div style="border-radius:18px;overflow:hidden;border:1px solid var(--paper-200);position:relative;aspect-ratio:5/4;background:linear-gradient(165deg,#F2A57B 0%,#E26F3C 60%,#BF5A2B 100%);box-shadow:var(--sh-card)">
+                  <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(31,27,22,0.6) 100%)"></div>
+                  <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.95);padding:5px 11px;border-radius:999px"><div style="width:5px;height:5px;border-radius:50%;background:var(--ember-500)"></div><span style="font-size:10px;color:var(--ember-600);font-weight:700">@seongsu_love</span></div>
+                  <div style="position:absolute;bottom:18px;left:18px;right:18px;color:#fff">
+                    <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:600;opacity:0.9">15곳 · 2026 SPRING</div>
+                    <h3 style="font-weight:800;font-size:24px;letter-spacing:-0.03em;line-height:30px;margin-top:4px">성수 감성 카페<br/>15곳</h3>
+                    <p style="font-size:13px;line-height:19px;margin-top:8px;opacity:0.92;font-weight:500">햇살이 길게 머무는 시간만 골라봤어요.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disappeared subtle reminder -->
+              <div style="margin:24px 22px 8px;padding:14px 16px;background:var(--paper-100);border:1px dashed var(--dusk-200);border-radius:14px;display:flex;align-items:center;gap:12px">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--dusk-400);opacity:0.6;flex-shrink:0;box-shadow:0 0 0 2px var(--paper-100),0 0 0 3px var(--dusk-400);margin-left:4px"></div>
+                <div style="flex:1">
+                  <p style="font-size:12px;color:var(--ink-700);font-style:italic;font-weight:500;line-height:18px">이번 주, 좋아하던 곳에 변화가 있어요.</p>
+                  <div style="font-size:11px;color:var(--dusk-400);font-weight:600;margin-top:2px">옛 골목 책방 → 곧 사라져요</div>
+                </div>
+                <i data-lucide="chevron-right" style="width:14px;height:14px;color:var(--dusk-400);stroke-width:1.75;flex-shrink:0"></i>
+              </div>
+            </div>
+
+            <!-- Floating BottomNav -->
+            <div class="bnav-float">
+              <div class="bnav-item active"><i data-lucide="home"></i>홈</div>
+              <div class="bnav-item"><i data-lucide="map"></i>지도</div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i>탐색</div>
+              <div class="bnav-item"><i data-lucide="user"></i>나</div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">02</span><span class="name">Profile</span><span>· 잡지 표지 + 큐레이션 갤러리</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <!-- Cover hero -->
+            <div style="position:absolute;top:0;left:0;right:0;height:340px;background:linear-gradient(165deg,#FAEAD9 0%,#F2A57B 50%,#E26F3C 100%);overflow:hidden">
+              <svg viewBox="0 0 380 340" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.35"><circle cx="60" cy="100" r="80" fill="#FCFAF6"/><circle cx="320" cy="240" r="120" fill="#1F1B16" opacity="0.2"/></svg>
+
+              <div class="status-bar over-photo"><span class="num">9:41</span><span class="right" style="color:#fff"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+              <!-- Top row: settings -->
+              <div style="position:absolute;top:38px;left:22px;right:22px;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:11px;color:#fff;letter-spacing:0.08em;font-weight:700;text-transform:uppercase;opacity:0.85">@artraxa · 박경주</div>
+                <button style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);color:#fff;display:flex;align-items:center;justify-content:center"><i data-lucide="settings" style="width:16px;height:16px;stroke-width:1.75"></i></button>
+              </div>
+
+              <!-- Magazine cover style title -->
+              <div style="position:absolute;left:22px;right:22px;bottom:80px;color:#fff">
+                <div class="num" style="font-size:11px;letter-spacing:0.1em;font-weight:700;opacity:0.9;text-transform:uppercase;margin-bottom:6px">VOL · 14 MAPS</div>
+                <h1 style="font-weight:800;font-size:34px;line-height:40px;letter-spacing:-0.04em">박경주의<br/>아카이브</h1>
+                <p style="margin-top:10px;font-size:14px;font-weight:500;line-height:21px;opacity:0.92">사라지는 동네에서 잠깐 머문 자리를<br/>천천히 모아두고 있어요.</p>
+              </div>
+            </div>
+
+            <!-- Avatar floating between hero and content -->
+            <div style="position:absolute;left:22px;top:300px;display:flex;align-items:center;gap:14px;z-index:5">
+              <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(150deg,var(--moss-700),var(--moss-800));border:4px solid var(--paper);box-shadow:var(--sh-card);display:flex;align-items:center;justify-content:center"><i data-lucide="lightbulb" style="width:28px;height:28px;color:var(--gold-500);stroke-width:1.75;fill:var(--gold-100);fill-opacity:0.3"></i></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--moss-700);color:#fff;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:0.02em;width:fit-content">Lv 4 · 동네 탐험가</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:var(--gold-100);border:1px solid #ECCB80;color:var(--ember-600);border-radius:999px;font-size:10px;font-weight:700;width:fit-content"><i data-lucide="trophy" style="width:10px;height:10px;stroke-width:2.25;color:var(--gold-500)"></i>뱃지 1</span>
+              </div>
+            </div>
+
+            <!-- Body content -->
+            <div style="position:absolute;left:0;right:0;top:340px;bottom:0;background:var(--paper);border-radius:24px 24px 0 0;overflow-y:auto;padding-top:64px;padding-bottom:90px">
+              <!-- bio link + stats -->
+              <div style="padding:0 22px 0">
+                <a href="#" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ember-500);font-weight:600;border-bottom:1.5px solid var(--ember-300);padding-bottom:1px;margin-bottom:14px"><i data-lucide="link" style="width:11px;height:11px;stroke-width:2"></i>blog.naver.com/artraxa</a>
+
+                <!-- inline stats -->
+                <div style="display:flex;gap:18px;font-size:13px;color:var(--ink-700);font-weight:600;margin-bottom:18px">
+                  <span><span class="num" style="color:var(--ink-900);font-weight:800">14</span> 지도</span>
+                  <span style="color:var(--paper-200)">·</span>
+                  <span><span class="num" style="color:var(--ember-500);font-weight:800">62</span> 장소</span>
+                  <span style="color:var(--paper-200)">·</span>
+                  <span><span class="num" style="color:var(--ink-900);font-weight:800">42</span> 팔로워</span>
+                </div>
+
+                <!-- 2 buttons -->
+                <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:24px">
+                  <button style="padding:12px;background:var(--ember-500);color:#fff;border-radius:12px;font-size:13px;font-weight:700;letter-spacing:-0.01em;box-shadow:var(--sh-ember)">내 프로필 공유하기</button>
+                  <button style="padding:12px 18px;background:var(--surface);border:1.5px solid var(--paper-200);color:var(--ink-900);border-radius:12px;font-size:13px;font-weight:700"><i data-lucide="edit-3" style="width:14px;height:14px;stroke-width:2"></i></button>
+                </div>
+              </div>
+
+              <!-- Tabs -->
+              <div style="padding:0 22px 14px;display:flex;gap:18px;border-bottom:1px solid var(--paper-200)">
+                <button style="padding:10px 0;font-size:14px;font-weight:800;color:var(--ink-900);letter-spacing:-0.02em;border-bottom:2px solid var(--ember-500);margin-bottom:-1px">발행 지도 <span class="num" style="color:var(--ember-500);font-size:12px;margin-left:2px">8</span></button>
+                <button style="padding:10px 0;font-size:14px;font-weight:600;color:var(--ink-500);letter-spacing:-0.02em">참여 <span class="num" style="font-size:12px;margin-left:2px">3</span></button>
+                <button style="padding:10px 0;font-size:14px;font-weight:600;color:var(--ink-500);letter-spacing:-0.02em">컬렉션 <span class="num" style="font-size:12px;margin-left:2px">5</span></button>
+              </div>
+
+              <!-- Magazine-style map cards stack (vertical) -->
+              <div style="padding:18px 22px 24px;display:flex;flex-direction:column;gap:18px">
+                <!-- Card 1 — featured -->
+                <div style="border-radius:18px;overflow:hidden;border:1px solid var(--paper-200);box-shadow:var(--sh-card);position:relative">
+                  <div style="aspect-ratio:5/4;background:linear-gradient(160deg,#D4CDB9 0%,#9CA68F 60%,#5C7461 100%);position:relative">
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(31,27,22,0.55) 100%)"></div>
+                    <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:5px;background:var(--ember-500);padding:4px 10px;border-radius:999px;color:#fff;font-size:11px;font-weight:800"><i data-lucide="check" style="width:11px;height:11px;stroke-width:2.5"></i>발행</div>
+                    <div style="position:absolute;bottom:16px;left:16px;right:16px;color:#fff">
+                      <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;opacity:0.9;text-transform:uppercase">2026 SPRING · 14곳</div>
+                      <h3 style="font-weight:800;font-size:22px;line-height:28px;letter-spacing:-0.03em;margin-top:3px">성수 반나절 코스</h3>
+                    </div>
+                  </div>
+                  <div style="padding:14px 16px;background:var(--surface)">
+                    <p style="font-size:13px;color:var(--ink-700);line-height:20px;font-weight:500">햇살이 길게 머무는 카페와 작은 책방, 그리고 그 사이의 산책로.</p>
+                    <div style="margin-top:8px;font-size:11px;color:var(--ink-500);font-weight:600;display:flex;justify-content:space-between"><span>1,247 보기 · 248 ♥</span><span>2일 전</span></div>
+                  </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div style="border-radius:18px;overflow:hidden;border:1px solid var(--paper-200);box-shadow:var(--sh-card);position:relative">
+                  <div style="aspect-ratio:5/4;background:linear-gradient(160deg,#FAEAD9 0%,#F2A57B 50%,#E26F3C 100%);position:relative">
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(31,27,22,0.5) 100%)"></div>
+                    <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:5px;background:#fff;padding:4px 10px;border-radius:999px;color:var(--ember-600);font-size:11px;font-weight:800"><div style="width:5px;height:5px;border-radius:50%;background:var(--ember-500)"></div>이벤트 · D-3</div>
+                    <div style="position:absolute;bottom:16px;left:16px;right:16px;color:#fff">
+                      <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;opacity:0.9;text-transform:uppercase">142명 참여 · 38명 완주</div>
+                      <h3 style="font-weight:800;font-size:22px;line-height:28px;letter-spacing:-0.03em;margin-top:3px">예산 지도</h3>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card 3 — disappeared -->
+                <div style="border-radius:18px;overflow:hidden;border:1px dashed var(--dusk-200);background:var(--paper-100);position:relative">
+                  <div style="aspect-ratio:5/4;background:linear-gradient(160deg,#C8D0D8 0%,#7E8893 100%);position:relative;opacity:0.85">
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(31,27,22,0.4) 100%)"></div>
+                    <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.95);padding:4px 10px;border-radius:999px;color:var(--dusk-400);font-size:11px;font-weight:700"><div style="width:5px;height:5px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div>3곳이 사라졌어요</div>
+                    <div style="position:absolute;bottom:16px;left:16px;right:16px;color:#fff">
+                      <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;opacity:0.9;text-transform:uppercase">2024 — NOW · 8곳</div>
+                      <h3 style="font-weight:800;font-size:22px;line-height:28px;letter-spacing:-0.03em;margin-top:3px;font-style:italic">옛 골목의 가게들</h3>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav-float">
+              <div class="bnav-item"><i data-lucide="home"></i>홈</div>
+              <div class="bnav-item"><i data-lucide="map"></i>지도</div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i>탐색</div>
+              <div class="bnav-item active"><i data-lucide="user"></i>나</div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">03</span><span class="name">Map Editor</span><span>· 95% 지도 + 작은 pill 헤더</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
+              <svg viewBox="0 0 380 760" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <rect width="380" height="760" fill="#ECE7DA"/>
+                <rect width="380" height="760" fill="url(#dot10E)" opacity="0.15"/>
+                <defs>
+                  <pattern id="dot10E" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.4" fill="#C2BCB1"/></pattern>
+                  <pattern id="hatch10" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#4A6B52" stroke-width="0.5" opacity="0.3"/></pattern>
+                  <filter id="ps10"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/></filter>
+                </defs>
+                <path d="M -20 480 Q 100 460 200 490 Q 300 510 400 495 L 400 600 L -20 600 Z" fill="#D6DFEB" opacity="0.85"/>
+                <text x="100" y="555" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#4A7AA8">한강</text>
+                <path d="M 220 280 Q 290 260 320 320 Q 320 380 270 390 Q 220 380 220 320 Z" fill="#4A6B52" fill-opacity="0.13"/>
+                <path d="M 220 280 Q 290 260 320 320 Q 320 380 270 390 Q 220 380 220 320 Z" fill="url(#hatch10)"/>
+                <rect x="232" y="320" width="76" height="20" rx="4" fill="#FCFAF6" opacity="0.92"/>
+                <text x="270" y="334" font-family="Pretendard Variable" font-style="italic" font-size="11" font-weight="600" fill="#4A6B52" text-anchor="middle">서울숲</text>
+                <path d="M 0 380 Q 100 360 200 390 T 380 410" stroke="#FFFFFF" stroke-width="7" fill="none"/>
+                <path d="M 0 380 Q 100 360 200 390 T 380 410" stroke="#D2C8B5" stroke-width="0.5" fill="none"/>
+                <path d="M 0 240 Q 120 220 240 250 T 380 270" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+                <path d="M 130 100 Q 140 280 130 460" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 280 100 Q 270 280 290 460" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <!-- path -->
+                <path d="M 100 320 Q 160 340 220 360 Q 270 380 310 420" stroke="#FFFFFF" stroke-width="5" fill="none" stroke-linecap="round"/>
+                <path d="M 100 320 Q 160 340 220 360 Q 270 380 310 420" stroke="#4A6B52" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+                <polygon points="168,338 174,343 168,348" fill="#4A6B52"/>
+                <rect x="96" y="316" width="8" height="8" rx="1" fill="#4A6B52" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="310" cy="420" r="5" fill="#FFFFFF" stroke="#4A6B52" stroke-width="2"/>
+                <!-- pins -->
+                <g filter="url(#ps10)"><circle cx="100" cy="320" r="9" fill="#FFFFFF"/><circle cx="100" cy="320" r="6" fill="#E26F3C"/></g>
+                <g filter="url(#ps10)"><circle cx="160" cy="280" r="9" fill="#FFFFFF"/><circle cx="160" cy="280" r="6" fill="#E26F3C"/></g>
+                <g filter="url(#ps10)">
+                  <circle cx="220" cy="360" r="22" fill="none" stroke="#E26F3C" stroke-width="1" opacity="0.25"/>
+                  <circle cx="220" cy="360" r="14" fill="none" stroke="#E26F3C" stroke-width="1.5" opacity="0.5"/>
+                  <circle cx="220" cy="360" r="11" fill="#FFFFFF"/>
+                  <circle cx="220" cy="360" r="7.5" fill="#E26F3C"/>
+                  <circle cx="220" cy="360" r="2.5" fill="#FFFFFF"/>
+                </g>
+                <g filter="url(#ps10)"><circle cx="310" cy="420" r="9" fill="#FFFFFF"/><circle cx="310" cy="420" r="6" fill="#E26F3C"/></g>
+                <g filter="url(#ps10)"><circle cx="270" cy="340" r="14" fill="#1F1B16" stroke="#FFFFFF" stroke-width="2"/><text x="270" y="345" font-family="Pretendard Variable" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">2</text></g>
+              </svg>
+
+              <!-- Selected pin callout — big floating card -->
+              <div style="position:absolute;top:280px;left:50%;transform:translateX(-50%);width:220px;background:var(--surface);border-radius:14px;box-shadow:var(--sh-deep);overflow:hidden">
+                <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:var(--surface);border-bottom:1px solid var(--paper-200);border-right:1px solid var(--paper-200);box-shadow:1px 1px 4px rgba(31,27,22,0.04)"></div>
+                <div style="aspect-ratio:5/3;background:linear-gradient(150deg,#D4CDB9,#9CA68F);position:relative">
+                  <div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.95);padding:3px 8px;border-radius:999px;font-size:10px;color:var(--ember-600);font-weight:700"><div style="width:5px;height:5px;border-radius:50%;background:var(--ember-500)"></div>02 / 14</div>
+                </div>
+                <div style="padding:10px 12px">
+                  <div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">서울숲 메타세콰이어</div>
+                  <p style="font-size:11px;color:var(--ink-500);margin-top:3px;line-height:16px;font-weight:500">새벽 비 끝, 안개 살짝.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tiny floating pill header -->
+            <div style="position:absolute;top:42px;left:14px;right:14px;display:flex;gap:8px;align-items:center">
+              <button style="width:38px;height:38px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border:1px solid var(--paper-200);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="chevron-left" style="width:16px;height:16px;stroke-width:2"></i></button>
+              <div style="flex:1;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border:1px solid var(--paper-200);border-radius:999px;padding:8px 14px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh-sm)">
+                <div style="font-weight:800;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">성수 반나절 코스</div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--ink-700)">
+                  <span style="display:inline-flex;align-items:center;gap:2px"><div style="width:6px;height:6px;border-radius:50%;background:var(--ember-500)"></div>14</span>
+                  <span style="display:inline-flex;align-items:center;gap:2px;color:var(--moss-600)"><svg width="10" height="5" viewBox="0 0 10 5"><path d="M 1 3.5 Q 3 1 5 2.5 T 9 1.5" stroke="#4A6B52" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>5</span>
+                </div>
+              </div>
+              <button style="width:38px;height:38px;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border:1px solid var(--paper-200);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-900);box-shadow:var(--sh-sm)"><i data-lucide="more-horizontal" style="width:16px;height:16px;stroke-width:2"></i></button>
+            </div>
+
+            <!-- Right floating tools (icons only) -->
+            <div style="position:absolute;right:14px;top:480px;display:flex;flex-direction:column;gap:6px">
+              <button style="width:42px;height:42px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ember-500);box-shadow:var(--sh-sm)"><i data-lucide="map-pin" style="width:18px;height:18px;stroke-width:2;fill:currentColor;fill-opacity:0.15"></i></button>
+              <button style="width:42px;height:42px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--moss-600);box-shadow:var(--sh-sm)"><svg width="18" height="14" viewBox="0 0 18 14"><path d="M 1 11 Q 5 4 9 8 T 17 5" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+              <button style="width:42px;height:42px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);box-shadow:var(--sh-sm)"><i data-lucide="locate-fixed" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+            </div>
+
+            <!-- Swipe-up sheet (peek only) -->
+            <div style="position:absolute;left:0;right:0;bottom:84px;background:var(--surface);border-radius:24px 24px 0 0;border-top:1px solid var(--paper-200);box-shadow:0 -12px 28px rgba(31,27,22,0.10);padding:10px 22px 16px">
+              <div style="width:36px;height:4px;background:var(--paper-200);border-radius:999px;margin:0 auto 12px"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">기록 23개</div>
+                  <div style="font-size:13px;color:var(--ink-700);font-style:italic;font-weight:500;margin-top:2px">위로 올려서 전체 보기</div>
+                </div>
+                <button style="padding:9px 18px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:-0.01em;box-shadow:var(--sh-ember);display:inline-flex;align-items:center;gap:5px"><i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>장소 추가</button>
+              </div>
+            </div>
+
+            <div class="bnav-float">
+              <div class="bnav-item"><i data-lucide="home"></i>홈</div>
+              <div class="bnav-item active"><i data-lucide="map"></i>지도</div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i>탐색</div>
+              <div class="bnav-item"><i data-lucide="user"></i>나</div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">04</span><span class="name">Pin Detail</span><span>· 풀 시트 · 잡지 페이지</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:rgba(31,27,22,0.45)">
+            <div class="status-bar over-photo"><span class="num">9:41</span><span class="right" style="color:#fff"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <!-- Hero photo (full top) inside sheet -->
+            <div style="position:absolute;left:0;right:0;top:42px;height:54%;background:linear-gradient(160deg,#FAEAD9 0%,#F2A57B 60%,#BF5A2B 100%);border-radius:28px 28px 0 0;overflow:hidden">
+              <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(255,255,255,0.25),transparent 60%)"></div>
+
+              <!-- handle -->
+              <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:40px;height:4px;background:rgba(255,255,255,0.5);border-radius:999px"></div>
+
+              <!-- close button -->
+              <button style="position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);color:var(--ink-900);display:flex;align-items:center;justify-content:center"><i data-lucide="x" style="width:16px;height:16px;stroke-width:2"></i></button>
+
+              <!-- photo counter -->
+              <div style="position:absolute;top:24px;left:18px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);padding:4px 10px;border-radius:999px"><i data-lucide="image" style="width:11px;height:11px;color:var(--ink-700);stroke-width:2"></i><span class="num" style="font-size:11px;color:var(--ink-900);font-weight:700">1 / 4</span></div>
+
+              <!-- title overlay -->
+              <div style="position:absolute;bottom:24px;left:20px;right:20px;color:#fff">
+                <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;opacity:0.92;text-transform:uppercase">바베큐 · 2026.04.30</div>
+                <h1 style="font-weight:800;font-size:30px;line-height:38px;letter-spacing:-0.035em;margin-top:4px;text-shadow:0 1px 12px rgba(0,0,0,0.2)">코리안<br/>바베큐</h1>
+              </div>
+            </div>
+
+            <!-- Bottom content sheet -->
+            <div style="position:absolute;left:0;right:0;top:calc(54% + 42px);bottom:0;background:var(--surface);overflow-y:auto;padding:18px 20px 100px">
+              <!-- one-line memo as quote -->
+              <div style="padding:14px 16px;background:var(--ember-50);border-left:3px solid var(--ember-500);border-radius:0 12px 12px 0;margin-bottom:18px">
+                <p style="font-size:15px;line-height:23px;color:var(--ink-900);font-weight:600;letter-spacing:-0.01em">처음 바베큐집 간날, 무조건 파채 추가 필요</p>
+                <div style="font-size:11px;color:var(--ember-600);font-weight:600;margin-top:6px">2026년 4월 30일 · 박경주</div>
+              </div>
+
+              <!-- voice memos as compact pills -->
+              <div style="margin-bottom:18px">
+                <div class="num" style="font-size:10px;color:var(--ink-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">음성 기록</div>
+                <div style="display:flex;gap:8px">
+                  <div style="flex:1;background:var(--moss-100);border-radius:14px;padding:10px;display:flex;align-items:center;gap:8px">
+                    <button style="width:32px;height:32px;border-radius:50%;background:var(--moss-700);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 8px rgba(45,66,50,0.25)"><i data-lucide="play" style="width:12px;height:12px;stroke-width:2;fill:currentColor"></i></button>
+                    <svg width="60" height="20" viewBox="0 0 60 20" style="flex:1"><g fill="#4A6B52"><rect x="0" y="7" width="2" height="6" rx="1"/><rect x="4" y="3" width="2" height="14" rx="1"/><rect x="8" y="5" width="2" height="10" rx="1"/><rect x="12" y="2" width="2" height="16" rx="1"/><rect x="16" y="6" width="2" height="8" rx="1"/><rect x="20" y="4" width="2" height="12" rx="1"/><rect x="24" y="7" width="2" height="6" rx="1"/><rect x="28" y="3" width="2" height="14" rx="1"/><rect x="32" y="5" width="2" height="10" rx="1"/><rect x="36" y="6" width="2" height="8" rx="1"/><rect x="40" y="4" width="2" height="12" rx="1"/><rect x="44" y="7" width="2" height="6" rx="1"/><rect x="48" y="5" width="2" height="10" rx="1"/><rect x="52" y="3" width="2" height="14" rx="1"/></g></svg>
+                    <span class="num" style="font-size:11px;color:var(--moss-700);font-weight:800">0:03</span>
+                  </div>
+                  <div style="flex:1;background:var(--moss-100);border-radius:14px;padding:10px;display:flex;align-items:center;gap:8px">
+                    <button style="width:32px;height:32px;border-radius:50%;background:var(--moss-700);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 8px rgba(45,66,50,0.25)"><i data-lucide="play" style="width:12px;height:12px;stroke-width:2;fill:currentColor"></i></button>
+                    <svg width="60" height="20" viewBox="0 0 60 20" style="flex:1"><g fill="#4A6B52" opacity="0.4"><rect x="0" y="7" width="2" height="6" rx="1"/><rect x="4" y="3" width="2" height="14" rx="1"/><rect x="8" y="5" width="2" height="10" rx="1"/><rect x="12" y="2" width="2" height="16" rx="1"/><rect x="16" y="6" width="2" height="8" rx="1"/><rect x="20" y="4" width="2" height="12" rx="1"/><rect x="24" y="7" width="2" height="6" rx="1"/><rect x="28" y="3" width="2" height="14" rx="1"/><rect x="32" y="5" width="2" height="10" rx="1"/><rect x="36" y="6" width="2" height="8" rx="1"/><rect x="40" y="4" width="2" height="12" rx="1"/><rect x="44" y="7" width="2" height="6" rx="1"/><rect x="48" y="5" width="2" height="10" rx="1"/><rect x="52" y="3" width="2" height="14" rx="1"/></g></svg>
+                    <span class="num" style="font-size:11px;color:var(--moss-700);font-weight:800">0:02</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- meta inline -->
+              <div style="display:flex;justify-content:space-between;padding:14px 16px;background:var(--paper-100);border-radius:12px;margin-bottom:14px">
+                <div style="text-align:center"><div style="font-weight:800;font-size:14px;color:var(--ink-900)">⭐ 4.8</div><div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:2px">평점</div></div>
+                <div style="text-align:center"><div style="font-weight:800;font-size:14px;color:var(--ink-900)">3번</div><div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:2px">방문</div></div>
+                <div style="text-align:center"><div style="font-weight:800;font-size:14px;color:var(--ink-900);font-style:italic">조용함</div><div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:2px">분위기</div></div>
+              </div>
+
+              <!-- tags -->
+              <div style="display:flex;flex-wrap:wrap;gap:5px">
+                <span style="padding:5px 11px;background:var(--paper-100);color:var(--ink-700);border-radius:999px;font-size:11px;font-weight:600">#한적함</span>
+                <span style="padding:5px 11px;background:var(--paper-100);color:var(--ink-700);border-radius:999px;font-size:11px;font-weight:600">#파채추가필수</span>
+                <span style="padding:5px 11px;background:var(--paper-100);color:var(--ink-700);border-radius:999px;font-size:11px;font-weight:600">#예산</span>
+              </div>
+            </div>
+
+            <!-- Sticky CTA -->
+            <div style="position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:8px;z-index:10">
+              <button style="width:48px;height:48px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);box-shadow:var(--sh-sm)"><i data-lucide="heart" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <button style="flex:1;height:48px;background:var(--ember-500);color:#fff;border-radius:14px;font-size:14px;font-weight:800;letter-spacing:-0.01em;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:var(--sh-ember)"><i data-lucide="navigation-2" style="width:16px;height:16px;stroke-width:2.25"></i>길찾기 시작</button>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">05</span><span class="name">Maps</span><span>· 컬렉션 갤러리</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+            <div style="flex:1;overflow-y:auto;padding-bottom:90px">
+              <!-- Magazine cover style header -->
+              <div style="padding:24px 22px 10px">
+                <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase">My Maps · 14 Volumes</div>
+                <h1 style="font-weight:800;font-size:36px;line-height:42px;color:var(--ink-900);letter-spacing:-0.04em;margin-top:8px">내 지도</h1>
+                <p style="font-size:14px;color:var(--ink-700);line-height:21px;font-weight:500;margin-top:6px">기억하고 싶은 시절을<br/>한 권씩 모아두고 있어요.</p>
+              </div>
+
+              <!-- pill filter -->
+              <div style="padding:14px 22px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+                <span style="padding:7px 14px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap"><span class="num">14</span> 전체</span>
+                <span style="padding:7px 14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600"><span class="num">8</span> 발행</span>
+                <span style="padding:7px 14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600"><span class="num">3</span> 초안</span>
+                <span style="padding:7px 14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600"><span class="num">2</span> 사라진</span>
+              </div>
+
+              <!-- Vertical magazine cards -->
+              <div style="padding:8px 22px 24px;display:flex;flex-direction:column;gap:18px">
+                <!-- Featured large -->
+                <div style="border-radius:18px;overflow:hidden;border:1px solid var(--paper-200);box-shadow:var(--sh-card);position:relative">
+                  <div style="aspect-ratio:5/4;background:linear-gradient(160deg,#D4CDB9 0%,#9CA68F 60%,#5C7461 100%);position:relative">
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(31,27,22,0.55) 100%)"></div>
+                    <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:5px;background:var(--ember-500);padding:4px 10px;border-radius:999px;color:#fff;font-size:11px;font-weight:800"><i data-lucide="check" style="width:11px;height:11px;stroke-width:2.5"></i>발행</div>
+                    <div style="position:absolute;bottom:16px;left:16px;right:16px;color:#fff">
+                      <div class="num" style="font-size:11px;letter-spacing:0.08em;font-weight:700;opacity:0.92;text-transform:uppercase">2026 SPRING · 14곳</div>
+                      <h3 style="font-weight:800;font-size:22px;line-height:28px;letter-spacing:-0.03em;margin-top:3px">성수 반나절 코스</h3>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2-col compact -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--paper-200);background:var(--surface);box-shadow:var(--sh-xs)">
+                    <div style="aspect-ratio:1;background:linear-gradient(160deg,#FAEAD9,#E26F3C);position:relative"><div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:4px;background:#fff;padding:3px 8px;border-radius:999px;color:var(--ember-600);font-size:10px;font-weight:800"><div style="width:4px;height:4px;border-radius:50%;background:var(--ember-500)"></div>D-3</div></div>
+                    <div style="padding:10px 12px"><div style="font-weight:800;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;line-height:17px">예산 지도</div><div style="font-size:10px;color:var(--ember-600);font-weight:600;margin-top:3px">142명 참여</div></div>
+                  </div>
+                  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--paper-200);background:var(--surface);box-shadow:var(--sh-xs)">
+                    <div style="aspect-ratio:1;background:linear-gradient(160deg,#C8D0BD,#5C7461);position:relative"><div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.95);padding:3px 8px;border-radius:999px;color:var(--ink-700);font-size:10px;font-weight:800"><div style="width:4px;height:4px;border-radius:50%;background:var(--ink-500)"></div>초안</div></div>
+                    <div style="padding:10px 12px"><div style="font-weight:800;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;line-height:17px">한강 자전거</div><div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:3px">8곳 · 4.2km</div></div>
+                  </div>
+                  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--paper-200);background:var(--surface);box-shadow:var(--sh-xs)">
+                    <div style="aspect-ratio:1;background:linear-gradient(160deg,#E5DDC8,#BDB5A8);position:relative"><div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:4px;background:var(--ember-500);padding:3px 8px;border-radius:999px;color:#fff;font-size:10px;font-weight:800"><i data-lucide="check" style="width:9px;height:9px;stroke-width:2.5"></i>발행</div></div>
+                    <div style="padding:10px 12px"><div style="font-weight:800;font-size:13px;color:var(--ink-900);letter-spacing:-0.02em;line-height:17px">동네 책방</div><div style="font-size:10px;color:var(--ink-500);font-weight:500;margin-top:3px">6곳</div></div>
+                  </div>
+                  <div style="border-radius:14px;overflow:hidden;border:1px dashed var(--dusk-200);background:var(--paper-100)">
+                    <div style="aspect-ratio:1;background:linear-gradient(160deg,#C8D0D8,#7E8893);position:relative;opacity:0.85"><div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.95);padding:3px 8px;border-radius:999px;color:var(--dusk-400);font-size:10px;font-weight:700"><div style="width:4px;height:4px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div>사라진</div></div>
+                    <div style="padding:10px 12px"><div style="font-weight:800;font-size:13px;color:var(--dusk-400);letter-spacing:-0.02em;line-height:17px;font-style:italic">옛 골목의 가게들</div><div style="font-size:10px;color:var(--dusk-400);font-weight:500;margin-top:3px">3곳이 사라졌어요</div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav-float">
+              <div class="bnav-item"><i data-lucide="home"></i>홈</div>
+              <div class="bnav-item active"><i data-lucide="map"></i>지도</div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="compass"></i>탐색</div>
+              <div class="bnav-item"><i data-lucide="user"></i>나</div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">06</span><span class="name">Explore</span><span>· 잡지 표지 큐레이션</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <!-- Hero magazine cover -->
+            <div style="position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(165deg,#9C88E0 0%,#6B5DC8 50%,#4A3DA0 100%);overflow:hidden">
+              <svg viewBox="0 0 380 384" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;opacity:0.3"><circle cx="320" cy="80" r="60" fill="#FAEAD9"/><circle cx="60" cy="240" r="80" fill="#E26F3C"/></svg>
+
+              <div class="status-bar over-photo"><span class="num">9:41</span><span class="right" style="color:#fff"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+              <div style="position:absolute;top:38px;left:22px;right:22px;display:flex;align-items:center;justify-content:space-between">
+                <div style="font-size:11px;color:#fff;letter-spacing:0.08em;font-weight:700;text-transform:uppercase;opacity:0.85">EXPLORE · APRIL</div>
+                <button style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);color:#fff;display:flex;align-items:center;justify-content:center"><i data-lucide="search" style="width:16px;height:16px;stroke-width:1.75"></i></button>
+              </div>
+
+              <div style="position:absolute;left:22px;right:22px;bottom:24px;color:#fff">
+                <div class="num" style="font-size:11px;letter-spacing:0.1em;font-weight:700;opacity:0.92;text-transform:uppercase">FEATURED · BY @hanok_walk</div>
+                <h1 style="font-weight:800;font-size:34px;line-height:40px;letter-spacing:-0.04em;margin-top:8px">익선동 골목,<br/>한옥과 카페.</h1>
+                <p style="margin-top:10px;font-size:13px;font-weight:500;line-height:20px;opacity:0.9">조용한 평일 오후에 가야 진짜로 보이는 곳들.</p>
+              </div>
+            </div>
+
+            <!-- Bottom content -->
+            <div style="position:absolute;left:0;right:0;top:48%;bottom:0;background:var(--paper);border-radius:24px 24px 0 0;overflow-y:auto;padding-bottom:90px">
+              <!-- category chips -->
+              <div style="padding:18px 22px 14px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+                <span style="padding:7px 13px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;display:inline-flex;align-items:center;gap:4px"><i data-lucide="trending-up" style="width:11px;height:11px;stroke-width:2.5"></i>인기</span>
+                <span style="padding:7px 13px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">벚꽃</span>
+                <span style="padding:7px 13px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">성수동</span>
+                <span style="padding:7px 13px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">한옥</span>
+                <span style="padding:7px 13px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">감성카페</span>
+              </div>
+
+              <!-- Today's pick row -->
+              <div style="padding:8px 22px 0">
+                <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px">오늘의 큐레이션 · 4</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+                  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--paper-200);position:relative">
+                    <div style="aspect-ratio:4/5;background:linear-gradient(160deg,#FAEAD9,#E26F3C);position:relative"><div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(31,27,22,0.5) 100%)"></div><div style="position:absolute;bottom:8px;left:10px;right:10px;color:#fff"><div style="font-weight:800;font-size:13px;letter-spacing:-0.02em">성수 감성</div><div class="num" style="font-size:9px;opacity:0.85;font-weight:600;margin-top:1px">@seongsu_love · 15곳</div></div></div>
+                  </div>
+                  <div style="border-radius:14px;overflow:hidden;border:1px solid var(--paper-200);position:relative">
+                    <div style="aspect-ratio:4/5;background:linear-gradient(160deg,#5BB5D6,#2C8AB8);position:relative"><div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,rgba(31,27,22,0.5) 100%)"></div><div style="position:absolute;bottom:8px;left:10px;right:10px;color:#fff"><div style="font-weight:800;font-size:13px;letter-spacing:-0.02em">부산 해안</div><div class="num" style="font-size:9px;opacity:0.85;font-weight:600;margin-top:1px">@busan_wave · 12곳</div></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Together section -->
+              <div style="padding:0 22px 24px">
+                <div class="num" style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px">함께 만드는</div>
+                <h3 style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;margin-bottom:12px">우리 동네 지도</h3>
+                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;overflow:hidden;box-shadow:var(--sh-sm)">
+                  <div style="aspect-ratio:16/9;background:#ECE7DA;position:relative">
+                    <svg viewBox="0 0 320 180" style="width:100%;height:100%"><rect width="320" height="180" fill="#ECE7DA"/><path d="M 0 90 Q 100 70 180 100 T 320 110" stroke="#D6DFEB" stroke-width="14" fill="none" opacity="0.85"/><path d="M 0 50 Q 80 40 160 60 T 320 70" stroke="#FFFFFF" stroke-width="3" fill="none"/><circle cx="60" cy="65" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/><circle cx="130" cy="100" r="5" fill="#4A6B52" stroke="#FFFFFF" stroke-width="1.5"/><circle cx="180" cy="80" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/><circle cx="220" cy="120" r="5" fill="#BF5A2B" stroke="#FFFFFF" stroke-width="1.5"/><circle cx="270" cy="95" r="5" fill="#E26F3C" stroke="#FFFFFF" stroke-width="1.5"/></svg>
+                  </div>
+                  <div style="padding:14px"><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">성수동 · 지난 주 새로 23곳</div><div style="font-size:11px;color:var(--ink-500);margin-top:3px;font-weight:500">동네 사람 12명이 함께 기록 중</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav-float">
+              <div class="bnav-item"><i data-lucide="home"></i>홈</div>
+              <div class="bnav-item"><i data-lucide="map"></i>지도</div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item active"><i data-lucide="compass"></i>탐색</div>
+              <div class="bnav-item"><i data-lucide="user"></i>나</div>
+            </div>
+          </div></div>
+        </div>
+        <div class="phone">
+          <div class="phone-caption"><span class="idx">07</span><span class="name">Shared Viewer</span><span>· 라이트웹 · 잡지 표지</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <!-- Magazine cover -->
+            <div style="position:absolute;top:0;left:0;right:0;height:62%;background:linear-gradient(165deg,#D4CDB9 0%,#9CA68F 50%,#5C7461 100%);overflow:hidden">
+              <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(252,250,246,0.3),transparent 60%)"></div>
+
+              <div class="status-bar over-photo"><span class="num">9:41</span><span class="right" style="color:#fff"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+              <!-- Curator strip top -->
+              <div style="position:absolute;top:38px;left:22px;right:22px;display:flex;align-items:center;gap:10px">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(150deg,var(--moss-700),var(--moss-800));border:2px solid #fff;box-shadow:var(--sh-sm);display:flex;align-items:center;justify-content:center"><i data-lucide="lightbulb" style="width:14px;height:14px;color:var(--gold-500);stroke-width:1.75"></i></div>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:12px;color:#fff;letter-spacing:-0.01em">박경주</div>
+                  <div class="num" style="font-size:10px;color:rgba(255,255,255,0.85);font-weight:600;letter-spacing:0.04em">@artraxa · 동네 탐험가</div>
+                </div>
+                <button style="padding:7px 14px;background:#fff;color:var(--ink-900);border-radius:999px;font-size:11px;font-weight:800">+ 팔로우</button>
+              </div>
+
+              <!-- Title overlay -->
+              <div style="position:absolute;left:22px;right:22px;bottom:32px;color:#fff">
+                <div class="num" style="font-size:11px;letter-spacing:0.1em;font-weight:700;opacity:0.92;text-transform:uppercase;margin-bottom:8px">VOL · 2026 · APRIL</div>
+                <h1 style="font-weight:800;font-size:38px;line-height:44px;letter-spacing:-0.04em">성수<br/>반나절 코스</h1>
+                <div style="margin-top:14px;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase">
+                  <span>14곳</span>
+                  <span style="opacity:0.5">·</span>
+                  <span>4.2km</span>
+                  <span style="opacity:0.5">·</span>
+                  <span style="color:var(--ember-300)">1곳 사라짐</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Body -->
+            <div style="position:absolute;left:0;right:0;top:62%;bottom:0;background:var(--paper);border-radius:24px 24px 0 0;overflow-y:auto;padding-bottom:30px">
+              <!-- Quote opening -->
+              <div style="padding:24px 22px 20px;border-bottom:1px solid var(--paper-200)">
+                <p style="font-size:16px;line-height:25px;color:var(--ink-900);font-weight:600;letter-spacing:-0.015em">햇살이 길게 머무는 카페와 작은 책방, 그리고 그 사이의 산책로.</p>
+                <div class="num" style="font-size:11px;color:var(--ink-500);font-weight:600;margin-top:10px;letter-spacing:0.04em">— 박경주, 2026년 봄</div>
+              </div>
+
+              <!-- Magazine TOC -->
+              <div style="padding:18px 22px 20px">
+                <div class="num" style="font-size:11px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700;margin-bottom:10px;text-transform:uppercase">CONTENTS</div>
+                <div style="padding:12px 0;border-bottom:1px solid var(--paper-200);display:flex;gap:14px">
+                  <span class="num" style="font-size:14px;color:var(--ember-500);font-weight:800;min-width:20px">01</span>
+                  <div style="flex:1"><div style="font-weight:800;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em">햇살카페</div><div style="font-size:12px;color:var(--ink-500);font-weight:500;font-style:italic;margin-top:2px">창가에 햇살이 길게 머무는 시간이 있어요.</div></div>
+                </div>
+                <div style="padding:12px 0;border-bottom:1px solid var(--paper-200);display:flex;gap:14px">
+                  <span class="num" style="font-size:14px;color:var(--ember-500);font-weight:800;min-width:20px">02</span>
+                  <div style="flex:1"><div style="font-weight:800;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em">서울숲 메타세콰이어</div><div style="font-size:12px;color:var(--ink-500);font-weight:500;font-style:italic;margin-top:2px">새벽 비 끝, 안개 살짝.</div></div>
+                </div>
+                <div style="padding:12px 0;border-bottom:1px solid var(--paper-200);display:flex;gap:14px">
+                  <span class="num" style="font-size:14px;color:var(--dusk-400);font-weight:800;min-width:20px">03</span>
+                  <div style="flex:1"><div style="font-weight:800;font-size:15px;color:var(--dusk-400);letter-spacing:-0.02em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div><div style="font-size:12px;color:var(--ink-500);font-weight:500;font-style:italic;margin-top:4px">이곳은 더 이상 거기에 없어요.</div></div>
+                </div>
+              </div>
+
+              <!-- Quiet invite -->
+              <div style="padding:32px 22px;text-align:center;background:var(--ember-50);margin:0 22px;border-radius:18px">
+                <p style="font-size:14px;color:var(--ink-700);line-height:22px;font-weight:500;font-style:italic">이 지도가 마음에 드셨다면,</p>
+                <button style="margin-top:14px;padding:13px 24px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:-0.01em;box-shadow:var(--sh-ember)">내 지도로 가져오기</button>
+                <div style="font-size:11px;color:var(--ink-500);margin-top:14px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase">LOCA에서 만들어진 지도</div>
+              </div>
+              <div style="height:24px"></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="section-delta">
+      <div class="section-head">
+        <span class="num-tag">03 / DELTA</span>
+        <h2>v9 → v10 — 무엇이 진짜 바뀌었는가</h2>
+        <span class="desc">시각만이 아니라 정보 위계와 인터랙션 패턴까지.</span>
+      </div>
+      <div class="gallery">
+        <div class="gcard"><h3><span class="ix">A</span>구조 변화 — v9 vs v10</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:2px solid var(--ink-900)">
+                <th style="text-align:left;padding:10px 4px;font-weight:700;color:var(--ink-900);font-size:11px;letter-spacing:0.04em;text-transform:uppercase">화면 영역</th>
+                <th style="text-align:left;padding:10px 4px;font-weight:700;color:var(--ink-500);font-size:11px;letter-spacing:0.04em;text-transform:uppercase">v9 (reskin)</th>
+                <th style="text-align:left;padding:10px 4px;font-weight:700;color:var(--ember-500);font-size:11px;letter-spacing:0.04em;text-transform:uppercase">v10 (재설계)</th>
+              </tr>
+            </thead>
+            <tbody style="line-height:19px">
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">홈 첫 화면</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">유저 카드 + 통계 + RESUME + MY LOG</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">edge-to-edge dark hero + 큰 타이틀 + 큰 CTA</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">레벨/XP</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">전면 노출 (게임 같음)</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">CTA에 작은 "🔥 4일 연속"으로 흡수</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">최근 기록</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">정사각 카드 그리드</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">살짝 회전된 폴라로이드 가로 스크롤</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">PICKED 큐레이션</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">4개 작은 카드 캐러셀</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">단일 큰 매거진 카드 + 사진 위 카피</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">프로필</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">아바타 + 통계 그리드 + 2버튼 + 1지도</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">잡지 표지 + 떠 있는 아바타 + 탭 + 매거진 카드 스택</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">지도 에디터</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">헤더 카드 + 필터칩 + 큰 sheet 항상</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">95% 지도 + 작은 pill 헤더 + swipe-up sheet (peek)</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">선택된 핀</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">시트 안 한 줄</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">지도 위 떠 있는 큰 콜아웃 카드 (사진 + 메모)</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">핀 상세</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">중간 떠 있는 카드</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">풀 시트 · 위쪽 54% 사진 hero · 아래 잡지 페이지</td></tr>
+              <tr style="border-bottom:1px solid var(--paper-200)"><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">탐색</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">위에서 카테고리 + 행사 카드 리스트</td><td style="padding:10px 4px;color:var(--ink-900);font-weight:600;vertical-align:top">잡지 표지 hero + featured by 큐레이터 + 그리드</td></tr>
+              <tr><td style="padding:10px 4px;color:var(--ink-700);font-weight:500;vertical-align:top">BottomNav</td><td style="padding:10px 4px;color:var(--ink-500);vertical-align:top">화면 끝까지 닿는 바</td><td style="padding:10px 4px;color:var(--ember-500);font-weight:700;vertical-align:top">떠 있는 캡슐 (양옆 14px) + 가운데 + FAB</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="gcard"><h3><span class="ix">B</span>5가지 핵심 인터랙션 변화</h3>
+          <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;line-height:20px">
+            <div style="padding:12px 14px;background:var(--paper-100);border-radius:10px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">Hero가 hero가 됨</strong> · 화면 진입 시 첫인상은 사진 + 큰 카피. 기능 리스트가 아님</div>
+            <div style="padding:12px 14px;background:var(--paper-100);border-radius:10px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">Chrome 50% 감소</strong> · 고정 헤더·검색바·필터바 → hero 위 작은 칩 또는 swipe up</div>
+            <div style="padding:12px 14px;background:var(--paper-100);border-radius:10px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">CTA가 단 하나</strong> · 화면당 가장 중요한 행동 1개에 집중. "+기록하기" 풀 너비 ember pill</div>
+            <div style="padding:12px 14px;background:var(--paper-100);border-radius:10px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">잡지·다이어리 패턴</strong> · 폴라로이드 회전 · num font 캡션 · 큰 인용 + 작가 노트 · serif italic 메모</div>
+            <div style="padding:12px 14px;background:var(--paper-100);border-radius:10px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">지도가 진짜 주인공</strong> · 95% 지도, 콜아웃은 사진+메모 떠있는 카드, 시트는 swipe up</div>
+          </div>
+        </div>
+
+        <div class="gcard"><h3><span class="ix">C</span>실제 src/ 변경 (v9 대비 추가)</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:12px;line-height:18px">
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/components/ui.jsx · BottomNav</div><div style="color:var(--ink-700);font-weight:500">바닥 닿는 형태 → <strong>floating capsule</strong> (position fixed, 14px inset, border-radius 26px). margin-bottom: env(safe-area-inset-bottom)</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/screens/HomeScreen.jsx ⭐</div><div style="color:var(--ink-700);font-weight:500">상단 54% darkhero(JSX 마크업 추가) + 폴라로이드 가로 스크롤(CSS transform rotate -2deg/1.5deg) + 큰 매거진 카드</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/screens/ProfileScreen.jsx ⭐</div><div style="color:var(--ink-700);font-weight:500">상단 340px 그라디언트 cover + 떠 있는 아바타(margin-top: -36px) + tabs + 매거진 카드 스택</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/screens/MapEditorScreen.jsx</div><div style="color:var(--ink-700);font-weight:500">기존 헤더 카드 → <strong>pill 헤더 + 작은 칩 카운터</strong>. 시트는 peek만, swipe-up으로 확장 (touch handler)</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/components/sheets/FeatureDetailSheet.jsx</div><div style="color:var(--ink-700);font-weight:500">시트 위쪽 54%를 <strong>edge-to-edge hero photo</strong>로. 아래 메모는 quote 스타일</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/screens/SharedMapViewer.jsx</div><div style="color:var(--ink-700);font-weight:500">62% 매거진 표지 hero + 큐레이터 strip + 매거진 TOC + 잔잔한 invite</div></div>
+            <div style="padding:11px 13px;background:var(--paper-100);border-radius:8px"><div style="font-weight:700;font-size:13px;color:var(--ink-900);margin-bottom:3px">src/legacy/styles.css</div><div style="color:var(--ink-700);font-weight:500">sh-deep, .over-photo (status bar 흰색), .bnav-float, .num 클래스 추가</div></div>
+          </div>
+          <div style="margin-top:14px;padding:11px 13px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:8px;font-size:12px;line-height:18px;color:var(--ink-900);font-weight:500"><strong style="color:var(--ember-600);font-weight:700">유지</strong> · 라우팅 · 5탭 · 기능 · DB · 훅 · NaverMap zoom 분기 · analytics</div>
+        </div>
+
+        <div class="gcard"><h3><span class="ix">D</span>적용 순서 (권장)</h3>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--paper-200)">
+              <span class="num" style="font-size:20px;color:var(--ember-500);font-weight:800;min-width:28px;line-height:1">01</span>
+              <div><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">Floating BottomNav</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px;font-weight:500">ui.jsx BottomNav를 floating capsule로 — 모든 화면 즉시 v10 분위기</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--paper-200)">
+              <span class="num" style="font-size:20px;color:var(--ember-500);font-weight:800;min-width:28px;line-height:1">02</span>
+              <div><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">HomeScreen Hero 적용 ⭐</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px;font-weight:500">가장 많이 보는 화면. 임팩트 가장 큼</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--paper-200)">
+              <span class="num" style="font-size:20px;color:var(--ember-500);font-weight:800;min-width:28px;line-height:1">03</span>
+              <div><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">MapEditor 헤더 + 시트</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px;font-weight:500">pill 헤더 + swipe-up sheet (지도 가시성 즉시 향상)</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start;padding-bottom:14px;border-bottom:1px solid var(--paper-200)">
+              <span class="num" style="font-size:20px;color:var(--ember-500);font-weight:800;min-width:28px;line-height:1">04</span>
+              <div><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">FeatureDetailSheet 풀 시트</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px;font-weight:500">위쪽 hero 사진 + 아래 잡지 페이지 (가장 많이 열리는 시트)</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span class="num" style="font-size:20px;color:var(--ember-500);font-weight:800;min-width:28px;line-height:1">05</span>
+              <div><div style="font-weight:800;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em">Profile · Explore · Shared 점진</div><div style="font-size:12px;color:var(--ink-700);line-height:18px;margin-top:3px;font-weight:500">매거진 표지 패턴 일괄. 각 PR 한 화면씩</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <span>v10 · FINAL · MOBILE-NATIVE · LOCA IDENTITY</span>
+      <span>NEXT · DESIGN.md → 토큰 · NaverMap · HomeScreen · ProfileScreen 점진</span>
+    </footer>
+  </div>
+
+<script>
+  if (window.lucide) window.lucide.createIcons();
+</script>
+</body>
+</html>
