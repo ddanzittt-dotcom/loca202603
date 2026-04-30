@@ -57,17 +57,6 @@ function hasFeatureMemory(feature) {
   )
 }
 
-function getFeatureSearchText(feature) {
-  const memoTexts = (feature?.memos || []).map((memo) => memo.text || "")
-  return [
-    feature?.title,
-    feature?.note,
-    ...(Array.isArray(feature?.tags) ? feature.tags : []),
-    ...memoTexts,
-  ].join(" ").toLowerCase()
-}
-
-
 const getFeatureBadgeMeta = (feature) => {
   if (!feature) return { kind: "none" }
   if (feature.type !== "pin") return { kind: feature.type }
@@ -147,7 +136,6 @@ export function MapEditorScreen({
   const [searching, setSearching] = useState(false)
   const [pendingSearchPin, setPendingSearchPin] = useState(null)
   const [mappingSearchPin, setMappingSearchPin] = useState(false)
-  const [recordSearchQuery, setRecordSearchQuery] = useState("")
   const [activeFilter, setActiveFilter] = useState("all")
   const [stripOpen, setStripOpen] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
@@ -167,7 +155,6 @@ export function MapEditorScreen({
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
   const trimmedExternalSearchQuery = externalSearchQuery.trim()
-  const normalizedRecordSearchQuery = recordSearchQuery.trim().toLowerCase()
   const summaryOpen = Boolean(selectedFeatureSummary)
   const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
   // 내 지도(personal)는 본인 지도이므로 항상 작성자. 커뮤니티는 createdBy 로 판정.
@@ -275,11 +262,9 @@ export function MapEditorScreen({
         if (activeFilter === "memory") return hasFeatureMemory(feature)
         return feature.type === activeFilter
       })()
-      if (!matchesFilter) return false
-      if (!normalizedRecordSearchQuery) return true
-      return getFeatureSearchText(feature).includes(normalizedRecordSearchQuery)
+      return matchesFilter
     })
-  ), [activeFilter, features, normalizedRecordSearchQuery])
+  ), [activeFilter, features])
 
   useEffect(() => {
     if (showExternalPlaceSearch) return
@@ -674,25 +659,6 @@ export function MapEditorScreen({
             </div>
             {stripOpen ? (
               <>
-                <label className="map-record-search" aria-label="지도 안 기록 검색">
-                  <SearchIcon size={14} color="#9b938a" />
-                  <input
-                    type="search"
-                    value={recordSearchQuery}
-                    onChange={(event) => setRecordSearchQuery(event.target.value)}
-                    placeholder="장소, 메모, 태그로 찾아보세요"
-                  />
-                  {recordSearchQuery ? (
-                    <button
-                      className="map-record-search__clear"
-                      type="button"
-                      onClick={() => setRecordSearchQuery("")}
-                      aria-label="기록 검색어 지우기"
-                    >
-                      ×
-                    </button>
-                  ) : null}
-                </label>
 
                 <div className="map-record-filters" aria-label="지도 안 기록 필터">
                   {RECORD_FILTERS.map((filterItem) => (

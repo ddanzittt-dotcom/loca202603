@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FullscreenGallery } from "./FullscreenGallery"
+import { getMedia } from "../lib/mediaStore"
 
 /*
  * 지도 마커 탭 시 열리는 팝업 카드.
@@ -225,8 +226,52 @@ function VoiceWave({ played = 0 }) {
 }
 
 // ---------- 사진 썸네일 ----------
+function usePhotoSource(photo) {
+  const remoteSrc = photo?.url || photo?.cloudUrl || photo?.src || ""
+  const mediaKey = photo?.localId || photo?.id || ""
+  const [localSrc, setLocalSrc] = useState("")
+  const [loadedKey, setLoadedKey] = useState("")
+  const objectUrlRef = useRef("")
+
+  useEffect(() => {
+    if (remoteSrc || !mediaKey) return undefined
+    if (loadedKey === mediaKey && objectUrlRef.current) return undefined
+
+    let cancelled = false
+
+    const loadLocalPhoto = async () => {
+      try {
+        const blob = await getMedia(mediaKey)
+        if (!blob || cancelled) return
+        const nextUrl = URL.createObjectURL(blob)
+        const prevUrl = objectUrlRef.current
+        objectUrlRef.current = nextUrl
+        setLoadedKey(mediaKey)
+        setLocalSrc(nextUrl)
+        if (prevUrl && prevUrl !== nextUrl) URL.revokeObjectURL(prevUrl)
+      } catch {
+        // ignore local media read errors
+      }
+    }
+
+    loadLocalPhoto()
+
+    return () => {
+      cancelled = true
+    }
+  }, [loadedKey, mediaKey, remoteSrc])
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+  }, [])
+
+  if (remoteSrc) return remoteSrc
+  if (!mediaKey || loadedKey !== mediaKey) return ""
+  return localSrc
+}
+
 function PhotoThumb({ photo, size = 56, overlayCount, onClick }) {
-  const url = photo?.url || photo?.cloudUrl || photo?.src
+  const url = usePhotoSource(photo)
   const dateMMDD = formatMMDD(photo?.date || photo?.createdAt)
   const cls = size === 76 ? "fpc-photo-hero" : "fpc-thumb"
   const content = (
@@ -249,7 +294,7 @@ function PhotoThumb({ photo, size = 56, overlayCount, onClick }) {
 }
 
 function PhotoHero({ photo, overlayCount, onClick }) {
-  const url = photo?.url || photo?.cloudUrl || photo?.src
+  const url = usePhotoSource(photo)
   const dateMMDD = formatMMDD(photo?.date || photo?.createdAt)
   return (
     <div className="fpc-media-item">
@@ -379,6 +424,20 @@ function normalizeMemoPhotos(raw) {
   })
 }
 
+function MemoPhotoButton({ photo, hasMore, onClick }) {
+  const src = usePhotoSource(photo)
+  return (
+    <button
+      type="button"
+      className="fpc-memo-photo"
+      onClick={onClick}
+    >
+      {src ? <img src={src} alt="" /> : null}
+      {hasMore ? <span className="fpc-memo-photo__more">+{hasMore}</span> : null}
+    </button>
+  )
+}
+
 // ---------- 메모 리스트 아이템 ----------
 function MemoItem({ memo, currentUserId, onMemoPhotoClick }) {
   const isMine = memo.userId && currentUserId && memo.userId === currentUserId
@@ -399,17 +458,13 @@ function MemoItem({ memo, currentUserId, onMemoPhotoClick }) {
           <div className="fpc-memo-photos">
             {shown.map((photo, i) => {
               const isLastWithMore = i === shown.length - 1 && extra > 0
-              const url = photo?.url || photo?.cloudUrl
               return (
-                <button
+                <MemoPhotoButton
                   key={photo?.id || photo?.localId || `photo-${i}`}
-                  type="button"
-                  className="fpc-memo-photo"
+                  photo={photo}
+                  hasMore={isLastWithMore ? extra : 0}
                   onClick={() => onMemoPhotoClick?.(photos, i)}
-                >
-                  {url ? <img src={url} alt="" /> : null}
-                  {isLastWithMore ? <span className="fpc-memo-photo__more">+{extra}</span> : null}
-                </button>
+                />
               )
             })}
           </div>

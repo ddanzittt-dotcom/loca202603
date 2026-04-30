@@ -712,12 +712,15 @@
   position: absolute;
   left: 14px;
   right: 14px;
-  bottom: 86px;
+  bottom: max(66px, calc(env(safe-area-inset-bottom, 0px) + 50px));
   z-index: 520;
   pointer-events: auto;
 }
 .map-feature-summary-wrap > .fpc {
   width: 100%;
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .map-feature-summary__head {
@@ -6846,6 +6849,16 @@
   overscroll-behavior: contain;
 }
 
+.map-editor--summary-open .map-feature-summary-wrap {
+  left: 12px;
+  right: 14px;
+  bottom: max(54px, calc(env(safe-area-inset-bottom, 0px) + 38px));
+}
+
+.map-editor--summary-open .map-feature-summary-wrap > .fpc {
+  max-height: min(40vh, 300px);
+}
+
 .map-editor--summary-open .editor-mode-guide,
 .map-editor--summary-open .map-filter-bar--upper,
 .map-editor--summary-open .map-list-bar {
@@ -6896,6 +6909,18 @@
   .map-editor--summary-open .map-feature-summary {
     left: 8px;
     right: 10px;
+  }
+
+  .map-feature-summary-wrap {
+    left: 10px;
+    right: 10px;
+    bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 44px));
+  }
+
+  .map-editor--summary-open .map-feature-summary-wrap {
+    left: 8px;
+    right: 10px;
+    bottom: max(48px, calc(env(safe-area-inset-bottom, 0px) + 32px));
   }
 
 }

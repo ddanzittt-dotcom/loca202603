@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>LOCA 라이트웹 맵핑 데모</title>
+    <style>
+      :root {
+        --bg: #faf5ee;
+        --card: #fffdf8;
+        --ink: #2d4a3e;
+        --muted: #7c766e;
+        --chip: rgba(255, 255, 255, 0.94);
+        --chip-border: #e4ddd2;
+        --accent: #ff6b35;
+        --accent-soft: #ffe2d6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background:
+          radial-gradient(circle at 14% 6%, #fff5ec 0, transparent 34%),
+          radial-gradient(circle at 90% 94%, #eef7ef 0, transparent 36%),
+          var(--bg);
+        font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+        color: var(--ink);
+      }
+
+      .wrap {
+        width: min(100%, 460px);
+        margin: 0 auto;
+        padding: 18px 14px 28px;
+      }
+
+      .hero {
+        background: var(--card);
+        border: 1px solid #e9e2d7;
+        border-radius: 22px;
+        padding: 14px 14px 16px;
+        box-shadow: 0 8px 32px rgba(45, 74, 62, 0.08);
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: 1rem;
+        letter-spacing: -0.01em;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.45;
+      }
+
+      .map-card {
+        margin-top: 12px;
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid #e5ddd1;
+        background: #f5f0e8;
+        box-shadow: 0 8px 24px rgba(45, 74, 62, 0.11);
+      }
+
+      .map-stage {
+        position: relative;
+        aspect-ratio: 4 / 3;
+      }
+
+      .map-stage img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .map-item {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        min-width: 74px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: var(--chip);
+        border: 1px solid var(--chip-border);
+        color: #2f3e37;
+        font-size: 0.77rem;
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+        box-shadow: 0 8px 18px rgba(36, 48, 43, 0.16);
+        backdrop-filter: blur(2px);
+      }
+
+      .map-item--primary {
+        background: color-mix(in srgb, var(--accent-soft) 50%, white);
+        border-color: #ffc3ad;
+      }
+
+      .map-item::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        transform: translateX(-50%);
+        background: var(--accent);
+        border: 2px solid #fff8f3;
+        box-shadow: 0 2px 7px rgba(255, 107, 53, 0.45);
+      }
+
+      .dot-top::after {
+        top: -13px;
+      }
+
+      .dot-bottom::after {
+        bottom: -13px;
+      }
+
+      .footer {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .tag {
+        border-radius: 999px;
+        background: #f4ece0;
+        border: 1px solid #eadfcc;
+        color: #615a52;
+        padding: 8px 11px;
+        font-size: 0.73rem;
+        font-weight: 700;
+      }
+
+      .cta {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 13px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.79rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <h1>LOCA 라이트웹 행사 맵핑 데모</h1>
+        <p>실제 지형 기반 디자인 배경에 임의 포인트를 맵핑한 프로토타입입니다.</p>
+
+        <div class="map-card">
+          <div class="map-stage">
+            <img src="/demo/event-map-prototype.png" alt="행사 맵 디자인 배경" />
+
+            <span class="map-item map-item--primary dot-bottom" style="left: 44%; top: 36%;">메인무대</span>
+            <span class="map-item dot-top" style="left: 41%; top: 27%;">안내</span>
+
+            <span class="map-item dot-bottom" style="left: 56%; top: 45%;">부스 A</span>
+            <span class="map-item dot-top" style="left: 61%; top: 50%;">부스 B</span>
+            <span class="map-item dot-bottom" style="left: 67%; top: 54%;">부스 C</span>
+            <span class="map-item dot-top" style="left: 54%; top: 58%;">부스 D</span>
+            <span class="map-item dot-bottom" style="left: 59%; top: 64%;">부스 E</span>
+            <span class="map-item dot-top" style="left: 65%; top: 68%;">부스 F</span>
+
+            <span class="map-item map-item--primary dot-top" style="left: 35%; top: 47%;">푸드존 1</span>
+            <span class="map-item map-item--primary dot-bottom" style="left: 52%; top: 72%;">푸드존 2</span>
+
+            <span class="map-item dot-bottom" style="left: 72%; top: 30%;">화장실 1</span>
+            <span class="map-item dot-top" style="left: 63%; top: 82%;">화장실 2</span>
+
+            <span class="map-item dot-top" style="left: 77%; top: 90%;">입구 1</span>
+            <span class="map-item dot-top" style="left: 24%; top: 88%;">입구 2</span>
+          </div>
+        </div>
+
+        <div class="footer">
+          <span class="tag">배경: 실제 위성형상 기반</span>
+          <button class="cta" type="button">라이트웹 시안</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
