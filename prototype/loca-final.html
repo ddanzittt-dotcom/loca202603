@@ -158,9 +158,23 @@
     position: absolute; left: 0; right: 0; bottom: 0;
     height: 64px; background: var(--surface);
     border-top: 1px solid var(--paper-200);
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr);
     align-items: center; padding-bottom: 4px;
     z-index: 10;
+  }
+  .toggle-seg {
+    display: inline-flex; padding: 3px; background: var(--paper-100);
+    border-radius: 999px; gap: 0;
+  }
+  .toggle-seg button {
+    padding: 6px 16px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: -0.01em;
+    color: var(--ink-500); transition: all 200ms var(--ease);
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .toggle-seg button.active {
+    background: var(--surface); color: var(--ink-900);
+    box-shadow: var(--sh-xs);
   }
   .bnav-item {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -286,136 +300,225 @@
       </div>
       <div class="phones">
         <div class="phone">
-          <div class="phone-cap"><span class="idx">01</span><span class="name">Home</span><span>· 인사 · 통계 · 이어서 기록</span></div>
+          <div class="phone-cap"><span class="idx">01</span><span class="name">Home</span><span>· 한 화면 · 프로필 카드 리디자인</span></div>
           <div class="phone-frame"><div class="phone-screen">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
-            <div style="flex:1;overflow-y:auto;padding-bottom:80px">
-              <div style="padding:24px 24px 24px">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
-                  <div class="wordmark" style="font-size:18px"><span class="glyph" style="width:7px;height:7px;background:var(--ember-500);box-shadow:0 0 0 1px var(--paper),0 0 0 1.5px var(--ember-500);margin-right:1px"></span>LOCA</div>
-                  <button style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);background:var(--surface);border:1px solid var(--paper-200);border-radius:50%;position:relative"><i data-lucide="bell" style="width:16px;height:16px;stroke-width:1.75"></i><span style="position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--ember-500);border:2px solid var(--surface)"></span></button>
-                </div>
-                <div style="font-size:12px;color:var(--ink-500);font-weight:500;margin-bottom:6px">2026년 4월 30일 목요일</div>
-                <h1 style="font-weight:800;font-size:28px;line-height:36px;color:var(--ink-900);letter-spacing:-0.035em">박경주님,<br/>오늘은 <span style="color:var(--ember-500)">어디</span> 가실래요?</h1>
+            <div style="flex:1;overflow:hidden;padding:0">
+              <!-- header -->
+              <div style="padding:14px 22px 14px;display:flex;align-items:center;justify-content:space-between">
+                <div class="wordmark" style="font-size:18px"><span class="glyph" style="width:7px;height:7px;background:var(--ember-500);box-shadow:0 0 0 1px var(--paper),0 0 0 1.5px var(--ember-500);margin-right:1px"></span>LOCA</div>
+                <button style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);background:var(--surface);border:1px solid var(--paper-200);border-radius:50%;position:relative"><i data-lucide="bell" style="width:16px;height:16px;stroke-width:1.75"></i><span style="position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--ember-500);border:2px solid var(--surface)"></span></button>
               </div>
 
-              <div style="margin:0 24px;display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid var(--paper-200);border-radius:14px;background:var(--surface);overflow:hidden;box-shadow:var(--sh-xs)">
-                <div style="padding:18px 8px;text-align:center;border-right:1px solid var(--paper-200)"><div class="num" style="font-weight:800;font-size:24px;color:var(--ink-900);line-height:1.1;letter-spacing:-0.03em">62</div><div style="font-size:11px;color:var(--ink-500);margin-top:6px;font-weight:600">장소</div></div>
-                <div style="padding:18px 8px;text-align:center;border-right:1px solid var(--paper-200)"><div class="num" style="font-weight:800;font-size:24px;color:var(--ink-900);line-height:1.1;letter-spacing:-0.03em">14</div><div style="font-size:11px;color:var(--ink-500);margin-top:6px;font-weight:600">지도</div></div>
-                <div style="padding:18px 8px;text-align:center;background:var(--ember-50)"><div class="num" style="font-weight:800;font-size:24px;color:var(--ember-500);line-height:1.1;letter-spacing:-0.03em">4일</div><div style="font-size:11px;color:var(--ember-600);margin-top:6px;font-weight:700">연속 🔥</div></div>
+              <!-- greeting -->
+              <div style="padding:6px 22px 18px">
+                <div class="num" style="font-size:11px;color:var(--ink-500);font-weight:500;margin-bottom:4px">2026년 4월 30일 목요일</div>
+                <h1 style="font-weight:800;font-size:24px;line-height:30px;color:var(--ink-900);letter-spacing:-0.035em">박경주님,<br/>오늘은 <span style="color:var(--ember-500)">어디</span> 가실래요?</h1>
               </div>
 
-              <div style="padding:14px 24px 0;display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--ink-500);font-weight:500"><span><span class="num" style="color:var(--ink-900);font-weight:700">42</span> 팔로워</span><span style="color:var(--paper-200)">·</span><span><span class="num" style="color:var(--ink-900);font-weight:700">31</span> 팔로잉</span></div>
+              <!-- Profile card (redesigned, no follower/following) -->
+              <div style="margin:0 22px;background:var(--surface);border:1px solid var(--paper-200);border-radius:18px;padding:16px 16px 14px;box-shadow:var(--sh-sm);position:relative;overflow:hidden">
+                <!-- soft decoration -->
+                <div style="position:absolute;top:-20px;right:-10px;width:80px;height:80px;border-radius:50%;background:var(--ember-50);opacity:0.7"></div>
 
-              <div style="padding:32px 24px 0">
-                <div style="font-size:12px;color:var(--ember-500);font-weight:700;letter-spacing:0.04em;margin-bottom:10px;text-transform:uppercase">이어서 기록하기</div>
-                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;overflow:hidden;box-shadow:var(--sh-xs)">
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);position:relative">
-                    <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(252,250,246,0.3),transparent 60%)"></div>
-                    <div style="position:absolute;top:14px;left:14px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.96);padding:5px 11px;border-radius:999px;backdrop-filter:blur(8px)"><div style="width:5px;height:5px;border-radius:50%;background:var(--ink-700)"></div><span style="font-size:11px;color:var(--ink-700);font-weight:600">초안 · 8 / 14곳</span></div>
-                    <button style="position:absolute;bottom:14px;right:14px;padding:9px 16px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:-0.01em;box-shadow:var(--sh-ember);display:inline-flex;align-items:center;gap:5px"><i data-lucide="plus" style="width:13px;height:13px;stroke-width:2.5"></i>이어서 쓰기</button>
+                <!-- top row -->
+                <div style="position:relative;display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                  <div style="width:44px;height:44px;border-radius:14px;background:linear-gradient(160deg,#FAEAD9,#F2A57B);flex-shrink:0;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;border:1px solid var(--paper-200)">
+                    <svg viewBox="0 0 44 44" style="width:100%;height:100%">
+                      <circle cx="22" cy="32" r="16" fill="#FCFAF6"/>
+                      <circle cx="17" cy="31" r="1.5" fill="#1F1B16"/>
+                      <circle cx="27" cy="31" r="1.5" fill="#1F1B16"/>
+                      <path d="M 18 36 Q 22 38 26 36" stroke="#1F1B16" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+                      <path d="M 13 22 Q 22 13 31 22" fill="#3B5841"/>
+                    </svg>
                   </div>
-                  <div style="padding:16px 18px">
-                    <div style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;line-height:24px">예산 지도</div>
-                    <p style="font-size:14px;color:var(--ink-700);margin-top:6px;line-height:21px;font-weight:500">마지막으로 코리안바베큐를 남겼어요.</p>
-                    <div style="font-size:12px;color:var(--ink-500);margin-top:10px;font-weight:500">3일 전 작성 시작</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">박경주</div>
+                      <span style="display:inline-flex;align-items:center;padding:2px 7px;background:var(--moss-600);color:#fff;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:0.02em">Lv 4</span>
+                    </div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 9px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:999px;font-size:10px;color:var(--ember-600);font-weight:700"><i data-lucide="compass" style="width:10px;height:10px;stroke-width:2.5"></i>동네 탐험가</span>
+                  </div>
+                </div>
+
+                <!-- progress bar -->
+                <div style="position:relative;margin-bottom:14px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-size:10px;color:var(--ink-500);font-weight:600">다음 모험 뱃지까지</span>
+                    <span class="num" style="font-size:10px;color:var(--ember-600);font-weight:800;letter-spacing:0.02em">56 XP</span>
+                  </div>
+                  <div style="height:5px;background:var(--paper-100);border-radius:999px;overflow:hidden">
+                    <div style="width:64%;height:100%;background:linear-gradient(90deg,var(--ember-500),#E5A93A);border-radius:999px"></div>
+                  </div>
+                </div>
+
+                <!-- stats inline (no follower/following) -->
+                <div style="position:relative;display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--paper-200)">
+                  <div style="display:inline-flex;align-items:center;gap:5px"><i data-lucide="map-pin" style="width:13px;height:13px;color:var(--ember-500);stroke-width:2"></i><span class="num" style="font-weight:800;font-size:14px;color:var(--ink-900)">62</span><span style="font-size:10px;color:var(--ink-500);font-weight:600">장소</span></div>
+                  <div style="width:1px;height:14px;background:var(--paper-200)"></div>
+                  <div style="display:inline-flex;align-items:center;gap:5px"><i data-lucide="layers" style="width:13px;height:13px;color:var(--moss-600);stroke-width:2"></i><span class="num" style="font-weight:800;font-size:14px;color:var(--ink-900)">14</span><span style="font-size:10px;color:var(--ink-500);font-weight:600">지도</span></div>
+                  <div style="width:1px;height:14px;background:var(--paper-200)"></div>
+                  <div style="display:inline-flex;align-items:center;gap:5px"><span style="font-size:13px">🔥</span><span class="num" style="font-weight:800;font-size:14px;color:var(--ink-900)">4일</span><span style="font-size:10px;color:var(--ink-500);font-weight:600">연속</span></div>
+                </div>
+              </div>
+
+              <!-- 이어서 기록 (compact horizontal card) -->
+              <div style="margin:18px 22px 0">
+                <div style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;margin-bottom:8px;text-transform:uppercase">이어서 기록하기</div>
+                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;overflow:hidden;box-shadow:var(--sh-xs);display:flex;height:96px">
+                  <div style="width:96px;background:linear-gradient(150deg,#D4CDB9,#9CA68F);flex-shrink:0;position:relative">
+                    <div style="position:absolute;top:8px;left:8px;background:rgba(255,255,255,0.96);padding:2px 7px;border-radius:999px;font-size:9px;color:var(--ink-700);font-weight:700">8/14</div>
+                  </div>
+                  <div style="flex:1;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;min-width:0">
+                    <div>
+                      <div style="font-weight:800;font-size:15px;color:var(--ink-900);letter-spacing:-0.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">예산 지도</div>
+                      <div style="font-size:11px;color:var(--ink-500);margin-top:2px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">3일 전 시작 · 마지막 코리안바베큐</div>
+                    </div>
+                    <button style="align-self:flex-start;padding:6px 12px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:-0.01em;box-shadow:var(--sh-ember);display:inline-flex;align-items:center;gap:4px"><i data-lucide="plus" style="width:11px;height:11px;stroke-width:2.5"></i>이어서 쓰기</button>
                   </div>
                 </div>
               </div>
 
-              <div style="padding:36px 0 20px">
-                <div style="padding:0 24px 14px;display:flex;align-items:baseline;justify-content:space-between">
-                  <div style="font-size:12px;color:var(--ember-500);font-weight:700;letter-spacing:0.04em;text-transform:uppercase">함께 보는 지도</div>
-                  <span style="font-size:12px;color:var(--ink-700);font-weight:600">전체 →</span>
+              <!-- 함께 보는 지도 (compact) -->
+              <div style="margin-top:18px">
+                <div style="padding:0 22px 10px;display:flex;align-items:baseline;justify-content:space-between">
+                  <div style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">함께 보는 지도</div>
+                  <span style="font-size:11px;color:var(--ink-700);font-weight:600">전체 →</span>
                 </div>
-                <div style="display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;padding:0 24px">
-                  <div style="flex:0 0 156px"><div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:10px;margin-bottom:10px"></div><div style="font-weight:700;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;line-height:18px">서울숲 산책 노트</div><div style="font-size:11px;color:var(--ink-500);margin-top:4px;font-weight:500">@minji · 8곳</div></div>
-                  <div style="flex:0 0 156px"><div style="aspect-ratio:4/5;background:linear-gradient(150deg,var(--ember-100),var(--ember-500));border-radius:10px;margin-bottom:10px"></div><div style="font-weight:700;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;line-height:18px">동네 책방 지도</div><div style="font-size:11px;color:var(--ink-500);margin-top:4px;font-weight:500">@hye · 6곳</div></div>
-                  <div style="flex:0 0 156px"><div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:10px;margin-bottom:10px;position:relative"><div style="position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--dusk-400);opacity:0.6;border:1.5px solid var(--surface)"></div></div><div style="font-weight:700;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;line-height:18px">사라진 가게들</div><div style="font-size:11px;color:var(--dusk-400);margin-top:4px;font-weight:500">@yun · 일부 사라진 곳</div></div>
+                <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:0 22px">
+                  <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:10px;margin-bottom:6px"></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">서울숲 산책 노트</div><div style="font-size:10px;color:var(--ink-500);margin-top:1px;font-weight:500">@minji · 8곳</div></div>
+                  <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,var(--ember-100),var(--ember-500));border-radius:10px;margin-bottom:6px"></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">동네 책방 지도</div><div style="font-size:10px;color:var(--ink-500);margin-top:1px;font-weight:500">@hye · 6곳</div></div>
+                  <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:10px;margin-bottom:6px;position:relative"><div style="position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--dusk-400);opacity:0.6;border:1.5px solid var(--surface)"></div></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">사라진 가게들</div><div style="font-size:10px;color:var(--dusk-400);margin-top:1px;font-weight:500">@yun · 사라진 곳</div></div>
                 </div>
               </div>
             </div>
             <div class="bnav">
               <div class="bnav-item active"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
           </div></div>
         </div>
         <div class="phone">
-          <div class="phone-cap"><span class="idx">02</span><span class="name">Maps</span><span>· 내 지도 그리드</span></div>
+          <div class="phone-cap"><span class="idx">02</span><span class="name">지도 tab · 장소</span><span>· 토글 + 사진 리스트</span></div>
           <div class="phone-frame"><div class="phone-screen">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
             <div style="flex:1;overflow-y:auto;padding-bottom:80px">
-              <div style="padding:24px 24px 18px">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px">
+              <!-- Header -->
+              <div style="padding:20px 22px 14px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
                   <div>
-                    <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.06em;font-weight:700;margin-bottom:4px;text-transform:uppercase">My Maps</div>
-                    <h1 style="font-weight:800;font-size:28px;line-height:34px;color:var(--ink-900);letter-spacing:-0.035em">내 지도 <span class="num" style="font-size:18px;color:var(--ink-500);font-weight:700">/ 14</span></h1>
+                    <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.06em;font-weight:700;margin-bottom:4px;text-transform:uppercase">PLACES</div>
+                    <h1 style="font-weight:800;font-size:26px;line-height:32px;color:var(--ink-900);letter-spacing:-0.035em">장소 <span class="num" style="font-size:16px;color:var(--ink-500);font-weight:700">/ 147</span></h1>
                   </div>
-                  <button style="width:44px;height:44px;background:var(--ember-500);color:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember)"><i data-lucide="plus" style="width:20px;height:20px;stroke-width:2.25"></i></button>
+                  <button style="width:40px;height:40px;background:var(--ember-500);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-ember)"><i data-lucide="plus" style="width:18px;height:18px;stroke-width:2.25"></i></button>
                 </div>
-                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-xs)">
+
+                <!-- Toggle (지도/장소) -->
+                <div style="margin-bottom:14px">
+                  <div class="toggle-seg">
+                    <button><i data-lucide="map" style="width:13px;height:13px;stroke-width:2"></i>지도</button>
+                    <button class="active" style="color:var(--ink-900)"><i data-lucide="map-pin" style="width:13px;height:13px;stroke-width:2;color:var(--ember-500)"></i>장소</button>
+                  </div>
+                </div>
+
+                <!-- search -->
+                <div style="background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-xs)">
                   <i data-lucide="search" style="width:15px;height:15px;color:var(--ink-500);stroke-width:1.75"></i>
-                  <span style="font-size:14px;color:var(--ink-500);font-weight:500;flex:1">기억하고 싶은 장소를 찾아보세요</span>
+                  <span style="font-size:14px;color:var(--ink-900);font-weight:500;flex:1">햇살</span>
+                  <span style="font-size:12px;color:var(--ember-500);font-weight:700">7건</span>
+                </div>
+
+                <!-- filter chips -->
+                <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:14px;padding-bottom:2px">
+                  <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:-0.01em">전체</span>
+                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">성수동의 한낮 골목들</span>
+                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">한강 자전거</span>
+                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">동네 책방</span>
                 </div>
               </div>
-              <div style="padding:8px 24px 24px;display:grid;grid-template-columns:1fr 1fr;gap:24px 14px">
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:14px;margin-bottom:12px;position:relative">
-                    <div style="position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:var(--ember-500);padding:4px 10px;border-radius:999px;box-shadow:var(--sh-xs)"><i data-lucide="check" style="width:10px;height:10px;color:#fff;stroke-width:2.5"></i><span style="font-size:10px;color:#fff;font-weight:700">발행</span></div>
+
+              <!-- Place list (사진 + PIN/PATH/AREA 뱃지 스타일) -->
+              <div>
+                <!-- PIN -->
+                <div style="padding:14px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px">
+                  <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:10px;flex-shrink:0;position:relative">
+                    <div style="position:absolute;top:6px;left:6px;width:18px;height:18px;border-radius:50%;background:var(--ember-500);border:2px solid #fff;box-shadow:var(--sh-xs);display:flex;align-items:center;justify-content:center"><i data-lucide="map-pin" style="width:9px;height:9px;color:#fff;stroke-width:2.5"></i></div>
                   </div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">성수 반나절 코스</div>
-                  <div style="font-size:11px;color:var(--ink-500);margin-top:5px;font-weight:500;display:flex;gap:8px"><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="map-pin" style="width:11px;height:11px;stroke-width:1.75"></i>14</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="route" style="width:11px;height:11px;stroke-width:1.75"></i>5</span></div>
-                </div>
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,var(--ember-100),var(--ember-500));border-radius:14px;margin-bottom:12px;position:relative;box-shadow:var(--sh-ember)">
-                    <div style="position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:#fff;padding:4px 10px;border-radius:999px"><div style="width:4px;height:4px;border-radius:50%;background:var(--ember-500)"></div><span style="font-size:10px;color:var(--ember-600);font-weight:700">D-3</span></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-size:10px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700">PIN</span>
+                      <span style="color:var(--paper-200);font-size:10px">·</span>
+                      <span style="font-size:11px;color:var(--ink-500);font-weight:500">성수동의 한낮 골목들</span>
+                    </div>
+                    <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">햇살카페</div>
+                    <p style="font-size:13px;color:var(--ink-700);margin-top:4px;line-height:19px;font-weight:500">창가에 햇살이 길게 머무는 시간이 있어요.</p>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:8px;font-weight:500;letter-spacing:0.02em">2026.04.30 · 한적함, 창가자리</div>
                   </div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">예산 지도</div>
-                  <div style="font-size:11px;color:var(--ember-600);margin-top:5px;font-weight:600">142명 참여</div>
                 </div>
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:14px;margin-bottom:12px;position:relative">
-                    <div style="position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.96);padding:4px 10px;border-radius:999px"><div style="width:4px;height:4px;border-radius:50%;background:var(--ink-500)"></div><span style="font-size:10px;color:var(--ink-700);font-weight:700">초안</span></div>
+
+                <!-- PATH -->
+                <div style="padding:14px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px">
+                  <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#E3EAE0,#87A088);border-radius:10px;flex-shrink:0;position:relative">
+                    <div style="position:absolute;top:6px;left:6px;width:18px;height:18px;border-radius:50%;background:var(--moss-600);border:2px solid #fff;box-shadow:var(--sh-xs);display:flex;align-items:center;justify-content:center"><svg width="9" height="6" viewBox="0 0 9 6"><path d="M 1 4 Q 3 1 5 2.5 T 8 1.5" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>
                   </div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">한강 자전거 코스</div>
-                  <div style="font-size:11px;color:var(--ink-500);margin-top:5px;font-weight:500">8곳 · 4.2km</div>
-                </div>
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#E5DDC8,#BDB5A8);border-radius:14px;margin-bottom:12px;position:relative">
-                    <div style="position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:var(--ember-500);padding:4px 10px;border-radius:999px"><i data-lucide="check" style="width:10px;height:10px;color:#fff;stroke-width:2.5"></i><span style="font-size:10px;color:#fff;font-weight:700">발행</span></div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-size:10px;color:var(--moss-600);letter-spacing:0.08em;font-weight:700">PATH</span>
+                      <span style="color:var(--paper-200);font-size:10px">·</span>
+                      <span style="font-size:11px;color:var(--ink-500);font-weight:500">한강 자전거 코스</span>
+                    </div>
+                    <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">잠수교 → 망원</div>
+                    <p style="font-size:13px;color:var(--ink-700);margin-top:4px;line-height:19px;font-weight:500">평일 새벽 안개 풍경.</p>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:8px;font-weight:500;letter-spacing:0.02em">2026.03.29 · 4.2km · 평지</div>
                   </div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">동네 책방 지도</div>
-                  <div style="font-size:11px;color:var(--ink-500);margin-top:5px;font-weight:500">6곳</div>
                 </div>
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:14px;margin-bottom:12px;position:relative">
-                    <div style="position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.96);padding:4px 10px;border-radius:999px"><div style="width:4px;height:4px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div><span style="font-size:10px;color:var(--ink-700);font-weight:700">사라진</span></div>
+
+                <!-- AREA -->
+                <div style="padding:14px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px">
+                  <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:10px;flex-shrink:0;position:relative">
+                    <div style="position:absolute;top:6px;left:6px;width:18px;height:18px;border-radius:50%;background:var(--moss-600);border:2px solid #fff;box-shadow:var(--sh-xs);display:flex;align-items:center;justify-content:center"><svg width="9" height="7" viewBox="0 0 9 7"><path d="M 1.5 2 Q 3 0.5 5 1.5 Q 7.5 3 7 5 Q 5 6.5 2.5 5.5 Q 0.5 4 1.5 2 Z" fill="#fff" fill-opacity="0.9"/></svg></div>
                   </div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">옛 골목의 가게들</div>
-                  <div style="font-size:11px;color:var(--dusk-400);margin-top:5px;font-weight:500">3곳이 더 이상 없어요</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-size:10px;color:var(--moss-600);letter-spacing:0.08em;font-weight:700">AREA</span>
+                      <span style="color:var(--paper-200);font-size:10px">·</span>
+                      <span style="font-size:11px;color:var(--ink-500);font-weight:500">성수동의 한낮 골목들</span>
+                    </div>
+                    <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">2024 봄의 골목</div>
+                    <p style="font-size:13px;color:var(--ink-700);margin-top:4px;line-height:19px;font-weight:500">한 시절이 머물렀던 결.</p>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:8px;font-weight:500;letter-spacing:0.02em">2024.04 · 0.6km²</div>
+                  </div>
                 </div>
-                <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#E3EAE0,#87A088);border-radius:14px;margin-bottom:12px"></div>
-                  <div style="font-weight:700;font-size:15px;color:var(--ink-900);letter-spacing:-0.02em;line-height:20px">옥상에서 만난 사람들</div>
-                  <div style="font-size:11px;color:var(--ink-500);margin-top:5px;font-weight:500">2024 여름</div>
+
+                <!-- DISAPPEARED -->
+                <div style="padding:14px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px;background:rgba(200,208,216,0.10)">
+                  <div style="width:72px;aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:10px;flex-shrink:0;position:relative;opacity:0.85">
+                    <div style="position:absolute;top:6px;left:6px;width:18px;height:18px;border-radius:50%;background:var(--dusk-400);border:2px solid #fff;display:flex;align-items:center;justify-content:center;opacity:0.85"><i data-lucide="map-pin" style="width:9px;height:9px;color:#fff;stroke-width:2.5"></i></div>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                      <span style="font-size:10px;color:var(--dusk-400);letter-spacing:0.08em;font-weight:700">DISAPPEARED</span>
+                      <span style="color:var(--paper-200);font-size:10px">·</span>
+                      <span style="font-size:11px;color:var(--ink-500);font-weight:500">옛 골목의 가게들</span>
+                    </div>
+                    <div style="font-weight:800;font-size:16px;color:var(--dusk-400);letter-spacing:-0.025em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+                    <p style="font-size:13px;color:var(--ink-700);margin-top:6px;line-height:19px;font-weight:500;font-style:italic">2024년 11월에 문을 닫았어요.</p>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item active"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
           </div></div>
         </div>
         <div class="phone">
-          <div class="phone-cap"><span class="idx">03</span><span class="name">Map Editor</span><span>· 향상된 가시성</span></div>
+          <div class="phone-cap"><span class="idx">03</span><span class="name">지도 tab · 지도</span><span>· 토글 + 향상된 가시성</span></div>
           <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
             <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
@@ -470,6 +573,14 @@
               <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-700)"><i data-lucide="more-horizontal" style="width:18px;height:18px;stroke-width:1.75"></i></button>
             </div>
 
+            <!-- Toggle floating below header -->
+            <div style="position:absolute;top:96px;left:50%;transform:translateX(-50%);z-index:5">
+              <div class="toggle-seg" style="background:var(--surface);box-shadow:var(--sh-sm)">
+                <button class="active"><i data-lucide="map" style="width:13px;height:13px;stroke-width:2;color:var(--ember-500)"></i>지도</button>
+                <button><i data-lucide="map-pin" style="width:13px;height:13px;stroke-width:2"></i>장소</button>
+              </div>
+            </div>
+
             <div style="position:absolute;right:14px;top:240px;display:flex;flex-direction:column;gap:8px">
               <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--ember-500);box-shadow:var(--sh-sm)"><i data-lucide="map-pin" style="width:18px;height:18px;stroke-width:2"></i></button>
               <button style="width:44px;height:44px;background:var(--surface);border:1px solid var(--paper-200);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--moss-600);box-shadow:var(--sh-sm)"><svg width="18" height="14" viewBox="0 0 18 14"><path d="M 1 11 Q 5 4 9 8 T 17 5" stroke="#4A6B52" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
@@ -493,7 +604,6 @@
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item active"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
@@ -567,7 +677,6 @@
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item active"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
@@ -635,7 +744,6 @@
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item active"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
@@ -722,8 +830,7 @@
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
-              <div class="bnav-item active"><i data-lucide="compass"></i><span>탐색</span></div>
+              <div class="bnav-item active"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
           </div></div>
@@ -787,7 +894,6 @@
             <div class="bnav">
               <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
               <div class="bnav-item"><i data-lucide="map"></i><span>지도</span></div>
-              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
               <div class="bnav-item"><i data-lucide="search"></i><span>검색</span></div>
               <div class="bnav-item active"><i data-lucide="user"></i><span>프로필</span></div>
             </div>
