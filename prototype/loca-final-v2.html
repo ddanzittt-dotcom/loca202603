@@ -208,11 +208,11 @@
     <header class="page-header">
       <div>
         <div class="wordmark"><span class="glyph"></span>LOCA</div>
-        <div class="wordmark-tag">FINAL v2 · 별개 탭 + +FAB + 프로필 정리</div>
-        <h1 class="page-title">5탭 + 가운데 <span class="accent">+버튼</span>,<br/>지도와 장소는 별개로.</h1>
+        <div class="wordmark-tag">FINAL v2 · 사라진은 모두의 지도에만 · 12 SCREENS</div>
+        <h1 class="page-title">"사라진"은 <span class="accent">모두의 지도</span>에만,<br/>내 지도는 그냥 내 기록.</h1>
         <p class="page-sub">
-          지도 탭과 장소 탭을 별개로 분리, 가운데 + FAB로 빠른 기록, 프로필에 외부 링크 추가,
-          다른 사람 프로필도 별도 화면으로. 핀·경로·영역 표현 옵션 갤러리도 포함.
+          핵심 원칙: 사라진 장소·DISAPPEARED·폐점 같은 시스템 상태는 <strong>오직 모두의 지도(공공데이터 기반)</strong>에만 적용.
+          내 지도·내 장소·내 프로필에는 절대 들어가지 않음. 사용자는 폐점한 가게도 그냥 "내 기록"으로 남길 수 있어요.
         </p>
       </div>
       <div class="page-meta">
@@ -225,8 +225,8 @@
     <section class="section" id="section-screens">
       <div class="section-head">
         <span class="num-tag">01 / SCREENS</span>
-        <h2>핵심 화면 11</h2>
-        <span class="desc">홈 · 지도 · +시트 · 장소 · 에디터 · 모두의 지도 · 핀(내·모두의지도) · 내 프로필 · 편집 · 다른 사람 프로필.</span>
+        <h2>핵심 화면 12</h2>
+        <span class="desc">홈 · 지도 · +시트 · 장소 · 에디터 · 모두의 지도 · 핀(내·모두지도·폐점) · 내 프로필 · 편집 · 다른 사람.</span>
       </div>
       <div class="phones">
         <div class="phone">
@@ -236,7 +236,10 @@
             <div style="flex:1;overflow:hidden;padding:0">
               <div style="padding:14px 22px 14px;display:flex;align-items:center;justify-content:space-between">
                 <div class="wordmark" style="font-size:18px"><span class="glyph" style="width:7px;height:7px;background:var(--ember-500);box-shadow:0 0 0 1px var(--paper),0 0 0 1.5px var(--ember-500);margin-right:1px"></span>LOCA</div>
-                <button style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);background:var(--surface);border:1px solid var(--paper-200);border-radius:50%;position:relative"><i data-lucide="bell" style="width:16px;height:16px;stroke-width:1.75"></i><span style="position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--ember-500);border:2px solid var(--surface)"></span></button>
+                <div style="display:flex;gap:8px">
+                  <button style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);background:var(--surface);border:1px solid var(--paper-200);border-radius:50%" aria-label="탐색"><i data-lucide="search" style="width:16px;height:16px;stroke-width:1.75"></i></button>
+                  <button style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);background:var(--surface);border:1px solid var(--paper-200);border-radius:50%;position:relative" aria-label="알림"><i data-lucide="bell" style="width:16px;height:16px;stroke-width:1.75"></i><span style="position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--ember-500);border:2px solid var(--surface)"></span></button>
+                </div>
               </div>
 
               <div style="padding:6px 22px 18px">
@@ -304,12 +307,12 @@
               <div style="margin-top:18px">
                 <div style="padding:0 22px 10px;display:flex;align-items:baseline;justify-content:space-between">
                   <div style="font-size:11px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase">함께 보는 지도</div>
-                  <span style="font-size:11px;color:var(--ink-700);font-weight:600">전체 →</span>
+                  <span style="font-size:11px;color:var(--ink-700);font-weight:600">탐색 →</span>
                 </div>
                 <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding:0 22px">
                   <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,#C8D0BD,#5C7461);border-radius:10px;margin-bottom:6px"></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">서울숲 산책</div><div style="font-size:10px;color:var(--ink-500);font-weight:500">@minji · 8곳</div></div>
                   <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,var(--ember-100),var(--ember-500));border-radius:10px;margin-bottom:6px"></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">동네 책방</div><div style="font-size:10px;color:var(--ink-500);font-weight:500">@hye · 6곳</div></div>
-                  <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:10px;margin-bottom:6px"></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">사라진 가게</div><div style="font-size:10px;color:var(--dusk-400);font-weight:500">@yun</div></div>
+                  <div style="flex:0 0 110px"><div style="aspect-ratio:1;background:linear-gradient(150deg,#FAEAD9,#F2A57B);border-radius:10px;margin-bottom:6px;position:relative"><div style="position:absolute;top:6px;left:6px;background:#fff;padding:2px 6px;border-radius:999px;font-size:9px;color:var(--ember-600);font-weight:700">🌐 모두의 지도</div></div><div style="font-weight:700;font-size:11px;color:var(--ink-900);letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">공공데이터로 본 변화</div><div style="font-size:10px;color:var(--ink-500);font-weight:500">폐점·이전 정보</div></div>
                 </div>
               </div>
             </div>
@@ -341,8 +344,8 @@
                 <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:14px">
                   <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap">전체 14</span>
                   <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">발행 8</span>
-                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">초안 3</span>
-                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">사라진 3</span>
+                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">초안 5</span>
+                  <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">이벤트 1</span>
                 </div>
               </div>
 
@@ -377,11 +380,11 @@
                   <div style="font-size:11px;color:var(--ink-500);margin-top:4px;font-weight:500">6곳</div>
                 </div>
                 <div>
-                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#C8D0D8,#7E8893);border-radius:14px;margin-bottom:10px;position:relative;opacity:0.85">
-                    <div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.96);padding:4px 10px;border-radius:999px"><div style="width:4px;height:4px;border-radius:50%;background:var(--dusk-400);opacity:0.6"></div><span style="font-size:10px;color:var(--ink-700);font-weight:700">사라진</span></div>
+                  <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#E5DDC8,#9CA68F);border-radius:14px;margin-bottom:10px;position:relative">
+                    <div style="position:absolute;top:8px;left:8px;display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.96);padding:4px 10px;border-radius:999px"><div style="width:4px;height:4px;border-radius:50%;background:var(--ink-500)"></div><span style="font-size:10px;color:var(--ink-700);font-weight:700">초안</span></div>
                   </div>
                   <div style="font-weight:700;font-size:14px;color:var(--ink-900);letter-spacing:-0.02em;line-height:18px">옛 골목의 가게들</div>
-                  <div style="font-size:11px;color:var(--dusk-400);margin-top:4px;font-weight:500">3곳이 사라졌어요</div>
+                  <div style="font-size:11px;color:var(--ink-500);margin-top:4px;font-weight:500">8곳 · 2024</div>
                 </div>
                 <div>
                   <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#E3EAE0,#87A088);border-radius:14px;margin-bottom:10px"></div>
@@ -503,7 +506,7 @@
                     </div>
                     <div style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;line-height:24px">햇살카페</div>
                     <p style="font-size:14px;color:var(--ink-700);margin-top:6px;line-height:21px;font-weight:500">창가에 햇살이 길게 머무는 시간이 있어요.</p>
-                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center"><span class="num">2026.04.30</span><span style="color:var(--paper-200)">·</span><span>한적함</span><span style="color:var(--paper-200)">·</span><span>창가자리</span></div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="num">2026.04.30</span><span style="color:var(--paper-200)">·</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="image" style="width:11px;height:11px;stroke-width:2"></i>사진 2</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="mic" style="width:11px;height:11px;stroke-width:2"></i>음성 2</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="file-text" style="width:11px;height:11px;stroke-width:2"></i>메모 3</span></div>
                   </div>
                 </div>
 
@@ -519,7 +522,7 @@
                     </div>
                     <div style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;line-height:24px">잠수교 → 망원</div>
                     <p style="font-size:14px;color:var(--ink-700);margin-top:6px;line-height:21px;font-weight:500">평일 새벽 안개 풍경. 잠수교에서 시작해 한강 따라.</p>
-                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center"><span class="num">2026.03.29</span><span style="color:var(--paper-200)">·</span><span class="num">4.2km</span><span style="color:var(--paper-200)">·</span><span>평지</span></div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="num">2026.03.29</span><span style="color:var(--paper-200)">·</span><span class="num">4.2km</span><span style="color:var(--paper-200)">·</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="mic" style="width:11px;height:11px;stroke-width:2"></i>음성 1</span></div>
                   </div>
                 </div>
 
@@ -535,22 +538,23 @@
                     </div>
                     <div style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;line-height:24px">2024 봄의 골목</div>
                     <p style="font-size:14px;color:var(--ink-700);margin-top:6px;line-height:21px;font-weight:500">한 시절이 머물렀던 결. 햇살이 길게 들어오던 골목들의 모임.</p>
-                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center"><span class="num">2024.04</span><span style="color:var(--paper-200)">·</span><span class="num">0.6km²</span></div>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="num">2024.04</span><span style="color:var(--paper-200)">·</span><span class="num">0.6km²</span><span style="color:var(--paper-200)">·</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="file-text" style="width:11px;height:11px;stroke-width:2"></i>메모 2</span></div>
                   </div>
                 </div>
 
-                <!-- DISAPPEARED -->
-                <div style="padding:18px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px;background:rgba(200,208,216,0.10);position:relative">
-                  <div style="position:absolute;left:0;top:18px;bottom:18px;width:3px;background:var(--dusk-400);border-radius:0 2px 2px 0;opacity:0.6"></div>
-                  <div style="width:36px;height:36px;border-radius:10px;background:var(--dusk-200);border:1px dashed var(--dusk-400);display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.85"><i data-lucide="map-pin" style="width:15px;height:15px;color:var(--dusk-400);stroke-width:2"></i></div>
+                <!-- 4번째 PIN — 일반 개인 기록 (사라진 X) -->
+                <div style="padding:18px 22px;border-top:1px solid var(--paper-200);display:flex;gap:14px;position:relative">
+                  <div style="position:absolute;left:0;top:18px;bottom:18px;width:3px;background:var(--ember-500);border-radius:0 2px 2px 0"></div>
+                  <div style="width:36px;height:36px;border-radius:10px;background:var(--ember-50);border:1px solid var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="book-open" style="width:16px;height:16px;color:var(--ember-500);stroke-width:2.25"></i></div>
                   <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-                      <span style="font-size:10px;color:var(--dusk-400);letter-spacing:0.08em;font-weight:700">DISAPPEARED</span>
+                      <span style="font-size:10px;color:var(--ember-500);letter-spacing:0.08em;font-weight:700">PIN</span>
                       <span style="color:var(--paper-200);font-size:10px">·</span>
                       <span style="font-size:11px;color:var(--ink-500);font-weight:500">옛 골목의 가게들</span>
                     </div>
-                    <div style="font-weight:800;font-size:18px;color:var(--dusk-400);letter-spacing:-0.025em;line-height:24px;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
-                    <p style="font-size:14px;color:var(--ink-700);margin-top:8px;line-height:21px;font-weight:500;font-style:italic">2024년 11월에 문을 닫았어요. 작은 시집을 추천해주시던 책방.</p>
+                    <div style="font-weight:800;font-size:18px;color:var(--ink-900);letter-spacing:-0.025em;line-height:24px">옛 골목 책방</div>
+                    <p style="font-size:14px;color:var(--ink-700);margin-top:6px;line-height:21px;font-weight:500">작은 시집을 추천해주시던 책방. 그날 김행숙 시집을 받았어요.</p>
+                    <div style="font-size:11px;color:var(--ink-500);margin-top:10px;font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="num">2024.07.12</span><span style="color:var(--paper-200)">·</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="image" style="width:11px;height:11px;stroke-width:2"></i>사진 3</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="mic" style="width:11px;height:11px;stroke-width:2"></i>음성 1</span><span style="display:inline-flex;align-items:center;gap:3px"><i data-lucide="file-text" style="width:11px;height:11px;stroke-width:2"></i>메모 2</span></div>
                   </div>
                 </div>
               </div>
@@ -680,8 +684,13 @@
 
             <div style="position:absolute;left:0;right:0;bottom:64px;background:var(--surface);border-radius:24px 24px 0 0;border-top:1px solid var(--paper-200);box-shadow:0 -12px 28px rgba(31,27,22,0.10);padding:14px 22px 18px">
               <div style="width:36px;height:3px;background:var(--paper-200);border-radius:999px;margin:0 auto 14px"></div>
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:999px;font-size:12px;font-weight:700;color:var(--ember-600)">새 제안 <span class="num">2</span> · 전체 <span class="num">11</span></button>
+              <!-- 모두의 지도 전용 필터 (공공데이터 상태 + 제안) -->
+              <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;padding-bottom:2px">
+                <span style="padding:6px 12px;background:var(--ink-900);color:var(--paper);border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap">전체 <span class="num">156</span></span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600;display:inline-flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--moss-600)"></div>운영 중 <span class="num">131</span></span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px dashed var(--dusk-400);border-radius:999px;font-size:12px;color:var(--dusk-400);white-space:nowrap;font-weight:600;display:inline-flex;align-items:center;gap:5px"><div style="width:5px;height:5px;border-radius:50%;background:var(--dusk-400);opacity:0.7"></div>사라진 <span class="num">12</span></span>
+                <span style="padding:6px 12px;background:var(--surface);border:1px solid var(--paper-200);border-radius:999px;font-size:12px;color:var(--ink-700);white-space:nowrap;font-weight:600">이전됨 <span class="num">5</span></span>
+                <span style="padding:6px 12px;background:var(--ember-50);border:1px dashed var(--ember-300);border-radius:999px;font-size:12px;color:var(--ember-600);white-space:nowrap;font-weight:700">제안 <span class="num">2</span></span>
               </div>
               <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none">
                 <div style="flex:0 0 156px;background:var(--surface);border:1.5px dashed var(--ember-300);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px">
@@ -827,13 +836,13 @@
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
                 <div style="width:36px;height:36px;border-radius:10px;background:var(--ember-50);border:1px solid var(--ember-100);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i data-lucide="map-pin" style="width:16px;height:16px;color:var(--ember-500);stroke-width:2.25;fill:var(--ember-100)"></i></div>
                 <div style="flex:1;font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em;min-width:0">타코야키 맛집</div>
-                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 11px;background:transparent;border:1.5px solid var(--ember-500);color:var(--ember-600);border-radius:999px;font-size:11px;font-weight:700;letter-spacing:-0.01em;flex-shrink:0"><i data-lucide="bookmark-plus" style="width:11px;height:11px;stroke-width:2.25"></i>가져오기</button>
-                <button style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--ink-500);background:var(--paper-100);border-radius:50%;flex-shrink:0"><i data-lucide="edit-3" style="width:12px;height:12px;stroke-width:2"></i></button>
-                <button style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--ink-500);background:var(--paper-100);border-radius:50%;flex-shrink:0"><i data-lucide="x" style="width:12px;height:12px;stroke-width:2"></i></button>
+                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 11px;background:transparent;border:1.5px solid var(--ember-500);color:var(--ember-600);border-radius:999px;font-size:11px;font-weight:700;letter-spacing:-0.01em;flex-shrink:0" aria-label="내 지도에 가져오기"><i data-lucide="bookmark-plus" style="width:11px;height:11px;stroke-width:2.25"></i>내 지도에 가져오기</button>
+                <button style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--ink-500);background:var(--paper-100);border-radius:50%;flex-shrink:0" aria-label="닫기"><i data-lucide="x" style="width:12px;height:12px;stroke-width:2"></i></button>
               </div>
 
-              <div style="margin-bottom:10px;display:flex;align-items:center;gap:6px">
+              <div style="margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                 <span style="display:inline-block;padding:3px 9px;background:var(--paper-100);color:var(--ink-700);border-radius:6px;font-size:11px;font-weight:600">분식</span>
+                <span style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;background:var(--moss-100);color:var(--moss-600);border-radius:6px;font-size:11px;font-weight:700"><div style="width:5px;height:5px;border-radius:50%;background:var(--moss-600)"></div>운영 중</span>
                 <span style="font-size:11px;color:var(--ink-500);font-weight:500">@minji가 추가</span>
               </div>
 
@@ -842,14 +851,15 @@
                 <div style="font-size:10px;color:var(--ink-500);font-weight:600;margin-top:4px;letter-spacing:0.02em">2026.04.28 · @minji</div>
               </div>
 
-              <!-- 다른 사람 메모 미리보기 -->
+              <!-- 다른 사람 메모 미리보기 + 상태 수정 요청 -->
               <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:11px;color:var(--ink-500);font-weight:500">
                 <div style="display:flex">
                   <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,#9CA68F,#5C7461);border:1.5px solid var(--surface)"></div>
                   <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,#FAEAD9,#E26F3C);border:1.5px solid var(--surface);margin-left:-6px"></div>
                   <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,#C8D0BD,#5C7461);border:1.5px solid var(--surface);margin-left:-6px"></div>
                 </div>
-                <span><span class="num" style="color:var(--ink-900);font-weight:700">12명</span>의 메모 더 보기 →</span>
+                <span style="flex:1"><span class="num" style="color:var(--ink-900);font-weight:700">12명</span>의 메모 →</span>
+                <button style="display:inline-flex;align-items:center;gap:3px;padding:4px 9px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:999px;font-size:10px;color:var(--ink-700);font-weight:700"><i data-lucide="alert-circle" style="width:10px;height:10px;stroke-width:2"></i>상태가 달라요</button>
               </div>
 
               <!-- 메모 추가 입력란 -->
@@ -877,8 +887,102 @@
           </div></div>
         </div>
 
+        <!-- 09 모두의 지도 폐점 핀 카드 (NEW · 공공데이터 상태) -->
         <div class="phone">
-          <div class="phone-cap"><span class="idx">09</span><span class="name">내 프로필</span><span>· 링크 단순 + 편집으로 관리</span></div>
+          <div class="phone-cap"><span class="idx">09</span><span class="name">모두의 지도 · 폐점</span><span>· 공공데이터 상태</span></div>
+          <div class="phone-frame"><div class="phone-screen" style="background:#ECE7DA">
+            <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
+
+            <div style="position:absolute;top:32px;left:0;right:0;bottom:0;overflow:hidden">
+              <svg viewBox="0 0 380 760" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%">
+                <rect width="380" height="760" fill="#ECE7DA"/>
+                <rect width="380" height="760" fill="url(#dotPC)" opacity="0.15"/>
+                <defs>
+                  <pattern id="dotPC" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.4" fill="#C2BCB1"/></pattern>
+                  <filter id="psPC"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/></filter>
+                </defs>
+                <path d="M 0 350 Q 100 330 200 360 T 380 380" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+                <path d="M 130 100 Q 140 350 130 500" stroke="#FFFFFF" stroke-width="5" fill="none"/>
+                <path d="M 270 100 Q 280 350 270 500" stroke="#FFFFFF" stroke-width="4" fill="none"/>
+                <!-- 운영중 핀 (참고) -->
+                <g filter="url(#psPC)"><circle cx="100" cy="280" r="9" fill="#FFFFFF"/><circle cx="100" cy="280" r="6" fill="#E26F3C"/></g>
+                <!-- 폐점 핀 (선택됨, dashed dusk, 낮은 opacity) -->
+                <g filter="url(#psPC)" opacity="0.7">
+                  <circle cx="200" cy="320" r="22" fill="none" stroke="#8896A4" stroke-width="1" stroke-dasharray="3 2" opacity="0.5"/>
+                  <circle cx="200" cy="320" r="11" fill="#FFFFFF"/>
+                  <circle cx="200" cy="320" r="7.5" fill="none" stroke="#8896A4" stroke-width="1.75" stroke-dasharray="2 1.5"/>
+                  <circle cx="200" cy="320" r="3" fill="#8896A4"/>
+                </g>
+                <g><rect x="212" y="310" width="116" height="20" rx="4" fill="#8896A4" opacity="0.95"/><text x="220" y="324" font-family="Pretendard Variable" font-size="11" font-weight="700" fill="#FFFFFF" font-style="italic">옛 골목 책방 · 폐점</text></g>
+              </svg>
+            </div>
+
+            <div style="position:absolute;top:42px;left:14px;right:14px;background:var(--surface);border:1px solid var(--paper-200);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh-card)">
+              <button style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--ink-900)"><i data-lucide="chevron-left" style="width:18px;height:18px;stroke-width:1.75"></i></button>
+              <div style="flex:1">
+                <div style="font-weight:800;font-size:16px;color:var(--ink-900);letter-spacing:-0.025em">모두의 지도</div>
+                <div style="font-size:10px;color:var(--ember-500);font-weight:700;letter-spacing:0.06em;text-transform:uppercase;margin-top:1px">공공데이터 기반</div>
+              </div>
+            </div>
+
+            <!-- 폐점 핀 카드 (Dusk 톤) -->
+            <div style="position:absolute;left:14px;right:14px;bottom:80px;background:var(--surface);border:1px solid var(--paper-200);border-radius:18px;padding:16px 16px 14px;box-shadow:0 24px 48px rgba(31,27,22,0.18)">
+              <!-- top row -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <div style="width:36px;height:36px;border-radius:10px;background:var(--dusk-200);border:1px dashed var(--dusk-400);display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.85"><i data-lucide="map-pin" style="width:16px;height:16px;color:var(--dusk-400);stroke-width:2.25"></i></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:800;font-size:16px;color:var(--dusk-400);letter-spacing:-0.025em;border-bottom:1px dashed var(--dusk-200);display:inline-block;padding-bottom:1px">옛 골목 책방</div>
+                </div>
+                <button style="display:inline-flex;align-items:center;gap:5px;padding:7px 11px;background:transparent;border:1.5px solid var(--ember-500);color:var(--ember-600);border-radius:999px;font-size:11px;font-weight:700;flex-shrink:0"><i data-lucide="bookmark-plus" style="width:11px;height:11px;stroke-width:2.25"></i>내 지도에 가져오기</button>
+                <button style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--ink-500);background:var(--paper-100);border-radius:50%;flex-shrink:0"><i data-lucide="x" style="width:12px;height:12px;stroke-width:2"></i></button>
+              </div>
+
+              <!-- 공공데이터 상태 배지 -->
+              <div style="margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:var(--dusk-200);color:var(--dusk-400);border-radius:6px;font-size:11px;font-weight:800"><i data-lucide="circle-slash" style="width:11px;height:11px;stroke-width:2.25"></i>폐점</span>
+                <span style="display:inline-block;padding:3px 9px;background:var(--paper-100);color:var(--ink-700);border-radius:6px;font-size:11px;font-weight:600">독립서점</span>
+                <span style="font-size:11px;color:var(--ink-500);font-weight:500">공공데이터 기준 · 2024.11 업데이트</span>
+              </div>
+
+              <!-- 상태 안내 -->
+              <div style="background:rgba(200,208,216,0.18);border-left:3px solid var(--dusk-400);border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:12px">
+                <div style="font-weight:700;font-size:12px;color:var(--dusk-400);margin-bottom:3px;display:flex;align-items:center;gap:5px"><i data-lucide="info" style="width:11px;height:11px;stroke-width:2"></i>운영 종료된 장소예요</div>
+                <p style="font-size:12px;color:var(--ink-700);font-weight:500;line-height:18px">공공데이터 기준 운영 종료로 표시된 장소예요. 이 장소에 대한 기억이나 사진은 메모로 남길 수 있어요.</p>
+              </div>
+
+              <!-- 다른 사람 메모 + 상태 수정 요청 -->
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:11px;color:var(--ink-500);font-weight:500">
+                <div style="display:flex">
+                  <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,#9CA68F,#5C7461);border:1.5px solid var(--surface)"></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:linear-gradient(150deg,#FAEAD9,#E26F3C);border:1.5px solid var(--surface);margin-left:-6px"></div>
+                </div>
+                <span style="flex:1"><span class="num" style="color:var(--ink-900);font-weight:700">7명</span>이 추억 메모 →</span>
+                <button style="display:inline-flex;align-items:center;gap:3px;padding:4px 9px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:999px;font-size:10px;color:var(--ink-700);font-weight:700"><i data-lucide="alert-circle" style="width:10px;height:10px;stroke-width:2"></i>상태 수정 요청</button>
+              </div>
+
+              <!-- 메모 입력 -->
+              <div style="border-top:1px solid var(--paper-200);padding-top:12px">
+                <div style="font-size:11px;color:var(--ink-700);font-weight:700;margin-bottom:8px">내 추억 남기기</div>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <button style="width:38px;height:38px;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0"><i data-lucide="camera" style="width:15px;height:15px;stroke-width:1.75"></i></button>
+                  <div style="flex:1;background:var(--paper-100);border:1px solid var(--paper-200);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink-500);font-weight:500;height:38px;display:flex;align-items:center">이곳에 대한 기억을 남겨보세요...</div>
+                  <button style="padding:0 14px;height:38px;background:var(--ember-500);color:#fff;border-radius:10px;font-size:12px;font-weight:700;box-shadow:var(--sh-ember);flex-shrink:0">추가</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="bnav">
+              <div class="bnav-item"><i data-lucide="home"></i><span>홈</span></div>
+              <div class="bnav-item active"><i data-lucide="map"></i><span>지도</span></div>
+              <div class="bnav-item"><button class="bnav-fab"><i data-lucide="plus"></i></button></div>
+              <div class="bnav-item"><i data-lucide="map-pin"></i><span>장소</span></div>
+              <div class="bnav-item"><i data-lucide="user"></i><span>프로필</span></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="phone">
+          <div class="phone-cap"><span class="idx">10</span><span class="name">내 프로필</span><span>· 링크 단순 + 편집으로 관리</span></div>
           <div class="phone-frame"><div class="phone-screen">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
             <div style="flex:1;overflow-y:auto;padding-bottom:80px">
@@ -924,9 +1028,9 @@
                 </div>
               </div>
 
-              <!-- 발행한 지도 -->
+              <!-- 보여주는 지도 -->
               <div style="padding:8px 22px 16px;border-top:1px solid var(--paper-200);padding-top:18px">
-                <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.06em;font-weight:700;margin-bottom:14px;text-transform:uppercase">발행한 지도</div>
+                <div style="font-size:11px;color:var(--ember-500);letter-spacing:0.06em;font-weight:700;margin-bottom:14px;text-transform:uppercase">보여주는 지도</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                   <div>
                     <div style="aspect-ratio:4/5;background:linear-gradient(150deg,#D4CDB9,#9CA68F);border-radius:10px;margin-bottom:8px;position:relative"><div style="position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:4px;background:var(--ember-500);padding:3px 8px;border-radius:999px"><i data-lucide="check" style="width:9px;height:9px;color:#fff;stroke-width:2.5"></i><span style="font-size:9px;color:#fff;font-weight:700">발행</span></div></div>
@@ -953,7 +1057,7 @@
 
         <!-- 10 프로필 편집 (NEW) -->
         <div class="phone">
-          <div class="phone-cap"><span class="idx">10</span><span class="name">프로필 편집</span><span>· 링크 관리</span></div>
+          <div class="phone-cap"><span class="idx">11</span><span class="name">프로필 편집</span><span>· 링크 관리</span></div>
           <div class="phone-frame"><div class="phone-screen">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
             <div style="flex:1;overflow-y:auto;padding-bottom:90px">
@@ -1045,7 +1149,7 @@
         </div>
 
         <div class="phone">
-          <div class="phone-cap"><span class="idx">11</span><span class="name">다른 사람 프로필</span><span>· 팔로잉 버튼만</span></div>
+          <div class="phone-cap"><span class="idx">12</span><span class="name">다른 사람 프로필</span><span>· 팔로잉 버튼만</span></div>
           <div class="phone-frame"><div class="phone-screen">
             <div class="status-bar"><span class="num">9:41</span><span class="right"><i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i></span></div>
             <div style="flex:1;overflow-y:auto;padding-bottom:80px">
@@ -1075,10 +1179,10 @@
                   <span><span class="num" style="color:var(--ink-900);font-weight:700">1.2k</span> 팔로워</span>
                 </div>
 
-                <!-- ★ 팔로잉 버튼만 (지도 올리기/편집 없음) -->
+                <!-- ★ 팔로잉 버튼만 (지도 올리기/편집/메시지 없음) -->
                 <div style="margin-top:18px;display:flex;gap:8px;justify-content:center">
-                  <button style="padding:11px 28px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:-0.01em;box-shadow:var(--sh-ember);display:inline-flex;align-items:center;gap:6px"><i data-lucide="user-plus" style="width:14px;height:14px;stroke-width:2.5"></i>팔로잉</button>
-                  <button style="width:44px;height:44px;background:var(--surface);border:1.5px solid var(--paper-200);color:var(--ink-700);border-radius:999px;display:flex;align-items:center;justify-content:center"><i data-lucide="message-circle" style="width:16px;height:16px;stroke-width:1.75"></i></button>
+                  <button style="padding:11px 32px;background:var(--ember-500);color:#fff;border-radius:999px;font-size:14px;font-weight:700;letter-spacing:-0.01em;box-shadow:var(--sh-ember);display:inline-flex;align-items:center;gap:6px"><i data-lucide="user-plus" style="width:14px;height:14px;stroke-width:2.5"></i>팔로잉</button>
+                  <button style="width:44px;height:44px;background:var(--surface);border:1.5px solid var(--paper-200);color:var(--ink-700);border-radius:999px;display:flex;align-items:center;justify-content:center" aria-label="공유"><i data-lucide="share-2" style="width:16px;height:16px;stroke-width:1.75"></i></button>
                 </div>
               </div>
 
@@ -1099,7 +1203,7 @@
 
               <!-- Tabs (다른 사람: 발행만 보임) -->
               <div style="padding:0 22px 14px;display:flex;gap:18px;font-size:13px;font-weight:600;border-bottom:1px solid var(--paper-200)">
-                <span style="padding:0 0 12px;color:var(--ink-900);border-bottom:2px solid var(--ink-900);margin-bottom:-1px">발행한 지도 8</span>
+                <span style="padding:0 0 12px;color:var(--ink-900);border-bottom:2px solid var(--ink-900);margin-bottom:-1px">지도 8</span>
                 <span style="padding:0 0 12px;color:var(--ink-500)">참여 12</span>
               </div>
 
@@ -1288,7 +1392,7 @@
                 <path d="M 30 20 Q 80 8 150 18 Q 220 35 200 60 Q 130 76 60 65 Q 20 50 30 20 Z" fill="#4A6B52" fill-opacity="0.13"/>
                 <path d="M 30 20 Q 80 8 150 18 Q 220 35 200 60 Q 130 76 60 65 Q 20 50 30 20 Z" fill="none" stroke="#4A6B52" stroke-width="1.5" stroke-dasharray="6 3"/>
               </svg>
-              <div style="margin-top:8px"><div style="font-weight:800;font-size:13px;color:var(--ink-900)">D. 점선 외곽</div><div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:2px">제안 영역 / 잠정 / 사라진 영역</div></div>
+              <div style="margin-top:8px"><div style="font-weight:800;font-size:13px;color:var(--ink-900)">D. 점선 외곽</div><div style="font-size:11px;color:var(--ink-500);font-weight:500;margin-top:2px">모두의 지도 제안 영역 / 잠정 영역 (개인 지도 X)</div></div>
             </div>
           </div>
         </div>
@@ -1302,15 +1406,129 @@
             <div style="padding:12px 14px;background:var(--surface);border-radius:10px"><strong style="color:var(--ink-900);font-weight:800">맛집 큐레이션</strong><div style="color:var(--ink-700);margin-top:3px;font-weight:500">핀 D(카테고리 아이콘) · 영역 C(히트맵 — 자주 가는 곳)</div></div>
             <div style="padding:12px 14px;background:var(--surface);border-radius:10px"><strong style="color:var(--ink-900);font-weight:800">이벤트 / 스탬프 투어</strong><div style="color:var(--ink-700);margin-top:3px;font-weight:500">핀 B(번호) + 체크인 시 Moss 채움 · 경로 A · 영역 B</div></div>
             <div style="padding:12px 14px;background:var(--surface);border-radius:10px"><strong style="color:var(--ink-900);font-weight:800">함께 만드는 지도 (커뮤니티)</strong><div style="color:var(--ink-700);margin-top:3px;font-weight:500">제안 핀 (대시 외곽) · 경로 B(점선) · 영역 D(점선 외곽)</div></div>
-            <div style="padding:12px 14px;background:var(--surface);border-radius:10px"><strong style="color:var(--dusk-400);font-weight:800">사라진 장소 (모든 지도)</strong><div style="color:var(--ink-700);margin-top:3px;font-weight:500">전부 Dusk 톤 + 점선 + 50~75% opacity로 통일</div></div>
+            <div style="padding:12px 14px;background:var(--dusk-200);border-radius:10px;border-left:3px solid var(--dusk-400)"><strong style="color:var(--dusk-400);font-weight:800">공공데이터 폐점 / 이전 (모두의 지도 전용)</strong><div style="color:var(--ink-700);margin-top:3px;font-weight:500">Dusk 톤 + 점선 외곽 + 55~70% opacity. <strong style="color:var(--ink-900)">개인 지도/장소에는 적용하지 않음</strong> — 사용자가 폐점한 가게도 그냥 "내 기록"으로 남길 수 있어요.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QA 체크리스트 + 데이터 모델 -->
+    <section class="section" id="section-qa">
+      <div class="section-head">
+        <span class="num-tag">03 / QA + DATA</span>
+        <h2>QA 체크리스트 · 데이터 모델 · 마이그레이션</h2>
+        <span class="desc">"사라진은 내 지도에 X, 모두의 지도에만 ○" 원칙 검증.</span>
+      </div>
+
+      <div class="gallery">
+        <!-- 핵심 원칙 -->
+        <div class="gcard" style="background:var(--ember-50);border:1px solid var(--ember-300)">
+          <h3 style="color:var(--ember-600)"><span class="ix" style="color:var(--ember-600)">★</span>핵심 원칙</h3>
+          <div style="font-size:14px;line-height:22px;color:var(--ink-900);font-weight:500">
+            <strong style="color:var(--ember-600);font-weight:800">사라진 / DISAPPEARED / 폐점 / 이전됨 / 임시 휴업 / 확인 필요</strong>는
+            오직 <strong style="color:var(--ink-900)">모두의 지도(공공데이터 기반)</strong>에서만 사용.
+            <br/><br/>
+            <strong style="color:var(--ink-900)">내 지도 · 내 장소 · 내 프로필 · 개인 큐레이션</strong>에는 절대 적용하지 않음.
+            사용자는 폐점한 가게도 그냥 "내 기록"으로 남길 수 있다.
+          </div>
+        </div>
+
+        <!-- 데이터 모델 -->
+        <div class="gcard">
+          <h3><span class="ix">DATA</span>공공데이터 상태 모델</h3>
+          <pre style="font-family:var(--font-mono);font-size:11px;line-height:18px;color:var(--ink-700);background:var(--paper-100);padding:14px;border-radius:8px;overflow-x:auto;white-space:pre-wrap">// 모두의 지도 전용
+publicPlace.status =
+  "open" | "closed" | "moved" |
+  "temporarily_closed" | "unknown"
+
+publicPlace.statusSource =
+  "public_data" | "user_report" |
+  "admin_verified"
+
+publicPlace.statusUpdatedAt = string
+
+// 신규 제안은 별도
+feature_change_requests.action =
+  "insert" | "update" | "delete" |
+  "status_update"
+
+// 상태 수정 요청
+payload = {
+  publicStatus,
+  statusNote,
+  evidencePhotos
+}
+
+// 다중 외부 링크
+profileLinks: [{
+  id, type, label, url, order
+}]
+// type: "naver" | "youtube" |
+//   "instagram" | "website" | "custom"</pre>
+          <div style="margin-top:10px;padding:10px 12px;background:var(--ember-50);border:1px solid var(--ember-300);border-radius:8px;font-size:11px;color:var(--ink-900);line-height:17px;font-weight:500"><strong style="color:var(--ember-600);font-weight:700">중요</strong> · 개인 feature에는 status 필드를 추가하지 않음. 개인 지도는 status-free.</div>
+        </div>
+
+        <!-- 변경 요약 -->
+        <div class="gcard">
+          <h3><span class="ix">DELTA</span>이번 통합에서 변경된 것</h3>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:12px;line-height:18px;color:var(--ink-700);font-weight:500">
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">홈</strong> · 검색 아이콘 추가, "전체 →" → "탐색 →", "사라진 가게" → "공공데이터로 본 변화 (모두의 지도)"</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">지도 탭</strong> · 필터 "사라진 3" 제거 → "이벤트" 추가. "사라진" 배지/카드 모두 제거</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">장소 탭</strong> · DISAPPEARED 항목 제거. 기록 카운트(사진/음성/메모) 추가</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">모두의 지도</strong> · 필터 = 운영 중/사라진/이전됨/제안. 공공데이터 상태 도입</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">모두의 지도 핀카드</strong> · "편집" 제거, "수정 요청"/"상태가 달라요" 추가, 권한 분기</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">★ 모두의 지도 · 폐점 카드 (NEW)</strong> · 09번 신규. Dusk + dashed + 안내 + 추억 메모</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">내 프로필</strong> · "발행한 지도" → "보여주는 지도"</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">다른 사람 프로필</strong> · 메시지 버튼 제거, "지도/참여" 탭, 공유로 대체</div>
+            <div style="padding:8px 10px;background:var(--paper-100);border-radius:6px"><strong style="color:var(--ink-900)">핀 표현 가이드</strong> · "사라진 (모든 지도)" → "공공데이터 폐점/이전 (모두의 지도 전용, 개인 X)"</div>
+          </div>
+        </div>
+
+        <!-- QA 체크리스트 -->
+        <div class="gcard" style="grid-column:span 2">
+          <h3><span class="ix">QA</span>실제 적용 시 검증 항목</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12px;line-height:19px">
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>지도 탭에 "사라진" 필터가 없는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>내 지도 카드에 "사라진" 배지가 없는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>내 장소 탭에 "DISAPPEARED" 항목이 없는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>개인 지도/장소에서 폐점/사라짐 시스템 상태가 노출되지 않는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모두의 지도에서 공공데이터 폐점/이전 상태가 표시되는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모두의 지도에서 "제안"과 "폐점/이전"이 시각적으로 구분되는지 (Ember vs Dusk)</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모두의 지도에서 상태 수정 요청이 가능한지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>새 지도에 첫 기록 추가 플로우 정상</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>기존 지도에 핀 추가 플로우 정상</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>경로/영역 그리기 진입점 노출</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>장소 탭에서 핀/경로/영역 필터 동작</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>프로필에 지도 올리기와 발행 상태 분리</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>다른 사람 프로필에서 편집/지도 올리기/메시지 버튼이 보이지 않는지</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모두의 지도에서 남의 장소 가져오기 (개인 지도엔 status 복사 안 됨)</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모두의 지도에서 수정 요청 폼 동작</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>키보드 표시 중 + FAB 숨김</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>공유지도 viewer에서 + FAB 숨김</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>feature 편집 시트/모달 열림 중 + FAB 숨김</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>모든 아이콘 버튼 터치 영역 44px 이상</span></div>
+            <div style="display:flex;align-items:flex-start;gap:8px"><span style="color:var(--moss-600);font-weight:800;flex-shrink:0">✓</span><span>aria-label 추가 (닫기/뒤로/공유/설정/편집)</span></div>
+          </div>
+        </div>
+
+        <!-- 구현 순서 -->
+        <div class="gcard">
+          <h3><span class="ix">PHASES</span>구현 순서 (6 단계)</h3>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:12px;line-height:18px;font-weight:500">
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P1 토큰 + 네비</strong> · CSS 변수, BottomNav 5탭+FAB, Quick Record Sheet, 검색 탭 제거 + 홈 진입</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P2 지도/장소</strong> · 지도 그리드 2열, 사라진 필터/배지 제거, 장소 탭 PIN/PATH/AREA + 카운트, DISAPPEARED 제거</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P3 모두의 지도 공공데이터 상태</strong> · publicStatus 필드 추가, closed/moved Dusk dashed, 상태 수정 요청, 제안과 분리</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P4 프로필</strong> · 보여주는 지도, 다중 링크, 편집 화면, 다른 사람 프로필, 메시지 제거</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P5 에디터/핀 카드</strong> · 상단 단순화, 하단 시트형, 모두의 지도 권한 분기</div>
+            <div style="padding:10px 12px;background:var(--paper-100);border-radius:8px;border-left:3px solid var(--ember-500)"><strong style="color:var(--ink-900);font-weight:800">P6 지도 렌더러</strong> · markerMode/Variant 적용, suggested vs publicStatus 분리</div>
           </div>
         </div>
       </div>
     </section>
 
     <footer class="page-footer">
-      <span>LOCA · FINAL v2</span>
-      <span>NEXT · DESIGN.md → styles.css → ui.jsx → NaverMap.jsx → 화면 점진</span>
+      <span>LOCA · FINAL v2 · 사라진은 모두의 지도에만</span>
+      <span>NEXT · DESIGN.md → styles.css → 데이터 모델 (publicStatus 추가) → 화면 점진</span>
     </footer>
   </div>
 
