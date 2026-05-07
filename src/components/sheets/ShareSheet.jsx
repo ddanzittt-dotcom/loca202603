@@ -37,7 +37,7 @@ function generateHighResQr(shareUrl, mapTitle) {
         qrCtx.beginPath()
         qrCtx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         qrCtx.fill()
-        qrCtx.font = `${logoSize}px serif`
+        qrCtx.font = `${logoSize}px Pretendard Variable`
         qrCtx.textAlign = "center"
         qrCtx.textBaseline = "middle"
         qrCtx.fillText(QR_LOGO_EMOJI, cx, cy)
@@ -59,13 +59,13 @@ function generateHighResQr(shareUrl, mapTitle) {
 
         const titleY = padding + QR_DOWNLOAD_SIZE + gap + titleHeight / 2
         ctx.fillStyle = "#101828"
-        ctx.font = "bold 48px Pretendard, Noto Sans KR, sans-serif"
+        ctx.font = "bold 48px Pretendard Variable"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.fillText(mapTitle || "LOCA", totalW / 2, titleY, QR_DOWNLOAD_SIZE)
 
         ctx.fillStyle = "#b0b8c9"
-        ctx.font = "bold 24px Pretendard, Noto Sans KR, sans-serif"
+        ctx.font = "bold 24px Pretendard Variable"
         ctx.textAlign = "right"
         ctx.fillText("LOCA", totalW - padding, totalH - 30)
 
@@ -147,7 +147,7 @@ export function ShareSheet({
         ctx.beginPath()
         ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         ctx.fill()
-        ctx.font = `${logoSize}px serif`
+        ctx.font = `${logoSize}px Pretendard Variable`
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.fillText(QR_LOGO_EMOJI, cx, cy)

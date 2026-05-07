@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react"
 import { Search as SearchIcon, ChevronRight, FileText, Camera, Mic } from "lucide-react"
 import { featureSort } from "../lib/appUtils"
+import { isEventMap } from "../lib/mapPlacement"
 
 const TYPE_FILTERS = [
   { id: "all", label: "전체", dot: null },
-  { id: "pin", label: "장소", dot: "pin" },
-  { id: "route", label: "경로", dot: "route" },
-  { id: "area", label: "영역", dot: "area" },
+  { id: "pin", label: "PIN", dot: "pin" },
+  { id: "route", label: "PATH", dot: "route" },
+  { id: "area", label: "AREA", dot: "area" },
 ]
 
 const CONTENT_FILTERS = [
@@ -30,6 +31,31 @@ function hasFeatureMemo(feature) {
 
 function hasFeatureVoice(feature) {
   return (feature.voices || []).length > 0
+}
+
+function isPersonalRecordType(feature) {
+  return ["pin", "route", "area"].includes(feature?.type)
+}
+
+function getTypeLabel(type) {
+  if (type === "route") return "PATH"
+  if (type === "area") return "AREA"
+  return "PIN"
+}
+
+function getFeatureDescription(feature) {
+  const note = feature.note?.trim()
+  if (note) return note
+  const tags = Array.isArray(feature.tags) ? feature.tags.filter(Boolean).slice(0, 3) : []
+  return tags.length > 0 ? tags.map((tag) => `#${tag}`).join(" ") : ""
+}
+
+function formatFeatureDate(feature) {
+  const value = feature.updatedAt || feature.updated_at || feature.createdAt || feature.created_at
+  if (!value) return ""
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ""
+  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }).replace(/\.$/u, "")
 }
 
 const RouteIcon = () => (
@@ -58,32 +84,45 @@ export function PlacesScreen({
   const [mapFilter, setMapFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [contentFilters, setContentFilters] = useState([])
+  const personalMaps = useMemo(
+    () => maps.filter((map) => !isEventMap(map)),
+    [maps],
+  )
+  const personalMapIds = useMemo(
+    () => new Set(personalMaps.map((map) => map.id)),
+    [personalMaps],
+  )
+
+  const recordFeatures = useMemo(
+    () => features.filter((feature) => isPersonalRecordType(feature) && personalMapIds.has(feature.mapId)),
+    [features, personalMapIds],
+  )
 
   const featureCounts = useMemo(() => {
-    const counts = { all: features.length }
-    for (const f of features) {
+    const counts = { all: recordFeatures.length }
+    for (const f of recordFeatures) {
       counts[f.mapId] = (counts[f.mapId] || 0) + 1
     }
     return counts
-  }, [features])
+  }, [recordFeatures])
 
   const typeCounts = useMemo(() => {
-    const counts = { all: features.length, pin: 0, route: 0, area: 0 }
-    for (const feature of features) {
+    const counts = { all: recordFeatures.length, pin: 0, route: 0, area: 0 }
+    for (const feature of recordFeatures) {
       counts[feature.type] = (counts[feature.type] || 0) + 1
     }
     return counts
-  }, [features])
+  }, [recordFeatures])
 
   const contentCounts = useMemo(() => ({
-    photo: features.filter((feature) => getFeaturePhotos(feature).length > 0).length,
-    memory: features.filter(hasFeatureMemo).length,
-    voice: features.filter(hasFeatureVoice).length,
-  }), [features])
+    photo: recordFeatures.filter((feature) => getFeaturePhotos(feature).length > 0).length,
+    memory: recordFeatures.filter(hasFeatureMemo).length,
+    voice: recordFeatures.filter(hasFeatureVoice).length,
+  }), [recordFeatures])
 
   const filteredFeatures = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    return [...features].sort(featureSort).filter((feature) => {
+    return [...recordFeatures].sort(featureSort).filter((feature) => {
       const matchesMap = mapFilter === "all" || feature.mapId === mapFilter
       const matchesType = typeFilter === "all" || feature.type === typeFilter
       const matchesPhoto = !contentFilters.includes("photo") || getFeaturePhotos(feature).length > 0
@@ -93,7 +132,7 @@ export function PlacesScreen({
       const haystack = [feature.title, feature.note, ...(feature.tags || []), ...memoTexts].join(" ").toLowerCase()
       return matchesMap && matchesType && matchesPhoto && matchesMemory && matchesVoice && (!normalized || haystack.includes(normalized))
     })
-  }, [contentFilters, features, mapFilter, query, typeFilter])
+  }, [contentFilters, mapFilter, query, recordFeatures, typeFilter])
 
   const toggleContentFilter = (filterId) => {
     setContentFilters((current) => (
@@ -108,7 +147,7 @@ export function PlacesScreen({
   return (
     <Wrapper className={embedded ? "pl-screen pl-screen--embedded" : "screen screen--scroll pl-screen"}>
       <div className="pl-header">
-        <h1 className="pl-header__title">{title}</h1>
+        <h1 className="pl-header__title">{title === "장소" ? `PLACES / ${recordFeatures.length}` : title}</h1>
         <p className="pl-header__sub">{subtitle}</p>
       </div>
 
@@ -123,7 +162,7 @@ export function PlacesScreen({
           <button className={`pl-chip${mapFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setMapFilter("all")}>
             전체 <span className="pl-chip__count">{featureCounts.all || 0}</span>
           </button>
-          {maps.map((map) => (
+          {personalMaps.map((map) => (
             <button key={map.id} className={`pl-chip${mapFilter === map.id ? " is-active" : ""}`} type="button" onClick={() => setMapFilter(map.id)}>
               {map.title} <span className="pl-chip__count">{featureCounts[map.id] || 0}</span>
             </button>
@@ -165,7 +204,7 @@ export function PlacesScreen({
         </div>
       </div>
 
-      {features.length === 0 ? (
+      {recordFeatures.length === 0 ? (
         <div className="pl-empty">
           <img
             src={characterImage || "/characters/cloud_lv1.svg"}
@@ -193,7 +232,7 @@ export function PlacesScreen({
       ) : (
         <div className="pl-list">
           {filteredFeatures.map((feature) => {
-            const map = maps.find((item) => item.id === feature.mapId)
+            const map = personalMaps.find((item) => item.id === feature.mapId)
             const photoCount = getFeaturePhotos(feature).length
             const memoCount = (feature.note?.trim() ? 1 : 0) + (feature.memos || []).filter((memo) => memo.text?.trim()).length
             const voiceCount = (feature.voices || []).length
@@ -201,6 +240,29 @@ export function PlacesScreen({
             const isEmptyName = !trimmedName
             const displayName = isEmptyName ? "이름 없는 장소 · 직접 입력하기" : trimmedName
             const emoji = feature.emoji || "📍"
+            const typeLabel = getTypeLabel(feature.type)
+            const description = getFeatureDescription(feature)
+            const dateLabel = formatFeatureDate(feature)
+            const metaItems = []
+            if (dateLabel) metaItems.push({ key: "date", content: <span>{dateLabel}</span> })
+            if (photoCount > 0) {
+              metaItems.push({
+                key: "photo",
+                content: <span className="pl-item__media"><Camera size={9} strokeWidth={1.8} aria-hidden="true" /> 사진 {photoCount}</span>,
+              })
+            }
+            if (memoCount > 0) {
+              metaItems.push({
+                key: "memo",
+                content: <span className="pl-item__media"><FileText size={9} strokeWidth={1.8} aria-hidden="true" /> 메모 {memoCount}</span>,
+              })
+            }
+            if (voiceCount > 0) {
+              metaItems.push({
+                key: "voice",
+                content: <span className="pl-item__media"><Mic size={9} strokeWidth={1.8} aria-hidden="true" /> 음성 {voiceCount}</span>,
+              })
+            }
 
             return (
               <button
@@ -209,6 +271,7 @@ export function PlacesScreen({
                 type="button"
                 onClick={() => onOpenFeature(feature.id, isEmptyName ? { focusName: true } : undefined)}
               >
+                <span className={`pl-item__bar pl-item__bar--${feature.type || "pin"}`} aria-hidden="true" />
                 <div className={`pl-item__icon pl-item__icon--${feature.type || "pin"}`}>
                   {feature.type === "route" ? (
                     <RouteIcon />
@@ -219,33 +282,19 @@ export function PlacesScreen({
                   )}
                 </div>
                 <div className="pl-item__info">
-                  <p className={`pl-item__name${isEmptyName ? " pl-item__name--empty" : ""}`}>{displayName}</p>
-                  <div className="pl-item__meta">
+                  <div className="pl-item__kicker">
+                    <span className={`pl-item__type pl-item__type--${feature.type || "pin"}`}>{typeLabel}</span>
                     {map ? <span className="pl-item__map-name">{map.title}</span> : null}
-                    {photoCount > 0 ? (
-                      <>
-                        <span className="pl-item__sep" aria-hidden="true" />
-                        <span className="pl-item__media">
-                          <Camera size={9} strokeWidth={1.8} aria-hidden="true" /> 사진 {photoCount}
-                        </span>
-                      </>
-                    ) : null}
-                    {memoCount > 0 ? (
-                      <>
-                        <span className="pl-item__sep" aria-hidden="true" />
-                        <span className="pl-item__media">
-                          <FileText size={9} strokeWidth={1.8} aria-hidden="true" /> 메모 {memoCount}
-                        </span>
-                      </>
-                    ) : null}
-                    {voiceCount > 0 ? (
-                      <>
-                        <span className="pl-item__sep" aria-hidden="true" />
-                        <span className="pl-item__media">
-                          <Mic size={9} strokeWidth={1.8} aria-hidden="true" /> 음성 {voiceCount}
-                        </span>
-                      </>
-                    ) : null}
+                  </div>
+                  <p className={`pl-item__name${isEmptyName ? " pl-item__name--empty" : ""}`}>{displayName}</p>
+                  {description ? <p className="pl-item__desc">{description}</p> : null}
+                  <div className="pl-item__meta">
+                    {metaItems.length > 0 ? metaItems.map((item, index) => (
+                      <span className="pl-item__meta-part" key={item.key}>
+                        {index > 0 ? <span className="pl-item__sep" aria-hidden="true" /> : null}
+                        {item.content}
+                      </span>
+                    )) : <span>기록</span>}
                   </div>
                 </div>
                 <span className="pl-item__arrow" aria-hidden="true">

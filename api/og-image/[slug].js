@@ -49,10 +49,10 @@ export default async function handler(req, res) {
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
   <rect width="1200" height="630" fill="${theme.bg}"/>
-  <text x="600" y="220" fill="${theme.text}" font-family="Arial,sans-serif" font-size="100" text-anchor="middle" opacity="0.25">🗺</text>
-  <text x="600" y="360" fill="${theme.text}" font-family="Arial,sans-serif" font-size="52" font-weight="bold" text-anchor="middle">${escapeXml(title.slice(0, 30))}</text>
-  <text x="600" y="420" fill="${theme.text}" font-family="Arial,sans-serif" font-size="28" text-anchor="middle" opacity="0.7">${escapeXml(subtitle)}</text>
-  <text x="600" y="560" fill="${theme.text}" font-family="Arial,sans-serif" font-size="32" font-weight="bold" text-anchor="middle" opacity="0.4">LOCA</text>
+  <text x="600" y="220" fill="${theme.text}" font-family="Pretendard Variable" font-size="100" text-anchor="middle" opacity="0.25">🗺</text>
+  <text x="600" y="360" fill="${theme.text}" font-family="Pretendard Variable" font-size="52" font-weight="bold" text-anchor="middle">${escapeXml(title.slice(0, 30))}</text>
+  <text x="600" y="420" fill="${theme.text}" font-family="Pretendard Variable" font-size="28" text-anchor="middle" opacity="0.7">${escapeXml(subtitle)}</text>
+  <text x="600" y="560" fill="${theme.text}" font-family="Pretendard Variable" font-size="32" font-weight="bold" text-anchor="middle" opacity="0.4">LOCA</text>
 </svg>`
 
   res.setHeader("Content-Type", "image/svg+xml")

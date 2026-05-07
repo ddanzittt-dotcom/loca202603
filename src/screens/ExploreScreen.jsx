@@ -153,6 +153,8 @@ export function ExploreScreen({
   onSelectUser,
   hasUnread = false,
   onOpenNotifications,
+  embedded = false,
+  section = "all",
 }) {
   const [searchMode, setSearchMode] = useState("idle")
   const [query, setQuery] = useState("")
@@ -323,9 +325,19 @@ export function ExploreScreen({
     detailAbortRef.current?.abort?.()
   }, [])
 
+  const showAllSections = section === "all"
+  const showCommunitySection = section === "all" || section === "community"
+  const showEventsSection = section === "all" || section === "events"
+  const sectionClassName = embedded ? "explore-screen explore-screen--embedded" : "screen screen--scroll explore-screen"
+  const eventBannerLabel = eventsLoading
+    ? "행사 불러오는 중"
+    : events.length > 0
+      ? `${events.length}개 행사`
+      : "근처 행사 없음"
+
   // ─────────────────────────────────────
   // 검색 활성 모드 (B/C 화면)
-  if (searchMode === "active") {
+  if (showAllSections && searchMode === "active") {
     return (
       <section className="screen screen--scroll explore-screen">
         <div className="ex-search-active-bar">
@@ -521,184 +533,227 @@ export function ExploreScreen({
   // ─────────────────────────────────────
   // A 화면: 기본 상태
   return (
-    <section className="screen screen--scroll explore-screen">
-      <div className="ex-h-row">
-        <h1 className="ex-h-title">탐색</h1>
-        <div className="ex-h-actions">
-          {onOpenNotifications ? (
+    <section className={sectionClassName}>
+      {showAllSections ? (
+        <>
+          <div className="ex-h-row">
+            <h1 className="ex-h-title">탐색</h1>
+            <div className="ex-h-actions">
+              {onOpenNotifications ? (
+                <button
+                  type="button"
+                  className="ex-h-icon-btn"
+                  aria-label="알림"
+                  title="알림"
+                  onClick={onOpenNotifications}
+                >
+                  <Bell size={16} strokeWidth={1.8} />
+                  {hasUnread ? <span className="ex-h-icon-dot" /> : null}
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="explore-banner-grid" aria-label="탐색 추천">
             <button
               type="button"
-              className="ex-h-icon-btn"
-              aria-label="알림"
-              title="알림"
-              onClick={onOpenNotifications}
+              className="explore-banner-card explore-banner-card--community"
+              onClick={onOpenCommunityEditor}
+              aria-label="모두의 지도 열기"
             >
-              <Bell size={16} strokeWidth={1.8} />
-              {hasUnread ? <span className="ex-h-icon-dot" /> : null}
+              <span className="explore-banner-card__eyebrow">TOGETHER</span>
+              <strong>모두의 지도</strong>
+              <span>공공데이터와 사람들이 함께 만든 동네 변화 지도</span>
+              <span className="explore-banner-card__action">
+                둘러보기 <MapGlyph size={13} strokeWidth={2} />
+              </span>
             </button>
-          ) : null}
-        </div>
-      </div>
+            <button
+              type="button"
+              className="explore-banner-card explore-banner-card--events"
+              onClick={() => {
+                if (events.length > 0) setShowEventList(true)
+              }}
+              aria-label="내 주변 행사 보기"
+            >
+              <span className="explore-banner-card__eyebrow">NEARBY</span>
+              <strong>내 주변 행사</strong>
+              <span>근처에서 기록해볼 만한 일정과 장소를 한 번에 보기</span>
+              <span className="explore-banner-card__action">
+                {eventBannerLabel} <MapPin size={13} strokeWidth={2} />
+              </span>
+            </button>
+          </div>
 
-      <div className="ex-hero-greet">
-        <div className="ex-hero-tag">EXPLORE</div>
-        <div className="ex-hero-q">어떤 지도를 둘러볼까요?</div>
-        <div className="ex-hero-sub">태그·동네·에디터로 검색해보세요</div>
-      </div>
+          <div className="ex-hero-greet">
+            <div className="ex-hero-tag">EXPLORE</div>
+            <div className="ex-hero-q">어떤 지도를 둘러볼까요?</div>
+            <div className="ex-hero-sub">태그·동네·에디터로 검색해보세요</div>
+          </div>
 
-      <div
-        className="ex-search-bar"
-        role="button"
-        tabIndex={0}
-        onClick={() => setSearchMode("active")}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault()
-            setSearchMode("active")
-          }
-        }}
-      >
-        <SearchIcon size={16} className="ex-search-bar__ico" />
-        <input
-          readOnly
-          tabIndex={-1}
-          placeholder="지도, 에디터 검색"
-          onFocus={(e) => { e.currentTarget.blur(); setSearchMode("active") }}
-        />
-        <span className="ex-search-bar__kbd">⌘ K</span>
-      </div>
-
-      <div className="ex-keywords">
-        <span className="ex-keywords-label">인기</span>
-        {POPULAR_KEYWORDS.map((kw) => (
-          <button
-            key={kw.text}
-            type="button"
-            className="ex-kw-chip"
-            onClick={() => submitQuery(kw.text)}
+          <div
+            className="ex-search-bar"
+            role="button"
+            tabIndex={0}
+            onClick={() => setSearchMode("active")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setSearchMode("active")
+              }
+            }}
           >
-            {kw.trending ? <span className="ex-kw-trend">↑</span> : null}
-            {kw.text}
-          </button>
-        ))}
-      </div>
-
-      <div className="ex-sec-h">
-        <div>
-          <span className="ex-sec-tag">TOGETHER</span>
-          <h2 className="ex-sec-title">모두의 지도</h2>
-          <p className="ex-sec-sub">동네 사람들이 함께 만들어가는 지도</p>
-        </div>
-      </div>
-
-      <div className="ex-together-card">
-        <div className="ex-together-blob" aria-hidden="true" />
-        <div className="ex-minimap" aria-hidden="true">
-          <div className="ex-minimap__streets" />
-          <div className="ex-minimap__river" />
-          {MINIMAP_PINS.map((pin, idx) => (
-            <span
-              key={idx}
-              className={`ex-minimap__pin ex-minimap__pin--${pin.kind}`}
-              style={{ top: pin.top, left: pin.left }}
+            <SearchIcon size={16} className="ex-search-bar__ico" />
+            <input
+              readOnly
+              tabIndex={-1}
+              placeholder="지도, 에디터 검색"
+              onFocus={(e) => { e.currentTarget.blur(); setSearchMode("active") }}
             />
-          ))}
-          <div className="ex-minimap__overlay">
-            <MapPin size={9} fill="currentColor" stroke="none" />
-            <strong>내 동네</strong>
-            <span> · 지난 주 새로 기록됨</span>
-          </div>
-        </div>
-
-        <div className="ex-together-actions">
-          <button type="button" className="ex-together-btn" onClick={onOpenCommunityEditor}>
-            <MapPin size={13} strokeWidth={2.4} />
-            모두의 지도 둘러보기
-          </button>
-        </div>
-      </div>
-
-      <div className="ex-sec-h">
-        <div>
-          <span className="ex-sec-tag">NEARBY</span>
-          <h2 className="ex-sec-title">근처에서 기록해볼 만한 행사</h2>
-        </div>
-        {events.length > 0 ? (
-          <button type="button" className="ex-sec-more" onClick={() => setShowEventList(true)}>더보기 →</button>
-        ) : null}
-      </div>
-
-      <div className="ex-nearby-row">
-        <span className="ex-location-chip" aria-label="현재 위치">
-          <MapPin size={11} strokeWidth={2} />
-          내 위치 근처
-          <ChevronDown size={9} strokeWidth={2} />
-        </span>
-        {events.length > 0 ? (
-          <span className="ex-nearby-count">총 {events.length}개 · 거리순</span>
-        ) : null}
-      </div>
-
-      {eventsLoading ? (
-        <div className="ex-events-empty">행사를 불러오는 중...</div>
-      ) : eventsError ? (
-        <div className="ex-events-empty">
-          <p>{eventsError}</p>
-        </div>
-      ) : events.length === 0 ? (
-        <div className="ex-events-empty">근처에서 열리는 행사가 없어요</div>
-      ) : (
-        <>
-          <div className="ex-event-list">
-            {events.slice(0, 3).map((event) => {
-              const status = getEventStatus(event.startDate, event.endDate)
-              const thumb = pickEventThumb(event.id || event.title)
-              const period = formatEventPeriod(event.startDate, event.endDate)
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  className="ex-event-card"
-                  onClick={() => openEventDetail(event)}
-                >
-                  <div className="ex-event-thumb" style={{ background: thumb.gradient }}>
-                    {event.image ? (
-                      <span className="ex-event-thumb__img" style={{ backgroundImage: `url(${event.image})` }} />
-                    ) : (
-                      <span className="ex-event-thumb__ico">{thumb.emoji}</span>
-                    )}
-                  </div>
-                  <div className="ex-event-info">
-                    {period ? <div className="ex-event-period">{period}</div> : null}
-                    <div className="ex-event-title">{event.title}</div>
-                    {event.addr ? (
-                      <div className="ex-event-meta">
-                        <span>{event.addr}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {status ? (
-                    <span className={`ex-event-status ex-event-status--${status.kind}`}>{status.label}</span>
-                  ) : null}
-                </button>
-              )
-            })}
+            <span className="ex-search-bar__kbd">⌘ K</span>
           </div>
 
-          {events.length > 3 ? (
-            <button type="button" className="ex-see-more" onClick={() => setShowEventList(true)}>
-              더보기 <span className="ex-see-more__num">{events.length}개</span> →
-            </button>
-          ) : null}
+          <div className="ex-keywords">
+            <span className="ex-keywords-label">인기</span>
+            {POPULAR_KEYWORDS.map((kw) => (
+              <button
+                key={kw.text}
+                type="button"
+                className="ex-kw-chip"
+                onClick={() => submitQuery(kw.text)}
+              >
+                {kw.trending ? <span className="ex-kw-trend">↑</span> : null}
+                {kw.text}
+              </button>
+            ))}
+          </div>
         </>
-      )}
+      ) : null}
+
+      {showCommunitySection ? (
+        <>
+          <div className="ex-sec-h">
+            <div>
+              <span className="ex-sec-tag">TOGETHER</span>
+              <h2 className="ex-sec-title">모두의 지도</h2>
+              <p className="ex-sec-sub">동네 사람들이 함께 만들어가는 지도</p>
+            </div>
+          </div>
+
+          <div className="ex-together-card">
+            <div className="ex-together-blob" aria-hidden="true" />
+            <div className="ex-minimap" aria-hidden="true">
+              <div className="ex-minimap__streets" />
+              <div className="ex-minimap__river" />
+              {MINIMAP_PINS.map((pin, idx) => (
+                <span
+                  key={idx}
+                  className={`ex-minimap__pin ex-minimap__pin--${pin.kind}`}
+                  style={{ top: pin.top, left: pin.left }}
+                />
+              ))}
+              <div className="ex-minimap__overlay">
+                <MapPin size={9} fill="currentColor" stroke="none" />
+                <strong>내 동네</strong>
+                <span> · 지난 주 새로 기록됨</span>
+              </div>
+            </div>
+
+            <div className="ex-together-actions">
+              <button type="button" className="ex-together-btn" onClick={onOpenCommunityEditor}>
+                <MapPin size={13} strokeWidth={2.4} />
+                모두의 지도 둘러보기
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {showEventsSection ? (
+        <>
+          <div className="ex-sec-h">
+            <div>
+              <span className="ex-sec-tag">NEARBY</span>
+              <h2 className="ex-sec-title">근처에서 기록해볼 만한 행사</h2>
+            </div>
+            {events.length > 0 ? (
+              <button type="button" className="ex-sec-more" onClick={() => setShowEventList(true)}>더보기 →</button>
+            ) : null}
+          </div>
+
+          <div className="ex-nearby-row">
+            <span className="ex-location-chip" aria-label="현재 위치">
+              <MapPin size={11} strokeWidth={2} />
+              내 위치 근처
+              <ChevronDown size={9} strokeWidth={2} />
+            </span>
+            {events.length > 0 ? (
+              <span className="ex-nearby-count">총 {events.length}개 · 거리순</span>
+            ) : null}
+          </div>
+
+          {eventsLoading ? (
+            <div className="ex-events-empty">행사를 불러오는 중...</div>
+          ) : eventsError ? (
+            <div className="ex-events-empty">
+              <p>{eventsError}</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="ex-events-empty">근처에서 열리는 행사가 없어요</div>
+          ) : (
+            <>
+              <div className="ex-event-list">
+                {events.slice(0, 3).map((event) => {
+                  const status = getEventStatus(event.startDate, event.endDate)
+                  const thumb = pickEventThumb(event.id || event.title)
+                  const period = formatEventPeriod(event.startDate, event.endDate)
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      className="ex-event-card"
+                      onClick={() => openEventDetail(event)}
+                    >
+                      <div className="ex-event-thumb" style={{ background: thumb.gradient }}>
+                        {event.image ? (
+                          <span className="ex-event-thumb__img" style={{ backgroundImage: `url(${event.image})` }} />
+                        ) : (
+                          <span className="ex-event-thumb__ico">{thumb.emoji}</span>
+                        )}
+                      </div>
+                      <div className="ex-event-info">
+                        {period ? <div className="ex-event-period">{period}</div> : null}
+                        <div className="ex-event-title">{event.title}</div>
+                        {event.addr ? (
+                          <div className="ex-event-meta">
+                            <span>{event.addr}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                      {status ? (
+                        <span className={`ex-event-status ex-event-status--${status.kind}`}>{status.label}</span>
+                      ) : null}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {events.length > 3 ? (
+                <button type="button" className="ex-see-more" onClick={() => setShowEventList(true)}>
+                  더보기 <span className="ex-see-more__num">{events.length}개</span> →
+                </button>
+              ) : null}
+            </>
+          )}
+        </>
+      ) : null}
 
       <div style={{ height: 18 }} />
 
-      {showEventList ? (
+      {showEventsSection && showEventList ? (
         <div className="event-list-screen">
           <div className="event-list-screen__header">
-            <button className="event-list-screen__back" type="button" onClick={() => setShowEventList(false)}><ArrowLeft size={20} /></button>
+            <button className="event-list-screen__back" type="button" onClick={() => setShowEventList(false)} aria-label="뒤로가기"><ArrowLeft size={20} /></button>
             <h2>근처에서 기록해볼 만한 행사</h2>
             <span className="event-list-screen__count">{events.length}건</span>
           </div>
@@ -740,10 +795,10 @@ export function ExploreScreen({
         </div>
       ) : null}
 
-      {selectedEvent ? (
+      {showEventsSection && selectedEvent ? (
         <div className="event-detail-overlay" onClick={() => setSelectedEvent(null)}>
           <div className="event-detail-sheet" onClick={(e) => e.stopPropagation()}>
-            <button className="event-detail-sheet__close" type="button" onClick={() => setSelectedEvent(null)}><X size={18} /></button>
+            <button className="event-detail-sheet__close" type="button" onClick={() => setSelectedEvent(null)} aria-label="닫기"><X size={18} /></button>
             {(eventDetail?.image || selectedEvent.image) ? (
               <div className="event-detail-sheet__hero" style={{ backgroundImage: `url(${eventDetail?.image || selectedEvent.image})` }} />
             ) : (
@@ -864,4 +919,3 @@ export function ExploreScreen({
     </section>
   )
 }
-

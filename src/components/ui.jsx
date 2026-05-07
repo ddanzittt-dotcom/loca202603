@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
-import { Home, Map, MapPin, PlusCircle, Compass, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import { Compass, Home, Map, MapPin, PlusCircle, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 
 export function BottomSheet({ open, title, subtitle, onClose, children }) {
@@ -15,7 +15,7 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
             <h2 className="sheet__title">{title}</h2>
             {subtitle ? <p className="sheet__subtitle">{subtitle}</p> : null}
           </div>
-          <button className="icon-button" type="button" onClick={onClose}>
+          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
           </button>
         </div>
@@ -26,30 +26,32 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
 }
 
 const NAV_ICONS = { home: Home, maps: Map, "add-record": PlusCircle, explore: Compass, profile: User }
-const NAV_LABELS = { home: "홈", maps: "내 지도", "add-record": "기록", explore: "탐색", profile: "프로필" }
+const NAV_LABELS = { home: "홈", maps: "지도", "add-record": "＋", explore: "탐색", profile: "프로필" }
 
 export function BottomNav({ activeTab, onChange, pulseAdd = false }) {
   const items = ["home", "maps", "add-record", "explore", "profile"]
 
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav" role="tablist" aria-label="주요 메뉴">
       {items.map((id) => {
         const Icon = NAV_ICONS[id]
         const label = NAV_LABELS[id] || id
         const isActive = activeTab === id
         const isAddAction = id === "add-record"
-        const ariaLabel = isAddAction ? "기록 남기기" : label
+        const ariaLabel = isAddAction ? "기록 추가" : label
         const addPulse = isAddAction && pulseAdd
         return (
           <button
             key={id}
             className={`bottom-nav__item${isActive ? " is-active" : ""}${isAddAction ? " bottom-nav__item--add" : ""}${addPulse ? " bottom-nav__item--pulse" : ""}`}
             type="button"
+            role="tab"
             onClick={() => onChange(id)}
             aria-label={ariaLabel}
+            aria-current={isActive && !isAddAction ? "page" : undefined}
           >
             <span className="bottom-nav__icon">
-              <Icon size={20} strokeWidth={isActive ? 2.4 : 1.5} fill={isActive ? "currentColor" : "none"} />
+              <Icon size={20} strokeWidth={isActive ? 2.4 : 1.75} fill={isActive ? "currentColor" : "none"} aria-hidden="true" />
             </span>
             <span className="bottom-nav__label">{label}</span>
           </button>

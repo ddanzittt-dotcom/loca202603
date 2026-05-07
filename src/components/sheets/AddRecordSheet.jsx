@@ -29,6 +29,14 @@ export function AddRecordSheet({
 }) {
   const [view, setView] = useState(initialView)
   const [currentMapId, setCurrentMapId] = useState(selectedMapId)
+  const recentMaps = useMemo(
+    () => (
+      [...maps]
+        .sort((a, b) => new Date(b.updatedAt || b.updated_at || 0) - new Date(a.updatedAt || a.updated_at || 0))
+        .slice(0, 3)
+    ),
+    [maps],
+  )
 
   const currentMap = useMemo(
     () => maps.find((map) => map.id === currentMapId) || null,
@@ -48,8 +56,8 @@ export function AddRecordSheet({
   return (
     <BottomSheet
       open={open}
-      title="어디에 기록할까요?"
-      subtitle="먼저 기록할 지도를 고른 뒤 장소를 남겨요."
+      title="QUICK RECORD"
+      subtitle="어디에 기록할까요?"
       onClose={onClose}
     >
       <div className="add-record-sheet">
@@ -58,17 +66,38 @@ export function AddRecordSheet({
             <button className="add-record-option add-record-option--primary" type="button" onClick={onCreateMap}>
               <span className="add-record-option__icon"><PlusCircle size={18} /></span>
               <span className="add-record-option__copy">
-                <strong>새 지도 만들기</strong>
-                <small>새로운 주제로 장소를 모아볼게요.</small>
+                <strong>새 지도에 기록하기</strong>
+                <small>새 지도를 만들고 바로 첫 장소를 남겨요.</small>
               </span>
             </button>
             <button className="add-record-option" type="button" onClick={() => setView("maps")}>
               <span className="add-record-option__icon"><Map size={18} /></span>
               <span className="add-record-option__copy">
-                <strong>기존 지도에서 선택</strong>
-                <small>이미 만든 지도에 장소를 더해보세요.</small>
+                <strong>기존 지도에 기록하기</strong>
+                <small>이미 만든 지도에 장소를 이어서 기록해요.</small>
               </span>
             </button>
+            {recentMaps.length > 0 ? (
+              <div className="add-record-recent">
+                <div className="add-record-recent__head">
+                  <strong>최근 작업</strong>
+                  <span>최근 편집한 지도</span>
+                </div>
+                <div className="add-record-recent__scroll">
+                  {recentMaps.map((map) => (
+                    <button
+                      key={map.id}
+                      className="add-record-recent__chip"
+                      type="button"
+                      onClick={() => chooseMap(map.id)}
+                    >
+                      <span className="add-record-recent__dot" style={{ background: map.theme || "#4A6B52" }} aria-hidden="true" />
+                      <span>{map.title || "내 지도"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 

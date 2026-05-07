@@ -8,6 +8,7 @@ import "./map-labels.css"
 import "./feature-popup-card.css"
 import "./feature-edit-sheet.css"
 import "./legacy/styles.css"
+import "./styles/tokens.css"
 import App from "./App"
 import { registerServiceWorker } from "./registerServiceWorker"
 

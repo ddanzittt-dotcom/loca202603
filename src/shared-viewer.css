@@ -75,7 +75,7 @@
 .lw-hero__logo {
   font-size: 10px;
   color: rgba(250,245,238,.35);
-  font-family: 'Quicksand', sans-serif;
+  font-family: var(--font-sans, "Pretendard Variable");
   font-weight: 500;
   line-height: 1;
 }
@@ -501,7 +501,7 @@
 .lw-ci-powered-logo {
   font-size: 8px;
   color: rgba(255,255,255,.4);
-  font-family: 'Quicksand', sans-serif;
+  font-family: var(--font-sans, "Pretendard Variable");
   font-weight: 500;
   margin-left: 2px;
 }

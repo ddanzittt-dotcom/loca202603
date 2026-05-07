@@ -1209,11 +1209,14 @@ export default function App() {
     )
   }
 
+  const isMapEditorLayout = activeTab === "maps" && mapsView === "editor"
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell${isMapEditorLayout ? " app-shell--map-editor" : ""}`}>
       {!isOnline ? (
         <div className="offline-banner">오프라인 모드 - 데이터가 자동 저장됩니다</div>
       ) : null}
+      {!isMapEditorLayout && activeTab !== "home" ? (
       <header className={`top-bar${(activeTab === "maps" && mapsView === "list") || activeTab === "explore" ? " top-bar--blank" : ""}`}>
         <div>
           {!((activeTab === "maps" && mapsView === "list") || activeTab === "explore") ? (
@@ -1256,6 +1259,7 @@ export default function App() {
           ) : null}
         </div>
       </header>
+      ) : null}
 
       {/* 인앱 배너 */}
       <NotificationBanner
@@ -1302,6 +1306,8 @@ export default function App() {
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
             onNavigateToExplore={() => setActiveTab("explore")}
+            onOpenNotifications={() => setNotiPanelOpen(true)}
+            hasUnread={notiHasUnread}
           />
         ) : null}
 
@@ -1323,11 +1329,13 @@ export default function App() {
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
           <MyArchiveScreen
+            key={`archive-${activeTab}`}
             maps={maps}
             features={features}
             shares={shares}
             loading={cloudLoading}
             characterImage={levelEmoji}
+            initialArchiveView="maps"
             onImport={() => setImportSheetOpen(true)}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
             onEdit={(mapId) => {
@@ -1362,6 +1370,15 @@ export default function App() {
             onRemoveFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
             onOpenFeature={openFeatureFromPlaces}
             onCreateRecord={openRecordFlow}
+            recommendedMaps={recommendedMaps}
+            onOpenDemoMap={openDemoMap}
+            onOpenCommunityEditor={openCommunityMapEditor}
+            users={users}
+            followed={followed}
+            onSelectUser={(profile) => {
+              setSelectedUserProfile(profile)
+              setSelectedUserId(profile.id)
+            }}
             onOpenNotifications={() => setNotiPanelOpen(true)}
             hasUnread={notiHasUnread}
           />
@@ -1518,8 +1535,8 @@ export default function App() {
       </Suspense>
       </main>
 
-      {/* 행사 지도 참여 중이거나 폼 입력 중에는 BottomNav 숨김 */}
-      {(activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer) || keyboardVisible ? null : (
+      {/* 공유 지도 viewer / feature 편집 시트 / 키보드 표시 중에는 BottomNav 숨김 */}
+      {(activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer) || keyboardVisible || Boolean(featureSheet) ? null : (
       <BottomNav
         activeTab={activeTab}
         onChange={handleBottomNavChange}

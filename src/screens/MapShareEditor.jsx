@@ -41,7 +41,7 @@ function drawMapImage(ctx, mapImage, x, y, w, h, radius) {
 
 function drawTitle(ctx, title, x, y, color, size, maxW) {
   ctx.fillStyle = color
-  ctx.font = `bold ${size}px Pretendard, Noto Sans KR, sans-serif`
+  ctx.font = `bold ${size}px Pretendard Variable`
   ctx.textAlign = "center"
   ctx.fillText(title || "LOCA", x, y, maxW)
 }
@@ -52,7 +52,7 @@ function drawStickers(ctx, stickers) {
   ctx.globalCompositeOperation = "source-over"
   ctx.fillStyle = "#000"
   stickers.forEach((s) => {
-    ctx.font = `${s.size}px serif`
+    ctx.font = `${s.size}px Pretendard Variable`
     ctx.textAlign = "center"
     ctx.textBaseline = "middle"
     ctx.fillText(s.emoji, s.x, s.y)
@@ -77,7 +77,7 @@ function drawTagsOrTitle(ctx, title, features, colors, titleColor) {
     for (let i = 0; i < tags.length; i += maxPerRow) rows.push(tags.slice(i, i + maxPerRow))
     let tagIdx = 0
     rows.forEach((row, ri) => {
-      ctx.font = "bold 24px Pretendard, Noto Sans KR, sans-serif"
+      ctx.font = "bold 24px Pretendard Variable"
       const widths = row.map((f) => ctx.measureText(`${f.emoji} ${f.title}`).width + 36)
       const totalW = widths.reduce((a, b) => a + b, 0) + (row.length - 1) * tagGap
       let startX = (CANVAS_W - totalW) / 2
@@ -87,7 +87,7 @@ function drawTagsOrTitle(ctx, title, features, colors, titleColor) {
         ctx.fillStyle = colors[tagIdx % colors.length]
         ctx.beginPath(); ctx.roundRect(startX, ty, tw, tagH, tagH / 2); ctx.fill()
         ctx.fillStyle = "#fff"
-        ctx.font = "bold 24px Pretendard, Noto Sans KR, sans-serif"
+        ctx.font = "bold 24px Pretendard Variable"
         ctx.textAlign = "center"; ctx.textBaseline = "middle"
         ctx.fillText(`${f.emoji} ${f.title}`, startX + tw / 2, ty + tagH / 2, tw - 14)
         startX += tw + tagGap
@@ -120,7 +120,7 @@ const framePainters = {
     ctx.fillStyle = theme || "#4F46E5"
     ctx.fillRect(80, FOOTER_Y - 10, 60, 5)
     ctx.fillStyle = "#fff"
-    ctx.font = "bold 56px Pretendard, Noto Sans KR, sans-serif"
+    ctx.font = "bold 56px Pretendard Variable"
     ctx.textAlign = "left"
     ctx.fillText(title || "LOCA", 80, FOOTER_Y + 50, CANVAS_W - 160)
     ctx.textAlign = "start"
@@ -137,7 +137,7 @@ const framePainters = {
     ctx.beginPath(); ctx.roundRect(MAP_X - 8, MAP_Y - 8, MAP_W + 16, MAP_H + 16, 28); ctx.fill()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 22)
     drawTagsOrTitle(ctx, title, features, ["#FF6B6B", "#4ECDC4", "#FFE66D", "#A8E6CF", "#FF8A5C", "#6C5CE7"], "#2d2d2d")
-    ctx.font = "40px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "40px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🌿", 30, 30); ctx.fillText("🌸", 40, CANVAS_H - 30); ctx.fillText("⭐", CANVAS_W - 40, CANVAS_H - 30)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -160,7 +160,7 @@ const framePainters = {
     ctx.restore()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 24)
     drawTagsOrTitle(ctx, title, features, ["#E491B2", "#9B7ED8", "#6CB4EE", "#F0A6CA", "#B8A9C9", "#88C9D4"], "#5B4A6F")
-    ctx.font = "36px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🦋", 35, 35); ctx.fillText("🌷", CANVAS_W - 35, 40); ctx.fillText("💜", 35, CANVAS_H - 35)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -186,7 +186,7 @@ const framePainters = {
     ctx.restore()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 18)
     drawTagsOrTitle(ctx, title, features, ["#e94560", "#ffb347", "#ff6b6b", "#ffd166", "#ef476f", "#fca311"], "#fff")
-    ctx.font = "36px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🌅", 35, 35); ctx.fillText("✨", CANVAS_W - 35, CANVAS_H - 35)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -211,7 +211,7 @@ const framePainters = {
     ctx.beginPath(); ctx.roundRect(MAP_X - 8, MAP_Y - 8, MAP_W + 16, MAP_H + 16, 26); ctx.fill()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
     drawTagsOrTitle(ctx, title, features, ["#00BCD4", "#0097A7", "#26C6DA", "#4DD0E1", "#00ACC1", "#0088A3"], "#fff")
-    ctx.font = "36px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🐚", 35, 30); ctx.fillText("🌊", CANVAS_W - 35, 35); ctx.fillText("🐠", 35, CANVAS_H - 30)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -241,7 +241,7 @@ const framePainters = {
     ctx.restore()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
     drawTagsOrTitle(ctx, title, features, ["#4CAF50", "#2E7D32", "#81C784", "#66BB6A", "#388E3C", "#43A047"], "#fff")
-    ctx.font = "36px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🌲", 35, 30); ctx.fillText("🍃", CANVAS_W - 35, 35); ctx.fillText("🌿", 35, CANVAS_H - 30); ctx.fillText("🦌", CANVAS_W - 40, CANVAS_H - 30)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -268,7 +268,7 @@ const framePainters = {
     ctx.beginPath(); ctx.roundRect(MAP_X - 6, MAP_Y - 6, MAP_W + 12, MAP_H + 12, 24); ctx.fill()
     drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
     drawTagsOrTitle(ctx, title, features, ["#FF6987", "#FFC107", "#81D4FA", "#CE93D8", "#FFB74D", "#AED581"], "#E65100")
-    ctx.font = "36px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
     ctx.fillText("🍭", 35, 30); ctx.fillText("🍬", CANVAS_W - 35, 35); ctx.fillText("🎀", 35, CANVAS_H - 30); ctx.fillText("🧁", CANVAS_W - 40, CANVAS_H - 30)
     ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
   },
@@ -338,7 +338,7 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
         ctx.beginPath()
         ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         ctx.fill()
-        ctx.font = `${logoSize}px serif`
+        ctx.font = `${logoSize}px Pretendard Variable`
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
         ctx.fillText("📍", cx, cy)
@@ -437,7 +437,7 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
   return (
     <div className="share-editor">
       <header className="share-editor__header">
-        <button className="share-editor__close" type="button" onClick={onClose}><X size={18} /></button>
+        <button className="share-editor__close" type="button" onClick={onClose} aria-label="??"><X size={18} /></button>
         <strong className="share-editor__heading">이미지 공유</strong>
         <button className="share-editor__export" type="button" onClick={handleExport}>공유</button>
       </header>

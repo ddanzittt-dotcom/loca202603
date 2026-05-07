@@ -513,6 +513,7 @@ export function FeaturePopupCard({
   const playingVoiceId = onVoiceClick ? currentPlayingVoiceId : localPlayingVoiceId
   // 내부 갤러리 상태 ({ photos, index } | null). 외부 onPhotoClick 이 있으면 그쪽 위임.
   const [galleryState, setGalleryState] = useState(null)
+  const memoListRef = useRef(null)
 
   const openInternalGallery = (photos, index) => {
     if (!Array.isArray(photos) || photos.length === 0) return
@@ -627,15 +628,19 @@ export function FeaturePopupCard({
     return { shown, extra }
   }, [photos, mapMode])
 
-  // ---------- 최신 메모 1건 (내 지도 프리뷰) ----------
-  const latestMemo = useMemo(() => {
-    if (memos.length === 0) return null
-    return memos.slice().sort((a, b) => {
+  const sortedMemos = useMemo(() => (
+    memos.slice().sort((a, b) => {
       const ta = new Date(a.date || a.createdAt || 0).getTime() || 0
       const tb = new Date(b.date || b.createdAt || 0).getTime() || 0
       return tb - ta
-    })[0]
-  }, [memos])
+    })
+  ), [memos])
+
+  // ---------- 최신 메모 1건 (내 지도 프리뷰) ----------
+  const latestMemo = useMemo(() => {
+    if (sortedMemos.length === 0) return null
+    return sortedMemos[0]
+  }, [sortedMemos])
 
   const handleVoiceToggle = (voice, index) => {
     if (onVoiceClick) { onVoiceClick(voice, index); return }
@@ -656,6 +661,32 @@ export function FeaturePopupCard({
     const fallbackId = voice?.id || voice?.localId || `idx-${index}`
     return playingVoiceId === fallbackId
   }
+
+  useEffect(() => {
+    const listEl = memoListRef.current
+    if (!listEl) return undefined
+    if (sortedMemos.length <= 1) {
+      listEl.style.removeProperty("--fpc-memo-visible-height")
+      return undefined
+    }
+
+    const firstItem = listEl.querySelector(".fpc-memo-item")
+    if (!firstItem) return undefined
+
+    const applyVisibleHeight = () => {
+      const listStyle = window.getComputedStyle(listEl)
+      const gap = Number.parseFloat(listStyle.rowGap || listStyle.gap || "0") || 0
+      const height = Math.ceil(firstItem.getBoundingClientRect().height + gap)
+      listEl.style.setProperty("--fpc-memo-visible-height", `${height}px`)
+    }
+
+    applyVisibleHeight()
+    if (typeof ResizeObserver === "undefined") return undefined
+
+    const observer = new ResizeObserver(() => applyVisibleHeight())
+    observer.observe(firstItem)
+    return () => observer.disconnect()
+  }, [sortedMemos])
 
   if (!feature) return null
 
@@ -725,12 +756,8 @@ export function FeaturePopupCard({
                 />
               ) : null}
               {memos.length > 0 ? (
-                <div className="fpc-memo-list">
-                  {memos.slice().sort((a, b) => {
-                    const ta = new Date(a.date || a.createdAt || 0).getTime() || 0
-                    const tb = new Date(b.date || b.createdAt || 0).getTime() || 0
-                    return tb - ta
-                  }).map((memo) => (
+                <div ref={memoListRef} className={`fpc-memo-list${sortedMemos.length > 1 ? " is-scrollable" : ""}`}>
+                  {sortedMemos.map((memo) => (
                     <MemoItem
                       key={memo.id || `${memo.userId}-${memo.date}`}
                       memo={memo}

@@ -1,43 +1,6 @@
-/* MaruBuri (Naver hangeul CDN) — unified family with weight-keyed @font-face
-   so that `font-family: 'MaruBuri'; font-weight: 400|500|700` maps to the
-   right weight file instead of synthesizing faux-bold (which mangles 한글). */
-@font-face {
-  font-family: 'MaruBuri';
-  src: local('MaruBuri'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff') format('woff');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'MaruBuri';
-  src: local('MaruBuriSemiBold'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-SemiBold.woff') format('woff');
-  font-weight: 500 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'MaruBuri';
-  src: local('MaruBuriBold'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff2') format('woff2'),
-       url('https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Bold.woff') format('woff');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
   color-scheme: light;
-  font-family:
-    "Pretendard Variable",
-    Pretendard,
-    -apple-system,
-    BlinkMacSystemFont,
-    system-ui,
-    sans-serif;
+  font-family: var(--font-sans, "Pretendard Variable");
   background: #FAF5EE;
   color: #1A1A1A;
   --bg: #FAF5EE;
@@ -96,7 +59,7 @@
   --space-item: 12px;
   --space-tight: 6px;
 }
-/* ── Dark Mode ── */
+/* ���� Dark Mode ���� */
 [data-theme="dark"] {
   color-scheme: dark;
   --bg: #0f0f0f;
@@ -143,6 +106,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -205,7 +169,7 @@ textarea {
 }
 .brand {
   display: block;
-  font-family: 'MaruBuri', 'Nanum Myeongjo', serif;
+  font-family: var(--font-sans, "Pretendard Variable");
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--color-secondary, #2D4A3E);
@@ -896,44 +860,49 @@ textarea {
 .bottom-nav {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.96);
+  align-items: center;
+  min-height: 64px;
+  padding: 6px 12px calc(4px + env(safe-area-inset-bottom));
+  background: var(--surface, #fff);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--paper-200, #EFE9DD);
 }
 .bottom-nav__item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   min-height: 44px;
   border-radius: var(--radius-sm);
-  color: #aaaaaa;
+  color: var(--ink-300, #C2BCB1);
   cursor: pointer;
   transition: color 0.15s ease;
   position: relative;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .bottom-nav__item--add {
-  color: #FF6B35;
+  color: var(--ember-500, #E26F3C);
 }
 .bottom-nav__item--add .bottom-nav__icon {
   position: relative;
-  width: 46px;
-  height: 46px;
-  margin-top: -18px;
+  width: 56px;
+  height: 56px;
+  margin-top: -16px;
   border-radius: 999px;
-  background: var(--color-primary, #FF6B35);
+  background: var(--ember-500, #E26F3C);
   color: #fff;
-  box-shadow: 0 4px 14px rgba(255, 107, 53, 0.32);
+  box-shadow: var(--sh-ember, 0 8px 20px rgba(226, 111, 60, 0.3));
 }
 .bottom-nav__item--pulse .bottom-nav__icon::after {
   content: "";
   position: absolute;
   inset: -5px;
   border-radius: 50%;
-  border: 1.5px solid var(--color-primary, #FF6B35);
+  border: 1.5px solid var(--ember-500, #E26F3C);
   opacity: 0.4;
   pointer-events: none;
   animation: bottom-nav-pulse 1.8s ease-out infinite;
@@ -946,26 +915,44 @@ textarea {
   display: none;
 }
 .bottom-nav__item.is-active {
-  color: #2D4A3E;
+  color: var(--moss-600, #4A6B52);
 }
 .bottom-nav__item.is-active::after {
   content: "";
+  position: absolute;
+  bottom: 0;
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #FF6B35;
-  margin-top: 3px;
+  background: var(--ember-500, #E26F3C);
 }
 .bottom-nav__icon {
-  font-size: 1.25rem;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 20px;
+  height: 22px;
 }
-/* 핸드북 §13.9: BottomNav 는 아이콘만 표시한다. 라벨 텍스트는 스크린리더에만 보이도록 sr-only 처리. */
+.bottom-nav__icon svg {
+  width: 22px;
+  height: 22px;
+}
+.bottom-nav__item.is-active .bottom-nav__icon svg {
+  color: var(--moss-600, #4A6B52);
+  fill: var(--moss-600, #4A6B52);
+  stroke: var(--moss-600, #4A6B52);
+}
 .bottom-nav__label {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.bottom-nav__item.is-active .bottom-nav__label {
+  color: var(--ink-900, #1F1B16);
+  font-weight: 800;
+}
+.bottom-nav__item--add .bottom-nav__label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1636,10 +1623,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-container {
   font-family:
-    Helvetica Neue,
-    Arial,
-    Helvetica,
-    sans-serif;
+    var(--font-sans, "Pretendard Variable");
   font-size: 12px;
   font-size: 0.75rem;
   line-height: 1.5;
@@ -1698,10 +1682,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 }
 .leaflet-control-zoom-in,
 .leaflet-control-zoom-out {
-  font:
-    700 18px Lucida Console,
-    Monaco,
-    monospace;
+  font: 700 18px var(--font-sans, "Pretendard Variable");
   text-indent: 1px;
 }
 .leaflet-touch .leaflet-control-zoom-in,
@@ -1877,9 +1858,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   width: 24px;
   height: 24px;
   font:
-    16px/24px Tahoma,
-    Verdana,
-    sans-serif;
+    16px/24px var(--font-sans, "Pretendard Variable");
   color: #757575;
   text-decoration: none;
   background: transparent;
@@ -1998,7 +1977,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   transform: none;
 }
 
-/* ─── PostDetailSheet (pds) ─── */
+/* ������ PostDetailSheet (pds) ������ */
 .pds__author {
   display: flex;
   align-items: center;
@@ -2187,7 +2166,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   border: 0.5px solid rgba(45,74,62,.2);
 }
 
-/* ─── PublishSheet (pub) ─── */
+/* ������ PublishSheet (pub) ������ */
 .pub-card {
   display: flex;
   align-items: center;

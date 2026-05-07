@@ -105,7 +105,6 @@ export function MapEditorScreen({
   onUndoDraft,
   onCompleteRoute,
   onCompleteArea,
-  onCancelDraft,
   onToggleLabels,
   onOpenFeatureDetail,
   onCloseFeatureSummary,
@@ -169,7 +168,7 @@ export function MapEditorScreen({
   )
   const canOpenDetailOnHeader = !communityMode && typeof onOpenFeatureDetail === "function"
   const canMapPinFromSearch = !readOnly && typeof onCreatePinAtLocation === "function"
-  const showExternalPlaceSearch = !readOnly && editorMode === "pin"
+  const showExternalPlaceSearch = !readOnly
 
   const handleSummaryRequestEdit = useCallback(async () => {
     if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
@@ -587,12 +586,6 @@ export function MapEditorScreen({
             </button>
           </div>
         ) : null}
-        {!readOnly && isDrawing ? (
-          <button className="fab fab--cancel" type="button" onClick={onCancelDraft} aria-label="그리기 취소">
-            <X size={18} />
-          </button>
-        ) : null}
-
         {selectedFeatureSummary ? (
           <div className="map-feature-summary-wrap">
             <FeaturePopupCard

@@ -1,0 +1,112 @@
+:root {
+  /* Paper / Ink */
+  --paper: #FCFAF6;
+  --paper-100: #F6F2EA;
+  --paper-200: #EFE9DD;
+  --surface: #FFFFFF;
+  --ink-900: #1F1B16;
+  --ink-700: #58524A;
+  --ink-500: #908A80;
+  --ink-300: #C2BCB1;
+
+  /* Brand: Ember (Primary) */
+  --ember-600: #BF5A2B;
+  --ember-500: #E26F3C;
+  --ember-300: #F2A57B;
+  --ember-100: #FAE3D2;
+  --ember-50: #FDF3EA;
+
+  /* Moss (Secondary, Path/Area 기본) */
+  --moss-600: #4A6B52;
+  --moss-100: #E3EAE0;
+
+  /* Dusk (공공데이터 폐점/이전 전용) */
+  --dusk-400: #8896A4;
+  --dusk-200: #C8D0D8;
+
+  /* Accent / Map */
+  --gold-500: #E5A93A;
+  --map-bg: #ECE7DA;
+
+  /* Type */
+  --font-sans: "Pretendard Variable";
+  --font-mono: "Pretendard Variable";
+
+  /* Shadow */
+  --sh-xs: 0 1px 2px rgba(31, 27, 22, 0.04);
+  --sh-sm: 0 4px 12px rgba(31, 27, 22, 0.06);
+  --sh-md: 0 12px 28px rgba(31, 27, 22, 0.08);
+  --sh-lift: 0 20px 40px rgba(31, 27, 22, 0.1);
+  --sh-ember: 0 8px 20px rgba(226, 111, 60, 0.3);
+  --sh-card: 0 8px 24px rgba(31, 27, 22, 0.1);
+
+  --ease: cubic-bezier(.32, .72, 0, 1);
+
+  /* Legacy bridge */
+  color-scheme: light;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  background: var(--paper);
+  color: var(--ink-900);
+  --bg: var(--paper);
+  --surface-soft: var(--paper-100);
+  --surface-muted: var(--paper-200);
+  --text: var(--ink-900);
+  --text-secondary: var(--ink-700);
+  --muted: var(--ink-500);
+  --line: #D3CCC1;
+  --primary: var(--ember-500);
+  --primary-strong: var(--ember-600);
+  --primary-light: var(--ember-50);
+  --secondary: var(--moss-600);
+  --secondary-light: var(--moss-100);
+  --accent: var(--ember-500);
+  --accent-light: var(--ember-100);
+  --success: var(--moss-600);
+  --shadow-sm: var(--sh-xs);
+  --shadow: var(--sh-sm);
+  --shadow-lg: var(--sh-md);
+
+  --color-primary: var(--ember-500);
+  --color-secondary: var(--moss-600);
+  --color-background: var(--paper);
+  --color-card: var(--surface);
+  --color-text-primary: var(--ink-900);
+  --color-text-secondary: var(--ink-500);
+  --color-text-tertiary: var(--ink-300);
+  --color-text-description: var(--ink-700);
+  --accent-warm-bg: var(--ember-50);
+  --accent-warm-fg: var(--ember-600);
+  --accent-amber-bg: #F8EDDC;
+  --accent-amber-fg: #633806;
+  --accent-mint-bg: var(--moss-100);
+  --accent-mint-fg: #355244;
+  --accent-sky-bg: #E9EEF2;
+  --accent-sky-fg: #61707F;
+  --xp-gold: var(--gold-500);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface-soft: #1e1e2e;
+  --surface-muted: #252525;
+  --text: #f0f0f0;
+  --text-secondary: #d1d5db;
+  --muted: #9ca3af;
+  --line: #2a2a2a;
+  --primary: #FF8B5E;
+  --primary-strong: #FF6B35;
+  --primary-light: #2a1a10;
+  --secondary: #4A7A6A;
+  --secondary-light: #1a2e26;
+  --accent: #FF8B5E;
+  --accent-light: #2a1a10;
+  --danger: #f87171;
+  --success: #34d399;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+

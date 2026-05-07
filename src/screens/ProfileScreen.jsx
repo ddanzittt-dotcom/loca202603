@@ -509,7 +509,7 @@ export function ProfileScreen({
       <section className="pf-edit">
         {/* 헤더 */}
         <div className="pf-edit__header">
-          <button className="pf-edit__back" type="button" onClick={() => setEditOpen(false)}>
+          <button className="pf-edit__back" type="button" onClick={() => setEditOpen(false)} aria-label="뒤로가기">
             <ArrowLeft size={20} />
           </button>
           <h1 className="pf-edit__title">프로필 편집</h1>
