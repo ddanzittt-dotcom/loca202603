@@ -17,15 +17,6 @@ import { useLocalStorageState } from "../hooks/useAppState"
 // 정적 큐레이션 (검색 진입 보조 + B 화면 인기 검색 랭킹)
 // 백엔드 trending API 도입 전 정적 fallback. 추후 교체.
 
-const POPULAR_KEYWORDS = [
-  { text: "벚꽃", trending: true },
-  { text: "성수동" },
-  { text: "한옥" },
-  { text: "감성카페" },
-  { text: "제주 동쪽" },
-  { text: "독립서점" },
-]
-
 const TRENDING_RANKING = [
   { text: "벚꽃 명소", change: { kind: "up", value: 3 } },
   { text: "성수동", change: { kind: "same" } },
@@ -155,6 +146,7 @@ export function ExploreScreen({
   onOpenNotifications,
   embedded = false,
   section = "all",
+  searchRequestId = 0,
 }) {
   const [searchMode, setSearchMode] = useState("idle")
   const [query, setQuery] = useState("")
@@ -166,6 +158,18 @@ export function ExploreScreen({
 
   const trimmed = query.trim()
   const normalizedQuery = trimmed.toLowerCase()
+  const showAllSections = section === "all"
+  const showCommunitySection = section === "all" || section === "community"
+  const showEventsSection = section === "all" || section === "events"
+  const handledSearchRequestRef = useRef(0)
+
+  useEffect(() => {
+    if (!showAllSections || searchRequestId <= handledSearchRequestRef.current) return
+    handledSearchRequestRef.current = searchRequestId
+    setSearchMode("active")
+    setQuery("")
+    setEditorResults([])
+  }, [searchRequestId, showAllSections])
 
   const pushRecentQuery = (raw) => {
     const next = String(raw || "").trim()
@@ -325,15 +329,7 @@ export function ExploreScreen({
     detailAbortRef.current?.abort?.()
   }, [])
 
-  const showAllSections = section === "all"
-  const showCommunitySection = section === "all" || section === "community"
-  const showEventsSection = section === "all" || section === "events"
   const sectionClassName = embedded ? "explore-screen explore-screen--embedded" : "screen screen--scroll explore-screen"
-  const eventBannerLabel = eventsLoading
-    ? "행사 불러오는 중"
-    : events.length > 0
-      ? `${events.length}개 행사`
-      : "근처 행사 없음"
 
   // ─────────────────────────────────────
   // 검색 활성 모드 (B/C 화면)
@@ -552,80 +548,6 @@ export function ExploreScreen({
                 </button>
               ) : null}
             </div>
-          </div>
-
-          <div className="explore-banner-grid" aria-label="탐색 추천">
-            <button
-              type="button"
-              className="explore-banner-card explore-banner-card--community"
-              onClick={onOpenCommunityEditor}
-              aria-label="모두의 지도 열기"
-            >
-              <span className="explore-banner-card__eyebrow">TOGETHER</span>
-              <strong>모두의 지도</strong>
-              <span>공공데이터와 사람들이 함께 만든 동네 변화 지도</span>
-              <span className="explore-banner-card__action">
-                둘러보기 <MapGlyph size={13} strokeWidth={2} />
-              </span>
-            </button>
-            <button
-              type="button"
-              className="explore-banner-card explore-banner-card--events"
-              onClick={() => {
-                if (events.length > 0) setShowEventList(true)
-              }}
-              aria-label="내 주변 행사 보기"
-            >
-              <span className="explore-banner-card__eyebrow">NEARBY</span>
-              <strong>내 주변 행사</strong>
-              <span>근처에서 기록해볼 만한 일정과 장소를 한 번에 보기</span>
-              <span className="explore-banner-card__action">
-                {eventBannerLabel} <MapPin size={13} strokeWidth={2} />
-              </span>
-            </button>
-          </div>
-
-          <div className="ex-hero-greet">
-            <div className="ex-hero-tag">EXPLORE</div>
-            <div className="ex-hero-q">어떤 지도를 둘러볼까요?</div>
-            <div className="ex-hero-sub">태그·동네·에디터로 검색해보세요</div>
-          </div>
-
-          <div
-            className="ex-search-bar"
-            role="button"
-            tabIndex={0}
-            onClick={() => setSearchMode("active")}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                setSearchMode("active")
-              }
-            }}
-          >
-            <SearchIcon size={16} className="ex-search-bar__ico" />
-            <input
-              readOnly
-              tabIndex={-1}
-              placeholder="지도, 에디터 검색"
-              onFocus={(e) => { e.currentTarget.blur(); setSearchMode("active") }}
-            />
-            <span className="ex-search-bar__kbd">⌘ K</span>
-          </div>
-
-          <div className="ex-keywords">
-            <span className="ex-keywords-label">인기</span>
-            {POPULAR_KEYWORDS.map((kw) => (
-              <button
-                key={kw.text}
-                type="button"
-                className="ex-kw-chip"
-                onClick={() => submitQuery(kw.text)}
-              >
-                {kw.trending ? <span className="ex-kw-trend">↑</span> : null}
-                {kw.text}
-              </button>
-            ))}
           </div>
         </>
       ) : null}

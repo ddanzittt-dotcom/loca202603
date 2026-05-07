@@ -115,6 +115,7 @@ export default function App() {
   const [sharedMapData, setSharedMapData] = useState(initialSharedMapData)
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
   const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "home")
+  const [exploreSearchRequestId, setExploreSearchRequestId] = useState(0)
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -246,6 +247,15 @@ export default function App() {
     (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
   const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
   const showPersonalLoading = hasSupabaseEnv && (!authReady || cloudLoading) && requiresAuthForCurrentTab
+
+  const openExploreTab = useCallback(() => {
+    setActiveTab("explore")
+  }, [])
+
+  const openExploreSearch = useCallback(() => {
+    setActiveTab("explore")
+    setExploreSearchRequestId((current) => current + 1)
+  }, [])
 
   const openCreateMapSheet = useCallback(() => {
     setActiveTab("maps")
@@ -1305,7 +1315,8 @@ export default function App() {
             onResumeMyMap={openMapEditor}
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
-            onNavigateToExplore={() => setActiveTab("explore")}
+            onNavigateToExplore={openExploreTab}
+            onOpenExploreSearch={openExploreSearch}
             onOpenNotifications={() => setNotiPanelOpen(true)}
             hasUnread={notiHasUnread}
           />
@@ -1324,6 +1335,7 @@ export default function App() {
             }}
             onOpenNotifications={() => setNotiPanelOpen(true)}
             hasUnread={notiHasUnread}
+            searchRequestId={exploreSearchRequestId}
           />
         ) : null}
 

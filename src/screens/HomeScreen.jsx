@@ -102,6 +102,7 @@ export function HomeScreen({
   onResumeMyMap,
   onOpenMap,
   onNavigateToExplore,
+  onOpenExploreSearch,
   onOpenNotifications,
   hasUnread = false,
   maps = [],
@@ -236,7 +237,7 @@ export function HomeScreen({
           </HomeSection>
         ) : null}
 
-        <HomeSection title="함께 보는 지도" actionLabel="탐색 →" onAction={onNavigateToExplore}>
+        <HomeSection title="함께 보는 지도" actionLabel="탐색 →" onAction={onOpenExploreSearch || onNavigateToExplore}>
           <div className="home-v2-shared-strip" aria-label="함께 보는 지도">
             {sharedMaps.map((item, index) => (
               <button
