@@ -17,7 +17,7 @@ const ENV_PUBLIC_WEB_ORIGIN =
     ? `${import.meta.env.VITE_PUBLIC_WEB_ORIGIN}`.trim()
     : ""
 
-export const DEFAULT_PUBLIC_WEB_ORIGIN = ENV_PUBLIC_WEB_ORIGIN || "https://loca202603.vercel.app"
+export const DEFAULT_PUBLIC_WEB_ORIGIN = ENV_PUBLIC_WEB_ORIGIN || "https://loca.im"
 
 export function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`

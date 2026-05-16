@@ -192,7 +192,7 @@ export function ShareSheet({
       const sdkReady = await ensureKakaoSdk()
       if (sdkReady && window.Kakao?.Share) {
         const kakaoUrl = cleanUrl + (cleanUrl.includes("?") ? "&" : "?") + "utm_source=kakao"
-        const ogImageUrl = `https://loca202603.vercel.app/api/og-image/${encodeURIComponent(map?.slug || "loca")}`
+        const ogImageUrl = `https://loca.im/api/og-image/${encodeURIComponent(map?.slug || "loca")}`
         window.Kakao.Share.sendDefault({
           objectType: "feed",
           content: {

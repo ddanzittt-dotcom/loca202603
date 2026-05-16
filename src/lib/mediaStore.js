@@ -1,4 +1,5 @@
 import { supabase, hasSupabaseEnv } from "./supabase"
+import { assertStoredMediaAllowed } from "./mediaPolicy"
 
 const STORAGE_BUCKET = "media"
 const DB_NAME = "loca-media"
@@ -78,6 +79,7 @@ export async function getAllMediaKeys() {
 export async function uploadMediaToCloud(id, blob, folder = "photos") {
   if (!hasSupabaseEnv || !supabase) return null
   try {
+    assertStoredMediaAllowed(blob, folder === "voices" ? "voice" : "photo")
     const mimeType = blob.type || (folder === "voices" ? "audio/webm" : "image/jpeg")
     const ext = mimeType.includes("webm") ? "webm"
       : mimeType.includes("mp4") ? "mp4"

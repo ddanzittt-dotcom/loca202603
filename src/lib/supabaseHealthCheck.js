@@ -191,11 +191,11 @@ function printOAuthGuide() {
   카카오/Google OAuth를 프로덕션에서 사용하려면:
 
   1. Supabase Dashboard → Authentication → URL Configuration
-     - Site URL: 프로덕션 도메인 (예: https://loca202603.vercel.app)
+     - Site URL: 프로덕션 도메인 (예: https://loca.im)
      - Redirect URLs에 추가:
-       • https://loca202603.vercel.app
-       • https://loca202603.vercel.app/**
-       • https://your-custom-domain.com (커스텀 도메인 사용 시)
+       • https://loca.im
+       • https://loca.im/**
+       • https://*.vercel.app (프리뷰 배포를 사용할 때)
 
   2. 카카오 개발자 콘솔 (https://developers.kakao.com)
      - 내 애플리케이션 → 앱 선택 → 카카오 로그인 → Redirect URI:

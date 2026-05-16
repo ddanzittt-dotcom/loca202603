@@ -41,7 +41,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="loca202603.vercel.app" android:pathPrefix="/s/" />
+                <data android:scheme="https" android:host="loca.im" android:pathPrefix="/s/" />
             </intent-filter>
 
         </activity>

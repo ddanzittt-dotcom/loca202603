@@ -1,4 +1,5 @@
 import { supabase, hasSupabaseEnv } from "./supabase"
+import { MEDIA_POLICY } from "./mediaPolicy"
 
 const QUEUE_KEY = "loca.event_queue"
 const MAX_RETRY = 5
@@ -133,8 +134,9 @@ function enqueue(eventType, payload) {
     timestamp: new Date().toISOString(),
     retryCount: 0,
   })
-  // 큐가 너무 커지지 않도록 최대 200개 유지
-  if (queue.length > 200) queue.splice(0, queue.length - 200)
+  if (queue.length > MEDIA_POLICY.localQueue.maxAnalyticsEvents) {
+    queue.splice(0, queue.length - MEDIA_POLICY.localQueue.maxAnalyticsEvents)
+  }
   writeQueue(queue)
 }
 

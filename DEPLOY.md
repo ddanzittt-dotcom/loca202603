@@ -41,7 +41,7 @@ Vercel Dashboard → Project → Settings → Environment Variables:
 |-----|-------|------|
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Production, Preview |
 | `VITE_SUPABASE_ANON_KEY` | `your-public-anon-key` | Production, Preview |
-| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.your-domain.com` | Production, Preview |
+| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.im` | Production, Preview |
 | `TMAP_APP_KEY` | `your-tmap-app-key` | Production, Preview |
 | `NCP_CLIENT_ID` | `your-ncp-client-id` | Production, Preview (Optional) |
 | `NCP_CLIENT_SECRET` | `your-ncp-client-secret` | Production, Preview (Optional) |
@@ -64,7 +64,7 @@ GitHub 연결 시 push마다 자동 배포됩니다.
 
 Vercel Dashboard → Project → Settings → Domains:
 
-1. **도메인 추가**: `loca.your-domain.com` 입력
+1. **도메인 추가**: `loca.im` 입력
 2. **DNS 설정**: 도메인 관리자에서 아래 레코드 추가
    - `CNAME` → `cname.vercel-dns.com`
    - 또는 루트 도메인이면 `A` → `76.76.21.21`
@@ -110,7 +110,7 @@ Netlify Dashboard → Site → Site configuration → Environment variables:
 |-----|-------|
 | `VITE_SUPABASE_URL` | `https://your-project.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `your-public-anon-key` |
-| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.your-domain.com` |
+| `VITE_PUBLIC_WEB_ORIGIN` | `https://loca.im` |
 
 ### 3. 배포
 
@@ -126,7 +126,7 @@ netlify deploy
 
 Netlify Dashboard → Site → Domain management → Add custom domain:
 
-1. **도메인 추가**: `loca.your-domain.com` 입력
+1. **도메인 추가**: `loca.im` 입력
 2. **DNS 설정**:
    - `CNAME` → `your-site-name.netlify.app`
    - 또는 Netlify DNS 사용 (네임서버 변경)
@@ -166,10 +166,10 @@ Supabase Dashboard → Storage → New bucket:
 ### 3. Auth 리다이렉트 URL 등록
 
 Supabase Dashboard → Authentication → URL Configuration:
-- Site URL: `https://your-domain.com`
+- Site URL: `https://loca.im`
 - Redirect URLs에 추가:
-  - `https://your-domain.com`
-  - `https://your-domain.com/**`
+  - `https://loca.im`
+  - `https://loca.im/**`
   - (프리뷰용) `https://*.vercel.app` 또는 `https://*.netlify.app`
 
 ### 4. 초대코드 등록 (B2B 테스트용)

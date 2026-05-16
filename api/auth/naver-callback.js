@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   // CSRF 검증: state 내 csrf 토큰과 쿠키의 csrf 토큰 비교
-  let redirectTo = "https://loca.ddanzittt.com"
+  let redirectTo = "https://loca.im"
   try {
     const parsed = JSON.parse(Buffer.from(state, "base64url").toString())
     if (parsed.redirect_to) redirectTo = parsed.redirect_to

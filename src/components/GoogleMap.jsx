@@ -41,6 +41,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
   const myLocMarkerRef = useRef(null)
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
+  const initialCenterRef = useRef(focusPoint || myLocation || { lat: 37.56, lng: 126.98 })
 
   useEffect(() => { onMapTapRef.current = onMapTap }, [onMapTap])
 
@@ -94,9 +95,8 @@ export const GoogleMap = forwardRef(function GoogleMap({
 
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return
-      const center = focusPoint || myLocation || { lat: 37.56, lng: 126.98 }
       const map = new window.google.maps.Map(containerRef.current, {
-        center,
+        center: initialCenterRef.current,
         zoom: 14,
         disableDefaultUI: true,
         zoomControl: true,
@@ -116,7 +116,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
     })
 
     return () => { cancelled = true }
-  }, [focusPoint, myLocation])
+  }, [])
 
   // 전체 렌더링
   useEffect(() => {

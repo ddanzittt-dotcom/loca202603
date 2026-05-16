@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { createId } from "../lib/appUtils"
 import { saveMedia, deleteMedia, uploadMediaToCloud, deleteMediaFromCloud } from "../lib/mediaStore"
 import { createMediaRecord, deleteMediaRecord } from "../lib/mapService"
+import { MEDIA_POLICY, assertPhotoFileAllowed, assertStoredMediaAllowed } from "../lib/mediaPolicy"
 
 export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast, cloudMode = false }) {
   const [isRecording, setIsRecording] = useState(false)
@@ -16,13 +17,14 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
     const file = event.target.files?.[0]
     if (!file || !featureSheet) return
     try {
+      assertPhotoFileAllowed(file)
       const img = await new Promise((resolve, reject) => {
         const image = new Image()
         image.onload = () => resolve(image)
         image.onerror = reject
         image.src = URL.createObjectURL(file)
       })
-      const maxW = 800
+      const maxW = MEDIA_POLICY.photo.maxWidth
       let w = img.width
       let h = img.height
       if (w > maxW) { h = Math.round(h * maxW / w); w = maxW }
@@ -32,7 +34,8 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       const ctx = canvas.getContext("2d")
       ctx.drawImage(img, 0, 0, w, h)
       URL.revokeObjectURL(img.src)
-      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.7))
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", MEDIA_POLICY.photo.jpegQuality))
+      assertStoredMediaAllowed(blob, "photo")
       const photoId = createId("photo")
       await saveMedia(photoId, blob)
       let photoEntry = { id: photoId, date: new Date().toISOString() }
@@ -63,7 +66,7 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       showToast("사진을 추가했어요.")
     } catch (err) {
       console.error("Photo error", err)
-      showToast("사진을 추가하지 못했어요.")
+      showToast(err?.message || "사진을 추가하지 못했어요.")
     }
     if (photoInputRef.current) photoInputRef.current.value = ""
   }
@@ -108,6 +111,12 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
         if (!currentSheet) return
         const actualMime = recorder.mimeType || mimeType || "audio/webm"
         const blob = new Blob(chunks, { type: actualMime })
+        try {
+          assertStoredMediaAllowed(blob, "voice")
+        } catch (error) {
+          showToast(error.message)
+          return
+        }
         const voiceId = createId("voice")
         await saveMedia(voiceId, blob)
         let voiceEntry = { id: voiceId, duration, date: new Date().toISOString() }
@@ -144,7 +153,7 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       recordingTimerRef.current = setInterval(() => {
         secs++
         setRecordingSeconds(secs)
-        if (secs >= 10) {
+        if (secs >= MEDIA_POLICY.voice.maxDurationSeconds) {
           recorder.stop()
         }
       }, 1000)

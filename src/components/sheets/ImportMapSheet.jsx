@@ -84,7 +84,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
   const extractCodeFromQR = (data) => {
     // URL 형태: /s/slug 또는 전체 URL
     try {
-      const url = new URL(data, "https://loca.ddanzittt.com")
+      const url = new URL(data, "https://loca.im")
       const match = url.pathname.match(/\/s\/([^/?]+)/)
       if (match) return match[1]
     } catch { /* URL 아닌 경우 */ }

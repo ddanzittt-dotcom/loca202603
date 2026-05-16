@@ -1,8 +1,7 @@
 import { requireSupabase } from "./supabase"
 
 const ALLOWED_ORIGINS = [
-  "https://loca.ddanzittt.com",
-  "https://loca202603.vercel.app",
+  "https://loca.im",
   "http://localhost:5173",
   "http://localhost:4173",
   "http://127.0.0.1:5173",
