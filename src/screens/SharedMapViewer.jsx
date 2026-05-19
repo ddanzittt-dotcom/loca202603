@@ -1,5 +1,5 @@
 ﻿import { useState, useCallback, useMemo, useRef, useEffect } from "react"
-import { X, Bell, ArrowLeft, Share2, LocateFixed } from "lucide-react"
+import { X, ArrowLeft, Share2, LocateFixed } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -554,15 +554,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               onClick={() => setShareOpen((v) => !v)}
             >
               <Share2 size={14} />
-            </button>
-            <button
-              className="lw-noti-btn"
-              type="button"
-              aria-label="?뚮┝"
-              onClick={() => setNotiPanelOpen((v) => !v)}
-            >
-              <Bell size={14} />
-              {notiHasUnread && <span className="lw-noti-dot" style={{ borderColor: ciMainColor }} />}
             </button>
           </div>
 

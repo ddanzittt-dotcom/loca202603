@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { Bell, Download, Plus } from "lucide-react"
 import { isEventMap } from "../lib/mapPlacement"
 import { ExploreScreen } from "./ExploreScreen"
 import { MapsListScreen } from "./MapsListScreen"
@@ -28,8 +27,6 @@ export function MyArchiveScreen({
   users = [],
   followed = [],
   onSelectUser,
-  onOpenNotifications,
-  hasUnread = false,
   loading = false,
   initialArchiveView = "maps",
 }) {
@@ -62,42 +59,6 @@ export function MyArchiveScreen({
     <section className="screen screen--scroll maps-library-screen">
       <div className="archive-head">
         <h1 className="archive-head__title">{title}</h1>
-        <div className="archive-head__actions" aria-label="내 지도 액션">
-          {!isPlacesHub ? (
-            <button
-              type="button"
-              className="archive-head__icon"
-              aria-label="지도 가져오기"
-              title="지도 가져오기"
-              onClick={onImport}
-            >
-              <Download size={16} strokeWidth={1.8} />
-            </button>
-          ) : null}
-          {archiveView === "maps" || (isPlacesHub && archiveView === "places") ? (
-            <button
-              type="button"
-              className="archive-head__icon archive-head__icon--primary"
-              aria-label={archiveView === "maps" ? "새 지도 만들기" : "기록 시작하기"}
-              title={archiveView === "maps" ? "새 지도 만들기" : "기록 시작하기"}
-              onClick={archiveView === "maps" ? onCreate : onCreateRecord}
-            >
-              <Plus size={16} strokeWidth={2.2} />
-            </button>
-          ) : null}
-          {onOpenNotifications ? (
-            <button
-              type="button"
-              className="archive-head__icon"
-              aria-label="알림"
-              title="알림"
-              onClick={onOpenNotifications}
-            >
-              <Bell size={16} strokeWidth={1.8} />
-              {hasUnread ? <span className="archive-head__icon-dot" /> : null}
-            </button>
-          ) : null}
-        </div>
       </div>
 
       <div className={`maps-segment${isPlacesHub ? " maps-segment--hub" : ""}`} role="tablist" aria-label={isPlacesHub ? "장소 보기" : "내 아카이브 보기"}>
@@ -151,8 +112,6 @@ export function MyArchiveScreen({
           users={users}
           followed={followed}
           onSelectUser={onSelectUser}
-          onOpenNotifications={onOpenNotifications}
-          hasUnread={hasUnread}
           embedded
           section={archiveView === "events" ? "events" : "community"}
         />

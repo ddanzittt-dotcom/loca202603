@@ -684,8 +684,8 @@ export function HomeScreen({
       <div className="home-v9-shell">
         <header className="home-v9-header">
           <strong aria-label="LOCA">LOCA</strong>
-          <button type="button" className="home-v9-icon-btn" aria-label="알림" onClick={onOpenNotifications}>
-            <Bell size={20} strokeWidth={1.9} aria-hidden="true" />
+          <button type="button" className="home-v9-icon-btn" aria-label="알림" title="알림" onClick={onOpenNotifications}>
+            <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
             {hasUnread ? <span /> : null}
           </button>
         </header>

@@ -56,8 +56,7 @@ export function AddRecordSheet({
   return (
     <BottomSheet
       open={open}
-      title="QUICK RECORD"
-      subtitle="어디에 기록할까요?"
+      title="어디에 기록할까요?"
       onClose={onClose}
     >
       <div className="add-record-sheet">

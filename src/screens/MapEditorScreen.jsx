@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
-import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
+import { FeatureEmoji } from "../components/FeatureEmoji"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 
 // 경로 길이(km) — 위경도 배열의 haversine 합산
@@ -55,27 +55,6 @@ function hasFeatureMemory(feature) {
     || (feature?.memos || []).some((memo) => memo.text?.trim() || (memo.photos || []).length > 0)
     || (feature?.voices || []).length > 0,
   )
-}
-
-const getFeatureBadgeMeta = (feature) => {
-  if (!feature) return { kind: "none" }
-  if (feature.type !== "pin") return { kind: feature.type }
-  const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
-  if (explicitCategory) {
-    const iconData = getPinIcon(explicitCategory)
-    return { kind: "icon", catId: iconData.id, bg: iconData.bg }
-  }
-  const emoji = typeof feature.emoji === "string" ? feature.emoji.trim() : ""
-  if (isMappedPinEmoji(emoji)) {
-    const catId = emojiToCategory(emoji)
-    const iconData = getPinIcon(catId)
-    return { kind: "icon", catId, bg: iconData.bg }
-  }
-  const isEmojiValue = emoji && emoji.length <= 4 && !emoji.includes("/")
-  if (isEmojiValue) return { kind: "emoji", emoji }
-  const catId = feature.category || emojiToCategory(feature.emoji)
-  const iconData = getPinIcon(catId)
-  return { kind: "icon", catId, bg: iconData.bg }
 }
 
 export function MapEditorScreen({
@@ -716,18 +695,18 @@ export function MapEditorScreen({
                         onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                       >
                         <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
-                          {(() => {
-                            if (feature.type === "pin") {
-                              const badge = getFeatureBadgeMeta(feature)
-                              if (badge.kind === "emoji") return <span className="me-strip-icon__emoji">{badge.emoji}</span>
-                              if (badge.kind === "icon") return <img src={`/icons/pins/${badge.catId}.svg`} width="14" height="14" alt="" />
-                              return <span className="me-strip-icon__emoji">{"\u{1F4CD}"}</span>
-                            }
-                            if (feature.type === "route") {
-                              return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
-                            }
-                            return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
-                          })()}
+                          {feature.type === "pin" ? (
+                            <FeatureEmoji
+                              feature={feature}
+                              size={22}
+                              unicodeFontSize={17}
+                              className="me-strip-icon__emoji"
+                            />
+                          ) : feature.type === "route" ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                          ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+                          )}
                         </div>
                         <div className="me-strip-info">
                           <strong>{feature.title}</strong>

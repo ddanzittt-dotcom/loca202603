@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   X,
   MapPin,
-  Bell,
   Search as SearchIcon,
   ChevronDown,
   Clock,
@@ -142,8 +141,6 @@ export function ExploreScreen({
   users = [],
   followed = [],
   onSelectUser,
-  hasUnread = false,
-  onOpenNotifications,
   embedded = false,
   section = "all",
   searchRequestId = 0,
@@ -534,20 +531,6 @@ export function ExploreScreen({
         <>
           <div className="ex-h-row">
             <h1 className="ex-h-title">탐색</h1>
-            <div className="ex-h-actions">
-              {onOpenNotifications ? (
-                <button
-                  type="button"
-                  className="ex-h-icon-btn"
-                  aria-label="알림"
-                  title="알림"
-                  onClick={onOpenNotifications}
-                >
-                  <Bell size={16} strokeWidth={1.8} />
-                  {hasUnread ? <span className="ex-h-icon-dot" /> : null}
-                </button>
-              ) : null}
-            </div>
           </div>
         </>
       ) : null}

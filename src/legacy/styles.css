@@ -951,7 +951,7 @@ textarea {
   letter-spacing: -0.01em;
 }
 .bottom-nav__item.is-active .bottom-nav__label {
-  color: var(--ink-900, #1F1B16);
+  color: var(--moss-600, #4A6B52);
   font-weight: 800;
 }
 .bottom-nav__item--add .bottom-nav__label {

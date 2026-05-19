@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Bell, Settings as SettingsIcon } from "lucide-react"
+import { Settings as SettingsIcon } from "lucide-react"
 import { BottomNav, Toast } from "./components/ui"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
@@ -1256,16 +1256,6 @@ export default function App() {
             >
               <SettingsIcon size={18} />
             </button>
-          ) : !(activeTab === "maps" && mapsView === "editor") && !(activeTab === "maps" && mapsView === "list") && activeTab !== "explore" ? (
-            <button
-              className="top-bar__noti-btn"
-              type="button"
-              aria-label="알림"
-              onClick={() => setNotiPanelOpen(true)}
-            >
-              <Bell size={18} />
-              {notiHasUnread && <span className="top-bar__noti-dot" />}
-            </button>
           ) : null}
         </div>
       </header>
@@ -1334,8 +1324,6 @@ export default function App() {
               setSelectedUserProfile(profile)
               setSelectedUserId(profile.id)
             }}
-            onOpenNotifications={() => setNotiPanelOpen(true)}
-            hasUnread={notiHasUnread}
             searchRequestId={exploreSearchRequestId}
           />
         ) : null}
@@ -1392,8 +1380,6 @@ export default function App() {
               setSelectedUserProfile(profile)
               setSelectedUserId(profile.id)
             }}
-            onOpenNotifications={() => setNotiPanelOpen(true)}
-            hasUnread={notiHasUnread}
           />
         ) : null}
 
