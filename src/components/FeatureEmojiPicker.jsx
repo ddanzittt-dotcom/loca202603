@@ -33,6 +33,17 @@ const BASIC_SUB_ICONS = {
   object: "🏠",
 }
 
+// Short labels used for sub-tab text (was previously derived by splitting
+// aria on the middle-dot character — kept static here for encoding safety).
+const BASIC_SUB_LABELS = {
+  face: "표정",
+  food: "음식",
+  nature: "식물",
+  animal: "동물",
+  symbol: "심볼",
+  object: "오브젝트",
+}
+
 function descriptorEq(a, b) {
   return a && b && a.kind === b.kind && a.value === b.value
 }
@@ -277,7 +288,7 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
                 onClick={() => { setBasicSub(s.id); if (bodyRef.current) bodyRef.current.scrollTop = 0 }}
               >
                 <span className="fes-picker-subtab-ic">{BASIC_SUB_ICONS[s.id] || s.label}</span>
-                <span>{s.aria.split("쨌")[0]}</span>
+                <span>{BASIC_SUB_LABELS[s.id] || s.aria}</span>
               </button>
             ))}
           </div>

@@ -1,41 +1,41 @@
-﻿/* eslint-disable react-refresh/only-export-components */
-// ?μ냼(feature) ?대え吏瑜?醫낅쪟 臾닿??섍쾶 ?뚮뜑留곹븯???⑥씪 而댄룷?뚰듃.
+/* eslint-disable react-refresh/only-export-components */
+// 장소(feature) 이모지를 종류 무관하게 렌더링하는 단일 컴포넌트.
 //
-// ?낅젰 ?뺥깭:
-//   1) emoji prop 媛앹껜 {kind, value} ??沅뚯옣
-//   2) ?덇굅???명솚: 臾몄옄??emoji prop ??kind='unicode' 濡?媛꾩＜
-//   3) feature prop ??feature.emojiKind/emojiPixelId/emojiPhotoUrl/emoji 濡??먮룞 ?댁꽍
+// 입력 형태:
+//   1) emoji prop 객체 {kind, value} — 권장
+//   2) 레거시 호환: 문자열 emoji prop — kind='unicode' 로 간주
+//   3) feature prop — feature.emojiKind/emojiPixelId/emojiPhotoUrl/emoji 로 자동 해석
 //
 // kind:
-//   - 'unicode': value = ?대え吏 臾몄옄 (?? '?뜔')
-//   - 'pixel':   value = PIXEL_ART id (?? 'px-heart')
-//   - 'photo':   value = public URL (?뺤궗媛??대?吏 沅뚯옣)
+//   - 'unicode': value = 이모지 문자 (예: '🍗')
+//   - 'pixel':   value = PIXEL_ART id (예: 'px-heart')
+//   - 'photo':   value = public URL (정사각 이미지 권장)
 
 import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
 
 /**
- * feature 媛앹껜?먯꽌 emoji descriptor {kind, value} 瑜?戮묒븘?몃떎.
- * normalize ?⑥닔媛 ?꾩쭅 ??而щ읆??諛섏쁺?섏? 紐삵븳 寃쎌슦?먮룄 ?숈옉?섎룄濡??대갚 泥섎━.
+ * feature 객체에서 emoji descriptor {kind, value} 를 뽑아낸다.
+ * normalize 함수가 아직 새 컬럼을 반영하지 못한 경우에도 동작하도록 폴백 처리.
  */
 export function resolveFeatureEmoji(featureOrEmoji) {
-  if (!featureOrEmoji) return { kind: "unicode", value: "?뱧" }
+  if (!featureOrEmoji) return { kind: "unicode", value: "📍" }
 
-  // ?대? descriptor ?뺥깭濡??꾨떖??寃쎌슦
+  // 이미 descriptor 형태로 전달된 경우
   if (typeof featureOrEmoji === "object" && "kind" in featureOrEmoji && "value" in featureOrEmoji) {
     return featureOrEmoji
   }
 
-  // ?⑥닚 臾몄옄??(?덇굅??
+  // 단순 문자열 (레거시)
   if (typeof featureOrEmoji === "string") {
     return { kind: "unicode", value: featureOrEmoji }
   }
 
-  // feature 媛앹껜
+  // feature 객체
   const f = featureOrEmoji
-  // ?뺢퇋?붾맂 ?뺥깭 (normalizeFeature 媛 emoji 瑜?媛앹껜濡?留뚮뱺 寃쎌슦)
+  // 정규화된 형태 (normalizeFeature 가 emoji 를 객체로 만든 경우)
   if (f.emoji && typeof f.emoji === "object" && "kind" in f.emoji) return f.emoji
 
-  // ??而щ읆 ?곗꽑
+  // 새 컬럼 우선
   const kind = f.emojiKind || f.emoji_kind
   if (kind === "pixel") {
     const value = f.emojiPixelId || f.emoji_pixel_id
@@ -46,18 +46,19 @@ export function resolveFeatureEmoji(featureOrEmoji) {
     if (value) return { kind: "photo", value }
   }
 
-  // unicode ?대갚
-  const fallback = (typeof f.emoji === "string" ? f.emoji : "") || "?뱧"
+  // unicode 폴백
+  const fallback = (typeof f.emoji === "string" ? f.emoji : "") || "📍"
   return { kind: "unicode", value: fallback }
 }
 
 /**
- * 醫낅쪟 臾닿? ?뚮뜑留?
- * - unicode: <span> ?덉뿉 湲?? * - pixel: inline SVG (image-rendering: pixelated)
- * - photo: <img> ?먰삎 ?щ∼
+ * 종류 무관 렌더링.
+ * - unicode: <span> 안에 글자
+ * - pixel: inline SVG (image-rendering: pixelated)
+ * - photo: <img> 원형 크롭
  *
- * size ??px (?뺤궗媛?. 湲곕낯 28.
- * unicodeFontSize 媛 二쇱뼱吏硫?unicode 湲???ш린瑜?蹂꾨룄 吏??
+ * size 는 px (정사각). 기본 28.
+ * unicodeFontSize 가 주어지면 unicode 글자 크기를 별도 지정.
  */
 export function FeatureEmoji({
   emoji,
@@ -85,7 +86,7 @@ export function FeatureEmoji({
     if (!art) {
       return (
         <span className={`loca-feature-emoji is-unicode ${className}`} style={baseStyle} aria-label={ariaLabel}>
-          ?뱧
+          📍
         </span>
       )
     }
@@ -95,7 +96,7 @@ export function FeatureEmoji({
         className={`loca-feature-emoji is-pixel ${className}`}
         style={baseStyle}
         aria-label={ariaLabel || art.label}
-        // svg 臾몄옄?댁? ?대? ?듭젣 移댄깉濡쒓렇?먯꽌留???(?ъ슜???낅젰 ?놁쓬)
+        // svg 문자열은 내부 통제 카탈로그에서만 옴 (사용자 입력 없음)
         dangerouslySetInnerHTML={{ __html: svg }}
       />
     )
@@ -111,7 +112,7 @@ export function FeatureEmoji({
           overflow: "hidden",
           boxShadow: `0 0 0 1.5px #fff, 0 0 0 2.5px ${ringColor}`,
         }}
-        aria-label={ariaLabel || "?ъ쭊 ?대え吏"}
+        aria-label={ariaLabel || "사진 이모지"}
       >
         <img
           src={descriptor.value}
@@ -141,34 +142,34 @@ export function FeatureEmoji({
 }
 
 /**
- * innerHTML ??(NaverMap 留덉빱 ??. 醫낅쪟蹂꾨줈 HTML 臾몄옄?댁쓣 諛섑솚?쒕떎.
- * size ??px. unicode ??遺紐⑥뿉???ъ씠利?寃곗젙?쒕떎怨?媛?뺥븯怨?湲?먮쭔 諛섑솚.
+ * innerHTML 용 (NaverMap 마커 등). 종류별로 HTML 문자열을 반환한다.
+ * size 는 px. unicode 는 부모에서 사이즈 결정한다고 가정하고 글자만 반환.
  */
 export function emojiToHtmlString(descriptor, { size = 24 } = {}) {
   const d = resolveFeatureEmoji(descriptor)
   if (d.kind === "pixel") {
     const art = findPixelArt(d.value)
-    if (!art) return "?뱧"
+    if (!art) return "📍"
     return pixelArtToSvgString(art, size)
   }
   if (d.kind === "photo") {
     const safeUrl = typeof d.value === "string" ? d.value.replace(/"/g, "&quot;") : ""
     return `<img src="${safeUrl}" width="${size}" height="${size}" style="width:${size}px;height:${size}px;object-fit:cover;border-radius:50%;display:block" alt=""/>`
   }
-  return d.value || "?뱧"
+  return d.value || "📍"
 }
 
 /**
- * descriptor 媛 unicode ?대㈃ emoji 臾몄옄, pixel ?대㈃ ?쇰꺼, photo ?대㈃ '???ъ쭊' ??諛섑솚.
- * ?쒖떆??fallback ?띿뒪?멸? ?꾩슂??怨녹뿉???ъ슜.
+ * descriptor 가 unicode 이면 emoji 문자, pixel 이면 라벨, photo 이면 '내 사진' 을 반환.
+ * 표시용 fallback 텍스트가 필요한 곳에서 사용.
  */
 export function descriptorToDisplayText(descriptor) {
   const d = resolveFeatureEmoji(descriptor)
   if (d.kind === "unicode") return d.value
   if (d.kind === "pixel") {
     const art = findPixelArt(d.value)
-    return art ? art.label : "?꾪듃 ?대え吏"
+    return art ? art.label : "도트 이모지"
   }
-  if (d.kind === "photo") return "???ъ쭊"
+  if (d.kind === "photo") return "내 사진"
   return ""
 }
