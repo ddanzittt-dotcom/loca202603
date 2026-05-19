@@ -36,6 +36,10 @@ function getFeatureDate(feature) {
   return date && Number.isFinite(date.getTime()) ? date : null
 }
 
+function getFeatureMapId(feature) {
+  return feature?.mapId || feature?.map_id || feature?.map?.id || null
+}
+
 function formatKoreanDate(date = new Date()) {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -162,8 +166,8 @@ function buildRecordGroups(features, maps, range) {
     .filter(({ date }) => date && date >= range.start && date < range.end)
     .sort((a, b) => b.date.getTime() - a.date.getTime())
     .forEach(({ feature, date }) => {
-      const map = mapById.get(feature.mapId)
-      const mapId = feature.mapId || "unknown"
+      const mapId = getFeatureMapId(feature) || "unknown"
+      const map = mapById.get(mapId)
       if (!groups.has(mapId)) {
         groups.set(mapId, {
           mapId,
@@ -438,7 +442,7 @@ function YearDialog({ today, yearCells, monthlyTotals, activeDays, yearTotal, on
                 disabled={future || !count}
                 onClick={() => onOpenMonth(index, count)}
               >
-                <span>{MONTH_LABELS[index]}</span>
+                <span>{index + 1}월</span>
                 <b><i style={{ width: `${pct}%` }} /></b>
                 <strong>{future || count === 0 ? "·" : count}</strong>
               </button>

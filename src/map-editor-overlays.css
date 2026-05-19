@@ -10529,12 +10529,14 @@
 }
 
 .home-v9-dialog--year {
+  overflow: hidden;
   max-width: 352px;
-  padding: 18px 14px 14px;
+  max-height: none;
+  padding: 16px 14px 12px;
 }
 
 .home-v9-dialog__head {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .home-v9-dialog__head h3 {
@@ -10621,7 +10623,7 @@
 
 .home-v9-year-months {
   padding-left: 24px;
-  margin-bottom: 9px;
+  margin-bottom: 7px;
 }
 
 .home-v9-year-months span {
@@ -10634,13 +10636,16 @@
 }
 
 .home-v9-year-dows {
-  width: 18px;
-  gap: 2px;
+  width: 17px;
+  gap: 1.5px;
   font-size: 9px;
 }
 
 .home-v9-year-grid {
-  gap: 2px;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(53, 4px);
+  grid-template-rows: repeat(7, 4px);
+  gap: 1.5px;
 }
 
 .home-v9-year-cell {
@@ -10653,34 +10658,35 @@
 }
 
 .home-v9-year-legend {
-  margin-top: 15px;
+  margin-top: 11px;
   font-size: 10px;
 }
 
 .home-v9-year-legend i {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
 }
 
 .home-v9-monthly h4 {
-  margin-top: 14px;
+  margin: 10px 0 4px;
   color: var(--v9-coral-deep);
   font-size: 9px;
 }
 
 .home-v9-monthly__list {
-  gap: 2px;
-  padding: 7px 8px;
+  gap: 1px;
+  padding: 6px 8px;
   border-radius: 9px;
 }
 
 .home-v9-monthly__row {
-  grid-template-columns: 22px 1fr 22px;
-  gap: 7px;
+  grid-template-columns: 28px 1fr 24px;
+  gap: 6px;
+  min-height: 15px;
 }
 
 .home-v9-monthly__row b {
-  height: 4px;
+  height: 3.5px;
   background: #EEE8DC;
 }
 
@@ -10715,6 +10721,15 @@
 .home-v9-monthly__row {
   width: 100%;
   text-align: left;
+}
+
+.home-v9-monthly__row span,
+.home-v9-monthly__row strong {
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .home-v9-dialog--records {
