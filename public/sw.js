@@ -1,5 +1,5 @@
 // LOCA Service Worker — network-first, 오프라인 fallback
-const CACHE_VERSION = "loca-v1"
+const CACHE_VERSION = "loca-v20260519-brand"
 
 self.addEventListener("install", () => self.skipWaiting())
 
