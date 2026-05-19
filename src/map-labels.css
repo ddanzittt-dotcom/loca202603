@@ -26,6 +26,7 @@
 /* 핀: 이모지 + 라벨 통합 마커 */
 .loca-pin-marker {
   position: relative;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -104,6 +105,13 @@
 }
 
 /* 이름 라벨 */
+.loca-map-label-anchor {
+  width: 118px;
+  display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+
 .loca-pin-label,
 .loca-route-label,
 .loca-area-label {
@@ -115,6 +123,7 @@
   border-radius: 6px;
   border: 0.5px solid rgba(0,0,0,0.08);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  max-width: 118px;
   white-space: nowrap;
 }
 
@@ -123,11 +132,18 @@
   margin-top: 2px;
   transition: opacity 0.2s ease;
 }
+.loca-pin-label--overlay {
+  margin-top: 0;
+  pointer-events: auto;
+}
 
 .loca-route-label span,
 .loca-area-label span {
   font-size: 10px;
   font-weight: 600;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .loca-pin-label span {

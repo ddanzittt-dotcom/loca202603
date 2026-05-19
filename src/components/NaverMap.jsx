@@ -297,6 +297,20 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
 
       const toLatLng = (lat, lng) => new naverMaps.LatLng(lat, lng)
       const pointsToPath = (points) => points.map(([lng, lat]) => toLatLng(lat, lng))
+      const getPointsCenter = (points) => {
+        if (!points?.length) return null
+        let minLat = Infinity
+        let maxLat = -Infinity
+        let minLng = Infinity
+        let maxLng = -Infinity
+        points.forEach(([lng, lat]) => {
+          minLat = Math.min(minLat, lat)
+          maxLat = Math.max(maxLat, lat)
+          minLng = Math.min(minLng, lng)
+          maxLng = Math.max(maxLng, lng)
+        })
+        return new naverMaps.LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2)
+      }
       const bindFeatureSelection = (target, featureId) => {
         const handleSelect = () => {
           const now = Date.now()
@@ -425,9 +439,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`
             : ""
           const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;background:${pinColor};${isSelected ? "border-color:#2D4A3E" : ""}`
-          const labelHtml = showPinLabel
-            ? `<div class="loca-pin-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-5-5.2-5-9a5 5 0 1 1 10 0c0 3.8-5 9-5 9z"/><circle cx="12" cy="12" r="1.6"/></svg><span style="color:${pinColor}">${escapeHtml(feature.title)}</span></div>`
-            : ""
+          const labelHtml = `<div class="loca-map-label-anchor"><div class="loca-pin-label loca-pin-label--overlay"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-5-5.2-5-9a5 5 0 1 1 10 0c0 3.8-5 9-5 9z"/><circle cx="12" cy="12" r="1.6"/></svg><span style="color:${pinColor}">${escapeHtml(feature.title)}</span></div></div>`
           const markerSize = zoomLevel === 1 ? 20 : zoomLevel === 2 ? 30 : 40
           const anchorY = zoomLevel === 1 ? 10 : zoomLevel === 2 ? 20 : 48
 
@@ -435,13 +447,29 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-pin-marker">${checkBadge}${badgeHtml}<div class="loca-pin-dot${isSelected ? " is-selected" : ""}" style="${dotStyle}"></div>${labelHtml}</div>`,
+              content: `<div class="loca-pin-marker" style="width:${markerSize}px">${checkBadge}${badgeHtml}<div class="loca-pin-dot${isSelected ? " is-selected" : ""}" style="${dotStyle}"></div></div>`,
               size: new naverMaps.Size(markerSize, markerSize + 30),
               anchor: new naverMaps.Point(markerSize / 2, anchorY),
             },
           })
           bindFeatureSelection(marker, feature.id)
           layersRef.current.push(marker)
+
+          if (showPinLabel) {
+            const labelMarker = new naverMaps.Marker({
+              position: toLatLng(feature.lat, feature.lng),
+              map,
+              icon: {
+                content: labelHtml,
+                size: new naverMaps.Size(118, 24),
+                anchor: new naverMaps.Point(59, -18),
+              },
+              clickable: true,
+              zIndex: 20,
+            })
+            bindFeatureSelection(labelMarker, feature.id)
+            layersRef.current.push(labelMarker)
+          }
         } else if (feature.type === "route") {
           const routeColor = getFeatureStyleColor(feature, "route")
           const routeLineStyle = getFeatureStyleLineStyle(feature, "route")
@@ -489,15 +517,15 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             }
           }
 
-          // 寃쎈줈 ?쇰꺼
-          const midpoint = feature.points[Math.floor(feature.points.length / 2)]
-          if (showLabels && midpoint) {
+          const routeLabelPoint = getPointsCenter(feature.points)
+          if (showLabels && routeLabelPoint) {
             const routeLabel = new naverMaps.Marker({
-              position: toLatLng(midpoint[1], midpoint[0]),
+              position: routeLabelPoint,
               map,
               icon: {
-                content: `<div class="loca-route-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${routeColor}" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg><span style="color:${routeColor}">${escapeHtml(feature.title)}</span></div>`,
-                anchor: new naverMaps.Point(0, 14),
+                content: `<div class="loca-map-label-anchor"><div class="loca-route-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${routeColor}" stroke-width="2" stroke-linecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg><span style="color:${routeColor}">${escapeHtml(feature.title)}</span></div></div>`,
+                size: new naverMaps.Size(118, 24),
+                anchor: new naverMaps.Point(59, -18),
               },
               clickable: true,
             })
@@ -532,26 +560,15 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           bindFeatureSelection(hitArea, feature.id)
           layersRef.current.push(hitArea)
 
-          // 援ъ뿭 ?쇰꺼 ???곷떒 以묒븰 諛곗튂
-          const getTopCenter = (pts) => {
-            let minLat = Infinity, sumLng = 0
-            for (const [lng, lat] of pts) {
-              if (lat < minLat) minLat = lat
-              sumLng += lng
-            }
-            // 媛?????⑥そ???묒? 媛? ???곷떒
-            let maxLat = -Infinity
-            for (const [, lat] of pts) { if (lat > maxLat) maxLat = lat }
-            return new naverMaps.LatLng(maxLat, sumLng / pts.length)
-          }
-          const topPoint = getTopCenter(feature.points)
-          if (showLabels && topPoint) {
+          const areaLabelPoint = getPointsCenter(feature.points)
+          if (showLabels && areaLabelPoint) {
             const areaLabel = new naverMaps.Marker({
-              position: topPoint,
+              position: areaLabelPoint,
               map,
               icon: {
-                content: `<div class="loca-area-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${areaColor}" stroke-width="2" stroke-linecap="round"${areaDashArray ? ` stroke-dasharray="${areaDashArray}"` : ""}><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span style="color:${areaColor}">${escapeHtml(feature.title)}</span></div>`,
-                anchor: new naverMaps.Point(40, 24),
+                content: `<div class="loca-map-label-anchor"><div class="loca-area-label"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${areaColor}" stroke-width="2" stroke-linecap="round"${areaDashArray ? ` stroke-dasharray="${areaDashArray}"` : ""}><rect x="4" y="4" width="16" height="16" rx="3"/></svg><span style="color:${areaColor}">${escapeHtml(feature.title)}</span></div></div>`,
+                size: new naverMaps.Size(118, 24),
+                anchor: new naverMaps.Point(59, -18),
               },
               clickable: true,
             })

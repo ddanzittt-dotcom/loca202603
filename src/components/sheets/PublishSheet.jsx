@@ -97,7 +97,6 @@ export function PublishSheet({
     <BottomSheet
       open={Boolean(publishSheet)}
       title="프로필에 어떤 지도를 공개할까요?"
-      subtitle="나만 보기 지도는 링크 공유를 먼저 켜요"
       onClose={onClose}
     >
       {candidates.length === 0 ? (
@@ -107,11 +106,6 @@ export function PublishSheet({
         </article>
       ) : (
         <div className="form-stack">
-          <article className="empty-card" style={{ padding: "14px 16px", marginBottom: 10 }}>
-            <strong>링크 공유와 프로필 공개는 달라요.</strong>
-            <p>링크 공유는 볼 수 있는 링크를 만드는 것, 프로필 공개는 내 갤러리에 보여주는 것이에요.</p>
-          </article>
-
           <div className="card-list">
             {candidates.map((mapItem) => {
               const mapFeatures = features.filter((f) => f.mapId === mapItem.id)

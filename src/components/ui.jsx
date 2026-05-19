@@ -15,7 +15,7 @@ export function BottomSheet({ open, title, subtitle, onClose, children }) {
             <h2 className="sheet__title">{title}</h2>
             {subtitle ? <p className="sheet__subtitle">{subtitle}</p> : null}
           </div>
-          <button className="icon-button" type="button" onClick={onClose} aria-label="닫기">
+          <button className="icon-button sheet__close" type="button" onClick={onClose} aria-label="닫기">
             <X size={18} />
           </button>
         </div>
