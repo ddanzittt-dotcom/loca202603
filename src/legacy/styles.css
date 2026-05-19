@@ -917,15 +917,6 @@ textarea {
 .bottom-nav__item.is-active {
   color: var(--moss-600, #4A6B52);
 }
-.bottom-nav__item.is-active::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--ember-500, #E26F3C);
-}
 .bottom-nav__icon {
   line-height: 1;
   display: flex;
