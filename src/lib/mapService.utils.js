@@ -144,12 +144,20 @@ export function normalizeMedia(row) {
 }
 
 export function normalizeFeature(row, memos = [], photos = [], voices = []) {
+  // 새 컬럼 (emoji_kind/emoji_pixel_id/emoji_photo_url) 우선,
+  // 없으면 레거시 emoji 문자열을 unicode 로 폴백.
+  const rawKind = row.emoji_kind || null
+  const emojiKind = rawKind === "pixel" || rawKind === "photo" ? rawKind : "unicode"
+  const unicodeEmoji = row.emoji || getDefaultEmoji(row.type)
   const base = {
     id: row.id,
     mapId: row.map_id,
     type: row.type,
     title: row.title || DEFAULT_FEATURE_TITLE,
-    emoji: row.emoji || getDefaultEmoji(row.type),
+    emoji: unicodeEmoji,
+    emojiKind,
+    emojiPixelId: row.emoji_pixel_id || null,
+    emojiPhotoUrl: row.emoji_photo_url || null,
     tags: row.tags || [],
     note: row.note || "",
     highlight: Boolean(row.highlight),
@@ -173,10 +181,19 @@ export function normalizeFeature(row, memos = [], photos = [], voices = []) {
 
 export function toFeatureInsert(feature = {}, fallbackType = "pin") {
   const type = feature.type || fallbackType
+  const kindRaw = feature.emojiKind
+  const emojiKind = kindRaw === "pixel" || kindRaw === "photo" ? kindRaw : "unicode"
+  // emoji TEXT 컬럼: unicode 종류일 때만 의미, 그 외에는 기본 폴백 글자(레거시 클라이언트 대응).
+  const emojiText = emojiKind === "unicode"
+    ? (feature.emoji || getDefaultEmoji(type))
+    : getDefaultEmoji(type)
   const payload = {
     type,
     title: feature.title?.trim() || DEFAULT_FEATURE_TITLE,
-    emoji: feature.emoji || getDefaultEmoji(type),
+    emoji: emojiText,
+    emoji_kind: emojiKind,
+    emoji_pixel_id: emojiKind === "pixel" ? (feature.emojiPixelId || null) : null,
+    emoji_photo_url: emojiKind === "photo" ? (feature.emojiPhotoUrl || null) : null,
     tags: feature.tags || [],
     note: feature.note || "",
     highlight: Boolean(feature.highlight),
@@ -205,7 +222,19 @@ export function toFeaturePatch(updates = {}) {
 
   if ("type" in updates) payload.type = updates.type
   if ("title" in updates) payload.title = updates.title?.trim() || DEFAULT_FEATURE_TITLE
-  if ("emoji" in updates) payload.emoji = updates.emoji || getDefaultEmoji(updates.type)
+
+  // 이모지 3종 필드는 묶음으로 처리 — kind 가 명시되면 전체를 동기화.
+  if ("emojiKind" in updates || "emojiPixelId" in updates || "emojiPhotoUrl" in updates || "emoji" in updates) {
+    const kindRaw = updates.emojiKind
+    const kind = kindRaw === "pixel" || kindRaw === "photo" ? kindRaw : "unicode"
+    payload.emoji_kind = kind
+    payload.emoji_pixel_id = kind === "pixel" ? (updates.emojiPixelId || null) : null
+    payload.emoji_photo_url = kind === "photo" ? (updates.emojiPhotoUrl || null) : null
+    payload.emoji = kind === "unicode"
+      ? (updates.emoji || getDefaultEmoji(updates.type))
+      : getDefaultEmoji(updates.type)
+  }
+
   if ("tags" in updates) payload.tags = updates.tags || []
   if ("note" in updates) payload.note = updates.note || ""
   if ("highlight" in updates) payload.highlight = Boolean(updates.highlight)

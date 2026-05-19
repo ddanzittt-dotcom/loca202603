@@ -42,6 +42,21 @@ function isMissingStyleColumn(error) {
   return message.includes("style") && message.includes("column")
 }
 
+// migration 031 적용 전 환경 대응: emoji_kind/emoji_pixel_id/emoji_photo_url 컬럼이 없을 때.
+function isMissingEmojiKindColumn(error) {
+  if (!error) return false
+  if (error.code !== "42703") return false
+  const message = `${error.message || ""}`.toLowerCase()
+  return message.includes("emoji_kind") || message.includes("emoji_pixel_id") || message.includes("emoji_photo_url")
+}
+
+function stripEmojiKindFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload
+  const { emoji_kind, emoji_pixel_id, emoji_photo_url, ...rest } = payload
+  void emoji_kind; void emoji_pixel_id; void emoji_photo_url
+  return rest
+}
+
 async function applyFeatureStyleFromRequestPayload(supabase, featureId, payload) {
   if (!featureId) return
   if (!payload || typeof payload !== "object") return
@@ -196,6 +211,16 @@ export async function createFeature(mapId, featureData) {
     .select("*")
     .single()
 
+  // migration 031 (emoji_kind 등) 미적용 환경 폴백: 새 컬럼 제거 후 재시도.
+  if (error && isMissingEmojiKindColumn(error)) {
+    const legacyEmojiPayload = stripEmojiKindFromPayload(featurePayload)
+    ;({ data, error } = await supabase
+      .from("map_features")
+      .insert(legacyEmojiPayload)
+      .select("*")
+      .single())
+  }
+
   if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(featurePayload, "style")) {
     const { style: _style, ...legacyPayload } = featurePayload
     ;({ data, error } = await supabase
@@ -231,6 +256,10 @@ export async function updateFeature(featureId, updates) {
 
   const patchPayload = toFeaturePatch(patchSource)
   let { data, error } = await buildQuery(patchPayload)
+
+  if (error && isMissingEmojiKindColumn(error)) {
+    ;({ data, error } = await buildQuery(stripEmojiKindFromPayload(patchPayload)))
+  }
 
   if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(patchPayload, "style")) {
     const { style: _style, ...legacyPatch } = patchPayload

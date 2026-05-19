@@ -882,6 +882,211 @@
 }
 
 /* ============================================================
+ *  Emoji Picker — 4 top tabs + sub-tabs + pixel + photo
+ * ============================================================ */
+.fes-picker-toptabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 2px 0 10px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.04);
+  margin-bottom: 6px;
+}
+.fes-picker-toptab {
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 9px 4px 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+  color: #666666;
+}
+.fes-picker-toptab:hover { background: #FBF6EC; }
+.fes-picker-toptab.is-active {
+  background: #FFF4EB;
+  border-color: rgba(255,107,53,0.25);
+  color: #993C1D;
+}
+.fes-picker-toptab-ic {
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fes-picker-toptab-ic svg { display: block; }
+.fes-picker-toptab-pixel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+.fes-picker-toptab-pixel svg {
+  width: 20px;
+  height: 20px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.fes-picker-toptab-lbl {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  font-family: var(--font-sans, "Pretendard Variable");
+}
+
+.fes-picker-subtabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 0 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fes-picker-subtabs::-webkit-scrollbar { display: none; }
+.fes-picker-subtab {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 0.5px solid transparent;
+  background: #FAF5EE;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #666666;
+  cursor: pointer;
+  font-family: var(--font-sans, "Pretendard Variable");
+}
+.fes-picker-subtab:hover { background: #FFF4EB; }
+.fes-picker-subtab.is-active {
+  background: #FFFFFF;
+  color: #1A1A1A;
+  border-color: rgba(0,0,0,0.08);
+  box-shadow: inset 0 -2px 0 #FF6B35;
+}
+.fes-picker-subtab-ic { font-size: 13px; line-height: 1; }
+.fes-picker-subtab-ic.is-pixel {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+}
+.fes-picker-subtab-ic.is-pixel svg {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel cell — SVG fills the cell */
+.fes-picker-pixel-cell {
+  background: #FBF5EA;
+  border: 0.5px solid rgba(0,0,0,0.05);
+  padding: 0;
+}
+.fes-picker-pixel-cell:hover { background: #F7ECDA; }
+.fes-picker-pixel-cell.is-selected {
+  background: #FFF4EB;
+  border-color: #FF6B35;
+}
+.fes-picker-pixel-cell svg {
+  width: 78%;
+  height: 78%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Photo cell */
+.fes-picker-photo-cell {
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0,0,0,0.06);
+  padding: 4px;
+}
+.fes-picker-photo-cell.is-selected {
+  border-color: #FF6B35;
+  background: #FFF4EB;
+}
+.fes-picker-photo-crop {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 2.5px rgba(255,107,53,0.4);
+}
+
+/* Add-photo tile */
+.fes-picker-add-photo {
+  background: #FFFFFF;
+  border: 1.5px dashed rgba(255,107,53,0.5);
+  color: #FF6B35;
+  flex-direction: column;
+  gap: 3px;
+}
+.fes-picker-add-photo:hover { background: #FFF4EB; }
+.fes-picker-add-photo:disabled { opacity: 0.6; cursor: progress; }
+.fes-picker-add-photo-lbl {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  color: #FF6B35;
+  font-family: var(--font-sans, "Pretendard Variable");
+}
+.fes-spin { animation: fes-rot 0.9s linear infinite; }
+@keyframes fes-rot {
+  to { transform: rotate(360deg); }
+}
+
+/* Photo intro card */
+.fes-picker-photo-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0 0 10px;
+  background: linear-gradient(135deg, #FFF4EB 0%, #FFE3CF 100%);
+  border-radius: 14px;
+}
+.fes-picker-photo-ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  box-shadow: 0 2px 6px rgba(255,107,53,0.15);
+}
+.fes-picker-photo-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1A1A1A;
+}
+.fes-picker-photo-desc {
+  font-size: 10px;
+  color: #666666;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.fes-picker-photo-error {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  background: rgba(226,75,74,0.08);
+  border: 0.5px solid rgba(226,75,74,0.2);
+  border-radius: 10px;
+  color: #993C1D;
+  font-size: 11px;
+}
+
+/* ============================================================
  *  ImportTargetMapSheet — 모두의 지도 → 내 지도 선택 바텀시트
  * ============================================================ */
 .itm-sheet {

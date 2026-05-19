@@ -152,6 +152,9 @@ export function createMapSharePayload(map, features) {
     type: f.type,
     title: f.title,
     emoji: f.emoji,
+    emojiKind: f.emojiKind || (f.emoji ? "unicode" : null),
+    emojiPixelId: f.emojiPixelId || null,
+    emojiPhotoUrl: f.emojiPhotoUrl || null,
     tags: f.tags,
     note: f.note || "",
     highlight: f.highlight,
@@ -220,17 +223,24 @@ export function parseMapSharePayload(encodedPayload) {
     updatedAt: payload.map.updatedAt || payload.exportedAt || new Date().toISOString(),
   }
 
-  const normalizedFeatures = payload.features.map((feature) => ({
-    ...feature,
-    id: feature.id || createId("feat"),
-    mapId,
-    type: feature.type || "pin",
-    title: feature.title || "장소",
-    emoji: feature.emoji || "📍",
-    tags: Array.isArray(feature.tags) ? feature.tags : [],
-    note: feature.note || "",
-    updatedAt: feature.updatedAt || normalizedMap.updatedAt,
-  }))
+  const normalizedFeatures = payload.features.map((feature) => {
+    const rawKind = typeof feature.emojiKind === "string" ? feature.emojiKind : null
+    const emojiKind = rawKind === "pixel" || rawKind === "photo" ? rawKind : "unicode"
+    return {
+      ...feature,
+      id: feature.id || createId("feat"),
+      mapId,
+      type: feature.type || "pin",
+      title: feature.title || "장소",
+      emoji: feature.emoji || "📍",
+      emojiKind,
+      emojiPixelId: emojiKind === "pixel" ? (feature.emojiPixelId || null) : null,
+      emojiPhotoUrl: emojiKind === "photo" ? (feature.emojiPhotoUrl || null) : null,
+      tags: Array.isArray(feature.tags) ? feature.tags : [],
+      note: feature.note || "",
+      updatedAt: feature.updatedAt || normalizedMap.updatedAt,
+    }
+  })
 
   return { map: normalizedMap, features: normalizedFeatures }
 }

@@ -1,6 +1,8 @@
 ﻿import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
 import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
 import { getFeatureStyleColor, getFeatureStyleLineStyle, FEATURE_LINE_STYLE_SHORT_DASH, FEATURE_LINE_STYLE_SHORT_DOT } from "../lib/featureStyle"
+import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
+import { resolveFeatureEmoji } from "./FeatureEmoji"
 
 const getNaverMaps = () => window.naver?.maps ?? null
 
@@ -374,12 +376,14 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const pinColor = getFeatureStyleColor(feature, "pin")
           const isChecked = checkedInIds && checkedInIds.has(feature.id)
           const checkBadge = isChecked ? `<div class="loca-pin-check">??/div>` : ""
-          const emoji = typeof feature.emoji === "string" ? feature.emoji.trim() : ""
+          const descriptor = resolveFeatureEmoji(feature)
+          const emoji = descriptor.kind === "unicode" ? descriptor.value : ""
           const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
-          const mappedCategory = isMappedPinEmoji(emoji) ? emojiToCategory(emoji) : ""
+          const mappedCategory = (descriptor.kind === "unicode" && isMappedPinEmoji(emoji)) ? emojiToCategory(emoji) : ""
           const catId = explicitCategory || mappedCategory || emojiToCategory(feature.emoji)
           const iconData = getPinIcon(catId)
-          const hasCustomEmoji = !explicitCategory
+          const hasCustomEmoji = descriptor.kind === "unicode"
+            && !explicitCategory
             && !mappedCategory
             && emoji
             && emoji.length <= 4
@@ -395,9 +399,20 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const expandedLabelZoomThreshold = Math.max(1, baseLabelZoomThreshold - 2)
           const showPinLabel = showLabels && zoomLevel >= expandedLabelZoomThreshold
 
-          const badgeInnerHtml = hasCustomEmoji
-            ? `<span class="loca-pin-badge__emoji">${escapeHtml(emoji)}</span>`
-            : `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+          let badgeInnerHtml
+          if (descriptor.kind === "pixel") {
+            const art = findPixelArt(descriptor.value)
+            badgeInnerHtml = art
+              ? `<span class="loca-pin-badge__pixel">${pixelArtToSvgString(art, 14)}</span>`
+              : `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+          } else if (descriptor.kind === "photo") {
+            const safeUrl = escapeHtml(descriptor.value || "")
+            badgeInnerHtml = `<img class="loca-pin-badge__photo" src="${safeUrl}" width="14" height="14" alt=""/>`
+          } else if (hasCustomEmoji) {
+            badgeInnerHtml = `<span class="loca-pin-badge__emoji">${escapeHtml(emoji)}</span>`
+          } else {
+            badgeInnerHtml = `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+          }
           const badgeHtml = showBadge
             ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`
             : ""

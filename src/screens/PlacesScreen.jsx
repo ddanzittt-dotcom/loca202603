@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { Search as SearchIcon, ChevronRight, FileText, Camera, Mic } from "lucide-react"
 import { featureSort } from "../lib/appUtils"
 import { isEventMap } from "../lib/mapPlacement"
+import { FeatureEmoji } from "../components/FeatureEmoji"
 
 const TYPE_FILTERS = [
   { id: "all", label: "전체", dot: null },
@@ -239,7 +240,6 @@ export function PlacesScreen({
             const trimmedName = (feature.title || "").trim()
             const isEmptyName = !trimmedName
             const displayName = isEmptyName ? "이름 없는 장소 · 직접 입력하기" : trimmedName
-            const emoji = feature.emoji || "📍"
             const typeLabel = getTypeLabel(feature.type)
             const description = getFeatureDescription(feature)
             const dateLabel = formatFeatureDate(feature)
@@ -278,7 +278,7 @@ export function PlacesScreen({
                   ) : feature.type === "area" ? (
                     <AreaIcon />
                   ) : (
-                    <span className="pl-item__emoji">{emoji}</span>
+                    <span className="pl-item__emoji"><FeatureEmoji feature={feature} size={22} unicodeFontSize={18} /></span>
                   )}
                 </div>
                 <div className="pl-item__info">

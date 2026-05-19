@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { X as XIcon, Camera, Mic, FileText, Play } from "lucide-react"
 import { FeatureEmojiPicker } from "../FeatureEmojiPicker"
+import { FeatureEmoji, resolveFeatureEmoji, descriptorToDisplayText } from "../FeatureEmoji"
 import { lookupEmojiName } from "../../lib/emojiCatalog"
 import {
   FEATURE_LINE_STYLE_ITEMS,
@@ -599,10 +600,19 @@ export function FeatureEditSheet({
     })
   }
 
-  const setEmoji = (emoji) => {
+  // descriptor 객체 {kind, value} 를 받아 form state 의 3개 필드로 전개한다.
+  // - unicode: emoji=value, emojiKind='unicode', emojiPixelId=null, emojiPhotoUrl=null
+  // - pixel:   emoji=null,  emojiKind='pixel',   emojiPixelId=value, emojiPhotoUrl=null
+  // - photo:   emoji=null,  emojiKind='photo',   emojiPixelId=null,  emojiPhotoUrl=value
+  // 레거시 string 입력도 받는다 (방어).
+  const setEmoji = (input) => {
+    const d = resolveFeatureEmoji(input)
     setFeatureSheet((current) => ({
       ...current,
-      emoji,
+      emoji: d.kind === "unicode" ? d.value : "",
+      emojiKind: d.kind,
+      emojiPixelId: d.kind === "pixel" ? d.value : null,
+      emojiPhotoUrl: d.kind === "photo" ? d.value : null,
       category: null, // 이모지 직접 선택 시 아이콘 카테고리 해제
     }))
     setEmojiPickerOpen(false)
@@ -625,8 +635,11 @@ export function FeatureEditSheet({
 
   const canDelete = !readOnly && !creating && typeof onDelete === "function"
 
-  const emojiForPin = featureSheet.emoji || DEFAULT_EMOJI_BY_TYPE.pin
-  const emojiName = lookupEmojiName(emojiForPin)
+  // 현재 선택된 이모지 descriptor — 3개 새 필드를 우선, 없으면 레거시 emoji 문자열.
+  const emojiDescriptor = resolveFeatureEmoji(featureSheet)
+  const emojiName = emojiDescriptor.kind === "unicode"
+    ? (lookupEmojiName(emojiDescriptor.value) || "이모지")
+    : descriptorToDisplayText(emojiDescriptor)
 
   return (
     <>
@@ -656,7 +669,7 @@ export function FeatureEditSheet({
                 aria-label="이모지 변경"
                 disabled={readOnly}
               >
-                <span className="fes-emoji-glyph">{emojiForPin}</span>
+                <FeatureEmoji emoji={emojiDescriptor} size={36} unicodeFontSize={26} />
               </button>
               <div className="fes-emoji-hint">
                 <strong>{emojiName || "이모지"}</strong>
@@ -841,7 +854,7 @@ export function FeatureEditSheet({
 
       {emojiPickerOpen ? (
         <FeatureEmojiPicker
-          selectedEmoji={emojiForPin}
+          selectedEmoji={emojiDescriptor}
           onSelect={setEmoji}
           onClose={() => setEmojiPickerOpen(false)}
         />

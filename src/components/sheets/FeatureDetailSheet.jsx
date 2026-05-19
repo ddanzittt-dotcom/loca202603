@@ -3,6 +3,7 @@ import { X as XIcon, Mic } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
 import { PIN_ICON_GROUPS, emojiToCategory, categoryToEmoji } from "../../data/pinIcons"
+import { FeatureEmoji } from "../FeatureEmoji"
 import { FEATURE_LINE_STYLE_ITEMS, getFeatureColorPresets, normalizeFeatureStyle } from "../../lib/featureStyle"
 
 function TagInput({ tags, onChange }) {
@@ -244,7 +245,7 @@ export function FeatureDetailSheet({
                   ) : (
                     <>
                       <div className="fd__readonly">
-                        <span className="fd__readonly-emoji">{featureSheet.emoji}</span>
+                        <span className="fd__readonly-emoji"><FeatureEmoji feature={featureSheet} size={24} unicodeFontSize={20} /></span>
                         <strong>{featureSheet.title}</strong>
                         {featureSheet.note ? <p>{featureSheet.note}</p> : null}
                       </div>
@@ -256,7 +257,7 @@ export function FeatureDetailSheet({
                 </>
               ) : (
                 <div className="fd__readonly">
-                  <span className="fd__readonly-emoji">{featureSheet.emoji}</span>
+                  <span className="fd__readonly-emoji"><FeatureEmoji feature={featureSheet} size={24} unicodeFontSize={20} /></span>
                   <strong>{featureSheet.title}</strong>
                   {featureSheet.note ? <p>{featureSheet.note}</p> : null}
                 </div>
@@ -318,7 +319,7 @@ export function FeatureDetailSheet({
                     </>
                   ) : (
                     <div className="fd__readonly">
-                      <span className="fd__readonly-emoji">{featureSheet.emoji}</span>
+                      <span className="fd__readonly-emoji"><FeatureEmoji feature={featureSheet} size={24} unicodeFontSize={20} /></span>
                       <strong>{featureSheet.title}</strong>
                       {featureSheet.note ? <p>{featureSheet.note}</p> : null}
                       {featureSheet.tags?.length ? <div className="fd__readonly-tags">{featureSheet.tags.map((t) => <span key={t} className="fd__tag">#{t}</span>)}</div> : null}

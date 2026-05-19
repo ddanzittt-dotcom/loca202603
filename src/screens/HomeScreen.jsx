@@ -546,9 +546,10 @@ export function HomeScreen({
   const featuresByMapId = useMemo(() => {
     const groups = new Map()
     for (const feature of features) {
-      if (!feature?.mapId) continue
-      if (!groups.has(feature.mapId)) groups.set(feature.mapId, [])
-      groups.get(feature.mapId).push(feature)
+      const mapId = getFeatureMapId(feature)
+      if (!mapId) continue
+      if (!groups.has(mapId)) groups.set(mapId, [])
+      groups.get(mapId).push(feature)
     }
     return groups
   }, [features])
@@ -608,7 +609,8 @@ export function HomeScreen({
   }
   const openMapFromRecords = (mapId) => {
     setOpenDialog(null)
-    onOpenMap?.(mapId)
+    if (!mapId || mapId === "unknown") return
+    onResumeMyMap?.(mapId)
   }
 
   return (
