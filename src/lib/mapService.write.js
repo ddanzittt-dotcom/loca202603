@@ -57,6 +57,19 @@ function stripEmojiKindFromPayload(payload) {
   return rest
 }
 
+function stripStyleFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return payload
+  const { style, ...rest } = payload
+  void style
+  return rest
+}
+
+function stripUnsupportedFeatureColumns(payload, error) {
+  if (isMissingEmojiKindColumn(error)) return stripEmojiKindFromPayload(payload)
+  if (isMissingStyleColumn(error)) return stripStyleFromPayload(payload)
+  return payload
+}
+
 async function applyFeatureStyleFromRequestPayload(supabase, featureId, payload) {
   if (!featureId) return
   if (!payload || typeof payload !== "object") return
@@ -201,33 +214,25 @@ export async function deleteMap(mapId) {
 export async function createFeature(mapId, featureData) {
   await requireUser()
   const supabase = requireSupabase()
-  const featurePayload = {
+  let featurePayload = {
     map_id: mapId,
     ...toFeatureInsert(featureData, featureData.type || "pin"),
   }
-  let { data, error } = await supabase
-    .from("map_features")
-    .insert(featurePayload)
-    .select("*")
-    .single()
+  let data = null
+  let error = null
 
   // migration 031 (emoji_kind 등) 미적용 환경 폴백: 새 컬럼 제거 후 재시도.
-  if (error && isMissingEmojiKindColumn(error)) {
-    const legacyEmojiPayload = stripEmojiKindFromPayload(featurePayload)
+  for (let attempt = 0; attempt < 3; attempt += 1) {
     ;({ data, error } = await supabase
       .from("map_features")
-      .insert(legacyEmojiPayload)
+      .insert(featurePayload)
       .select("*")
       .single())
-  }
+    if (!error) break
 
-  if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(featurePayload, "style")) {
-    const { style: _style, ...legacyPayload } = featurePayload
-    ;({ data, error } = await supabase
-      .from("map_features")
-      .insert(legacyPayload)
-      .select("*")
-      .single())
+    const nextPayload = stripUnsupportedFeatureColumns(featurePayload, error)
+    if (Object.keys(nextPayload).length === Object.keys(featurePayload).length) break
+    featurePayload = nextPayload
   }
 
   if (error) throw error
@@ -254,16 +259,17 @@ export async function updateFeature(featureId, updates) {
     return query.select("*")
   }
 
-  const patchPayload = toFeaturePatch(patchSource)
-  let { data, error } = await buildQuery(patchPayload)
+  let patchPayload = toFeaturePatch(patchSource)
+  let data = null
+  let error = null
 
-  if (error && isMissingEmojiKindColumn(error)) {
-    ;({ data, error } = await buildQuery(stripEmojiKindFromPayload(patchPayload)))
-  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    ;({ data, error } = await buildQuery(patchPayload))
+    if (!error) break
 
-  if (error && isMissingStyleColumn(error) && Object.prototype.hasOwnProperty.call(patchPayload, "style")) {
-    const { style: _style, ...legacyPatch } = patchPayload
-    ;({ data, error } = await buildQuery(legacyPatch))
+    const nextPayload = stripUnsupportedFeatureColumns(patchPayload, error)
+    if (Object.keys(nextPayload).length === Object.keys(patchPayload).length) break
+    patchPayload = nextPayload
   }
 
   if (error) throw error
