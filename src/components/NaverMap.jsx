@@ -11,6 +11,12 @@ const escapeHtml = (str) => {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
+const getDefaultEmojiForFeature = (feature) => {
+  if (feature?.type === "route") return "🛣️"
+  if (feature?.type === "area") return "🟩"
+  return "📍"
+}
+
 const getLineDashArrayAttr = (lineStyle) => {
   if (lineStyle === FEATURE_LINE_STYLE_SHORT_DOT) return "2 3"
   if (lineStyle === FEATURE_LINE_STYLE_SHORT_DASH) return "4 3"
@@ -380,7 +386,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           const emoji = descriptor.kind === "unicode" ? descriptor.value : ""
           const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
           const mappedCategory = (descriptor.kind === "unicode" && isMappedPinEmoji(emoji)) ? emojiToCategory(emoji) : ""
-          const catId = explicitCategory || mappedCategory || emojiToCategory(feature.emoji)
+          const catId = explicitCategory || mappedCategory || (descriptor.kind === "unicode" ? emojiToCategory(feature.emoji) : "pin")
           const iconData = getPinIcon(catId)
           const hasCustomEmoji = descriptor.kind === "unicode"
             && !explicitCategory
@@ -404,14 +410,16 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
             const art = findPixelArt(descriptor.value)
             badgeInnerHtml = art
               ? `<span class="loca-pin-badge__pixel">${pixelArtToSvgString(art, 14)}</span>`
-              : `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+              : `<span class="loca-pin-badge__emoji">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
           } else if (descriptor.kind === "photo") {
             const safeUrl = escapeHtml(descriptor.value || "")
             badgeInnerHtml = `<img class="loca-pin-badge__photo" src="${safeUrl}" width="14" height="14" alt=""/>`
           } else if (hasCustomEmoji) {
             badgeInnerHtml = `<span class="loca-pin-badge__emoji">${escapeHtml(emoji)}</span>`
           } else {
-            badgeInnerHtml = `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+            badgeInnerHtml = descriptor.kind === "unicode"
+              ? `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
+              : `<span class="loca-pin-badge__emoji">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
           }
           const badgeHtml = showBadge
             ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`

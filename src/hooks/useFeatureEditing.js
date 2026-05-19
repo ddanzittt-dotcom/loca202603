@@ -23,6 +23,16 @@ const toEditableFeature = (feature) => ({
   tagsText: tagsToText(feature.tags),
 })
 
+function preserveDraftFeatureFields(savedFeature, draftFeature) {
+  const next = { ...savedFeature }
+  for (const key of ["emoji", "emojiKind", "emojiPixelId", "emojiPhotoUrl", "category", "style"]) {
+    if (Object.prototype.hasOwnProperty.call(draftFeature || {}, key)) {
+      next[key] = draftFeature[key]
+    }
+  }
+  return next
+}
+
 const getFeatureDefaultEmoji = (type) => {
   if (type === "route") return "\uD83D\uDEE3\uFE0F"
   if (type === "area") return "\uD83D\uDFE9"
@@ -413,12 +423,13 @@ export function useFeatureEditing({
             mapId: activeMapId,
             lastKnownUpdatedAt,
           })
+          const displayFeature = preserveDraftFeatureFields(savedFeature, nextFeature)
           setCommunityMapFeatures((current) => current.map((feature) => {
             if (feature.id !== nextFeature.id) return feature
-            return mergeFeatureMedia(savedFeature, feature)
+            return mergeFeatureMedia(displayFeature, feature)
           }))
           setFeatureSheet((current) => {
-            const merged = toEditableFeature(mergeFeatureMedia(savedFeature, current))
+            const merged = toEditableFeature(mergeFeatureMedia(displayFeature, current))
             return { ...merged, operatorNote: current?.operatorNote || "" }
           })
           showToast("정보를 저장했어요.")
@@ -461,12 +472,13 @@ export function useFeatureEditing({
             mapId: nextFeature.mapId,
             lastKnownUpdatedAt,
           })
+          const displayFeature = preserveDraftFeatureFields(savedFeature, nextFeature)
           setFeatures((current) => current.map((feature) => {
             if (feature.id !== nextFeature.id) return feature
-            return mergeFeatureMedia(savedFeature, feature)
+            return mergeFeatureMedia(displayFeature, feature)
           }))
           setFeatureSheet((current) => {
-            const merged = toEditableFeature(mergeFeatureMedia(savedFeature, current))
+            const merged = toEditableFeature(mergeFeatureMedia(displayFeature, current))
             return { ...merged, operatorNote: current?.operatorNote || "" }
           })
           setMaps((current) => current.map((mapItem) => (
@@ -903,7 +915,10 @@ export function useFeatureEditing({
             return
           }
           try {
-            nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+            nextFeature = preserveDraftFeatureFields(
+              await createFeatureRecord(activeMapId, nextFeature),
+              nextFeature,
+            )
           } catch (error) {
             console.error("Failed to create pin", error)
             return showToast("핀을 추가하지 못했어요.")
@@ -1012,7 +1027,10 @@ export function useFeatureEditing({
           return
         }
         try {
-          nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+          nextFeature = preserveDraftFeatureFields(
+            await createFeatureRecord(activeMapId, nextFeature),
+            nextFeature,
+          )
         } catch (error) {
           console.error("Failed to create route", error)
           return showToast("경로를 저장하지 못했어요.")
@@ -1092,7 +1110,10 @@ export function useFeatureEditing({
           return
         }
         try {
-          nextFeature = await createFeatureRecord(activeMapId, nextFeature)
+          nextFeature = preserveDraftFeatureFields(
+            await createFeatureRecord(activeMapId, nextFeature),
+            nextFeature,
+          )
         } catch (error) {
           console.error("Failed to create area", error)
           return showToast("영역을 저장하지 못했어요.")
