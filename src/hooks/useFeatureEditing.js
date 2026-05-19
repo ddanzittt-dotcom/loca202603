@@ -109,6 +109,10 @@ function checkCommunityDistance(activeMapSource, myLocation, lat, lng, showToast
   return true
 }
 
+function isSupabaseUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(`${value || ""}`)
+}
+
 /**
  * DB에서 반환된 feature(memos/photos/voices가 빈 배열일 수 있음)와
  * 로컬 state의 기존 feature를 병합한다.
@@ -166,6 +170,8 @@ export function useFeatureEditing({
     && cloudMode
     && Boolean(activeMapId)
     && activeMapId !== "community-map"
+    && isSupabaseUuid(activeMapId)
+  const canPersistLocalInCloud = cloudMode && activeMapSource === "local" && isSupabaseUuid(activeMapId)
   const isLocalEventMap = activeMapSource === "local" && isEventMap
   const canUseOperatorNote = isLocalEventMap && (activeMapRole === "owner" || activeMapRole === "operator")
   const shouldRequestApproval = cloudMode && isLocalEventMap && activeMapRole === "editor"
@@ -875,7 +881,7 @@ export function useFeatureEditing({
         }
         setCommunityMapFeatures((current) => [nextFeature, ...current])
       } else {
-        if (cloudMode) {
+        if (canPersistLocalInCloud) {
           if (shouldRequestApproval) {
             await submitFeatureRequest("insert", null, {
               type: nextFeature.type,
@@ -908,7 +914,7 @@ export function useFeatureEditing({
       }
 
       logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
-      if (cloudMode) {
+      if (canPersistLocalInCloud) {
         recordMapAction({
           actionType: "feature_create_pin",
           eventKey: `pin:${nextFeature.id}`,
@@ -985,7 +991,7 @@ export function useFeatureEditing({
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
-      if (cloudMode) {
+      if (canPersistLocalInCloud) {
         if (shouldRequestApproval) {
           await submitFeatureRequest("insert", null, {
             type: nextFeature.type,
@@ -1017,7 +1023,7 @@ export function useFeatureEditing({
     }
 
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
-    if (cloudMode) {
+    if (canPersistLocalInCloud) {
       recordMapAction({
         actionType: "feature_create_route",
         eventKey: `route:${nextFeature.id}`,
@@ -1065,7 +1071,7 @@ export function useFeatureEditing({
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
-      if (cloudMode) {
+      if (canPersistLocalInCloud) {
         if (shouldRequestApproval) {
           await submitFeatureRequest("insert", null, {
             type: nextFeature.type,
@@ -1097,7 +1103,7 @@ export function useFeatureEditing({
     }
 
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
-    if (cloudMode) {
+    if (canPersistLocalInCloud) {
       recordMapAction({
         actionType: "feature_create_area",
         eventKey: `area:${nextFeature.id}`,

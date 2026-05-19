@@ -65,9 +65,27 @@ function stripStyleFromPayload(payload) {
 }
 
 function stripUnsupportedFeatureColumns(payload, error) {
+  const column = getMissingColumnName(error)
+  if (column && Object.prototype.hasOwnProperty.call(payload || {}, column)) {
+    if (column === "emoji_kind" || column === "emoji_pixel_id" || column === "emoji_photo_url") {
+      return stripEmojiKindFromPayload(payload)
+    }
+    const { [column]: _missing, ...rest } = payload
+    void _missing
+    return rest
+  }
   if (isMissingEmojiKindColumn(error)) return stripEmojiKindFromPayload(payload)
   if (isMissingStyleColumn(error)) return stripStyleFromPayload(payload)
   return payload
+}
+
+function getMissingColumnName(error) {
+  if (!error) return null
+  if (error.code !== "42703" && error.code !== "PGRST204") return null
+  const message = `${error.message || ""}`
+  return message.match(/'([^']+)'\s+column/i)?.[1]
+    || message.match(/column\s+"([^"]+)"/i)?.[1]
+    || null
 }
 
 async function applyFeatureStyleFromRequestPayload(supabase, featureId, payload) {
@@ -222,7 +240,7 @@ export async function createFeature(mapId, featureData) {
   let error = null
 
   // migration 031 (emoji_kind 등) 미적용 환경 폴백: 새 컬럼 제거 후 재시도.
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     ;({ data, error } = await supabase
       .from("map_features")
       .insert(featurePayload)
@@ -263,7 +281,7 @@ export async function updateFeature(featureId, updates) {
   let data = null
   let error = null
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     ;({ data, error } = await buildQuery(patchPayload))
     if (!error) break
 
