@@ -749,6 +749,7 @@ export function useFeatureEditing({
       const featureId = relocatingRef.current
       relocatingRef.current = null
       setEditorMode("browse")
+      let relocatedFeature = null
 
       if (cloudMode) {
         if (shouldRequestApproval && activeMapSource === "local") {
@@ -768,6 +769,7 @@ export function useFeatureEditing({
             mapId: activeMapId,
             lastKnownUpdatedAt: currentFeature?.updatedAt || null,
           })
+          relocatedFeature = mergeFeatureMedia(saved, currentFeature)
           const updateFn = (current) => current.map((feature) => (
             feature.id === featureId
               ? mergeFeatureMedia(saved, feature)
@@ -791,6 +793,12 @@ export function useFeatureEditing({
             ? { ...feature, lat: sc.lat, lng: sc.lng, updatedAt: new Date().toISOString() }
             : feature
         ))
+        relocatedFeature = {
+          ...(activeFeaturePool.find((feature) => feature.id === featureId) || {}),
+          lat: sc.lat,
+          lng: sc.lng,
+          updatedAt: new Date().toISOString(),
+        }
         if (activeMapSource === "community") {
           setCommunityMapFeatures(updateFn)
         } else {
@@ -800,7 +808,7 @@ export function useFeatureEditing({
       }
 
       setSelectedFeatureId(featureId)
-      const updated = activeFeaturePool.find((feature) => feature.id === featureId)
+      const updated = relocatedFeature || activeFeaturePool.find((feature) => feature.id === featureId)
       if (updated) {
         setFeatureSheet(toEditableFeature({ ...updated, lat: sc.lat, lng: sc.lng }))
       }
