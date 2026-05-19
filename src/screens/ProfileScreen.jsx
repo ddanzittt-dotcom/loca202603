@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users, Settings } from "lucide-react"
+import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
@@ -360,7 +360,6 @@ export function ProfileScreen({
   cloudMode = false,
   cloudEmail = "",
   characterImage,
-  souvenirs = [],
   settingsOpen: settingsOpenProp,
   onSettingsOpenChange,
   onSignOut,
@@ -378,18 +377,6 @@ export function ProfileScreen({
   const setSettingsOpen = onSettingsOpenChange ?? setSettingsOpenLocal
   const [editOpen, setEditOpen] = useState(false)
   const [userSearchOpen, setUserSearchOpen] = useState(false)
-  const [souvenirsPopoverOpen, setSouvenirsPopoverOpen] = useState(false)
-  const souvenirsPopoverRef = useRef(null)
-  useEffect(() => {
-    if (!souvenirsPopoverOpen) return
-    const handleDocClick = (e) => {
-      if (souvenirsPopoverRef.current && !souvenirsPopoverRef.current.contains(e.target)) {
-        setSouvenirsPopoverOpen(false)
-      }
-    }
-    document.addEventListener("pointerdown", handleDocClick)
-    return () => document.removeEventListener("pointerdown", handleDocClick)
-  }, [souvenirsPopoverOpen])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
   useEffect(() => {
@@ -648,13 +635,6 @@ export function ProfileScreen({
   return (
     <section className="screen screen--scroll profile-v4">
       <div className="pf">
-        <header className="pf__app-header">
-          <strong>LOCA</strong>
-          <button className="pf__settings-btn" type="button" onClick={() => setSettingsOpen(true)} aria-label="설정">
-            <Settings size={18} aria-hidden="true" />
-          </button>
-        </header>
-
         <div className="pf__profile-header">
           <div className="pf__id-row">
             <div className="pf__avatar" aria-hidden="true">
@@ -667,34 +647,6 @@ export function ProfileScreen({
               </div>
               <p className="pf__handle">@{handleText}</p>
             </div>
-
-            {souvenirs.length > 0 ? (
-              <div ref={souvenirsPopoverRef} className="pf__souvenir-wrap">
-                <button
-                  type="button"
-                  className="pf__souvenir-chip"
-                  aria-label={`기념 뱃지 ${souvenirs.length}개`}
-                  aria-expanded={souvenirsPopoverOpen}
-                  onClick={() => setSouvenirsPopoverOpen((v) => !v)}
-                >
-                  <span aria-hidden="true">🏆</span>
-                  <span>{souvenirs.length}</span>
-                </button>
-                {souvenirsPopoverOpen ? (
-                  <div className="pf__souvenir-popover" role="dialog" aria-label="받은 기념 뱃지" onClick={(e) => e.stopPropagation()}>
-                    <p>기념 뱃지</p>
-                    <ul>
-                      {souvenirs.map((s) => (
-                        <li key={s.id || s.souvenir_id || s.souvenir_code}>
-                          <span aria-hidden="true">{s.emoji || "🏆"}</span>
-                          <strong>{s.title}</strong>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
           </div>
 
           {user.bio ? <p className="pf__bio">{user.bio}</p> : null}
