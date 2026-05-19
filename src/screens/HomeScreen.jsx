@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Bell, ChevronLeft, ChevronRight, Layers, MapPin, X } from "lucide-react"
 import { isEventMap } from "../lib/mapPlacement"
 import { getLevelForXp, getLevelProgress } from "../data/gamification"
+import { buildGreetingContext, getDailyGreeting } from "../lib/greeting"
 
 const DAY_MS = 86400000
 const WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"]
@@ -36,12 +37,34 @@ function getFeatureDate(feature) {
   return date && Number.isFinite(date.getTime()) ? date : null
 }
 
+function toValidDate(value) {
+  const date = value ? new Date(value) : null
+  return date && Number.isFinite(date.getTime()) ? date : null
+}
+
 function getFeatureMapId(feature) {
   return feature?.mapId || feature?.map_id || feature?.map?.id || null
 }
 
 function getFeatureId(feature) {
   return feature?.id || feature?.feature_id || null
+}
+
+const greetingStorage = {
+  async get(key) {
+    try {
+      return window.localStorage?.getItem(key) || null
+    } catch {
+      return null
+    }
+  },
+  async set(key, value) {
+    try {
+      window.localStorage?.setItem(key, value)
+    } catch {
+      // localStorage can be unavailable in private or embedded contexts.
+    }
+  },
 }
 
 function formatKoreanDate(date = new Date()) {
@@ -569,6 +592,36 @@ export function HomeScreen({
 
   const resumeMap = useMemo(() => buildResumeMap(personalMaps, featuresByMapId), [featuresByMapId, personalMaps])
   const sharedMaps = useMemo(() => buildSharedMaps(recommendedMaps), [recommendedMaps])
+  const firstRecordAt = useMemo(() => (
+    features.reduce((oldest, feature) => {
+      const date = getFeatureDate(feature)
+      if (!date) return oldest
+      return !oldest || date.getTime() < oldest.getTime() ? date : oldest
+    }, null)
+  ), [features])
+  const lastVisitAt = useMemo(() => toValidDate(
+    viewerProfile?.lastVisitAt
+      || viewerProfile?.last_visit_at
+      || viewerProfile?.lastSeenAt
+      || viewerProfile?.last_seen_at
+      || viewerProfile?.updatedAt
+      || viewerProfile?.updated_at,
+  ), [viewerProfile])
+  const greetingContext = useMemo(() => buildGreetingContext({
+    user: { lastVisitAt, firstRecordAt },
+    inProgressMap: resumeMap ? { id: resumeMap.id } : null,
+  }), [firstRecordAt, lastVisitAt, resumeMap])
+  const [greetingMessage, setGreetingMessage] = useState("")
+
+  useEffect(() => {
+    let alive = true
+    getDailyGreeting(greetingContext, greetingStorage).then((message) => {
+      if (alive) setGreetingMessage(message)
+    })
+    return () => {
+      alive = false
+    }
+  }, [greetingContext])
 
   const xp = userStats?.xp || 0
   const levelInfo = useMemo(() => getLevelForXp(xp), [xp])
@@ -639,7 +692,7 @@ export function HomeScreen({
 
         <div className="home-v9-greeting">
           <time>{formatKoreanDate(today)}</time>
-          <h1>{userName}님, 안녕하세요.</h1>
+          <h1>{greetingMessage || "오늘은 어디로 떠나볼까요?"}</h1>
         </div>
 
         <section className="home-v9-combo" aria-label="내 기록 요약">
