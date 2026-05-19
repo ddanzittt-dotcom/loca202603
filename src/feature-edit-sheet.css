@@ -112,6 +112,20 @@
   flex-shrink: 0;
   padding: 0;
 }
+.fes-head-relocate {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 10px;
+  background: #FAF5EE;
+  border: 0.5px solid rgba(45,74,62,0.16);
+  color: #2D4A3E;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* ---------- Fields (공통) ---------- */
 .fes-field {
@@ -1250,3 +1264,35 @@
   color: #fff;
 }
 .itm-btn--primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-height: 720px) {
+  .fes-sheet {
+    max-height: calc(100dvh - 16px);
+  }
+  .fes-head {
+    padding: 10px 16px 8px;
+  }
+  .fes-field {
+    padding-bottom: 9px;
+  }
+  .fes-label {
+    margin-bottom: 5px;
+  }
+  .fes-input,
+  .fes-textarea {
+    padding: 9px 12px;
+  }
+  .fes-textarea {
+    line-height: 1.38;
+  }
+  .fes-attach {
+    padding-bottom: 9px;
+  }
+  .fes-action {
+    padding-top: 2px;
+    padding-bottom: 12px;
+  }
+  .fes-btn {
+    height: 42px;
+  }
+}

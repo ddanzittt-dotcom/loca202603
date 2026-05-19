@@ -9,7 +9,6 @@ import {
   toFeatureInsert,
   toFeaturePatch,
   touchMapRecord,
-  reverseGeocodeAndTag,
 } from "./mapService.utils"
 import { normalizeFeatureStyle } from "./featureStyle"
 
@@ -255,9 +254,6 @@ export async function createFeature(mapId, featureData) {
 
   if (error) throw error
   await touchMapRecord(mapId)
-  if (data.type === "pin" && data.lat && data.lng && data.lat !== 0 && data.lng !== 0) {
-    reverseGeocodeAndTag(supabase, data.id, data.lat, data.lng).catch(() => {})
-  }
   return normalizeFeature(data)
 }
 
@@ -297,13 +293,6 @@ export async function updateFeature(featureId, updates) {
 
   const savedFeature = data[0]
   if (mapId) await touchMapRecord(mapId)
-  if (("lat" in patchSource || "lng" in patchSource)
-    && savedFeature.lat
-    && savedFeature.lng
-    && savedFeature.lat !== 0
-    && savedFeature.lng !== 0) {
-    reverseGeocodeAndTag(supabase, savedFeature.id, savedFeature.lat, savedFeature.lng).catch(() => {})
-  }
   return normalizeFeature(savedFeature)
 }
 

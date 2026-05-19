@@ -634,6 +634,13 @@ export function FeatureEditSheet({
   }
 
   const canDelete = !readOnly && !creating && typeof onDelete === "function"
+  const canRelocate = type === "pin"
+    && featureSheet?.id
+    && featureSheet.lat != null
+    && featureSheet.lng != null
+    && (featureSheet.lat !== 0 || featureSheet.lng !== 0)
+    && typeof onRelocatePin === "function"
+    && !readOnly
 
   // 현재 선택된 이모지 descriptor — 3개 새 필드를 우선, 없으면 레거시 emoji 문자열.
   const emojiDescriptor = resolveFeatureEmoji(featureSheet)
@@ -652,6 +659,15 @@ export function FeatureEditSheet({
             <div className="fes-title">{sheetTitle}</div>
             <div className="fes-meta">{metaLine}</div>
           </div>
+          {canRelocate ? (
+            <button
+              className="fes-head-relocate"
+              type="button"
+              onClick={() => onRelocatePin(featureSheet.id)}
+            >
+              위치변경
+            </button>
+          ) : null}
           <button className="fes-close" type="button" onClick={onClose} aria-label="닫기">
             <XIcon size={12} />
           </button>
@@ -755,31 +771,6 @@ export function FeatureEditSheet({
             maxLength={2000}
           />
         </div>
-
-        {/* --- 위치 (장소만) --- */}
-        {type === "pin" && featureSheet.lat != null && featureSheet.lng != null
-          && (featureSheet.lat !== 0 || featureSheet.lng !== 0) ? (
-          <div className="fes-field">
-            <FieldLabel hint="장소가 지도에 남겨진 좌표">위치</FieldLabel>
-            <div className="fes-location">
-              <div className="fes-location-info">
-                <div className="fes-location-addr">{featureSheet.address || "주소를 불러오는 중..."}</div>
-                <div className="fes-location-coords">
-                  {Number(featureSheet.lat).toFixed(6)}, {Number(featureSheet.lng).toFixed(6)}
-                </div>
-              </div>
-              {onRelocatePin && !readOnly ? (
-                <button
-                  type="button"
-                  className="fes-location-change"
-                  onClick={() => onRelocatePin(featureSheet.id)}
-                >
-                  변경
-                </button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
 
         {/* --- 미디어 블록 (내 지도만) --- */}
         {isPersonal ? (
