@@ -160,6 +160,13 @@ describe("toFeatureInsert", () => {
     expect(result.lat).toBeNull()
     expect(result.points).toEqual([[127, 37]])
   })
+
+  it("pixel emoji insert keeps legacy text fallback", () => {
+    const result = toFeatureInsert({ type: "pin", emojiKind: "pixel", emojiPixelId: "px-heart", lat: 37.5, lng: 127.0 })
+    expect(result.emoji_kind).toBe("pixel")
+    expect(result.emoji_pixel_id).toBe("px-heart")
+    expect(result.emoji).toBe("loca-emoji:pixel:px-heart")
+  })
 })
 
 describe("toFeaturePatch", () => {
@@ -173,6 +180,13 @@ describe("toFeaturePatch", () => {
     const result = toFeaturePatch({ lat: 37.5, lng: 127.0 })
     expect(result.lat).toBe(37.5)
     expect(result.lng).toBe(127.0)
+  })
+
+  it("pixel emoji patch keeps legacy text fallback", () => {
+    const result = toFeaturePatch({ type: "pin", emojiKind: "pixel", emojiPixelId: "px-star" })
+    expect(result.emoji_kind).toBe("pixel")
+    expect(result.emoji_pixel_id).toBe("px-star")
+    expect(result.emoji).toBe("loca-emoji:pixel:px-star")
   })
 })
 

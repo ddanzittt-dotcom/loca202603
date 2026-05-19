@@ -32,6 +32,13 @@ export function friendlySupabaseError(error) {
 
 export const DEFAULT_MAP_THEME = "#4F46E5"
 export const DEFAULT_FEATURE_TITLE = "새 항목"
+const LEGACY_EMOJI_PREFIX = "loca-emoji:"
+
+function encodeLegacyEmojiDescriptor(kind, value, type) {
+  if (kind === "pixel" && value) return `${LEGACY_EMOJI_PREFIX}pixel:${value}`
+  if (kind === "photo" && value) return `${LEGACY_EMOJI_PREFIX}photo:${value}`
+  return getDefaultEmoji(type)
+}
 
 export function createSlugCandidate(value = "") {
   const slug = value
@@ -186,7 +193,7 @@ export function toFeatureInsert(feature = {}, fallbackType = "pin") {
   // emoji TEXT 컬럼: unicode 종류일 때만 의미, 그 외에는 기본 폴백 글자(레거시 클라이언트 대응).
   const emojiText = emojiKind === "unicode"
     ? (feature.emoji || getDefaultEmoji(type))
-    : getDefaultEmoji(type)
+    : encodeLegacyEmojiDescriptor(emojiKind, emojiKind === "pixel" ? feature.emojiPixelId : feature.emojiPhotoUrl, type)
   const payload = {
     type,
     title: feature.title?.trim() || DEFAULT_FEATURE_TITLE,
@@ -232,7 +239,7 @@ export function toFeaturePatch(updates = {}) {
     payload.emoji_photo_url = kind === "photo" ? (updates.emojiPhotoUrl || null) : null
     payload.emoji = kind === "unicode"
       ? (updates.emoji || getDefaultEmoji(updates.type))
-      : getDefaultEmoji(updates.type)
+      : encodeLegacyEmojiDescriptor(kind, kind === "pixel" ? updates.emojiPixelId : updates.emojiPhotoUrl, updates.type)
   }
 
   if ("tags" in updates) payload.tags = updates.tags || []
@@ -298,10 +305,20 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
 
   if (!regionName) return
 
-  await supabase
-    .from("map_features")
-    .update({ region_name: regionName, region_code: regionCode })
-    .eq("id", featureId)
+  try {
+    const { error } = await supabase
+      .from("map_features")
+      .update({ region_name: regionName, region_code: regionCode })
+      .eq("id", featureId)
+    if (error) {
+      const msg = `${error.message || ""}`.toLowerCase()
+      if (!msg.includes("region_name") && !msg.includes("region_code") && error.code !== "42703" && error.code !== "PGRST204") {
+        throw error
+      }
+    }
+  } catch {
+    // Region tagging is best-effort and must never affect feature saves.
+  }
 }
 
 export async function requireUser() {

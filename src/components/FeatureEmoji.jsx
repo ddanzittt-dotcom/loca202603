@@ -13,6 +13,21 @@
 
 import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
 
+const LEGACY_EMOJI_PREFIX = "loca-emoji:"
+
+function parseLegacyEmojiDescriptor(value) {
+  if (typeof value !== "string" || !value.startsWith(LEGACY_EMOJI_PREFIX)) return null
+  const rest = value.slice(LEGACY_EMOJI_PREFIX.length)
+  const divider = rest.indexOf(":")
+  if (divider <= 0) return null
+  const kind = rest.slice(0, divider)
+  const descriptorValue = rest.slice(divider + 1)
+  if ((kind === "pixel" || kind === "photo") && descriptorValue) {
+    return { kind, value: descriptorValue }
+  }
+  return null
+}
+
 /**
  * feature 객체에서 emoji descriptor {kind, value} 를 뽑아낸다.
  * normalize 함수가 아직 새 컬럼을 반영하지 못한 경우에도 동작하도록 폴백 처리.
@@ -27,6 +42,8 @@ export function resolveFeatureEmoji(featureOrEmoji) {
 
   // 단순 문자열 (레거시)
   if (typeof featureOrEmoji === "string") {
+    const legacyDescriptor = parseLegacyEmojiDescriptor(featureOrEmoji)
+    if (legacyDescriptor) return legacyDescriptor
     return { kind: "unicode", value: featureOrEmoji }
   }
 
@@ -34,6 +51,9 @@ export function resolveFeatureEmoji(featureOrEmoji) {
   const f = featureOrEmoji
   // 정규화된 형태 (normalizeFeature 가 emoji 를 객체로 만든 경우)
   if (f.emoji && typeof f.emoji === "object" && "kind" in f.emoji) return f.emoji
+
+  const legacyDescriptor = parseLegacyEmojiDescriptor(f.emoji)
+  if (legacyDescriptor) return legacyDescriptor
 
   // 새 컬럼 우선
   const kind = f.emojiKind || f.emoji_kind
