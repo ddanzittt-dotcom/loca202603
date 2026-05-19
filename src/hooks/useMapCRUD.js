@@ -400,11 +400,11 @@ export function useMapCRUD({
   }, [cloudMode, setSelectedPostRef, setShares, shares, showToast])
 
   const openFeatureFromPlaces = useCallback((featureId, options) => {
-    const feature = features.find((item) => item.id === featureId)
+    const feature = features.find((item) => (item.id || item.feature_id) === featureId)
     if (!feature) return
     setActiveTab("maps")
     setActiveMapSource("local")
-    setActiveMapId(feature.mapId)
+    setActiveMapId(feature.mapId || feature.map_id)
     setMapsView("editor")
     resetEditorState()
     setSelectedFeatureId(featureId)

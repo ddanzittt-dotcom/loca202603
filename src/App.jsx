@@ -1313,6 +1313,7 @@ export default function App() {
             userStats={userStats}
             levelEmoji={levelEmoji}
             onResumeMyMap={openMapEditor}
+            onOpenFeatureInMap={(_, featureId) => openFeatureFromPlaces(featureId)}
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
             onNavigateToExplore={openExploreTab}

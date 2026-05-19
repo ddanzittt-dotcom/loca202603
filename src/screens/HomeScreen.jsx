@@ -40,6 +40,10 @@ function getFeatureMapId(feature) {
   return feature?.mapId || feature?.map_id || feature?.map?.id || null
 }
 
+function getFeatureId(feature) {
+  return feature?.id || feature?.feature_id || null
+}
+
 function formatKoreanDate(date = new Date()) {
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
@@ -175,8 +179,10 @@ function buildRecordGroups(features, maps, range) {
           records: [],
         })
       }
+      const featureId = getFeatureId(feature)
       groups.get(mapId).records.push({
-        id: feature.id || `${mapId}-${date.getTime()}`,
+        id: featureId || `${mapId}-${date.getTime()}`,
+        featureId,
         title: feature.title || feature.name || "이름 없는 기록",
         kind: getFeatureKindLabel(feature),
         date,
@@ -468,7 +474,7 @@ function DialogHeader({ title, stat, onClose }) {
   )
 }
 
-function RecordListDialog({ range, groups, onOpenMap, onClose }) {
+function RecordListDialog({ range, groups, onOpenMap, onOpenFeature, onClose }) {
   const total = groups.reduce((sum, group) => sum + group.records.length, 0)
 
   return (
@@ -495,7 +501,7 @@ function RecordListDialog({ range, groups, onOpenMap, onClose }) {
                     type="button"
                     className="home-v9-record-item"
                     key={record.id}
-                    onClick={() => onOpenMap?.(record.mapId)}
+                    onClick={() => onOpenFeature?.(record.mapId, record.featureId)}
                   >
                     <span className="home-v9-record-item__marker">{record.kind}</span>
                     <span className="home-v9-record-item__body">
@@ -520,6 +526,7 @@ function RecordListDialog({ range, groups, onOpenMap, onClose }) {
 
 export function HomeScreen({
   onResumeMyMap,
+  onOpenFeatureInMap,
   onOpenMap,
   onNavigateToExplore,
   onOpenExploreSearch,
@@ -611,6 +618,12 @@ export function HomeScreen({
     setOpenDialog(null)
     if (!mapId || mapId === "unknown") return
     onResumeMyMap?.(mapId)
+  }
+  const openFeatureFromRecords = (mapId, featureId) => {
+    setOpenDialog(null)
+    if (!mapId || mapId === "unknown") return
+    if (featureId && onOpenFeatureInMap) onOpenFeatureInMap(mapId, featureId)
+    else onResumeMyMap?.(mapId)
   }
 
   return (
@@ -750,6 +763,7 @@ export function HomeScreen({
               range={recordRange}
               groups={recordGroups}
               onOpenMap={openMapFromRecords}
+              onOpenFeature={openFeatureFromRecords}
               onClose={() => setOpenDialog(null)}
             />
           ) : null}
