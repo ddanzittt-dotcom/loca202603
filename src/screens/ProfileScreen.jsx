@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, Map as MapIcon, ArrowLeft, Link as LinkIcon, Check, Search, Users } from "lucide-react"
+import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users, Settings } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
@@ -7,34 +7,82 @@ import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { hasSupabaseEnv } from "../lib/supabase"
 
-// 미니 지도 카드 (갤러리용)
-const MINI_PALETTES = {
-  서울: ["#D4836B", "#D99580", "#E0A896", "#E8BCAD"],
-  경기: ["#C48B4C", "#D4A06A", "#E0B585", "#ECCAA0"],
-  강원: ["#4A7A60", "#649478", "#80AE92", "#9CC8AC"],
-  부산: ["#5B7EA5", "#7596B8", "#90AECA", "#ABC6DC"],
-  제주: ["#C47A6E", "#D09488", "#DCAEA2", "#E8C8BE"],
+function renderMiniMapGrid() {
+  const vertical = [40, 80, 120, 160].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="138"/>`).join("")
+  const horizontal = [34, 69, 103].map((y) => `<line x1="0" y1="${y}" x2="200" y2="${y}"/>`).join("")
+  return `<g stroke="#DDD0B3" stroke-width="0.6">${vertical}${horizontal}</g>`
+}
+
+function generateLocalMiniMapSvg(features) {
+  const pins = features.filter((item) => item.type === "pin" && Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng)))
+  const bg = '<rect width="200" height="138" fill="#EFE7D4"/>'
+  const grid = renderMiniMapGrid()
+
+  if (pins.length === 0) {
+    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<text x="100" y="73" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="10" font-weight="700" fill="#8B847A">장소 없음</text></svg>`
+  }
+
+  const coords = pins.map((pin) => ({ lat: Number(pin.lat), lng: Number(pin.lng) }))
+  const minLat = Math.min(...coords.map((p) => p.lat))
+  const maxLat = Math.max(...coords.map((p) => p.lat))
+  const minLng = Math.min(...coords.map((p) => p.lng))
+  const maxLng = Math.max(...coords.map((p) => p.lng))
+  const latRange = maxLat - minLat
+  const lngRange = maxLng - minLng
+
+  if (latRange < 0.0005 && lngRange < 0.0005) {
+    const countLabel = pins.length > 1 ? `<text x="100" y="102" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="9" font-weight="700" fill="#4A453E">${pins.length}곳 한 지점</text>` : ""
+    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<circle cx="100" cy="69" r="14" fill="#FF6B35" opacity="0.15"/><circle cx="100" cy="69" r="8" fill="#FF6B35" opacity="0.3"/><circle cx="100" cy="69" r="6" fill="white" stroke="#C44518" stroke-width="1"/><circle cx="100" cy="69" r="3.5" fill="#FF6B35"/>${countLabel}</svg>`
+  }
+
+  const padding = 18
+  const drawableW = 200 - padding * 2
+  const drawableH = 138 - padding * 2
+  const scale = Math.min(drawableW / lngRange, drawableH / latRange)
+  const usedW = lngRange * scale
+  const usedH = latRange * scale
+  const offsetX = padding + (drawableW - usedW) / 2
+  const offsetY = padding + (drawableH - usedH) / 2
+  const points = coords.map((p) => ({
+    x: offsetX + (p.lng - minLng) * scale,
+    y: offsetY + (maxLat - p.lat) * scale,
+  }))
+  const radius = pins.length > 20 ? 3 : pins.length > 10 ? 3.5 : 4.5
+  const dots = points.map((point) => {
+    const x = point.x.toFixed(1)
+    const y = point.y.toFixed(1)
+    return `<circle cx="${x}" cy="${y}" r="${radius}" fill="white" stroke="#C44518" stroke-width="0.8"/><circle cx="${x}" cy="${y}" r="${(radius * 0.62).toFixed(1)}" fill="#FF6B35"/>`
+  }).join("")
+
+  return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${bg}${grid}<g>${dots}</g></svg>`
+}
+
+function getMapPrivacyLabel(map) {
+  const state = getProfilePlacementState(map)
+  if (state.isPublished) return "공개"
+  if (map?.visibility === "private" || map?.privacy === "private") return "비공개"
+  return "참여 중"
 }
 
 function ProfileMiniCard({ map, features, onClick }) {
   const pins = features.filter((f) => f.type === "pin")
-  const routes = features.filter((f) => f.type === "route")
-  const areas = features.filter((f) => f.type === "area")
-  const pal = MINI_PALETTES["서울"] // fallback
-  const hash = (map.title || "").length % 3
+  const previewSvg = map.previewSvg || map.preview_svg || generateLocalMiniMapSvg(features)
+  const privacyLabel = getMapPrivacyLabel(map)
+  const isPrivate = privacyLabel === "비공개"
+  const savedCount = map.savedCount || map.saved_count || map.bookmarkCount || map.bookmark_count
 
   return (
-    <button className="pf__mini-card" type="button" onClick={onClick} style={{ background: pal[3] }}>
-      <div className="pf__mini-blob" style={{ left: -8, bottom: -8, width: 60, height: 42, background: `${pal[1]}66` }} />
-      <div className="pf__mini-blob" style={{ right: -6 + hash * 3, top: -5, width: 50, height: 35, background: `${pal[3]}80` }} />
-      <div className="pf__mini-bottom">
+    <button className="pf__mini-card" type="button" onClick={onClick}>
+      <span className="pf__mini-map" dangerouslySetInnerHTML={{ __html: previewSvg }} />
+      <span className="pf__mini-body">
         <p className="pf__mini-title">{map.title}</p>
         <div className="pf__mini-meta">
-          <span><MapPin size={7} fill="#fff" stroke="#fff" /> {pins.length}</span>
-          {routes.length > 0 ? <span>{routes.length} 경로</span> : null}
-          {areas.length > 0 ? <span>{areas.length} 영역</span> : null}
+          <span>{pins.length} 장소</span>
+          <i />
+          <span>{isPrivate ? "🔒 " : ""}{privacyLabel}</span>
+          {savedCount ? <><i /><span>저장 {savedCount}</span></> : null}
         </div>
-      </div>
+      </span>
     </button>
   )
 }
@@ -344,16 +392,12 @@ export function ProfileScreen({
   }, [souvenirsPopoverOpen])
   const [pickerOpen, setPickerOpen] = useState(false)
   const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
-  const showCurationNotice = !curationNoticeSeen
-  const handleDismissCurationNotice = () => {
-    writeCurationNoticeSeen()
-    setCurationNoticeSeen(true)
-  }
   useEffect(() => {
     // 프로필 탭에 첫 진입한 시점에 flag 를 기록한다.
     // dismiss 버튼과 무관하게 1회 이상 본 사용자는 다시 노출하지 않는다.
     if (!curationNoticeSeen) {
       writeCurationNoticeSeen()
+      setCurationNoticeSeen(true)
     }
   }, [curationNoticeSeen])
 
@@ -497,8 +541,12 @@ export function ProfileScreen({
     { id: "dark", icon: Moon, label: "다크" },
   ]
 
-  const placeCount = features.length
   const publicMapCount = shares.length
+  const profileLevel = user.level || user.levelNumber || 2
+  const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
+  const linkHref = user.link ? (user.link.startsWith("http") ? user.link : `https://${user.link}`) : ""
+  const linkDisplay = user.link ? user.link.replace(/^https?:\/\//, "") : ""
+  const profileInitial = getInitials(user.name).slice(0, 1)
 
   // 프로필 편집 화면
   if (editOpen) {
@@ -598,159 +646,76 @@ export function ProfileScreen({
   }
 
   return (
-    <section className="screen screen--scroll">
+    <section className="screen screen--scroll profile-v4">
       <div className="pf">
-        {/* 프로필 정보 */}
-        <div className="pf__info">
-          <Avatar name={user.name} avatarUrl={user.avatarUrl} size={68} className="pf__avatar" />
-          <div className="pf__info-body">
-            <div className="pf__name-row">
-              <span className="pf__name">{user.name}</span>
-              <span className="pf__level">Lv.2</span>
+        <header className="pf__app-header">
+          <strong>LOCA</strong>
+          <button className="pf__settings-btn" type="button" onClick={() => setSettingsOpen(true)} aria-label="설정">
+            <Settings size={18} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="pf__profile-header">
+          <div className="pf__id-row">
+            <div className="pf__avatar" aria-hidden="true">
+              {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{profileInitial}</span>}
             </div>
-            <p className="pf__handle">@{user.handle?.replace("@", "") || user.name}</p>
+            <div className="pf__info-body">
+              <div className="pf__name-row">
+                <span className="pf__name">{user.name}</span>
+                <span className="pf__level">Lv.{profileLevel}</span>
+              </div>
+              <p className="pf__handle">@{handleText}</p>
+            </div>
+
+            {souvenirs.length > 0 ? (
+              <div ref={souvenirsPopoverRef} className="pf__souvenir-wrap">
+                <button
+                  type="button"
+                  className="pf__souvenir-chip"
+                  aria-label={`기념 뱃지 ${souvenirs.length}개`}
+                  aria-expanded={souvenirsPopoverOpen}
+                  onClick={() => setSouvenirsPopoverOpen((v) => !v)}
+                >
+                  <span aria-hidden="true">🏆</span>
+                  <span>{souvenirs.length}</span>
+                </button>
+                {souvenirsPopoverOpen ? (
+                  <div className="pf__souvenir-popover" role="dialog" aria-label="받은 기념 뱃지" onClick={(e) => e.stopPropagation()}>
+                    <p>기념 뱃지</p>
+                    <ul>
+                      {souvenirs.map((s) => (
+                        <li key={s.id || s.souvenir_id || s.souvenir_code}>
+                          <span aria-hidden="true">{s.emoji || "🏆"}</span>
+                          <strong>{s.title}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
-          {/* 기념 뱃지 간이 chip (0개면 숨김) — 탭 시 popover 로 목록 표시 */}
-          {souvenirs.length > 0 ? (
-            <div ref={souvenirsPopoverRef} style={{ position: "relative", alignSelf: "center" }}>
-              <button
-                type="button"
-                aria-label={`기념 뱃지 ${souvenirs.length}개`}
-                aria-expanded={souvenirsPopoverOpen}
-                onClick={() => setSouvenirsPopoverOpen((v) => !v)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  padding: "6px 10px",
-                  background: "#FAEEDA",
-                  border: "0.5px solid rgba(0,0,0,.06)",
-                  borderRadius: 999,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "#633806",
-                  cursor: "pointer",
-                }}
-              >
-                <span aria-hidden="true">🏆</span>
-                <span>{souvenirs.length}</span>
-              </button>
-              {souvenirsPopoverOpen ? (
-                <div
-                  role="dialog"
-                  aria-label="받은 기념 뱃지"
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "calc(100% + 6px)",
-                    zIndex: 20,
-                    minWidth: 200,
-                    maxWidth: 240,
-                    background: "#fff",
-                    border: "0.5px solid rgba(0,0,0,.08)",
-                    borderRadius: 12,
-                    padding: 10,
-                    boxShadow: "0 10px 24px rgba(0,0,0,.12)",
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 500, color: "#666" }}>
-                    기념 뱃지
-                  </p>
-                  <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6, maxHeight: 240, overflowY: "auto" }}>
-                    {souvenirs.map((s) => (
-                      <li
-                        key={s.id || s.souvenir_id || s.souvenir_code}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 8,
-                          padding: "4px 6px",
-                        }}
-                      >
-                        <span aria-hidden="true" style={{ fontSize: 18, flexShrink: 0 }}>{s.emoji || "🏆"}</span>
-                        <span style={{ fontSize: 12, color: "#1A1A1A", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {s.title}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
+          {user.bio ? <p className="pf__bio">{user.bio}</p> : null}
+          {user.link ? (
+            <a className="pf__link" href={linkHref} target="_blank" rel="noopener noreferrer">
+              <span aria-hidden="true">↗</span>
+              <span>{linkDisplay}</span>
+            </a>
           ) : null}
         </div>
 
-        {/* 바이오 */}
-        {user.bio ? <p className="pf__bio">{user.bio}</p> : null}
-
-        {/* 링크 */}
-        {user.link ? (
-          <a className="pf__link" href={user.link.startsWith("http") ? user.link : `https://${user.link}`} target="_blank" rel="noopener noreferrer">
-            <LinkIcon size={12} />
-            <span>{user.link.replace(/^https?:\/\//, "")}</span>
-          </a>
-        ) : null}
-
-        {/* 통계 */}
-        <div className="pf__stats">
-          <div className="pf__stat"><p className="pf__stat-value">{publicMapCount}</p><p className="pf__stat-label">공개 지도</p></div>
-          <div className="pf__stat-divider" />
-          <div className="pf__stat"><p className="pf__stat-value">{placeCount}</p><p className="pf__stat-label">장소</p></div>
-        </div>
-
-        {/* 액션 버튼 */}
         <div className="pf__actions">
           <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>내 프로필에 공개</button>
           <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
 
-        <button className="pf__find-user" type="button" onClick={() => setUserSearchOpen(true)}>
-          <Search size={15} aria-hidden="true" />
-          <span>
-            <strong>사용자 찾기</strong>
-            <small>닉네임이나 아이디로 찾아보세요</small>
-          </span>
-          <ChevronRight size={15} aria-hidden="true" />
-        </button>
+        <div className="pf__section-head">
+          <h2>내 지도</h2>
+          <span>{publicMapCount}개</span>
+        </div>
 
-        {/* 기념 뱃지는 프로필 info 행의 chip + popover 로 간결하게 이동됨. 섹션 형태 렌더 제거. */}
-
-        {/* 프로필 구성 변경 안내 (최초 1회) */}
-        {showCurationNotice ? (
-          <div
-            role="status"
-            style={{
-              margin: "8px 14px 12px",
-              padding: "12px 14px",
-              background: "#FFF4EB",
-              border: "0.5px solid rgba(0,0,0,.06)",
-              borderRadius: 12,
-              display: "flex", alignItems: "flex-start", gap: 10,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "#1A1A1A", margin: 0, lineHeight: 1.4 }}>
-                프로필 구성이 바뀌었어요
-              </p>
-              <p style={{ fontSize: 11, color: "#666", margin: "4px 0 0", lineHeight: 1.4 }}>
-                보여주고 싶은 지도만 직접 공개해보세요.
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="안내 닫기"
-              onClick={handleDismissCurationNotice}
-              style={{
-                background: "transparent", border: "none", padding: 4,
-                fontSize: 14, fontWeight: 500, color: "#888", cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        ) : null}
-
-        {/* 프로필 공개 지도 갤러리 */}
         {shares.length > 0 ? (
           <div className="pf__gallery">
             {shares.map((share) => {
