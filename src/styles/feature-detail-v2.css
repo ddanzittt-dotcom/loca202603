@@ -1,0 +1,472 @@
+/* ============================================================
+ * FeatureDetailSheet v2 — Cream & Ember
+ * 시안: 참고자료/design-source/map-cards-modals.jsx (ItemPreviewCardDiary + ItemDetailView)
+ * 토큰: tokens-v2.css
+ *
+ * Scope: .fd--v2
+ * ============================================================ */
+
+.fd--v2 {
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+/* ============================================================
+ * B5-B7 풀스크린 상세 화면 — BottomSheet --fullscreen modifier
+ * 시안: 참고자료/design-source/map-cards-modals.jsx (ItemDetailView)
+ * 시트 → 풀스크린 페이지: max-height 해제, border-radius 제거, slide-from-right or fade-in
+ * ============================================================ */
+.sheet-backdrop--fullscreen {
+  background: var(--bg, #FAF8F2);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
+}
+
+.sheet.sheet--fullscreen {
+  position: fixed;
+  inset: 0;
+  max-width: none;
+  max-height: 100vh;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: loca-sheet-in var(--duration-sheet, 0.25s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+}
+
+.sheet--fullscreen .sheet__header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  z-index: 5;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sheet--fullscreen .sheet__back {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--ink-strong);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.sheet--fullscreen .sheet__back:hover {
+  background: var(--second-soft);
+}
+
+.sheet--fullscreen .sheet__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.sheet--fullscreen .sheet__subtitle {
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  margin: 2px 0 0;
+}
+
+/* 본문 (FeatureDetailSheet 내부 fd-* 들이 들어옴) */
+.sheet--fullscreen .fd,
+.sheet--fullscreen .fd--v2 {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 16px 32px;
+}
+
+/* ---------- 헤더 (아이콘 박스 + 이름 + 부제) ---------- */
+.fd--v2 .fd__header,
+.fd--v2 .fd__title-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.fd--v2 .fd__icon-box,
+.fd--v2 .fd__readonly-emoji {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fd--v2 strong,
+.fd--v2 .fd__name,
+.fd--v2 .fd__title-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.fd--v2 .fd__sub,
+.fd--v2 .fd__title-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  letter-spacing: -0.005em;
+}
+
+/* ---------- 상세 버튼 (페일 코랄 필) ---------- */
+.fd--v2 .fd__btn--save,
+.fd--v2 .fd__btn--detail {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 6px 14px;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+}
+.fd--v2 .fd__btn--save:hover,
+.fd--v2 .fd__btn--detail:hover {
+  background: var(--accent-soft);
+}
+
+.fd--v2 .fd__btn--del {
+  background: var(--card);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+}
+
+/* 세이지 톤 — 상세보기 버튼 변형 */
+.fd--v2 .fd__btn--secondary {
+  background: var(--sage-soft);
+  color: var(--sage);
+  border: 1px solid rgba(92, 122, 78, 0.25);
+}
+
+/* ---------- 본문/소개 ---------- */
+.fd--v2 .fd__readonly p,
+.fd--v2 .fd__intro {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+}
+
+/* ---------- 태그 (페일 코랄 채움 칩) ---------- */
+.fd--v2 .fd__tag,
+.fd--v2 .fd__tag-chip,
+.fd--v2 .fd__readonly-tags .fd__tag {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  letter-spacing: -0.015em;
+  font-family: var(--font-sans);
+}
+
+.fd--v2 .fd__tag-chip-x {
+  color: var(--accent-deep);
+  opacity: 0.7;
+}
+
+/* ---------- 입력 필드 ---------- */
+.fd--v2 .fd__input,
+.fd--v2 .fd__textarea {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-strong);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  padding: 10px 12px;
+}
+.fd--v2 .fd__input:focus,
+.fd--v2 .fd__textarea:focus {
+  border-color: var(--accent-soft);
+  outline: 2px solid var(--accent-faint);
+  outline-offset: -1px;
+}
+
+.fd--v2 .fd__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+/* ---------- 아이콘 셀렉터 (PIN_ICON_GROUPS) ---------- */
+.fd--v2 .fd__icon-group-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fd--v2 .fd__icon-btn {
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+.fd--v2 .fd__icon-btn.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-faint);
+}
+
+/* ---------- 스타일 셀렉터 ---------- */
+.fd--v2 .fd__swatch.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-faint);
+}
+
+/* ---------- info bar (경로/영역만) — 세이지 톤 ---------- */
+.fd--v2 .fd__info-bar,
+.fd--v2 .fd__metrics {
+  background: var(--sage-soft);
+  color: var(--sage);
+  border: 1px solid rgba(92, 122, 78, 0.18);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+/* ---------- 액션 버튼 묶음 ---------- */
+.fd--v2 .fd__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fd--v2 .fd__btn {
+  flex: 1;
+  height: 38px;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+  border: none;
+}
+
+.fd--v2 .fd__actions .fd__btn--save {
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius);
+  border: none;
+  padding: 0;
+}
+.fd--v2 .fd__actions .fd__btn--save:hover {
+  background: var(--accent-deep);
+}
+
+/* ---------- 위치 행 ---------- */
+.fd--v2 .fd__location {
+  background: var(--bg-deep);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.fd--v2 .fd__location-addr {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.fd--v2 .fd__location-coords {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.fd--v2 .fd__location-change {
+  color: var(--accent-deep);
+  font-weight: 800;
+  font-size: 11.5px;
+}
+
+/* ============================================================
+ * 일기 entry 통합 (v2) — 사진+음성+메모 빠른 입력 + 날짜 그룹 카드
+ * ============================================================ */
+
+.fd__records-tab--v2 {
+  font-family: var(--font-sans);
+}
+
+.fd__rec-quickbar {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 8px;
+  background: var(--bg-deep);
+  border-radius: var(--radius);
+}
+
+.fd__rec-quickbar-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+  min-width: 56px;
+  padding: 6px 4px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fd__rec-quickbar-btn:hover {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border-color: var(--accent-soft);
+}
+.fd__rec-quickbar-btn span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.fd__rec-quickbar-btn.is-recording {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  animation: loca-record-pulse 1.5s ease-out infinite;
+}
+
+.fd__rec-quickbar-memo {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fd__rec-quickbar-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--ink-strong);
+  resize: none;
+}
+.fd__rec-quickbar-input:focus {
+  outline: 2px solid var(--accent-faint);
+  outline-offset: -1px;
+  border-color: var(--accent-soft);
+}
+.fd__rec-quickbar-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.fd__rec-quickbar-save {
+  flex-shrink: 0;
+  align-self: center;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+}
+.fd__rec-quickbar-save:disabled {
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  cursor: not-allowed;
+}
+
+/* ---------- 일기 (DiaryBanner) 섹션 ---------- */
+.fd--v2 .fd__diary-head,
+.fd .fd__diary-head {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 14px 0 8px;
+}
+
+.fd--v2 .fd__diary-list,
+.fd .fd__diary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fd__diary-stack {
+  font-family: var(--font-sans);
+}
+
+/* 지난 기록 수직 타임라인 — 좌측에 1.5px 라인 + 작은 코랄 외곽 원 마커 */
+.fd__diary-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fd__diary-timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 1.5px;
+  background: var(--accent-soft, #FFD0BC);
+  border-radius: 1px;
+}
+
+.fd__diary-timeline-item {
+  position: relative;
+}
+
+.fd__diary-timeline-dot {
+  position: absolute;
+  left: -18px;
+  top: 14px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--card, #fff);
+  border: 1.5px solid var(--accent, #FF4D1A);
+  box-shadow: 0 0 0 3px var(--card, #fff);
+}

@@ -3,14 +3,127 @@
 > 이 문서는 LOCA 앱의 모든 UI 구현에 대한 단일 참조 소스(Single Source of Truth)입니다.
 > 모든 화면과 컴포넌트는 이 가이드라인을 따릅니다.
 
+> **🟧 v2 리디자인 (2026-05) — Phase 1·2 적용 완료**:
+> Cream & Ember 톤 전면 개편. 메인 4탭(홈/지도/탐색/프로필) + 지도 상세(MapEditor·SharedMapViewer·FeatureDetailSheet·FeatureEditSheet·MemoComposeSheet) 모두 `--v2` modifier 스코프로 v2 룩 적용됨.
+>
+> 새 화면·컴포넌트는 **[0. v2 Design Tokens](#0-v2-design-tokens-cream--ember)** 섹션의 토큰을 사용합니다.
+> 아래 1~7 섹션의 v1 토큰은 **deprecated** — 신규 작업에서는 절대 채택하지 마세요. 마이그레이션 매핑은 `src/styles/tokens.css` 헤더 주석 참조.
+>
+> 적용된 stylesheets (`src/styles/`):
+> - tokens-v2.css · app-shell.css · visuals.css · animations.css
+> - home-v2.css · maps-v2.css · explore-v2.css · profile-v2.css
+> - map-detail-v2.css · feature-detail-v2.css · feature-sheets-v2.css
+>
+> 키프레임은 `animations.css` 한 곳에 모아두었습니다(loca-pin-pulse · pin-bob · sheet-in · backdrop-in · fab-rotate · record-pulse). 모든 애니메이션은 `prefers-reduced-motion: reduce` 에서 자동 비활성화.
+
+---
+
+## 0. v2 Design Tokens (Cream & Ember)
+
+참고자료: `참고자료/design-source/themes.js` (`LOCA_THEMES.ember`), `참고자료/README.md`.
+CSS 변수 정의: `src/styles/tokens-v2.css`.
+
+### 0.1 Surfaces
+
+| 토큰 | Hex | 용도 |
+|---|---|---|
+| `--bg` | `#FAF8F2` | 페이지 배경 (크림) |
+| `--bg-deep` | `#EFE9D8` | 토글·필 배경 |
+| `--bg-warm` | `#E8DFC4` | 미디어 placeholder 시작색 |
+| `--card` | `#FFFFFF` | 카드 배경 |
+
+### 0.2 Ink (텍스트 위계)
+
+| 토큰 | Hex | 용도 |
+|---|---|---|
+| `--ink-strong` | `#0A0A0A` | 제목·강조 |
+| `--ink` | `#161616` | 본문 |
+| `--ink-soft` | `#3F3A33` | 부 본문 |
+| `--ink-mute` | `#807668` | 메타·캡션 |
+| `--ink-faint` | `#C2B8A6` | 비활성 |
+
+### 0.3 Accent (Ember)
+
+| 토큰 | Hex | 용도 |
+|---|---|---|
+| `--accent` | `#FF4D1A` | CTA · FAB · 핀 · "오늘" 강조 |
+| `--accent-deep` | `#C2380B` | 라벨 · 링크 · 숫자 |
+| `--accent-soft` | `#FFD0BC` | 핀 배경 · "오늘" 카드 보더 |
+| `--accent-faint` | `#FFEBE0` | "오늘" 카드 배경 · 칩 · 호 라벨 |
+
+### 0.4 보조 (테마 외 고정)
+
+| 토큰 | Hex | 용도 |
+|---|---|---|
+| `--sage` / `--sage-soft` | `#5C7A4E` / `#E1EAD7` | 음성 칩 · 길 카운터 · info bar · "상세" 버튼 |
+| `--lilac` / `--lilac-soft` | `#9C7BC8` / `#E8DEF5` | 경로(길) 기본색 — **단색만, 그라데이션 금지** |
+| `--cocoa` / `--cocoa-soft` | `#8E5A2C` / `#F0DDC4` | 영역 기본색 |
+| `--mustard` / `--mustard-soft` | `#FFD865` / `#FFF1B8` | 인기 뱃지 |
+
+### 0.5 카테고리 권장 컬러
+
+핀·경로·영역에 일관되게 적용하는 카테고리 매핑. 사용자가 컬러를 직접 정하면 그것이 우선하지만, 시드·추천·기본값은 아래를 따른다.
+
+| 카테고리 | 토큰 | 색 |
+|---|---|---|
+| 음식 (food) | `--cat-food` = `--accent` | 엠버 |
+| 문화 (culture) | `--cat-culture` = `--sage` | 세이지 |
+| 기타 (etc) | `--cat-etc` = `--third` | 토프 |
+
+같은 컬러 = 한 그룹. 형태(원/선/면)로 핀·경로·영역 타입을 구분. **경로 점에 번호 매기지 않음** — 시작점(흰 채움)·끝점(컬러 채움) 두 마커만.
+
+### 0.6 Typography (v2)
+
+| 요소 | 크기 | weight | letter-spacing |
+|---|---|---|---|
+| 타이틀 (헤더) | 22~28px | **800** | -0.025em ~ -0.04em |
+| 본문 강조 | 13~14px | 700~800 | -0.015em |
+| 본문 | 12~13px | 500~600 | -0.005em |
+| 메타·캡션 | 10~11px | 600~800 | (uppercase 메타: 0.12em) |
+| 액센트 라벨 ("EDITOR'S PICK" 등) | 9.5px | 800 | 0.12em ~ 0.16em, uppercase |
+| 숫자 | tabular-nums (`font-variant-numeric`) | | |
+
+**v1 규칙 (~500까지) 폐지** — v2 작업에서는 700·800 자유롭게 사용.
+
+### 0.7 Radius & Shadow
+
+| 토큰 | 값 | 용도 |
+|---|---|---|
+| `--radius-chip` | 4px | 작은 칩·뱃지 |
+| `--radius-small` | 6px | 메타 칩 |
+| `--radius` | 12px | 인풋·카드 기본 |
+| `--radius-big` | 16px | 큰 카드 |
+| `--radius-pill` | 999px | 필 버튼·아바타 |
+| `--shadow-card` | `0 2px 6px var(--line)` | 일반 카드 |
+| `--shadow-float` | `0 8px 24px rgba(0,0,0,0.12)` | 떠있는 카드/시트 |
+| `--shadow-sheet` | `0 -10px 40px rgba(0,0,0,0.22)` | 바텀 시트 |
+| `--shadow-fab` | `0 8px 20px rgba(255,77,26,0.45)` | FAB |
+
+### 0.8 Spacing
+
+- 내부 패딩: 11~14px (카드), 18~22px (페이지 좌우)
+- 갭: 4~10px (조밀), 12~18px (보통), 22~28px (섹션 사이)
+
+### 0.9 Motion
+
+| 토큰 | 값 | 용도 |
+|---|---|---|
+| `--ease-out` | `cubic-bezier(0.2, 0.7, 0.3, 1)` | 시트/FAB 진입 |
+| `--duration-fast` | 0.15s | 토글·필터 |
+| `--duration-base` | 0.22s | FAB 회전 |
+| `--duration-sheet` | 0.25s | 바텀 시트 진입 |
+
+키프레임: `loca-pin-pulse` (2.4s ease-out infinite, 펄스 확대+페이드), `loca-pin-bob` (2.6s ease-in-out infinite, 1.5px 떠오름). 정의 위치: `src/styles/animations.css` (Step 13 정리 단계에서 추가 예정).
+
 ---
 
 ## 1. Brand Identity
 
 - **앱 이름**: LOCA
-- **로고 스타일**: Bold, letter-spacing: -0.5px, color: #2D4A3E
-- **타겟 사용자**: 20~30대, 로컬 탐험/장소 기록에 관심 있는 사용자
-- **디자인 톤**: 따뜻하고 유니크, AI스럽지 않은 감성. 보라색 그라데이션 절대 사용 금지.
+- **로고 스타일 (v2)**: `loca` + 엠버 점(`.` `--accent`), font-weight 900, letter-spacing -0.04em
+- **로고 스타일 (v1, 레거시)**: Bold, letter-spacing: -0.5px, color: #2D4A3E
+- **타겟 사용자**: 20~30대 (참고자료에서는 여성을 1차 타깃으로 명시), 로컬 탐험·장소 기록에 관심 있는 사용자
+- **디자인 톤**: 따뜻한 뉴트럴(Cream & Ember), AI스럽지 않은 감성. **보라색 그라데이션 금지** (lilac 단색은 허용 — 경로 기본색).
 
 ---
 

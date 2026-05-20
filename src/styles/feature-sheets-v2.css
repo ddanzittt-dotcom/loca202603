@@ -1,0 +1,245 @@
+/* ============================================================
+ * FeatureEditSheet + MemoComposeSheet v2 — Cream & Ember
+ * 시안: 참고자료/design-source/map-cards-modals.jsx (RecordEntrySheet + ItemEditModal)
+ * 토큰: tokens-v2.css
+ *
+ * Scope: .fes-sheet--v2 / .fes-memo-sheet--v2
+ * ============================================================ */
+
+.fes-sheet--v2,
+.fes-memo-sheet--v2 {
+  background: var(--bg) !important;
+  border-radius: 22px 22px 0 0 !important;
+  box-shadow: var(--shadow-sheet) !important;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.fes-sheet--v2 .fes-handle,
+.fes-memo-sheet--v2 .fes-handle {
+  background: var(--ink-faint);
+}
+
+/* ---------- 시트 헤더 ---------- */
+.fes-sheet--v2 .fes-head,
+.fes-memo-sheet--v2 .fes-memo-sheet-head {
+  border-bottom: 1px solid var(--line);
+}
+
+.fes-sheet--v2 .fes-title,
+.fes-memo-sheet--v2 .fes-memo-sheet-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.025em;
+}
+
+.fes-sheet--v2 .fes-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  letter-spacing: -0.005em;
+}
+
+.fes-sheet--v2 .fes-close,
+.fes-memo-sheet--v2 .fes-close {
+  background: var(--bg-deep);
+  color: var(--ink-soft);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+}
+.fes-sheet--v2 .fes-close:hover,
+.fes-memo-sheet--v2 .fes-close:hover {
+  background: var(--second-soft);
+}
+
+/* ---------- 필드 라벨 ---------- */
+.fes-sheet--v2 .fes-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.fes-sheet--v2 .fes-hint {
+  color: var(--ink-mute);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-transform: none;
+}
+
+/* ---------- 이모지 버튼 (picker 진입점) ---------- */
+.fes-sheet--v2 .fes-emoji-btn {
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+.fes-sheet--v2 .fes-emoji-btn:hover {
+  background: var(--second-soft);
+}
+
+.fes-sheet--v2 .fes-emoji-hint strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.015em;
+}
+
+.fes-sheet--v2 .fes-emoji-hint span {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+
+/* ---------- 색상 칩 ---------- */
+.fes-sheet--v2 .fes-color-chip {
+  border: 1px solid var(--line);
+}
+.fes-sheet--v2 .fes-color-chip.is-selected {
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent);
+}
+
+.fes-sheet--v2 .fes-color-chip-custom {
+  background: var(--card);
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-soft);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---------- 선 스타일 ---------- */
+.fes-sheet--v2 .fes-line-btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+}
+.fes-sheet--v2 .fes-line-btn.is-active {
+  background: var(--accent-faint);
+  border-color: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+/* ---------- 인풋 / 텍스트영역 ---------- */
+.fes-sheet--v2 .fes-input,
+.fes-sheet--v2 .fes-textarea,
+.fes-memo-sheet--v2 textarea {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  color: var(--ink-strong) !important;
+  font-family: var(--font-sans) !important;
+  font-size: 13px !important;
+  letter-spacing: -0.01em;
+}
+.fes-sheet--v2 .fes-input::placeholder,
+.fes-sheet--v2 .fes-textarea::placeholder,
+.fes-memo-sheet--v2 textarea::placeholder {
+  color: var(--ink-faint) !important;
+}
+.fes-sheet--v2 .fes-input:focus,
+.fes-sheet--v2 .fes-textarea:focus,
+.fes-memo-sheet--v2 textarea:focus {
+  border-color: var(--accent-soft) !important;
+  outline: 2px solid var(--accent-faint) !important;
+  outline-offset: -1px !important;
+}
+
+.fes-sheet--v2 .fes-input--bold {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+}
+
+/* ---------- 태그 칩 (페일 코랄) ---------- */
+.fes-sheet--v2 .fes-tag,
+.fes-sheet--v2 .fes-tag-chip {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+/* ---------- 액션 버튼 (저장/삭제) ---------- */
+.fes-sheet--v2 .fes-action,
+.fes-memo-sheet--v2 .fes-memo-sheet-action {
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  padding: 12px 16px env(safe-area-inset-bottom, 12px);
+}
+
+.fes-sheet--v2 .fes-btn,
+.fes-memo-sheet--v2 .fes-memo-sheet-action button {
+  height: 44px;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  border: none;
+  cursor: pointer;
+}
+
+.fes-sheet--v2 .fes-btn--primary,
+.fes-memo-sheet--v2 .fes-memo-sheet-save {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-fab);
+}
+.fes-sheet--v2 .fes-btn--primary:hover {
+  background: var(--accent-deep);
+}
+.fes-sheet--v2 .fes-btn--primary:disabled {
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  box-shadow: none;
+}
+
+.fes-sheet--v2 .fes-btn--danger {
+  background: var(--card);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+  box-shadow: none;
+}
+
+.fes-sheet--v2 .fes-btn--ghost {
+  background: var(--card);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+/* ---------- 메모 시트 (today 코랄 뱃지) ---------- */
+.fes-memo-sheet--v2 .fes-memo-today-pill {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 메모 리스트 (기존 표시) ---------- */
+.fes-sheet--v2 .fes-memo-list .fes-memo-text {
+  color: var(--ink-strong);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fes-sheet--v2 .fes-memo-list .fes-memo-date {
+  color: var(--ink-mute);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- backdrop (시트 위 모달용) ---------- */
+.fes-sheet--v2 ~ .fes-backdrop,
+.fes-memo-sheet--v2 ~ .fes-picker-backdrop {
+  background: rgba(20, 12, 5, 0.5);
+}

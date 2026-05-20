@@ -1,0 +1,458 @@
+/* ============================================================
+ * RecordEntrySheet (B8) — 오늘의 기록 남기기 통합 입력 시트
+ * 시안: 참고자료/design-source/map-cards-modals.jsx::RecordEntrySheet
+ * 토큰: tokens-v2.css
+ * ============================================================ */
+
+.res-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 12, 5, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 1410;
+  animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
+}
+
+.res-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 520px;
+  margin: 0 auto;
+  max-height: 94vh;
+  background: var(--bg);
+  border-radius: 22px 22px 0 0;
+  box-shadow: var(--shadow-sheet);
+  display: flex;
+  flex-direction: column;
+  z-index: 1411;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  animation: loca-sheet-in var(--duration-sheet, 0.25s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+}
+
+.res-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--ink-faint);
+  border-radius: 2px;
+  margin: 8px auto 6px;
+}
+
+/* ---------- 헤더 ---------- */
+.res-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 22px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.res-today {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+
+.res-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--ink-strong);
+}
+.res-title__name {
+  color: var(--accent-deep);
+}
+.res-title__rest {
+  color: var(--ink-strong);
+}
+
+.res-sub {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.res-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-deep);
+  color: var(--ink-soft);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.res-close:hover { background: var(--second-soft); }
+
+/* ---------- 본문 (스크롤) ---------- */
+.res-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 22px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.res-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.res-section-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.res-count {
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  font-size: 10px;
+  font-weight: 800;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.01em;
+}
+
+.res-char-count {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: -0.01em;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.res-char-count .is-over { color: var(--accent-deep); }
+
+/* ---------- 메모 textarea ---------- */
+.res-textarea {
+  width: 100%;
+  min-height: 108px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-strong);
+  letter-spacing: -0.005em;
+  line-height: 1.55;
+  resize: vertical;
+}
+.res-textarea::placeholder {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+.res-textarea:focus {
+  outline: 2px solid var(--accent-faint);
+  outline-offset: -1px;
+  border-color: var(--accent-soft);
+}
+
+/* ---------- 사진 가로 스크롤 ---------- */
+.res-photo-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.res-photo-row::-webkit-scrollbar { display: none; }
+
+.res-photo-thumb {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-deep);
+}
+.res-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.res-photo-rm {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  background: rgba(15, 10, 5, 0.65);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.res-photo-add {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--ink-mute);
+  font-family: var(--font-sans);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.res-photo-add span {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: -0.01em;
+}
+.res-photo-add:hover {
+  background: var(--bg-deep);
+  border-color: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.res-photo-add:hover span { color: var(--accent-deep); }
+
+/* ---------- 음성 카드 + 칩 ---------- */
+.res-voice-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--sage-soft);
+  border: 1px solid rgba(92, 122, 78, 0.18);
+  border-radius: var(--radius-big);
+}
+
+.res-voice-mic {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: #fff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-fast, 0.15s) var(--ease-out, cubic-bezier(0.2,0.7,0.3,1));
+}
+.res-voice-mic:hover { transform: scale(1.06); }
+.res-voice-mic:active { transform: scale(0.94); }
+
+.res-voice-mic.is-recording {
+  background: var(--accent);
+  animation: loca-record-pulse 1.5s ease-out infinite;
+}
+
+.res-voice-wave {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 30px;
+  min-width: 0;
+}
+.res-voice-wave span {
+  width: 3px;
+  background: var(--sage);
+  border-radius: 1.5px;
+  transition: height 0.18s ease-out;
+}
+
+.res-voice-meta {
+  flex-shrink: 0;
+}
+
+.res-voice-time {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-deep);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.res-voice-hint {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--sage);
+  letter-spacing: -0.01em;
+}
+
+.res-voice-list {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-top: 8px;
+}
+.res-voice-list::-webkit-scrollbar { display: none; }
+
+.res-voice-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--card);
+  border: 1px solid rgba(92, 122, 78, 0.25);
+  color: var(--sage);
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 5px 9px;
+  border-radius: var(--radius-pill);
+  letter-spacing: -0.01em;
+}
+.res-voice-chip svg { color: var(--sage); }
+
+.res-voice-chip-rm {
+  background: transparent;
+  border: none;
+  color: var(--ink-mute);
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.res-voice-chip-rm:hover {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+}
+
+/* ---------- 푸터 저장 버튼 ---------- */
+.res-action {
+  flex-shrink: 0;
+  padding: 12px 22px env(safe-area-inset-bottom, 16px);
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+.res-save {
+  display: block;
+  width: 100%;
+  height: 50px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+  box-shadow: var(--shadow-fab);
+  -webkit-tap-highlight-color: transparent;
+}
+.res-save:hover { background: var(--accent-deep); }
+.res-save:disabled {
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+ * FeatureEditSheet — v2 기록 진입 CTA
+ * (B9 메타 시트 안에서 RecordEntrySheet 진입점)
+ * ============================================================ */
+.fes-record-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 6px 0 6px;
+  padding: 12px 14px;
+  background: var(--accent-faint);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+  color: var(--accent-deep);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.fes-record-cta:hover { background: var(--accent-soft); }
+.fes-record-cta:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.fes-record-cta__plus {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.fes-record-cta__label {
+  flex: 1;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fes-record-cta__count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  opacity: 0.7;
+  letter-spacing: -0.01em;
+}

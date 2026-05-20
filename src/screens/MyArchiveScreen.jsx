@@ -4,13 +4,14 @@ import { ExploreScreen } from "./ExploreScreen"
 import { MapsListScreen } from "./MapsListScreen"
 import { PlacesScreen } from "./PlacesScreen"
 
+// onImport prop은 App.jsx 에서 전달되지만 v2 아카이브에서는 사용하지 않는다 (Phase 2 에서 검토).
+// eslint 통과를 위해 destructure 에서 제외.
 export function MyArchiveScreen({
   maps,
   features,
   shares = [],
   characterImage,
   onCreate,
-  onImport,
   onEdit,
   onOpen,
   onDelete,
@@ -56,16 +57,16 @@ export function MyArchiveScreen({
         : "장소"
 
   return (
-    <section className="screen screen--scroll maps-library-screen">
-      <div className="archive-head">
-        <h1 className="archive-head__title">{title}</h1>
+    <section className="screen screen--scroll maps-library-screen maps-library-screen--v2">
+      <div className="archive-head archive-head--v2">
+        <h1 className="archive-head__title archive-head__title--v2">{title}</h1>
       </div>
 
-      <div className={`maps-segment${isPlacesHub ? " maps-segment--hub" : ""}`} role="tablist" aria-label={isPlacesHub ? "장소 보기" : "내 아카이브 보기"}>
+      <div className={`maps-segment maps-segment--v2${isPlacesHub ? " maps-segment--hub" : ""}`} role="tablist" aria-label={isPlacesHub ? "장소 보기" : "내 아카이브 보기"}>
         {archiveTabs.map((tab) => (
           <button
             key={tab.id}
-            className={`maps-segment__tab${archiveView === tab.id ? " is-active" : ""}`}
+            className={`maps-segment__tab maps-segment__tab--v2${archiveView === tab.id ? " is-active" : ""}`}
             type="button"
             role="tab"
             aria-selected={archiveView === tab.id}

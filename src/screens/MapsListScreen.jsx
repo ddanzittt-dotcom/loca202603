@@ -102,8 +102,13 @@ function StatusBadge({ status, collabCount }) {
 }
 
 function MapsV3Card({ item, onOpen }) {
+  const isEmpty = item.placeCount === 0
   return (
-    <button className="maps-v3-card" type="button" onClick={() => onOpen(item.map.id)}>
+    <button
+      className={`maps-v3-card${isEmpty ? " maps-v3-card--empty" : ""}`}
+      type="button"
+      onClick={() => onOpen(item.map.id)}
+    >
       <span className="maps-v3-card__preview" dangerouslySetInnerHTML={{ __html: item.previewSvg }} />
       <StatusBadge status={item.status} collabCount={item.collabCount} />
       <span className="maps-v3-card__info">
@@ -131,10 +136,12 @@ export function MapsListScreen({
   const [debouncedQuery, setDebouncedQuery] = useState("")
   const [filter, setFilter] = useState("all")
 
+  // 검색어 debounce — 300ms. setTimeout 안에서 setState 하므로 effect 내 동기 setState 가 아님.
   useEffect(() => {
-    if (!query.trim()) {
-      setDebouncedQuery("")
-      return undefined
+    const trimmed = query.trim()
+    if (!trimmed) {
+      const id = window.setTimeout(() => setDebouncedQuery(""), 0)
+      return () => window.clearTimeout(id)
     }
     const timer = window.setTimeout(() => setDebouncedQuery(query), 300)
     return () => window.clearTimeout(timer)

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { X as XIcon, Camera, Mic, FileText, Play } from "lucide-react"
 import { FeatureEmojiPicker } from "../FeatureEmojiPicker"
 import { FeatureEmoji, resolveFeatureEmoji, descriptorToDisplayText } from "../FeatureEmoji"
+import { RecordEntrySheet } from "./RecordEntrySheet"
 import { lookupEmojiName } from "../../lib/emojiCatalog"
 import {
   FEATURE_LINE_STYLE_ITEMS,
@@ -493,7 +494,7 @@ function MemoComposeSheet({ onClose, onSave }) {
   return (
     <>
       <div className="fes-picker-backdrop" onClick={onClose} />
-      <section className="fes-memo-sheet" role="dialog" aria-modal="true" aria-label="메모 추가">
+      <section className="fes-memo-sheet fes-memo-sheet--v2" role="dialog" aria-modal="true" aria-label="메모 추가">
         <div className="fes-handle" />
         <div className="fes-memo-sheet-head">
           <span className="fes-memo-sheet-title">메모 추가</span>
@@ -547,11 +548,14 @@ export function FeatureEditSheet({
   onDeleteVoice,
   // 메모
   onAddMemo,
-  onDeleteMemo,
+  // onDeleteMemo prop 은 v2 에서 RecordEntrySheet 가 직접 호출하지 않으므로 미사용 (호환을 위해 받지 않음).
 }) {
   const open = Boolean(featureSheet)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [memoSheetOpen, setMemoSheetOpen] = useState(false)
+  // v2 (2026-05): B8 RecordEntrySheet — 메모+사진+음성 통합 입력.
+  // FeatureEditSheet 는 메타데이터만 다루고, 미디어/메모 입력은 이 시트로 분리.
+  const [recordSheetOpen, setRecordSheetOpen] = useState(false)
   const nameInputRef = useRef(null)
   const focusNameSignal = featureSheet?._focusName ? featureSheet?.id || true : null
 
@@ -618,15 +622,7 @@ export function FeatureEditSheet({
     setEmojiPickerOpen(false)
   }
 
-  const handlePhotoClick = () => {
-    if (!photoInputRef?.current) return
-    photoInputRef.current.click()
-  }
-
-  const handleVoiceClick = () => {
-    if (isRecording) onStopRecording?.()
-    else onStartRecording?.()
-  }
+  // v2: handlePhotoClick / handleVoiceClick 폐기 — AttachToolbar 제거에 따라 RecordEntrySheet 내부에서 처리.
 
   const handleMemoSave = (text) => {
     if (!featureSheet?.id) return
@@ -651,7 +647,7 @@ export function FeatureEditSheet({
   return (
     <>
       <div className="fes-backdrop" onClick={onClose} />
-      <section className="fes-sheet" role="dialog" aria-modal="true" aria-label={`${sheetTitle} 편집`}>
+      <section className="fes-sheet fes-sheet--v2" role="dialog" aria-modal="true" aria-label={`${sheetTitle} 편집`}>
         <div className="fes-handle" />
 
         <div className="fes-head">
@@ -772,27 +768,6 @@ export function FeatureEditSheet({
           />
         </div>
 
-        {/* --- 미디어 블록 (내 지도만) --- */}
-        {isPersonal ? (
-          <>
-            <PhotoBlock
-              photos={photos}
-              canEdit={!readOnly}
-              onDelete={onDeletePhoto}
-            />
-            <VoiceBlock
-              voices={voices}
-              canEdit={!readOnly}
-              onDeleteVoice={onDeleteVoice}
-            />
-            <MemoBlock
-              memos={memos}
-              canEdit={!readOnly}
-              onDeleteMemo={onDeleteMemo}
-            />
-          </>
-        ) : null}
-
         {/* --- 측정 정보 (경로·영역) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
@@ -800,29 +775,25 @@ export function FeatureEditSheet({
           </div>
         ) : null}
 
-        {/* --- 퀵 첨부 툴바 (내 지도만) --- */}
-        {isPersonal && !readOnly ? (
-          <>
-            <AttachToolbar
-              counts={{ photos: photos.length, voices: voices.length, memos: memos.length }}
-              onPhoto={handlePhotoClick}
-              onVoice={handleVoiceClick}
-              onMemo={() => setMemoSheetOpen(true)}
-              isRecording={isRecording}
-              recordingSeconds={recordingSeconds}
-              showHint={creating && photos.length === 0 && voices.length === 0 && memos.length === 0}
-            />
-            {photoInputRef ? (
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                style={{ display: "none" }}
-                onChange={onPhotoSelected}
-              />
-            ) : null}
-          </>
+        {/* --- v2: 기록 진입 (메모+사진+음성 RecordEntrySheet) ---
+         * 참고 B8/B9 분리 원칙 — FeatureEditSheet 는 메타만, 미디어 입력은 RecordEntrySheet.
+         */}
+        {isPersonal && !readOnly && !creating ? (
+          <button
+            type="button"
+            className="fes-record-cta"
+            onClick={() => setRecordSheetOpen(true)}
+          >
+            <span className="fes-record-cta__plus" aria-hidden="true">+</span>
+            <span className="fes-record-cta__label">
+              오늘의 기록 남기기
+              {(photos.length + voices.length + memos.length) > 0 ? (
+                <span className="fes-record-cta__count">
+                  · 지금 사진 {photos.length} · 음성 {voices.length} · 메모 {memos.length}
+                </span>
+              ) : null}
+            </span>
+          </button>
         ) : null}
 
         {/* --- 액션 --- */}
@@ -857,6 +828,25 @@ export function FeatureEditSheet({
           onSave={handleMemoSave}
         />
       ) : null}
+
+      <RecordEntrySheet
+        open={recordSheetOpen}
+        featureTitle={featureSheet?.title || sheetTitle}
+        onClose={() => setRecordSheetOpen(false)}
+        onSave={(text) => {
+          if (text && featureSheet?.id) onAddMemo?.(featureSheet.id, text)
+        }}
+        photos={photos}
+        voices={voices}
+        onPhotoSelected={onPhotoSelected}
+        onDeletePhoto={onDeletePhoto}
+        onStartRecording={onStartRecording}
+        onStopRecording={onStopRecording}
+        onDeleteVoice={onDeleteVoice}
+        isRecording={isRecording}
+        recordingSeconds={recordingSeconds}
+        photoInputRef={photoInputRef}
+      />
     </>
   )
 }

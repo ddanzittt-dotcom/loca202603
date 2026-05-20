@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Settings as SettingsIcon } from "lucide-react"
-import { BottomNav, Toast } from "./components/ui"
+import { Toast } from "./components/ui"
+import { BottomNavV2 } from "./components/BottomNav.v2"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -48,7 +49,8 @@ import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
 import { useAppSession } from "./hooks/useAppSession"
-import { useGamification } from "./hooks/useGamification"
+// 레벨/XP 시스템 폐기 (2026-05). useGamification 훅은 호출하지 않으며,
+// recordMapAction 호출은 useMapCRUD / useFeatureEditing 에서 stub 함수로 처리.
 import { useGeolocation } from "./hooks/useGeolocation"
 import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
@@ -145,7 +147,7 @@ export default function App() {
   // 프로필 공개/내리기 공통 confirm 시트 상태
   const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
   const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
-  const [characterStyle, setCharacterStyle] = useLocalStorageState("loca.mobile.characterStyle", "m3")
+  // characterStyle 폐기 (2026-05) — 레벨/XP 위젯 제거에 따라 캐릭터 마커도 제거.
   const [publishSubmitting, setPublishSubmitting] = useState(false)
   const [savingPostMapId, setSavingPostMapId] = useState(null)
   const [savingSharedMap, setSavingSharedMap] = useState(false)
@@ -228,7 +230,6 @@ export default function App() {
   const {
     authReady, authUser, cloudMode, cloudLoading,
     hasB2BAccess, setHasB2BAccess,
-    gameProfile, setGameProfile,
     readLocalImportData,
     handleSignOut, importLocalDataToCloud,
   } = useAppSession({
@@ -287,11 +288,9 @@ export default function App() {
 
   // --- Gamification ---
 
-  const { refreshGameProfile, userStats, levelEmoji, souvenirs } = useGamification({
-    cloudMode, authUser,
-    gameProfile, setGameProfile,
-    maps, features,
-  })
+  // 레벨/XP 위젯 제거 (2026-05). useMapCRUD / useFeatureEditing 이 받는
+  // refreshGameProfile 콜백은 stub 으로 유지 (서비스 호출은 살아있어도 위젯이 없어 가시 효과 없음).
+  const refreshGameProfile = () => {}
 
   // --- Geolocation ---
 
@@ -1300,8 +1299,6 @@ export default function App() {
             features={features}
             recommendedMaps={recommendedMaps}
             viewerProfile={viewerProfile}
-            userStats={userStats}
-            levelEmoji={levelEmoji}
             onResumeMyMap={openMapEditor}
             onOpenFeatureInMap={(_, featureId) => openFeatureFromPlaces(featureId)}
             onCreateMap={openRecordFlow}
@@ -1335,7 +1332,7 @@ export default function App() {
             features={features}
             shares={shares}
             loading={cloudLoading}
-            characterImage={levelEmoji}
+            characterImage="/characters/cloud_lv1.svg"
             initialArchiveView="maps"
             onImport={() => setImportSheetOpen(true)}
             onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
@@ -1411,8 +1408,6 @@ export default function App() {
             communityMode={activeMapSource === "community"}
             shareUrl={shareUrl}
             showLabels={showMapLabels}
-            characterStyle={characterStyle}
-            levelEmoji={levelEmoji}
             onBack={handleMapEditorBack}
             onFit={() => setFitTrigger((value) => value + 1)}
             onSearchLocation={(loc) => setFocusPoint(loc)}
@@ -1494,7 +1489,7 @@ export default function App() {
             users={users}
             cloudMode={cloudMode}
             cloudEmail={authUser?.email || ""}
-            characterImage={levelEmoji}
+            characterImage="/characters/cloud_lv1.svg"
             settingsOpen={profileSettingsOpen}
             onSettingsOpenChange={setProfileSettingsOpen}
             canImportLocalData={cloudMode && readLocalImportData().hasAny}
@@ -1523,12 +1518,8 @@ export default function App() {
               resetCoachmark()
               showToast("다음 편집기 진입 시 가이드가 다시 표시돼요")
             }}
-            characterStyle={characterStyle}
-            onChangeCharacter={setCharacterStyle}
             hasB2BAccess={hasB2BAccess}
             onB2BAccessChange={setHasB2BAccess}
-            userStats={userStats}
-            souvenirs={souvenirs}
           />
         ) : null}
       </Suspense>
@@ -1536,10 +1527,10 @@ export default function App() {
 
       {/* 공유 지도 viewer / feature 편집 시트 / 키보드 표시 중에는 BottomNav 숨김 */}
       {(activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer) || keyboardVisible || Boolean(featureSheet) ? null : (
-      <BottomNav
-        activeTab={activeTab}
-        onChange={handleBottomNavChange}
-        pulseAdd={(userStats?.xp || 0) < 30}
+      <BottomNavV2
+        tab={activeTab}
+        onTabChange={handleBottomNavChange}
+        onFabClick={() => handleBottomNavChange("add-record")}
       />
       )}
 

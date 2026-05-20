@@ -297,7 +297,21 @@
   filter: blur(1px);
 }
 
-/* 등급 이모지 캐릭터 */
+/* 내 위치 — v2: 캐릭터/레벨 이모지 제거, 단순 컬러 도트 */
+.loca-my-location__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--accent, #FF4D1A);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* 등급 이모지 캐릭터 (레거시 — 더 이상 사용 안 함, CSS는 유지) */
 .loca-level-emoji {
   position: absolute;
   top: 50%;

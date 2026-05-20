@@ -1,0 +1,102 @@
+/* ============================================================
+ * LOCA v2 Animations — Cream & Ember
+ *
+ * 단일 keyframes 사전. 화면별 CSS 는 여기 정의된 이름만 참조한다.
+ *
+ * 모든 애니메이션은 prefers-reduced-motion 에서 비활성화.
+ * 토큰: --duration-* / --ease-out (tokens-v2.css)
+ * ============================================================ */
+
+/* ---------- 핀 펄스 (홈 모두의 지도, 모든 마커 강조용) ---------- */
+@keyframes loca-pin-pulse {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  50%  { transform: scale(2.2); opacity: 0;    }
+  100% { transform: scale(1);   opacity: 0;    }
+}
+
+@keyframes loca-pin-bob {
+  0%, 100% { transform: translateY(0);    }
+  50%      { transform: translateY(-1.5px); }
+}
+
+/* ---------- 시트 진입 (slide-up) ---------- */
+@keyframes loca-sheet-in {
+  from { transform: translateY(100%); opacity: 0.4; }
+  to   { transform: translateY(0);    opacity: 1;   }
+}
+
+/* ---------- 백드롭 fade-in ---------- */
+@keyframes loca-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---------- FAB 회전 (도구 펼침 시 + → ×) ---------- */
+@keyframes loca-fab-rotate-in {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(45deg); }
+}
+
+@keyframes loca-fab-rotate-out {
+  from { transform: rotate(45deg); }
+  to   { transform: rotate(0deg);  }
+}
+
+/* ---------- FAB 도구 stagger 진입 ---------- */
+@keyframes loca-fab-tool-in {
+  from { transform: translateY(20px) scale(0.6); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);   opacity: 1; }
+}
+
+/* ---------- 음성 녹음 펄스 링 ---------- */
+@keyframes loca-record-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(255, 77, 26, 0.45); }
+  70%  { box-shadow: 0 0 0 12px rgba(255, 77, 26, 0);   }
+  100% { box-shadow: 0 0 0 0   rgba(255, 77, 26, 0);   }
+}
+
+/* ---------- 토스트 / 알림 fade ---------- */
+@keyframes loca-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ---------- 일관 적용 클래스 (선택사용) ---------- */
+.loca-anim-pin-pulse {
+  transform-origin: center;
+  animation: loca-pin-pulse 2.4s ease-out infinite;
+}
+.loca-anim-pin-bob {
+  transform-origin: center;
+  animation: loca-pin-bob 2.6s ease-in-out infinite;
+}
+.loca-anim-sheet-in {
+  animation: loca-sheet-in var(--duration-sheet, 0.25s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+}
+.loca-anim-backdrop-in {
+  animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
+}
+.loca-anim-record-pulse {
+  animation: loca-record-pulse 1.5s ease-out infinite;
+}
+
+/* ---------- prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- 공통 focus ring (v2) ---------- */
+.loca-v2-focus:focus-visible,
+.loca-v2-shell button:focus-visible,
+.loca-v2-bottomnav__tab:focus-visible,
+.loca-v2-bottomnav__fab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

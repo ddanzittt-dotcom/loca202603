@@ -1,23 +1,37 @@
 import { useEffect, useMemo, useState } from "react"
-import { Bell, ChevronLeft, ChevronRight, Layers, MapPin, X } from "lucide-react"
+import { Bell, ChevronRight, MapPin } from "lucide-react"
 import { isEventMap } from "../lib/mapPlacement"
-import { getLevelForXp, getLevelProgress } from "../data/gamification"
 import { buildGreetingContext, getDailyGreeting } from "../lib/greeting"
+import { PhotoBlock, SectionHead } from "../components/visuals"
+
+/*
+ * HomeScreen v2 — Cream & Ember 리디자인.
+ *
+ * 시안: 참고자료/design-source/screen-home.jsx
+ * 토큰: src/styles/tokens-v2.css
+ * 스타일: src/styles/home-v2.css
+ *
+ * 섹션 (위 → 아래):
+ *   1) 헤더 — loca. 로고 + 알림 벨
+ *   2) 인사 — 날짜 메타 + 큰 타이틀 (greeting message)
+ *   3) 이어서 쓰기 카드 — 가장 최근 작성 중인 지도
+ *   4) 이번 주 기록 — 7일 트래커
+ *   5) 모두의 지도 — 동네 공동 지도 프리뷰 (커뮤니티 맵)
+ *
+ * 기존 v9 의 레벨 콤보 카드 / 연·월 히트맵 다이얼로그는 v2 에서 빠진다.
+ * 레벨/XP UI 는 Step 6 프로필 탭으로 이동.
+ */
 
 const DAY_MS = 86400000
 const WEEK_LABELS = ["일", "월", "화", "수", "목", "금", "토"]
-const MONTH_LABELS = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
 
-function getMapTime(map) {
-  const value = map?.updatedAt || map?.updated_at || map?.createdAt || map?.created_at
-  const time = value ? new Date(value).getTime() : 0
-  return Number.isFinite(time) ? time : 0
-}
-
-function getFeatureTime(feature) {
-  const value = feature?.updatedAt || feature?.updated_at || feature?.createdAt || feature?.created_at
-  const time = value ? new Date(value).getTime() : 0
-  return Number.isFinite(time) ? time : 0
+const greetingStorage = {
+  async get(key) {
+    try { return window.localStorage?.getItem(key) || null } catch { return null }
+  },
+  async set(key, value) {
+    try { window.localStorage?.setItem(key, value) } catch { /* private mode */ }
+  },
 }
 
 function startOfDay(date) {
@@ -37,534 +51,185 @@ function getFeatureDate(feature) {
   return date && Number.isFinite(date.getTime()) ? date : null
 }
 
+function getFeatureMapId(feature) {
+  return feature?.mapId || feature?.map_id || feature?.map?.id || null
+}
+
+function getMapTime(map) {
+  const value = map?.updatedAt || map?.updated_at || map?.createdAt || map?.created_at
+  const time = value ? new Date(value).getTime() : 0
+  return Number.isFinite(time) ? time : 0
+}
+
+function getFeatureTime(feature) {
+  const value = feature?.updatedAt || feature?.updated_at || feature?.createdAt || feature?.created_at
+  const time = value ? new Date(value).getTime() : 0
+  return Number.isFinite(time) ? time : 0
+}
+
 function toValidDate(value) {
   const date = value ? new Date(value) : null
   return date && Number.isFinite(date.getTime()) ? date : null
 }
 
-function getFeatureMapId(feature) {
-  return feature?.mapId || feature?.map_id || feature?.map?.id || null
-}
-
-function getFeatureId(feature) {
-  return feature?.id || feature?.feature_id || null
-}
-
-const greetingStorage = {
-  async get(key) {
-    try {
-      return window.localStorage?.getItem(key) || null
-    } catch {
-      return null
-    }
-  },
-  async set(key, value) {
-    try {
-      window.localStorage?.setItem(key, value)
-    } catch {
-      // localStorage can be unavailable in private or embedded contexts.
-    }
-  },
-}
-
-function formatKoreanDate(date = new Date()) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "long",
-  }).format(date)
-}
-
-function formatWeekRange(weekData) {
-  if (!weekData.length) return ""
-  const first = weekData[0].rawDate
-  const last = weekData[weekData.length - 1].rawDate
-  if (!first || !last) return ""
-  return `${first.getMonth() + 1}/${first.getDate()} - ${last.getMonth() + 1}/${last.getDate()}`
-}
-
-function formatAgo(dateStr) {
-  if (!dateStr) return "최근"
-  const time = new Date(dateStr).getTime()
-  if (!Number.isFinite(time)) return "최근"
-  const diff = Math.floor((Date.now() - time) / DAY_MS)
-  if (diff <= 0) return "오늘"
-  if (diff === 1) return "어제"
-  if (diff < 30) return `${diff}일 전`
-  if (diff < 365) return `${Math.floor(diff / 30)}개월 전`
-  return `${Math.floor(diff / 365)}년 전`
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
-}
-
-function getActivityLevel(count) {
-  if (!count) return 0
-  if (count <= 2) return 1
-  if (count <= 4) return 2
-  if (count <= 6) return 3
-  return 4
+function formatDateUpperMeta(date = new Date()) {
+  const m = date.getMonth() + 1
+  const d = date.getDate()
+  const dow = WEEK_LABELS[date.getDay()]
+  // ex: "5월 20일 · 수요일" but in uppercase meta style → 카카오/한글 그대로
+  return `${m}월 ${d}일 · ${dow}요일`
 }
 
 function buildActivityIndex(features) {
-  const byDate = new Map()
+  const map = new Map()
   for (const feature of features) {
     const date = getFeatureDate(feature)
     if (!date) continue
     const key = getDateKey(date)
-    byDate.set(key, (byDate.get(key) || 0) + 1)
+    map.set(key, (map.get(key) || 0) + 1)
   }
-  return byDate
+  return map
 }
 
 function buildWeekData(today, activityByDate) {
-  const base = startOfDay(today)
-  const mondayOffset = (base.getDay() + 6) % 7
-  const monday = new Date(base.getTime() - mondayOffset * DAY_MS)
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday.getTime() + index * DAY_MS)
-    const future = date > base
-    const count = activityByDate.get(getDateKey(date)) || 0
+  const start = new Date(today)
+  start.setDate(today.getDate() - today.getDay()) // 일요일 시작
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(start.getTime() + i * DAY_MS)
+    const key = getDateKey(date)
+    const count = activityByDate.get(key) || 0
+    const future = date > today
     return {
-      key: getDateKey(date),
+      key,
       dow: WEEK_LABELS[date.getDay()],
-      date: date.getDate(),
+      d: date.getDate(),
       count,
       future,
-      today: getDateKey(date) === getDateKey(base),
-      rawDate: date,
-    }
-  })
-}
-
-function sumRange(startDate, days, activityByDate) {
-  let total = 0
-  for (let i = 0; i < days; i += 1) {
-    const date = new Date(startDate.getTime() + i * DAY_MS)
-    total += activityByDate.get(getDateKey(date)) || 0
-  }
-  return total
-}
-
-function getRangeEnd(startDate, days) {
-  return new Date(startDate.getTime() + days * DAY_MS)
-}
-
-function getMonthRange(year, month) {
-  return {
-    start: new Date(year, month, 1),
-    end: new Date(year, month + 1, 1),
-  }
-}
-
-function formatRecordDate(date) {
-  if (!date) return "날짜 없음"
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "short",
-    day: "numeric",
-    weekday: "short",
-  }).format(date)
-}
-
-function getFeatureKindLabel(feature) {
-  if (feature?.type === "route") return "동선"
-  if (feature?.type === "area") return "구역"
-  return "장소"
-}
-
-function getFeatureSummary(feature) {
-  const bits = []
-  if (feature?.note?.trim()) bits.push(feature.note.trim())
-  if (Array.isArray(feature?.memos) && feature.memos.some((memo) => memo.text?.trim())) bits.push("메모")
-  if (Array.isArray(feature?.photos) && feature.photos.length > 0) bits.push(`사진 ${feature.photos.length}`)
-  if (Array.isArray(feature?.voices) && feature.voices.length > 0) bits.push(`음성 ${feature.voices.length}`)
-  return bits.slice(0, 2).join(" · ")
-}
-
-function buildRecordGroups(features, maps, range) {
-  if (!range) return []
-  const mapById = new Map(maps.map((map) => [map.id, map]))
-  const groups = new Map()
-
-  features
-    .map((feature) => ({ feature, date: getFeatureDate(feature) }))
-    .filter(({ date }) => date && date >= range.start && date < range.end)
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .forEach(({ feature, date }) => {
-      const mapId = getFeatureMapId(feature) || "unknown"
-      const map = mapById.get(mapId)
-      if (!groups.has(mapId)) {
-        groups.set(mapId, {
-          mapId,
-          mapTitle: map?.title || "분류 없는 기록",
-          records: [],
-        })
-      }
-      const featureId = getFeatureId(feature)
-      groups.get(mapId).records.push({
-        id: featureId || `${mapId}-${date.getTime()}`,
-        featureId,
-        title: feature.title || feature.name || "이름 없는 기록",
-        kind: getFeatureKindLabel(feature),
-        date,
-        summary: getFeatureSummary(feature),
-        mapId,
-      })
-    })
-
-  return [...groups.values()]
-}
-
-function buildMonthCells(today, activityByDate) {
-  const year = today.getFullYear()
-  const month = today.getMonth()
-  const first = new Date(year, month, 1)
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const cells = []
-  for (let i = 0; i < first.getDay(); i += 1) cells.push({ key: `empty-${i}`, empty: true })
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = new Date(year, month, day)
-    const key = getDateKey(date)
-    cells.push({
-      key,
-      date: day,
-      count: activityByDate.get(key) || 0,
       today: key === getDateKey(today),
-      future: date > startOfDay(today),
-    })
-  }
-  return cells
-}
-
-function buildYearCells(today, activityByDate) {
-  const year = today.getFullYear()
-  const jan1 = new Date(year, 0, 1)
-  const daysInYear = new Date(year, 1, 29).getMonth() === 1 ? 366 : 365
-  const cells = []
-  for (let week = 0; week < 53; week += 1) {
-    for (let dow = 0; dow < 7; dow += 1) {
-      const doy = week * 7 + dow - jan1.getDay()
-      if (doy < 0 || doy >= daysInYear) {
-        cells.push({ key: `empty-${week}-${dow}`, future: true, empty: true })
-        continue
-      }
-      const date = new Date(year, 0, doy + 1)
-      const key = getDateKey(date)
-      cells.push({
-        key,
-        count: activityByDate.get(key) || 0,
-        today: key === getDateKey(today),
-        future: date > startOfDay(today),
-        rawDate: date,
-      })
     }
-  }
-  return cells
-}
-
-function buildMonthlyTotals(today, activityByDate) {
-  const year = today.getFullYear()
-  return Array.from({ length: 12 }, (_, month) => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    let count = 0
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      count += activityByDate.get(getDateKey(new Date(year, month, day))) || 0
-    }
-    return month > today.getMonth() ? 0 : count
   })
 }
 
-function buildResumeMap(personalMaps, featuresByMapId) {
-  const map = personalMaps.find((item) => (featuresByMapId.get(item.id) || []).length > 0)
-  if (!map) return null
+function buildResumeContext(personalMaps, featuresByMapId) {
+  for (const map of personalMaps) {
+    const list = featuresByMapId.get(map.id) || []
+    if (list.length === 0) continue
+    const sorted = [...list].sort((a, b) => getFeatureTime(b) - getFeatureTime(a))
+    const lastFeature = sorted[0]
+    return {
+      mapId: map.id,
+      mapTitle: map.title || "내 지도",
+      featureId: lastFeature?.id || null,
+      featureTitle: lastFeature?.title || lastFeature?.name || "최근 기록",
+      photoCount: Array.isArray(lastFeature?.photos) ? lastFeature.photos.length : 0,
+      regionLabel: lastFeature?.regionName || lastFeature?.region_name || map?.description || "",
+    }
+  }
+  return null
+}
 
-  const mapFeatures = [...(featuresByMapId.get(map.id) || [])].sort((a, b) => getFeatureTime(b) - getFeatureTime(a))
-  const lastFeature = mapFeatures[0]
-  const visited = mapFeatures.length
-  const targetTotal = Number(map?.config?.targetPlaceCount || map?.targetPlaceCount || map?.placeGoal || 14)
+// 카테고리 분류 — feature 의 category 필드 우선, 없으면 type 별 기본값.
+function classifyFeatureCategory(feature) {
+  const raw = (feature?.category || "").toString().toLowerCase()
+  if (raw.includes("food") || raw.includes("cafe") || raw.includes("음식") || raw.includes("맛집")) return "food"
+  if (raw.includes("culture") || raw.includes("문화") || raw.includes("전시") || raw.includes("공연")) return "culture"
+  if (raw) return "etc"
+  // 폴백: 타입 기반 — pin = food (가장 흔함), route/area = etc
+  if (feature?.type === "pin") return "food"
+  return "etc"
+}
+
+function buildCommunityPreview(maps, recommendedMaps, features) {
+  // 우선 community-map 슬러그 또는 isCommunity 플래그를 가진 지도를 찾는다.
+  const all = [...maps, ...recommendedMaps]
+  const communityMap = all.find((m) => m?.slug === "community-map" || m?.isCommunity)
+  if (!communityMap) return null
+
+  const mapId = communityMap.id || communityMap.mapId
+  const communityFeatures = features.filter((f) => getFeatureMapId(f) === mapId)
+  // 이번 주 새로 기록된 핀 수
+  const today = startOfDay(new Date())
+  const weekAgo = new Date(today.getTime() - 7 * DAY_MS)
+  const isRecent = (f) => {
+    const d = getFeatureDate(f)
+    return d && d >= weekAgo
+  }
+  const newCount = communityFeatures.filter(isRecent).length
+
+  // lat/lng 가 있는 pin 타입 feature 만 5:2 뷰포트(250×100)에 정사영.
+  // bounding box 기반 균등 스케일 + 18px 패딩.
+  const coords = communityFeatures
+    .map((f) => {
+      const lat = Number(f.lat)
+      const lng = Number(f.lng)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (lat === 0 && lng === 0) return null
+      return { f, lat, lng }
+    })
+    .filter(Boolean)
+    .slice(0, 24) // 너무 많으면 가독성 해침
+
+  let pins = []
+  if (coords.length === 0) {
+    // 좌표가 없으면 빈 상태 — Caller 에서 빈 상태 UI 분기
+    pins = []
+  } else if (coords.length === 1) {
+    pins = [{
+      x: 125,
+      y: 50,
+      cat: classifyFeatureCategory(coords[0].f),
+      recent: isRecent(coords[0].f),
+    }]
+  } else {
+    const lats = coords.map((c) => c.lat)
+    const lngs = coords.map((c) => c.lng)
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs)
+    const latRange = maxLat - minLat || 0.001
+    const lngRange = maxLng - minLng || 0.001
+    const padX = 18
+    const padY = 12
+    const usableW = 250 - padX * 2
+    const usableH = 100 - padY * 2
+    // 동일 스케일 (지도 비율 보존) — 한 축만 가득 채움
+    const scale = Math.min(usableW / lngRange, usableH / latRange)
+    const drawnW = lngRange * scale
+    const drawnH = latRange * scale
+    const offsetX = padX + (usableW - drawnW) / 2
+    const offsetY = padY + (usableH - drawnH) / 2
+    pins = coords.map(({ f, lat, lng }) => ({
+      x: Math.round(offsetX + (lng - minLng) * scale),
+      y: Math.round(offsetY + (maxLat - lat) * scale), // 위도 반전 (북=위)
+      cat: classifyFeatureCategory(f),
+      recent: isRecent(f),
+    }))
+  }
+
   return {
-    id: map.id,
-    title: map.title || "내 지도",
-    visited,
-    total: Math.max(visited, Number.isFinite(targetTotal) ? targetTotal : 14),
-    startedAgoLabel: formatAgo(map.createdAt || map.created_at || map.updatedAt || map.updated_at),
-    lastPlaceName: lastFeature?.title || lastFeature?.name || "최근 기록",
+    neighborhood: communityMap.title || "모두의 지도",
+    newCount,
+    pinCount: communityFeatures.length,
+    pins,
   }
 }
 
-function buildSharedMaps(recommendedMaps) {
-  const picked = recommendedMaps.slice(0, 2).map((item, index) => ({
-    kind: "user",
-    id: item.id || item.mapId || `picked-${index}`,
-    mapId: item.mapId || item.id,
-    title: item.title || "동네 지도",
-    ownerHandle: String(item.creator || item.creatorName || (index === 0 ? "minji" : "hye")).replace(/^@/, ""),
-    placeCount: item.placeCount || item.featureCount || 0,
-    gradient: item.gradient || (index === 0 ? ["#F9C56B", "#F4A53C"] : ["#A48BD9", "#7E66BD"]),
-  }))
-
-  return [
-    ...picked,
-    {
-      kind: "public_changes",
-      id: "public-changes",
-      title: "공공데이터로 본 변화",
-      sub: "상점·이전 정보",
-      gradient: ["#FFB58F", "#FF8654"],
-    },
-  ].slice(0, 3)
-}
-
-function HomeSection({ title, actionLabel, onAction, children }) {
-  const sectionId = `home-section-${title.replace(/\s+/g, "-")}`
-  return (
-    <section className="home-v9-section" aria-labelledby={sectionId}>
-      <div className="home-v9-section__head">
-        <h2 id={sectionId}>{title}</h2>
-        {actionLabel ? (
-          <button type="button" onClick={onAction} className="home-v9-section__link">
-            {actionLabel}
-          </button>
-        ) : null}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function WeekTracker({ weekData, weekDelta, onOpenDay, onOpenMonth, onOpenYear }) {
-  const weekTotal = weekData.reduce((sum, item) => sum + (item.future ? 0 : item.count || 0), 0)
-  const range = formatWeekRange(weekData)
-
-  return (
-    <section className="home-v9-tracker" aria-label="주간 기록">
-      <div className="home-v9-tracker__head">
-        <div>
-          <strong>이번 주</strong>
-          <span>· {range}</span>
-        </div>
-        <div>
-          <strong>{weekTotal}</strong>
-          <span>기록</span>
-          <em>+{Math.max(0, weekDelta)}</em>
-        </div>
-      </div>
-
-      <div className="home-v9-week-grid">
-        {weekData.map((item) => (
-          <button
-            type="button"
-            key={item.key}
-            className={`home-v9-day${item.today ? " is-today" : ""}${item.future ? " is-future" : ""}${item.count ? " has-records" : ""}`}
-            aria-label={`${item.dow} ${item.date} ${item.count || 0}`}
-            disabled={!item.count}
-            onClick={() => onOpenDay(item)}
-          >
-            <span className="home-v9-day__dow">{item.dow}</span>
-            <span className="home-v9-day__date">{item.date}</span>
-            <span className="home-v9-day__dot" data-lvl={getActivityLevel(item.count)} />
-          </button>
-        ))}
-      </div>
-
-      <div className="home-v9-tracker__actions">
-        <button type="button" onClick={onOpenMonth}>
-          <span>월간 보기</span>
-          <ChevronRight size={13} aria-hidden="true" />
-        </button>
-        <button type="button" onClick={onOpenYear}>
-          <span>연간 보기</span>
-          <ChevronRight size={13} aria-hidden="true" />
-        </button>
-      </div>
-    </section>
-  )
-}
-
-function MonthDialog({ today, monthCells, monthTotal, prevMonthDelta, onOpenDate, onClose }) {
-  return (
-    <section className="home-v9-dialog home-v9-dialog--month is-open" role="dialog" aria-modal="true" aria-label="월간 기록">
-      <DialogHeader
-        title={`${today.getMonth() + 1}월 ${today.getFullYear()}`}
-        stat={<><strong>{monthTotal}</strong>개 <span className="home-v9-dialog__trend">↑ +{Math.max(0, prevMonthDelta)} 지난달</span></>}
-        onClose={onClose}
-      />
-      <div className="home-v9-dialog__nav">
-        <button type="button" aria-label="이전 달"><ChevronLeft size={14} aria-hidden="true" /></button>
-        <strong>{today.getFullYear()}년 {today.getMonth() + 1}월</strong>
-        <button type="button" aria-label="다음 달"><ChevronRight size={14} aria-hidden="true" /></button>
-      </div>
-      <div className="home-v9-month-dows">
-        {WEEK_LABELS.map((label) => <span key={label}>{label}</span>)}
-      </div>
-      <div className="home-v9-month-grid">
-        {monthCells.map((cell) => (
-          <button
-            type="button"
-            key={cell.key}
-            className={`home-v9-month-cell${cell.empty ? " is-empty" : ""}${cell.today ? " is-today" : ""}${cell.future ? " is-future" : ""}${cell.count ? " has-records" : ""}`}
-            disabled={cell.empty || !cell.count}
-            onClick={() => onOpenDate(cell)}
-          >
-            <span>{cell.date}</span>
-            <i data-lvl={getActivityLevel(cell.count)} />
-          </button>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function YearDialog({ today, yearCells, monthlyTotals, activeDays, yearTotal, onOpenDate, onOpenMonth, onClose }) {
-  const maxMonth = Math.max(1, ...monthlyTotals)
-  return (
-    <section className="home-v9-dialog home-v9-dialog--year is-open" role="dialog" aria-modal="true" aria-label="연간 기록">
-      <DialogHeader
-        title={`${today.getFullYear()}`}
-        stat={<><strong>{yearTotal}</strong>개 · <strong>{activeDays}</strong>일 활동</>}
-        onClose={onClose}
-      />
-      <div className="home-v9-year-months">
-        {MONTH_LABELS.map((label) => <span key={label}>{label.replace("월", "")}</span>)}
-      </div>
-      <div className="home-v9-year-row">
-        <div className="home-v9-year-dows" aria-hidden="true">
-          <span />
-          <span>월</span>
-          <span />
-          <span>수</span>
-          <span />
-          <span>금</span>
-          <span />
-        </div>
-        <div className="home-v9-year-grid">
-          {yearCells.map((cell) => (
-            <button
-              type="button"
-              key={cell.key}
-              className={`home-v9-year-cell${cell.today ? " is-today" : ""}${cell.future ? " is-future" : ""}${cell.count ? " has-records" : ""}`}
-              data-lvl={getActivityLevel(cell.count)}
-              disabled={cell.empty || !cell.count}
-              onClick={() => onOpenDate(cell)}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="home-v9-year-legend" aria-hidden="true">
-        <span>적음</span>
-        {[0, 1, 2, 3, 4].map((level) => <i key={level} data-lvl={level} />)}
-        <span>많음</span>
-      </div>
-      <div className="home-v9-monthly">
-        <h4>월별 활동</h4>
-        <div className="home-v9-monthly__list">
-          {monthlyTotals.map((count, index) => {
-            const future = index > today.getMonth()
-            const pct = future || count === 0 ? 0 : (count / maxMonth) * 100
-            return (
-              <button
-                type="button"
-                key={MONTH_LABELS[index]}
-                className={`home-v9-monthly__row${future ? " is-future" : ""}${count ? " has-records" : ""}`}
-                disabled={future || !count}
-                onClick={() => onOpenMonth(index, count)}
-              >
-                <span>{index + 1}월</span>
-                <b><i style={{ width: `${pct}%` }} /></b>
-                <strong>{future || count === 0 ? "·" : count}</strong>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function DialogHeader({ title, stat, onClose }) {
-  return (
-    <div className="home-v9-dialog__head">
-      <div>
-        <h3>{title}</h3>
-        <p>{stat}</p>
-      </div>
-      <button type="button" onClick={onClose} aria-label="닫기">
-        <X size={16} aria-hidden="true" />
-      </button>
-    </div>
-  )
-}
-
-function RecordListDialog({ range, groups, onOpenMap, onOpenFeature, onClose }) {
-  const total = groups.reduce((sum, group) => sum + group.records.length, 0)
-
-  return (
-    <section className="home-v9-dialog home-v9-dialog--records is-open" role="dialog" aria-modal="true" aria-label="기간별 기록">
-      <DialogHeader
-        title={range?.title || "기록 모아보기"}
-        stat={<><strong>{total}</strong>개 · {range?.subtitle || "선택한 기간"}</>}
-        onClose={onClose}
-      />
-      {groups.length ? (
-        <div className="home-v9-record-groups">
-          {groups.map((group) => (
-            <article className="home-v9-record-group" key={group.mapId}>
-              <button type="button" className="home-v9-record-group__head" onClick={() => onOpenMap?.(group.mapId)}>
-                <span>
-                  <strong>{group.mapTitle}</strong>
-                  <em>{group.records.length}개 기록</em>
-                </span>
-                <ChevronRight size={14} aria-hidden="true" />
-              </button>
-              <div className="home-v9-record-list">
-                {group.records.map((record) => (
-                  <button
-                    type="button"
-                    className="home-v9-record-item"
-                    key={record.id}
-                    onClick={() => onOpenFeature?.(record.mapId, record.featureId)}
-                  >
-                    <span className="home-v9-record-item__marker">{record.kind}</span>
-                    <span className="home-v9-record-item__body">
-                      <strong>{record.title}</strong>
-                      <em>{formatRecordDate(record.date)}{record.summary ? ` · ${record.summary}` : ""}</em>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      ) : (
-        <div className="home-v9-record-empty">
-          <strong>이 기간에는 아직 기록이 없어요</strong>
-          <span>기록이 있는 날짜나 월을 누르면 지도별로 모아볼 수 있어요.</span>
-        </div>
-      )}
-    </section>
-  )
-}
-
-export function HomeScreen({
-  onResumeMyMap,
-  onOpenFeatureInMap,
-  onOpenMap,
-  onNavigateToExplore,
-  onOpenExploreSearch,
-  onOpenNotifications,
-  hasUnread = false,
-  maps = [],
-  features = [],
-  recommendedMaps = [],
-  viewerProfile = null,
-  userStats = null,
-  levelEmoji = "",
-}) {
-  const [openDialog, setOpenDialog] = useState(null)
-  const [recordRange, setRecordRange] = useState(null)
+// 호환을 위해 App.jsx 가 전달하는 모든 props 를 받지만, v2 화면에서 사용하지 않는 일부
+// (onNavigateToExplore, onOpenExploreSearch, userStats, levelEmoji)는 추후 단계에서
+// 다른 탭으로 이전 예정이므로 여기서는 본문에서 참조하지 않는다.
+export function HomeScreen(props) {
+  const {
+    onResumeMyMap,
+    onOpenFeatureInMap,
+    onOpenMap,
+    onOpenNotifications,
+    hasUnread = false,
+    maps = [],
+    features = [],
+    recommendedMaps = [],
+    viewerProfile = null,
+  } = props
   const today = useMemo(() => startOfDay(new Date()), [])
+  const [greetingMessage, setGreetingMessage] = useState("")
 
   const personalMaps = useMemo(() => (
     maps
@@ -586,12 +251,16 @@ export function HomeScreen({
 
   const activityByDate = useMemo(() => buildActivityIndex(features), [features])
   const weekData = useMemo(() => buildWeekData(today, activityByDate), [activityByDate, today])
-  const monthCells = useMemo(() => buildMonthCells(today, activityByDate), [activityByDate, today])
-  const yearCells = useMemo(() => buildYearCells(today, activityByDate), [activityByDate, today])
-  const monthlyTotals = useMemo(() => buildMonthlyTotals(today, activityByDate), [activityByDate, today])
+  const weekTotal = weekData.reduce((sum, item) => sum + (item.future ? 0 : item.count || 0), 0)
+  const resumeContext = useMemo(
+    () => buildResumeContext(personalMaps, featuresByMapId),
+    [featuresByMapId, personalMaps],
+  )
+  const communityPreview = useMemo(
+    () => buildCommunityPreview(maps, recommendedMaps, features),
+    [features, maps, recommendedMaps],
+  )
 
-  const resumeMap = useMemo(() => buildResumeMap(personalMaps, featuresByMapId), [featuresByMapId, personalMaps])
-  const sharedMaps = useMemo(() => buildSharedMaps(recommendedMaps), [recommendedMaps])
   const firstRecordAt = useMemo(() => (
     features.reduce((oldest, feature) => {
       const date = getFeatureDate(feature)
@@ -609,219 +278,239 @@ export function HomeScreen({
   ), [viewerProfile])
   const greetingContext = useMemo(() => buildGreetingContext({
     user: { lastVisitAt, firstRecordAt },
-    inProgressMap: resumeMap ? { id: resumeMap.id } : null,
-  }), [firstRecordAt, lastVisitAt, resumeMap])
-  const [greetingMessage, setGreetingMessage] = useState("")
+    inProgressMap: resumeContext ? { id: resumeContext.mapId } : null,
+  }), [firstRecordAt, lastVisitAt, resumeContext])
 
   useEffect(() => {
     let alive = true
     getDailyGreeting(greetingContext, greetingStorage).then((message) => {
       if (alive) setGreetingMessage(message)
     })
-    return () => {
-      alive = false
-    }
+    return () => { alive = false }
   }, [greetingContext])
 
-  const xp = userStats?.xp || 0
-  const levelInfo = useMemo(() => getLevelForXp(xp), [xp])
-  const levelProgress = useMemo(() => getLevelProgress(xp), [xp])
-  const progressPct = clamp(Math.round((levelProgress.progress || 0) * 100), 0, 100)
-  const remainingXp = levelProgress.remaining || 0
-  const userName = viewerProfile?.name || "LOCA"
-  const placeCountStat = userStats?.pins || features.filter((feature) => feature.type === "pin").length
-  const mapCountStat = userStats?.maps ?? personalMaps.length
-  const streakStat = userStats?.streak || 0
-  const monthTotal = monthlyTotals[today.getMonth()] || 0
-  const prevMonthTotal = monthlyTotals[Math.max(0, today.getMonth() - 1)] || 0
-  const currentWeekStart = weekData[0]?.rawDate || today
-  const prevWeekTotal = useMemo(
-    () => sumRange(new Date(currentWeekStart.getTime() - 7 * DAY_MS), 7, activityByDate),
-    [activityByDate, currentWeekStart],
-  )
-  const weekTotal = weekData.reduce((sum, item) => sum + (item.future ? 0 : item.count || 0), 0)
-  const activeDays = yearCells.filter((cell) => !cell.future && (cell.count || 0) > 0).length
-  const yearTotal = monthlyTotals.reduce((sum, count) => sum + count, 0)
-  const recordGroups = useMemo(() => buildRecordGroups(features, maps, recordRange), [features, maps, recordRange])
-  const openRecordRange = (range) => {
-    setRecordRange(range)
-    setOpenDialog("records")
+  const userName = viewerProfile?.name || viewerProfile?.nickname || "LOCA"
+  const greetingLine1 = greetingMessage || "오늘은 어디로 걸어볼까요,"
+  const handleResume = () => {
+    if (!resumeContext) return
+    if (resumeContext.featureId && onOpenFeatureInMap) {
+      onOpenFeatureInMap(resumeContext.mapId, resumeContext.featureId)
+    } else {
+      onResumeMyMap?.(resumeContext.mapId)
+    }
   }
-  const openDayRecords = (date, count) => {
-    const day = startOfDay(date)
-    openRecordRange({
-      type: "day",
-      title: `${day.getMonth() + 1}월 ${day.getDate()}일 기록`,
-      subtitle: `${count || 0}개 기록`,
-      start: day,
-      end: getRangeEnd(day, 1),
-    })
-  }
-  const openMonthRecords = (monthIndex, count) => {
-    const { start, end } = getMonthRange(today.getFullYear(), monthIndex)
-    openRecordRange({
-      type: "month",
-      title: `${monthIndex + 1}월 기록`,
-      subtitle: `${count || 0}개 기록`,
-      start,
-      end,
-    })
-  }
-  const openMapFromRecords = (mapId) => {
-    setOpenDialog(null)
-    if (!mapId || mapId === "unknown") return
-    onResumeMyMap?.(mapId)
-  }
-  const openFeatureFromRecords = (mapId, featureId) => {
-    setOpenDialog(null)
-    if (!mapId || mapId === "unknown") return
-    if (featureId && onOpenFeatureInMap) onOpenFeatureInMap(mapId, featureId)
-    else onResumeMyMap?.(mapId)
+  const handleOpenCommunity = () => {
+    const all = [...maps, ...recommendedMaps]
+    const cm = all.find((m) => m?.slug === "community-map" || m?.isCommunity)
+    if (cm && onOpenMap) onOpenMap(cm.id || cm.mapId)
   }
 
   return (
-    <section className="screen screen--scroll home-screen home-v9">
-      <div className="home-v9-shell">
-        <header className="home-v9-header">
-          <strong aria-label="LOCA">LOCA</strong>
-          <button type="button" className="home-v9-icon-btn" aria-label="알림" title="알림" onClick={onOpenNotifications}>
-            <Bell size={16} strokeWidth={1.8} aria-hidden="true" />
-            {hasUnread ? <span /> : null}
-          </button>
-        </header>
+    <section className="screen screen--scroll home-v2">
+      <header className="home-v2__header">
+        <strong className="home-v2__brand">
+          loca<span className="home-v2__brand-dot">.</span>
+        </strong>
+        <button
+          type="button"
+          className="home-v2__icon-btn"
+          aria-label="알림"
+          title="알림"
+          onClick={onOpenNotifications}
+        >
+          <Bell size={17} strokeWidth={1.8} aria-hidden="true" />
+          {hasUnread ? <span className="home-v2__icon-dot" /> : null}
+        </button>
+      </header>
 
-        <div className="home-v9-greeting">
-          <time>{formatKoreanDate(today)}</time>
-          <h1>{greetingMessage || "오늘은 어디로 떠나볼까요?"}</h1>
-        </div>
+      <div className="home-v2__greeting">
+        <time className="home-v2__meta">{formatDateUpperMeta(today)}</time>
+        <h1>
+          {greetingLine1}<br />{userName}님.
+        </h1>
+      </div>
 
-        <section className="home-v9-combo" aria-label="내 기록 요약">
-          <div className="home-v9-combo__profile">
-            <div className="home-v9-avatar" aria-hidden="true">
-              {levelEmoji ? <img src={levelEmoji} alt="" /> : <span>{levelInfo.emoji || "🥚"}</span>}
-            </div>
-            <div className="home-v9-profile-copy">
-              <div className="home-v9-name-row">
-                <strong>{userName}</strong>
-                <span>Lv {levelInfo.level}</span>
-              </div>
-              <span className="home-v9-title-pill">거리 달리기</span>
-              <div className="home-v9-next-row">
-                <span>다음 모험 뱃지까지</span>
-                <strong>{remainingXp || xp} XP</strong>
-              </div>
-              <div className="home-v9-xp" aria-hidden="true"><i style={{ width: `${progressPct}%` }} /></div>
-              <div className="home-v9-stats">
-                <span><MapPin size={10} aria-hidden="true" /> <b>{placeCountStat}</b>장소</span>
-                <span><Layers size={10} aria-hidden="true" /> <b>{mapCountStat}</b>지도</span>
-                <span><b>{streakStat}일</b>연속</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="home-v9-combo__divider" />
-
-          {resumeMap ? (
-            <button type="button" className="home-v9-continue" onClick={() => onResumeMyMap?.(resumeMap.id)}>
-              <span className="home-v9-continue__thumb" aria-hidden="true"><b>{resumeMap.visited}/{resumeMap.total}</b></span>
-              <span className="home-v9-continue__body">
-                <small>이어 기록하기</small>
-                <strong>{resumeMap.title}</strong>
-                <em>{resumeMap.startedAgoLabel} 시작 · 마지막 {resumeMap.lastPlaceName}</em>
-              </span>
-              <span className="home-v9-continue__progress">+ 이어서</span>
-            </button>
-          ) : (
-            <button type="button" className="home-v9-continue" onClick={onNavigateToExplore}>
-              <span className="home-v9-continue__thumb" aria-hidden="true"><b>0/1</b></span>
-              <span className="home-v9-continue__body">
-                <small>첫 기록 시작하기</small>
-                <strong>오늘의 장소를 남겨보세요</strong>
-                <em>사진, 메모, 음성으로 가볍게 시작</em>
-              </span>
-              <span className="home-v9-continue__progress">+ 시작</span>
-            </button>
-          )}
-        </section>
-
-        <HomeSection title="내 기록">
-          <WeekTracker
-            weekData={weekData}
-            weekDelta={weekTotal - prevWeekTotal}
-            onOpenDay={(item) => openDayRecords(item.rawDate, item.count)}
-            onOpenMonth={() => setOpenDialog("month")}
-            onOpenYear={() => setOpenDialog("year")}
+      {resumeContext ? (
+        <button
+          type="button"
+          className="home-v2__resume"
+          onClick={handleResume}
+          aria-label={`이어서 쓰기 — ${resumeContext.mapTitle}`}
+        >
+          <PhotoBlock
+            tone="d"
+            width={60}
+            height={60}
+            radius={9}
+            className="home-v2__resume-thumb"
           />
-        </HomeSection>
-
-        <HomeSection title="함께 보는 지도" actionLabel="탐색 →" onAction={onOpenExploreSearch || onNavigateToExplore}>
-          <div className="home-v9-shared" aria-label="함께 보는 지도">
-            {sharedMaps.map((item, index) => (
-              <button
-                key={item.id}
-                type="button"
-                className="home-v9-map-card"
-                onClick={() => {
-                  if (item.kind === "public_changes") onNavigateToExplore?.()
-                  else onOpenMap?.(item.mapId || item.id)
-                }}
-              >
-                <span
-                  className="home-v9-map-card__thumb"
-                  style={{ "--card-a": item.gradient?.[0], "--card-b": item.gradient?.[1] }}
-                  aria-hidden="true"
-                >
-                  {item.kind === "public_changes" ? <em>모두의 지도</em> : null}
-                  <i style={{ left: `${28 + index * 10}%`, top: "42%" }} />
-                  <i style={{ left: "62%", top: `${52 - index * 8}%` }} />
-                </span>
-                <strong>{item.title}</strong>
-                <small>{item.kind === "public_changes" ? item.sub : `@${item.ownerHandle} · ${item.placeCount}곳`}</small>
-              </button>
-            ))}
+          <div className="home-v2__resume-body">
+            <span className="home-v2__resume-cap">이어서 쓰기 · 어제</span>
+            <span className="home-v2__resume-title">{resumeContext.featureTitle}</span>
+            {resumeContext.regionLabel || resumeContext.photoCount > 0 ? (
+              <span className="home-v2__resume-meta">
+                {resumeContext.regionLabel}
+                {resumeContext.regionLabel && resumeContext.photoCount > 0 ? " · " : ""}
+                {resumeContext.photoCount > 0 ? `사진 ${resumeContext.photoCount}장` : ""}
+              </span>
+            ) : null}
           </div>
-        </HomeSection>
-      </div>
+          <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+        </button>
+      ) : null}
 
-      <div
-        className={`home-v9-overlay${openDialog ? " is-open" : ""}`}
-        onClick={() => setOpenDialog(null)}
-        aria-hidden={!openDialog}
-      >
-        <div onClick={(event) => event.stopPropagation()}>
-          {openDialog === "month" ? (
-            <MonthDialog
-              today={today}
-              monthCells={monthCells}
-              monthTotal={monthTotal}
-              prevMonthDelta={monthTotal - prevMonthTotal}
-              onOpenDate={(cell) => openDayRecords(new Date(today.getFullYear(), today.getMonth(), cell.date), cell.count)}
-              onClose={() => setOpenDialog(null)}
-            />
-          ) : null}
-          {openDialog === "year" ? (
-            <YearDialog
-              today={today}
-              yearCells={yearCells}
-              monthlyTotals={monthlyTotals}
-              activeDays={activeDays}
-              yearTotal={yearTotal}
-              onOpenDate={(cell) => openDayRecords(cell.rawDate, cell.count)}
-              onOpenMonth={openMonthRecords}
-              onClose={() => setOpenDialog(null)}
-            />
-          ) : null}
-          {openDialog === "records" ? (
-            <RecordListDialog
-              range={recordRange}
-              groups={recordGroups}
-              onOpenMap={openMapFromRecords}
-              onOpenFeature={openFeatureFromRecords}
-              onClose={() => setOpenDialog(null)}
-            />
-          ) : null}
+      <SectionHead title="이번 주 기록" />
+      <div className="home-v2__tracker">
+        <div className="home-v2__tracker-head">
+          <span className="home-v2__tracker-range">
+            {weekData[0] ? `${weekData[0].d}일 — ${weekData[6]?.d ?? ""}일` : ""}
+          </span>
+          <span className="home-v2__tracker-total">
+            <strong className="loca-v2-num">{weekTotal}</strong>
+            <span>기록</span>
+          </span>
+        </div>
+        <div className="home-v2__tracker-grid">
+          {weekData.map((d) => (
+            <div
+              key={d.key}
+              className={`home-v2__tracker-cell${d.today ? " is-today" : ""}${d.future ? " is-future" : ""}`}
+            >
+              <span className="home-v2__tracker-dow">{d.dow}</span>
+              <span className="home-v2__tracker-day loca-v2-num">{d.d}</span>
+              <span
+                className={`home-v2__tracker-dot${d.count > 0 ? " has-record" : ""}${d.today && d.count === 0 ? " is-today-empty" : ""}`}
+                aria-hidden="true"
+              />
+            </div>
+          ))}
         </div>
       </div>
+
+      {communityPreview ? (
+        <>
+          <div className="home-v2__community-cap">
+            <span className="home-v2__community-title">모두의 지도</span>
+            <span className="home-v2__community-sub">동네 사람들이 함께 그려가는 한 장의 지도</span>
+          </div>
+          <button
+            type="button"
+            className="home-v2__community-card"
+            onClick={handleOpenCommunity}
+            aria-label={`모두의 지도 ${communityPreview.neighborhood} 열기`}
+          >
+            <div className="home-v2__community-map">
+              <svg viewBox="0 0 250 100" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+                <g stroke="var(--map-grid)" strokeWidth="0.4" opacity="0.6">
+                  {[50, 100, 150, 200].map((x) => (
+                    <line key={`v${x}`} x1={x} y1="0" x2={x} y2="100" />
+                  ))}
+                  {[33, 66].map((y) => (
+                    <line key={`h${y}`} x1="0" y1={y} x2="250" y2={y} />
+                  ))}
+                </g>
+                <ellipse cx="62" cy="38" rx="42" ry="20" fill="var(--accent-soft)" opacity="0.35" />
+                <ellipse cx="190" cy="72" rx="48" ry="22" fill="var(--second-soft)" opacity="0.45" />
+                <path
+                  d="M 5 60 Q 60 50 110 65 Q 170 80 245 50"
+                  stroke="var(--map-grid)"
+                  strokeWidth="1.2"
+                  fill="none"
+                  opacity="0.55"
+                />
+                {communityPreview.pins.length > 0 ? (
+                  communityPreview.pins.map((p, i) => {
+                    const catVar = p.cat === "food"
+                      ? "var(--cat-food)"
+                      : p.cat === "culture"
+                        ? "var(--cat-culture)"
+                        : "var(--cat-etc)"
+                    return (
+                      <g key={i} transform={`translate(${p.x} ${p.y})`}>
+                        {p.recent ? (
+                          <circle
+                            r="3.5"
+                            fill={catVar}
+                            opacity="0.45"
+                            className="home-v2__pin-pulse"
+                            style={{ animationDelay: `${(i * 0.35) % 2}s` }}
+                          />
+                        ) : null}
+                        <circle
+                          r="2.6"
+                          fill={catVar}
+                          stroke="#fff"
+                          strokeWidth="0.8"
+                          className={p.recent ? "home-v2__pin-bob" : ""}
+                          style={p.recent ? { animationDelay: `${(i * 0.2) % 1.8}s` } : undefined}
+                        />
+                      </g>
+                    )
+                  })
+                ) : (
+                  <g>
+                    <text x="125" y="46" textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--ink-soft)" letterSpacing="-0.02em">
+                      아직 아무 기록도 없어요
+                    </text>
+                    <text x="125" y="62" textAnchor="middle" fontSize="9" fontWeight="500" fill="var(--ink-mute)" letterSpacing="-0.01em">
+                      당신의 첫 핀이 모두의 지도를 시작합니다
+                    </text>
+                  </g>
+                )}
+              </svg>
+              <span className="home-v2__community-chip">
+                <span className="home-v2__community-chip-dot" />
+                {communityPreview.neighborhood}
+              </span>
+            </div>
+            <div className="home-v2__community-footer">
+              <div className="home-v2__community-info">
+                {communityPreview.pinCount > 0 ? (
+                  <>
+                    <span className="home-v2__community-line">
+                      이번 주 <span className="home-v2__community-num">{communityPreview.newCount}곳</span> 새로 기록됐어요
+                    </span>
+                    <span className="home-v2__community-legend">
+                      <span><i style={{ background: "var(--cat-food)" }} />음식</span>
+                      <span><i style={{ background: "var(--cat-culture)" }} />문화</span>
+                      <span><i style={{ background: "var(--cat-etc)" }} />기타</span>
+                    </span>
+                  </>
+                ) : (
+                  <span className="home-v2__community-line">
+                    {communityPreview.neighborhood} · 첫 기록자가 되어보세요
+                  </span>
+                )}
+              </div>
+              <span className="home-v2__community-chev" aria-hidden="true">
+                <ChevronRight size={13} strokeWidth={2.2} />
+              </span>
+            </div>
+          </button>
+        </>
+      ) : (
+        <div className="home-v2__community-cap">
+          <span className="home-v2__community-title">모두의 지도</span>
+          <span className="home-v2__community-sub">동네 사람들이 함께 그려가는 한 장의 지도</span>
+        </div>
+      )}
+
+      {!communityPreview ? (
+        <button
+          type="button"
+          className="home-v2__community-empty"
+          onClick={handleOpenCommunity}
+        >
+          <span className="home-v2__community-empty-icon" aria-hidden="true">
+            <MapPin size={20} strokeWidth={1.8} />
+          </span>
+          <div className="home-v2__community-empty-body">
+            <span className="home-v2__community-empty-title">동네를 먼저 설정해주세요</span>
+            <span className="home-v2__community-empty-desc">동네를 정하면 같은 곳을 기록하는 사람들의 지도가 열려요.</span>
+          </div>
+          <ChevronRight size={14} strokeWidth={1.8} aria-hidden="true" />
+        </button>
+      ) : null}
     </section>
   )
 }

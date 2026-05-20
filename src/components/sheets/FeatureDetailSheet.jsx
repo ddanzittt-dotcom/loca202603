@@ -1,9 +1,70 @@
 ﻿import { useState } from "react"
-import { X as XIcon, Mic } from "lucide-react"
+import { X as XIcon, Mic, Camera } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { MediaPhoto, MediaVoice } from "../MediaWidgets"
 import { PIN_ICON_GROUPS, emojiToCategory, categoryToEmoji } from "../../data/pinIcons"
 import { FeatureEmoji } from "../FeatureEmoji"
+import { DiaryBanner } from "../visuals/DiaryBanner"
+
+// 일기 entry 헬퍼 — 같은 날짜의 메모+사진+음성을 하나의 entry 로 묶음.
+const DAY_OF_WEEK_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
+
+function getDateBucketKey(dateValue) {
+  if (!dateValue) return null
+  const d = new Date(dateValue)
+  if (!Number.isFinite(d.getTime())) return null
+  return { iso: d.toISOString().slice(0, 10), date: d }
+}
+
+function buildDiaryBuckets({ memos = [], photos = [], voices = [] }) {
+  const buckets = new Map() // iso -> { dateKey, dateObj, photos[], voices[], memos[] }
+  const ensure = (key) => {
+    if (!buckets.has(key.iso)) {
+      buckets.set(key.iso, {
+        dateKey: key.iso,
+        dateObj: key.date,
+        photos: [],
+        voices: [],
+        memos: [],
+      })
+    }
+    return buckets.get(key.iso)
+  }
+  for (const m of memos) {
+    const k = getDateBucketKey(m?.date)
+    if (k) ensure(k).memos.push(m)
+  }
+  for (const p of photos) {
+    const k = getDateBucketKey(p?.date)
+    if (k) ensure(k).photos.push(p)
+  }
+  for (const v of voices) {
+    const k = getDateBucketKey(v?.date)
+    if (k) ensure(k).voices.push(v)
+  }
+  return [...buckets.values()].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime())
+}
+
+function bucketToDiaryEntry(bucket, todayIso) {
+  const d = bucket.dateObj
+  const dateStr = `${`${d.getMonth() + 1}`.padStart(2, "0")}.${`${d.getDate()}`.padStart(2, "0")}`
+  const day = DAY_OF_WEEK_KO[d.getDay()]
+  const memoText = bucket.memos
+    .map((m) => (m?.text || "").trim())
+    .filter(Boolean)
+    .join("\n\n")
+  return {
+    isToday: bucket.dateKey === todayIso,
+    date: dateStr,
+    day,
+    photos: bucket.photos.map((p) => ({ src: p?.url || p?.thumbnail || p?.src || "" })),
+    audio: bucket.voices.map((v) => ({
+      duration: v?.duration,
+      date: dateStr,
+    })),
+    memo: memoText,
+  }
+}
 import { FEATURE_LINE_STYLE_ITEMS, getFeatureColorPresets, normalizeFeatureStyle } from "../../lib/featureStyle"
 
 function TagInput({ tags, onChange }) {
@@ -163,10 +224,9 @@ export function FeatureDetailSheet({
   isRecording,
   recordingSeconds,
   onPhotoSelected,
-  onDeletePhoto,
+  // onDeletePhoto / onDeleteVoice 는 일기 entry 통합 후 인라인 삭제 UI 없음 (편집은 RecordEntrySheet 에서).
   onStartRecording,
   onStopRecording,
-  onDeleteVoice,
   memoText,
   onMemoTextChange,
   onAddMemo,
@@ -192,9 +252,15 @@ export function FeatureDetailSheet({
         : "장소 상세"
 
   return (
-    <BottomSheet open={Boolean(featureSheet)} title={sheetTitle} onClose={onClose}>
+    <BottomSheet
+      open={Boolean(featureSheet)}
+      title={sheetTitle}
+      onClose={onClose}
+      /* v2 B5-B7: 편집 권한이 없는 readonly 진입은 풀스크린 상세 페이지로 (시트 X) */
+      fullscreen={!canEdit}
+    >
       {featureSheet ? (
-        <div className="fd">
+        <div className="fd fd--v2">
           {isCommunity ? (
             <>
               {featureSheet.createdByName ? <span className="fd__author">작성자 · {featureSheet.createdByName}</span> : null}
@@ -327,53 +393,89 @@ export function FeatureDetailSheet({
                   )}
                 </div>
               ) : (
-                <div className="fd__records-tab">
-                  <div className="fd__rec-section">
-                    <span className="fd__sec-label">사진 ({(featureSheet.photos || []).length})</span>
-                    <div className="fd__photo-row">
-                      {canEdit ? (
-                        <>
-                          <button className="fd__photo-upload" type="button" onClick={() => photoInputRef.current?.click()}>+</button>
-                          <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onPhotoSelected} />
-                        </>
-                      ) : null}
-                      {(featureSheet.photos || []).map((p) => (
-                        <MediaPhoto key={p.id} mediaId={p.id} localId={p.localId} date={p.date} cloudUrl={p.url} onDelete={canEdit ? () => onDeletePhoto(p.id) : undefined} />
-                      ))}
-                    </div>
-                  </div>
+                <div className="fd__records-tab fd__records-tab--v2">
+                  {(() => {
+                    const buckets = buildDiaryBuckets({
+                      memos: featureMemos,
+                      photos: featureSheet.photos || [],
+                      voices: featureSheet.voices || [],
+                    })
+                    const todayIso = new Date().toISOString().slice(0, 10)
+                    const todayBucket = buckets.find((b) => b.dateKey === todayIso)
+                    const pastBuckets = buckets.filter((b) => b.dateKey !== todayIso)
+                    const totalCount = featureMemos.length + (featureSheet.photos || []).length + (featureSheet.voices || []).length
 
-                  <div className="fd__rec-section">
-                    <span className="fd__sec-label">음성 메모 ({(featureSheet.voices || []).length})</span>
-                    <div className="fd__voice-row">
-                      {canEdit ? (
-                        <button className={`fd__record-btn${isRecording ? " is-recording" : ""}`} type="button" onClick={isRecording ? onStopRecording : onStartRecording}>
-                          <Mic size={12} />{isRecording ? ` ${recordingSeconds}초` : ""}
-                        </button>
-                      ) : null}
-                      {(featureSheet.voices || []).map((v) => (
-                        <MediaVoice key={v.id} mediaId={v.id} localId={v.localId} duration={v.duration} date={v.date} cloudUrl={v.url} onDelete={canEdit ? () => onDeleteVoice(v.id) : undefined} />
-                      ))}
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        {/* 편집 모드 — 빠른 입력 툴바 (사진/음성/메모) */}
+                        {canEdit ? (
+                          <div className="fd__rec-quickbar">
+                            <button className="fd__rec-quickbar-btn" type="button" onClick={() => photoInputRef.current?.click()} aria-label="사진 추가">
+                              <Camera size={14} />
+                              <span>사진</span>
+                            </button>
+                            <input ref={photoInputRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onPhotoSelected} />
+                            <button
+                              className={`fd__rec-quickbar-btn${isRecording ? " is-recording" : ""}`}
+                              type="button"
+                              onClick={isRecording ? onStopRecording : onStartRecording}
+                              aria-label={isRecording ? "녹음 정지" : "음성 녹음"}
+                            >
+                              <Mic size={14} />
+                              <span>{isRecording ? `녹음 중 ${recordingSeconds}초` : "음성"}</span>
+                            </button>
+                            <div className="fd__rec-quickbar-memo">
+                              <textarea
+                                className="fd__rec-quickbar-input"
+                                rows="1"
+                                value={memoText}
+                                onChange={(e) => onMemoTextChange(e.target.value)}
+                                placeholder="짧은 메모를 남겨보세요"
+                              />
+                              <button
+                                className="fd__rec-quickbar-save"
+                                type="button"
+                                onClick={() => onAddMemo(featureSheet.id, memoText)}
+                                disabled={!memoText.trim()}
+                              >
+                                저장
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
 
-                  <div className="fd__rec-section">
-                    <span className="fd__sec-label">메모 ({featureMemos.length})</span>
-                    {canEdit ? (
-                      <div className="fd__memo-input-box">
-                        <textarea className="fd__memo-textarea" rows="2" value={memoText} onChange={(e) => onMemoTextChange(e.target.value)} placeholder="메모를 남겨보세요..." />
-                        <button className="fd__btn fd__btn--save fd__btn--sm" type="button" onClick={() => onAddMemo(featureSheet.id, memoText)} disabled={!memoText.trim()}>저장</button>
-                      </div>
-                    ) : null}
-                    <div className="fd__memo-list">
-                      {featureMemos.length === 0 ? <p className="fd__memo-empty">아직 메모가 없어요.</p> : [...featureMemos].reverse().map((m) => (
-                        <div className="fd__memo-item" key={m.id}>
-                          <p className="fd__memo-text">{m.text}</p>
-                          <span className="fd__memo-date">{new Date(m.date).toLocaleDateString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                        {totalCount === 0 ? (
+                          <p className="fd__memo-empty">
+                            아직 기록이 없어요.{canEdit ? " 위 버튼으로 첫 기록을 남겨보세요." : ""}
+                          </p>
+                        ) : (
+                          <div className="fd__diary-stack">
+                            {todayBucket ? (
+                              <>
+                                <span className="fd__diary-head">오늘</span>
+                                <div className="fd__diary-list">
+                                  <DiaryBanner entry={bucketToDiaryEntry(todayBucket, todayIso)} />
+                                </div>
+                              </>
+                            ) : null}
+                            {pastBuckets.length > 0 ? (
+                              <>
+                                <span className="fd__diary-head">지난 기록 {pastBuckets.length}</span>
+                                <ol className="fd__diary-timeline">
+                                  {pastBuckets.map((bucket) => (
+                                    <li key={bucket.dateKey} className="fd__diary-timeline-item">
+                                      <span className="fd__diary-timeline-dot" aria-hidden="true" />
+                                      <DiaryBanner entry={bucketToDiaryEntry(bucket, todayIso)} />
+                                    </li>
+                                  ))}
+                                </ol>
+                              </>
+                            ) : null}
+                          </div>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
               )}
             </>

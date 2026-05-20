@@ -1,0 +1,316 @@
+/* ============================================================
+ * Maps tab v2 — Cream & Ember
+ * 시안: 참고자료/design-source/screen-places.jsx
+ * 토큰: tokens-v2.css
+ *
+ * MyArchiveScreen / MapsListScreen / PlacesScreen 의 v2 모디파이어 (--v2) 스코프.
+ * 기존 v3 스타일은 그대로 두고, v2 클래스가 붙은 경우만 새 룩을 적용.
+ * ============================================================ */
+
+.maps-library-screen--v2 {
+  background: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+/* ---------- 페이지 타이틀 ---------- */
+.archive-head--v2 {
+  padding: 0 22px 12px;
+}
+.archive-head__title--v2 {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: var(--ink-strong) !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.2;
+  margin: 0;
+}
+
+/* ---------- 지도/장소 segment ---------- */
+.maps-segment--v2 {
+  margin: 0 22px 12px !important;
+  padding: 3px !important;
+  background: var(--bg-deep) !important;
+  border-radius: 10px !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  border: none !important;
+}
+.maps-segment--v2.maps-segment--hub {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.maps-segment__tab--v2 {
+  height: 34px !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--ink-mute) !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  letter-spacing: -0.015em;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+.maps-segment__tab--v2:hover {
+  color: var(--ink-soft);
+}
+.maps-segment__tab--v2.is-active {
+  background: var(--card) !important;
+  color: var(--ink-strong) !important;
+  font-weight: 800 !important;
+  box-shadow: 0 1px 3px var(--line);
+}
+.maps-segment__tab--v2 span {
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  color: var(--ink-mute) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.maps-segment__tab--v2.is-active span {
+  color: var(--accent-deep) !important;
+}
+
+/* ---------- 카드 그리드 / Map cards v2 override ---------- */
+.maps-library-screen--v2 .maps-v3-grid {
+  padding: 0 22px;
+  gap: 10px;
+}
+
+.maps-library-screen--v2 .maps-v3-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.maps-library-screen--v2 .maps-v3-card:hover {
+  background: var(--card);
+  border-color: var(--line-strong);
+}
+
+.maps-library-screen--v2 .maps-v3-card__preview {
+  aspect-ratio: 1 / 1;
+}
+
+.maps-library-screen--v2 .maps-v3-card__title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.02em;
+}
+
+.maps-library-screen--v2 .maps-v3-card__meta {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+
+/* 상태 뱃지 v2 — 작성 중 / 비공개 / 함께 N */
+.maps-library-screen--v2 .maps-v3-status--draft {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+  letter-spacing: -0.01em;
+}
+.maps-library-screen--v2 .maps-v3-status--collab {
+  background: var(--second-soft);
+  color: var(--ink-strong);
+  border: 1px solid var(--line-strong);
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+.maps-library-screen--v2 .maps-v3-status--private {
+  background: var(--bg-deep);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+/* ---------- 검색 + 필터 row v2 ---------- */
+.maps-library-screen--v2 .maps-v3-search {
+  margin: 0 22px 12px;
+  height: 38px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 13px;
+  font-family: var(--font-sans);
+}
+.maps-library-screen--v2 .maps-v3-search input {
+  font-size: 12px;
+  color: var(--ink);
+}
+.maps-library-screen--v2 .maps-v3-search input::placeholder {
+  color: var(--ink-faint);
+}
+
+.maps-library-screen--v2 .maps-v3-filter-row {
+  padding: 0 22px;
+  margin-bottom: 12px;
+}
+
+.maps-library-screen--v2 .maps-v3-chip {
+  height: 28px;
+  padding: 0 11px;
+  background: var(--card);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.maps-library-screen--v2 .maps-v3-chip.is-active {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border-color: var(--accent-soft);
+}
+.maps-library-screen--v2 .maps-v3-chip .num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.maps-library-screen--v2 .maps-v3-sort {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+}
+
+/* ---------- 빈 지도 카드 (장소 0개) — 점선 외곽 ---------- */
+.maps-library-screen--v2 .maps-v3-card--empty {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: var(--bg);
+}
+.maps-library-screen--v2 .maps-v3-card--empty .maps-v3-card__preview {
+  opacity: 0.7;
+}
+.maps-library-screen--v2 .maps-v3-card--empty .maps-v3-card__title {
+  color: var(--ink-soft);
+}
+
+/* ---------- Place list rows v2 (PlacesScreen embedded) ---------- */
+.maps-library-screen--v2 .pl-screen,
+.maps-library-screen--v2 .pl-screen--embedded {
+  background: var(--bg);
+  font-family: var(--font-sans);
+}
+
+.maps-library-screen--v2 .pl-item {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  padding: 11px 13px;
+  gap: 11px;
+}
+.maps-library-screen--v2 .pl-item:hover {
+  background: var(--bg-deep);
+}
+
+/* 좌측 컬러 톤 아이콘 박스 — 38×38 rounded — pin=warm, route=mint, area=amber */
+.maps-library-screen--v2 .pl-item__bar { display: none; }
+.maps-library-screen--v2 .pl-item__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.maps-library-screen--v2 .pl-item__icon--pin {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+}
+.maps-library-screen--v2 .pl-item__icon--route {
+  background: var(--sage-soft);
+  color: var(--sage);
+}
+.maps-library-screen--v2 .pl-item__icon--area {
+  background: var(--cocoa-soft);
+  color: var(--cocoa);
+}
+.maps-library-screen--v2 .pl-item__icon svg {
+  color: inherit;
+}
+
+/* 상단 kicker: 카테고리 · 지도 (작은 메타) */
+.maps-library-screen--v2 .pl-item__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  margin-bottom: 3px;
+  letter-spacing: 0.02em;
+}
+
+.maps-library-screen--v2 .pl-item__type {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.maps-library-screen--v2 .pl-item__type::after {
+  content: "·";
+  display: inline-block;
+  margin: 0 4px;
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
+.maps-library-screen--v2 .pl-item__map-name {
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+/* 이름 + 메타 */
+.maps-library-screen--v2 .pl-item__name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.015em;
+  margin-bottom: 2px;
+}
+.maps-library-screen--v2 .pl-item__name--empty {
+  color: var(--ink-faint);
+}
+
+.maps-library-screen--v2 .pl-item__desc {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.maps-library-screen--v2 .pl-item__meta {
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.maps-library-screen--v2 .pl-item__arrow {
+  color: var(--ink-faint);
+  display: inline-flex;
+  align-items: center;
+}

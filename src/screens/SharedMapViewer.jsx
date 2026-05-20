@@ -215,7 +215,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   const [notiPanelOpen, setNotiPanelOpen] = useState(false)
   const {
     notifications: notiList,
-    hasUnread: notiHasUnread,
     bannerItem: notiBanner,
     dismissBanner: notiDismissBanner,
     markRead: notiMarkRead,
@@ -519,14 +518,13 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   }
 
   // ??? 鍮꾩씠踰ㅽ듃 吏??(?쇰컲 怨듭쑀) ???
-  const ciMainColor = config.ci_main_color || "#1A3C5E"
-  const _ciDarkColor = config.ci_dark_color || "#0D2740"
+  // config.ci_* 색상은 추후 사용 예정 — 현 v2 리디자인 단계에서는 미사용.
   const orgName = config.org_name || map.title
   const orgLogo = config.org_logo
   const eventPeriod = config.event_period || ""
   // unified shared viewer shell
     return (
-      <div className="lw-viewer">
+      <div className="lw-viewer lw-viewer--v2">
         {/* Hero card header */}
         <div className="lw-hero">
           <div className="lw-hero__blob" />

@@ -34,7 +34,14 @@ const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 const LOCA_DARK_STYLE_ID = "90019b0b-7cdc-4f96-baa6-438d871a37d5"
 
-export const NaverMap = forwardRef(function NaverMap({ features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger, onMapTap, onFeatureTap, showLabels = true, myLocation = null, characterStyle = "m3", levelEmoji = "?쪡", checkedInIds = null, isEventMap = false }, ref) {
+// 레벨/XP 시스템 제거 (2026-05). 내 위치 마커는 단순 펄스 + 방향 화살표만 표시 (캐릭터 이모지 제거).
+// characterStyle / levelEmoji prop 은 호출부 호환을 위해 props 로 받지만 무시.
+export const NaverMap = forwardRef(function NaverMap(props, ref) {
+  const {
+    features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger,
+    onMapTap, onFeatureTap, showLabels = true, myLocation = null,
+    checkedInIds = null, isEventMap = false,
+  } = props
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const layersRef = useRef([])
@@ -610,9 +617,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
           + `<div class="loca-direction" style="transform:rotate(${h}deg)">`
           + `<div class="loca-dir-arrow"></div>`
           + `</div>`
-          + (levelEmoji.startsWith("/")
-            ? `<div class="loca-level-emoji"><img src="${levelEmoji}" alt="" style="width:36px;height:36px;object-fit:contain"/></div>`
-            : `<div class="loca-level-emoji"><span>${escapeHtml(levelEmoji)}</span></div>`)
+          + `<div class="loca-my-location__dot"></div>`
           + `</div>`
         const locMarker = new naverMaps.Marker({
           position: toLatLng(myLocation.lat, myLocation.lng),
@@ -629,7 +634,7 @@ export const NaverMap = forwardRef(function NaverMap({ features, selectedFeature
     } catch (e) {
       console.warn("?ㅼ씠踰?吏???덉씠???낅뜲?댄듃 ?ㅽ뙣:", e)
     }
-  }, [characterStyle, checkedInIds, draftMode, draftPoints, features, levelEmoji, isEventMap, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
+  }, [checkedInIds, draftMode, draftPoints, features, isEventMap, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
 
   // Focus
   useEffect(() => {

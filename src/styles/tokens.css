@@ -1,3 +1,22 @@
+/* ============================================================
+ * 🟡 DEPRECATED — LOCA Design Tokens v1
+ *
+ * 이 파일의 토큰은 v2 리디자인(2026-05~)으로 점진적 마이그레이션 중입니다.
+ *  - 새 작업은 tokens-v2.css 의 토큰(--bg, --accent, --ink-strong 등)을 사용하세요.
+ *  - 기존 화면이 참조 중이라 파일은 유지하지만, 신규 채택은 금지.
+ *  - 모든 화면이 v2 로 전환되면 이 파일을 제거 예정.
+ *
+ * 마이그레이션 가이드 (대표 매핑):
+ *   --paper, --paper-100      → --bg, --bg-deep
+ *   --surface                 → --card
+ *   --ink-900 / -700 / -500   → --ink-strong / --ink-soft / --ink-mute
+ *   --ember-500               → --accent (값 차이: #E26F3C → #FF4D1A)
+ *   --color-primary (#FF6B35) → --accent
+ *   --color-secondary         → --ink-strong (보조 강조)
+ *
+ * 자세한 표는 DESIGN.md §0 (v2 Design Tokens) 참조.
+ * ============================================================ */
+
 :root {
   /* Paper / Ink */
   --paper: #FCFAF6;

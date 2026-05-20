@@ -3,21 +3,29 @@ import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
 import { Compass, Home, Map, MapPin, PlusCircle, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 
-export function BottomSheet({ open, title, subtitle, onClose, children }) {
+// v2: `fullscreen` 옵션 — true 면 시트 대신 풀스크린 페이지 오버레이로 렌더 (B5-B7 상세 화면용).
+export function BottomSheet({ open, title, subtitle, onClose, children, fullscreen = false }) {
   if (!open) return null
   return (
     <>
-      <div className="sheet-backdrop" onClick={onClose} />
-      <section className="sheet" role="dialog" aria-modal="true">
-        <div className="sheet__handle" />
+      <div className={`sheet-backdrop${fullscreen ? " sheet-backdrop--fullscreen" : ""}`} onClick={onClose} />
+      <section className={`sheet${fullscreen ? " sheet--fullscreen" : ""}`} role="dialog" aria-modal="true">
+        {fullscreen ? null : <div className="sheet__handle" />}
         <div className="sheet__header">
+          {fullscreen ? (
+            <button className="icon-button sheet__back" type="button" onClick={onClose} aria-label="뒤로가기">
+              <X size={18} />
+            </button>
+          ) : null}
           <div>
             <h2 className="sheet__title">{title}</h2>
             {subtitle ? <p className="sheet__subtitle">{subtitle}</p> : null}
           </div>
-          <button className="icon-button sheet__close" type="button" onClick={onClose} aria-label="닫기">
-            <X size={18} />
-          </button>
+          {!fullscreen ? (
+            <button className="icon-button sheet__close" type="button" onClick={onClose} aria-label="닫기">
+              <X size={18} />
+            </button>
+          ) : null}
         </div>
         {children}
       </section>

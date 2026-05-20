@@ -10,7 +10,7 @@ import {
   getProfile as getProfileRecord,
   publishMap as publishMapRecord,
 } from "../lib/mapService"
-import { updateStreak } from "../lib/gamificationService"
+// 레벨/XP 시스템 폐기 (2026-05) — updateStreak / gamificationService 호출 제거.
 import {
   featuresSeed,
   followedSeed,
@@ -33,8 +33,7 @@ export function useAppSession({
   const [authUser, setAuthUser] = useState(null)
   const [hasB2BAccess, setHasB2BAccess] = useState(false)
   const [cloudLoading, setCloudLoading] = useState(false)
-  const [gameProfile, setGameProfile] = useState(null)
-  const [, setRecentReward] = useState(null)
+  // gameProfile / recentReward state 폐기.
 
   const cloudMode = hasSupabaseEnv && Boolean(authUser)
 
@@ -104,8 +103,6 @@ export function useAppSession({
       setFollowed(appData.followed)
       setViewerProfile(nextProfile)
 
-      updateStreak().catch(() => {})
-
       if (cloudEmpty && hasLocalData) {
         showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
       }
@@ -150,8 +147,6 @@ export function useAppSession({
     setSelectedPostRef(null)
     setSharedMapData(null)
     setShareEditorImage(null)
-    setGameProfile(null)
-    setRecentReward(null)
   }, [setFeatures, setFollowed, setMaps, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
 
   // 초기 세션 확인 + auth state 구독
@@ -262,8 +257,6 @@ export function useAppSession({
     cloudLoading,
     hasB2BAccess,
     setHasB2BAccess,
-    gameProfile,
-    setGameProfile,
     readLocalImportData,
     resetToLoggedOut,
     handleSignOut,

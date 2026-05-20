@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal, Plus } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
@@ -72,8 +72,6 @@ export function MapEditorScreen({
   currentUserId = "me",
   showLabels = true,
   myLocation = null,
-  characterStyle = "m3",
-  levelEmoji = "\uD83E\uDD5A",
   onBack,
   onLocate,
   onSearchLocation,
@@ -117,6 +115,8 @@ export function MapEditorScreen({
   const [activeFilter, setActiveFilter] = useState("all")
   const [stripOpen, setStripOpen] = useState(true)
   const [shareOpen, setShareOpen] = useState(false)
+  // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
+  const [fabExpanded, setFabExpanded] = useState(false)
   const [capturing, setCapturing] = useState(false)
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
   const mapMenuRef = useRef(null)
@@ -333,25 +333,18 @@ export function MapEditorScreen({
   }, [showExternalPlaceSearch, trimmedExternalSearchQuery])
 
   return (
-    <section className={`map-editor${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}`}>
-      {/* 상단 헤더 */}
-      <div className="me-bar">
+    <section className={`map-editor map-editor--v2${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}`}>
+      {/* 상단 헤더 — v2: 2줄 (제목/액션 행 + 카운터 점 행) */}
+      <div className="me-bar me-bar--v2">
         <div className="me-bar__card">
           <div className="me-bar__left">
             <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로가기">
-              <ArrowLeft size={16} color="#2D4A3E" />
+              <ArrowLeft size={16} />
             </button>
             <span className="me-bar__name">{map.title}</span>
           </div>
           <div className="me-bar__right">
-            {!hideCount ? (
-              <>
-                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg> {pinCount}</span>
-                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg> {routeCount}</span>
-                <span className="me-bar__count"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg> {areaCount}</span>
-                <span className="me-bar__divider" />
-              </>
-            ) : null}
+            {/* 카운트 chip 자리는 v2 에서 2번째 행으로 이동했지만, 비-v2 환경 호환을 위해 제거된 자리는 비워둠 */}
             {!communityMode ? (
               <>
                 <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
@@ -411,6 +404,27 @@ export function MapEditorScreen({
             ) : null}
           </div>
         </div>
+
+        {/* v2 2번째 행 — 카운터 점 + 라벨 + 숫자 (장소 · 길 · 영역) */}
+        {!hideCount ? (
+          <div className="me-bar__counters">
+            <span className="me-bar__counter me-bar__counter--pin">
+              <span className="me-bar__counter-dot" aria-hidden="true" />
+              <span className="me-bar__counter-label">장소</span>
+              <strong className="loca-v2-num">{pinCount}</strong>
+            </span>
+            <span className="me-bar__counter me-bar__counter--route">
+              <span className="me-bar__counter-dot" aria-hidden="true" />
+              <span className="me-bar__counter-label">길</span>
+              <strong className="loca-v2-num">{routeCount}</strong>
+            </span>
+            <span className="me-bar__counter me-bar__counter--area">
+              <span className="me-bar__counter-dot" aria-hidden="true" />
+              <span className="me-bar__counter-label">영역</span>
+              <strong className="loca-v2-num">{areaCount}</strong>
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <div className="map-editor__canvas-wrap">
@@ -483,8 +497,6 @@ export function MapEditorScreen({
             onFeatureTap={onFeatureTap}
             showLabels={showLabels}
             myLocation={myLocation}
-            characterStyle={characterStyle}
-            levelEmoji={levelEmoji}
             isEventMap={placement.isEventMap}
           />
         </MapErrorBoundary>
@@ -516,26 +528,63 @@ export function MapEditorScreen({
           </div>
         ) : null}
 
-        <div className="me-fabs">
+        {/* v2 펼침형 FAB — 백드롭 */}
+        {fabExpanded ? (
+          <div className="me-fab-backdrop" onClick={() => setFabExpanded(false)} aria-hidden="true" />
+        ) : null}
+
+        <div className={`me-fabs me-fabs--v2${fabExpanded ? " is-expanded" : ""}`}>
+          {/* 항상 보이는 유틸리티 (위치 / 라벨 토글) */}
           <button className="me-fab" type="button" onClick={onLocate} aria-label="내 위치로 이동">
-            <Navigation size={16} color="#2D4A3E" />
+            <Navigation size={16} />
           </button>
           <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="이름 라벨 표시 전환">
             <span>이름</span>
           </button>
-          {!readOnly ? (
-            <button className={`me-fab me-fab--pin${editorMode === "pin" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")} aria-label="장소 남기기 모드">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FF6B35" stroke="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
-            </button>
+
+          {/* 펼침형 도구 (장소/길/영역) — fabExpanded 일 때만 보임 */}
+          {!readOnly && fabExpanded ? (
+            <>
+              <button
+                className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => { onModeChange(editorMode === "pin" ? "browse" : "pin"); setFabExpanded(false) }}
+                aria-label="장소 남기기 모드"
+                style={{ animationDelay: "0s" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+              </button>
+              <button
+                className={`me-fab me-fab--route me-fab--tool${editorMode === "route" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => { onModeChange(editorMode === "route" ? "browse" : "route"); setFabExpanded(false) }}
+                aria-label="경로 그리기 모드"
+                style={{ animationDelay: "0.04s" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+              </button>
+              <button
+                className={`me-fab me-fab--area me-fab--tool${editorMode === "area" ? " is-active" : ""}`}
+                type="button"
+                onClick={() => { onModeChange(editorMode === "area" ? "browse" : "area"); setFabExpanded(false) }}
+                aria-label="영역 그리기 모드"
+                style={{ animationDelay: "0.08s" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+              </button>
+            </>
           ) : null}
+
+          {/* 메인 + FAB — 탭하면 펼침/접힘 토글, ✕로 회전 */}
           {!readOnly ? (
-            <button className={`me-fab me-fab--route${editorMode === "route" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")} aria-label="경로 그리기 모드">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
-            </button>
-          ) : null}
-          {!readOnly ? (
-            <button className={`me-fab me-fab--area${editorMode === "area" ? " is-active" : ""}`} type="button" onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")} aria-label="영역 그리기 모드">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+            <button
+              className={`me-fab me-fab--main${fabExpanded ? " is-expanded" : ""}`}
+              type="button"
+              onClick={() => setFabExpanded((v) => !v)}
+              aria-label={fabExpanded ? "도구 메뉴 닫기" : "도구 메뉴 열기"}
+              aria-expanded={fabExpanded}
+            >
+              <Plus size={20} strokeWidth={2.4} />
             </button>
           ) : null}
         </div>

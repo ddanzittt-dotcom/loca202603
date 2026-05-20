@@ -529,7 +529,7 @@ export function ProfileScreen({
   ]
 
   const publicMapCount = shares.length
-  const profileLevel = user.level || user.levelNumber || 2
+  // 레벨/XP 시스템 폐기 (2026-05) — 프로필에서 Lv 뱃지 제거.
   const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
   const linkHref = user.link ? (user.link.startsWith("http") ? user.link : `https://${user.link}`) : ""
   const linkDisplay = user.link ? user.link.replace(/^https?:\/\//, "") : ""
@@ -632,36 +632,61 @@ export function ProfileScreen({
     )
   }
 
+  // v2: 통계 인라인 — 장소·지도·기록.
+  const placeCountStat = features.filter((f) => f?.type === "pin").length
+  const mapCountStat = maps.filter((m) => !m?.slug?.startsWith("event-")).length
+  const recordCountStat = features.reduce(
+    (sum, f) => sum + (Array.isArray(f?.memos) ? f.memos.filter((m) => m?.text?.trim()).length : 0),
+    0,
+  )
+  const tagline = user.tagline || user.ho || ""
+
   return (
-    <section className="screen screen--scroll profile-v4">
+    <section className="screen screen--scroll profile-v4 profile-v4--v2">
       <div className="pf">
-        <div className="pf__profile-header">
-          <div className="pf__id-row">
-            <div className="pf__avatar" aria-hidden="true">
+        {/* 단일 화이트 카드 — 아바타 + 호 + 이름 + bio + 링크 + 통계 + 편집 (참고 디자인 A5) */}
+        <article className="pf-v2-card">
+          <div className="pf-v2-card__head">
+            <div className="pf-v2-card__avatar" aria-hidden="true">
               {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{profileInitial}</span>}
             </div>
-            <div className="pf__info-body">
-              <div className="pf__name-row">
-                <span className="pf__name">{user.name}</span>
-                <span className="pf__level">Lv.{profileLevel}</span>
-              </div>
-              <p className="pf__handle">@{handleText}</p>
-            </div>
+            <button className="pf-v2-card__edit" type="button" onClick={handleOpenEdit}>
+              편집
+            </button>
           </div>
 
-          {user.bio ? <p className="pf__bio">{user.bio}</p> : null}
+          {tagline ? (
+            <span className="pf-v2-card__tagline">
+              <span aria-hidden="true">✦</span> {tagline}
+            </span>
+          ) : null}
+
+          <h1 className="pf-v2-card__name">{user.name}</h1>
+          <p className="pf-v2-card__handle">@{handleText}</p>
+
+          {user.bio ? <p className="pf-v2-card__bio">{user.bio}</p> : null}
+
           {user.link ? (
-            <a className="pf__link" href={linkHref} target="_blank" rel="noopener noreferrer">
+            <a className="pf-v2-card__link" href={linkHref} target="_blank" rel="noopener noreferrer">
               <span aria-hidden="true">↗</span>
               <span>{linkDisplay}</span>
             </a>
           ) : null}
-        </div>
 
-        <div className="pf__actions">
-          <button className="pf__btn pf__btn--primary" type="button" onClick={onPublishOpen}>내 프로필에 공개</button>
-          <button className="pf__btn pf__btn--secondary" type="button" onClick={handleOpenEdit}>프로필 편집</button>
-        </div>
+          <div className="pf-v2-card__stats">
+            <span><strong className="loca-v2-num">{placeCountStat}</strong>장소</span>
+            <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
+            <span><strong className="loca-v2-num">{mapCountStat}</strong>지도</span>
+            <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
+            <span><strong className="loca-v2-num">{recordCountStat}</strong>기록</span>
+          </div>
+
+          {publicMapCount === 0 ? (
+            <button className="pf-v2-card__publish" type="button" onClick={onPublishOpen}>
+              + 첫 지도 프로필에 공개하기
+            </button>
+          ) : null}
+        </article>
 
         <div className="pf__section-head">
           <h2>내 지도</h2>

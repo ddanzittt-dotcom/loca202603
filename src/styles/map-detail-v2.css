@@ -1,0 +1,385 @@
+/* ============================================================
+ * Map detail (MapEditorScreen + SharedMapViewer) v2 — Cream & Ember
+ * 시안: 참고자료/design-source/screen-map-detail.jsx
+ * 토큰: tokens-v2.css
+ *
+ * Scope: .map-editor--v2 / .lw-viewer--v2
+ * ============================================================ */
+
+/* ---------- Map editor (작성자 시점) ---------- */
+.map-editor--v2 {
+  background: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.map-editor--v2 .me-bar {
+  background: transparent;
+}
+
+.map-editor--v2 .me-bar__card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-float);
+}
+
+.map-editor--v2 .me-bar__back {
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+.map-editor--v2 .me-bar__back:hover {
+  background: var(--second-soft);
+}
+
+.map-editor--v2 .me-bar__name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.02em;
+}
+
+/* 카운터 점 + 라벨 + 숫자 */
+.map-editor--v2 .me-bar__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+/* 검색 인풋 */
+.map-editor--v2 .me-search,
+.map-editor--v2 .me-bar__search {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--ink-strong);
+}
+.map-editor--v2 .me-search input::placeholder,
+.map-editor--v2 .me-bar__search input::placeholder {
+  color: var(--ink-mute);
+}
+
+/* 펼침형 FAB */
+.map-editor--v2 .me-fab,
+.map-editor--v2 .me-fab__main {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-fab);
+}
+.map-editor--v2 .me-fab__main:hover {
+  transform: translateY(-1px);
+}
+.map-editor--v2 .me-fab__main:active {
+  transform: scale(0.96);
+}
+
+/* FAB 도구 (장소 핀 / 길 / 영역) */
+.map-editor--v2 .me-fab__tool,
+.map-editor--v2 .me-fab__action {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  box-shadow: var(--shadow-float);
+}
+
+/* ============================================================
+ * 헤더 2줄 — 카운터 행 (장소 · 길 · 영역 색점 + 라벨 + 숫자)
+ * ============================================================ */
+.me-bar--v2 .me-bar__counters {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px 4px;
+  font-family: var(--font-sans);
+}
+
+.me-bar--v2 .me-bar__counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  letter-spacing: -0.015em;
+}
+
+.me-bar--v2 .me-bar__counter strong {
+  font-weight: 800;
+  color: var(--ink-strong);
+  margin-left: 2px;
+}
+
+.me-bar--v2 .me-bar__counter-label {
+  color: var(--ink-mute);
+}
+
+.me-bar--v2 .me-bar__counter-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.me-bar--v2 .me-bar__counter--pin .me-bar__counter-dot {
+  background: var(--accent);
+}
+.me-bar--v2 .me-bar__counter--route .me-bar__counter-dot {
+  background: var(--sage);
+}
+.me-bar--v2 .me-bar__counter--area .me-bar__counter-dot {
+  background: var(--cocoa);
+}
+
+/* 비-v2 환경의 기존 me-bar__count chip 은 숨김 (이중 노출 방지) */
+.me-bar--v2 .me-bar__count,
+.me-bar--v2 .me-bar__divider { display: none !important; }
+
+/* ============================================================
+ * 펼침형 FAB v2
+ * ============================================================ */
+.me-fab-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 12, 5, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 60;
+  animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
+}
+
+.me-fabs--v2 {
+  position: relative;
+  z-index: 65;
+}
+
+/* 메인 + FAB — 52px 엠버, ✕로 회전 */
+.me-fab--main {
+  width: 52px !important;
+  height: 52px !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-fab) !important;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--duration-base, 0.22s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)),
+              background-color var(--duration-fast, 0.15s) ease-out;
+}
+.me-fab--main:hover { transform: translateY(-1px); }
+.me-fab--main:active { transform: scale(0.95); }
+.me-fab--main.is-expanded {
+  background: var(--ink-strong) !important;
+  transform: rotate(45deg);
+}
+.me-fab--main:focus-visible {
+  outline: 3px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+/* 펼침 도구 — stagger 진입 */
+.me-fab--tool {
+  animation: loca-fab-tool-in var(--duration-base, 0.22s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+  transform-origin: center;
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow-float) !important;
+}
+.me-fab--tool.is-active {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: var(--accent) !important;
+}
+.me-fab--tool.is-active svg { color: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .me-fab--tool { animation: none !important; }
+  .me-fab--main { transition: background-color 0.01s ease !important; }
+  .me-fab--main.is-expanded { transform: none; }
+}
+
+/* ----- FAB 도구 stagger 진입 (mount 시 한 번) ----- */
+.map-editor--v2 .me-fabs > .me-fab {
+  animation: loca-fab-tool-in var(--duration-base, 0.22s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+  transform-origin: center;
+}
+.map-editor--v2 .me-fabs > .me-fab:nth-child(1) { animation-delay: 0s; }
+.map-editor--v2 .me-fabs > .me-fab:nth-child(2) { animation-delay: 0.04s; }
+.map-editor--v2 .me-fabs > .me-fab:nth-child(3) { animation-delay: 0.08s; }
+.map-editor--v2 .me-fabs > .me-fab:nth-child(4) { animation-delay: 0.12s; }
+.map-editor--v2 .me-fabs > .me-fab:nth-child(5) { animation-delay: 0.16s; }
+
+/* 모드 활성 시 펄스 강조 (active 상태) */
+.map-editor--v2 .me-fab.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+.map-editor--v2 .me-fab.is-active::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 var(--accent-soft);
+  animation: loca-record-pulse 1.6s ease-out infinite;
+  pointer-events: none;
+}
+.map-editor--v2 .me-fab {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-editor--v2 .me-fabs > .me-fab,
+  .map-editor--v2 .me-fab.is-active::before {
+    animation: none !important;
+  }
+}
+
+/* 하단 드로어 */
+.map-editor--v2 .me-drawer,
+.map-editor--v2 .me-summary {
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  box-shadow: var(--shadow-sheet);
+  border-radius: var(--radius-big) var(--radius-big) 0 0;
+}
+
+.map-editor--v2 .me-drawer__head,
+.map-editor--v2 .me-summary__head {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.015em;
+}
+
+.map-editor--v2 .me-drawer__filter,
+.map-editor--v2 .me-filter-chip {
+  height: 28px;
+  padding: 0 11px;
+  background: var(--card);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  font-family: var(--font-sans);
+}
+.map-editor--v2 .me-filter-chip.is-active,
+.map-editor--v2 .me-drawer__filter.is-active {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border-color: var(--accent-soft);
+}
+
+/* 핀 리스트 행 (가로 스크롤) */
+.map-editor--v2 .me-pin-item,
+.map-editor--v2 .me-summary__item {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink-strong);
+}
+.map-editor--v2 .me-pin-item__cat,
+.map-editor--v2 .me-summary__cat {
+  color: var(--ink-mute);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+/* ---------- Shared map viewer (참여자 시점) ---------- */
+.lw-viewer--v2 {
+  background: var(--bg);
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+.lw-viewer--v2 .lw-hero {
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+
+.lw-viewer--v2 .lw-hero__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.03em;
+}
+
+.lw-viewer--v2 .lw-hero__sub {
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+
+.lw-viewer--v2 .lw-checkin-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 10px 22px;
+  box-shadow: var(--shadow-fab);
+  letter-spacing: -0.015em;
+}
+.lw-viewer--v2 .lw-checkin-btn.is-checked {
+  background: var(--sage);
+  box-shadow: none;
+}
+.lw-viewer--v2 .lw-checkin-btn.is-far {
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  box-shadow: none;
+}
+
+.lw-viewer--v2 .lw-checkin-btn--lg {
+  font-size: 14px;
+  padding: 12px 28px;
+}
+
+/* 공지 배너 */
+.lw-viewer--v2 .lw-banner {
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+/* 핀 리스트 */
+.lw-viewer--v2 .lw-list,
+.lw-viewer--v2 .lw-pin-list {
+  background: var(--card);
+}
+
+.lw-viewer--v2 .lw-pin-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.lw-viewer--v2 .lw-pin-card__title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink-strong);
+  letter-spacing: -0.015em;
+}
+
+.lw-viewer--v2 .lw-pin-card__meta {
+  font-size: 11px;
+  color: var(--ink-mute);
+  font-weight: 600;
+}

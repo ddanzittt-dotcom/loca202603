@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { useLocalStorageState } from "../hooks/useAppState"
+import { PhotoBlock } from "../components/visuals/PhotoBlock"
 
 // ─────────────────────────────────────────────────────────
 // 정적 큐레이션 (검색 진입 보조 + B 화면 인기 검색 랭킹)
@@ -245,6 +246,8 @@ export function ExploreScreen({
   const [eventsLoading, setEventsLoading] = useState(true)
   const [eventsError, setEventsError] = useState("")
   const [showEventList, setShowEventList] = useState(false)
+  // 가볼만한 곳 필터 — '전체' | '행사' | '인기'
+  const [spotFilter, setSpotFilter] = useState("전체")
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [eventDetail, setEventDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -326,13 +329,16 @@ export function ExploreScreen({
     detailAbortRef.current?.abort?.()
   }, [])
 
-  const sectionClassName = embedded ? "explore-screen explore-screen--embedded" : "screen screen--scroll explore-screen"
+  // v2 modifier — Cream & Ember 리톤. 기존 클래스 보존하고 그 위에 추가.
+  const sectionClassName = embedded
+    ? "explore-screen explore-screen--embedded explore-screen--v2"
+    : "screen screen--scroll explore-screen explore-screen--v2"
 
   // ─────────────────────────────────────
   // 검색 활성 모드 (B/C 화면)
   if (showAllSections && searchMode === "active") {
     return (
-      <section className="screen screen--scroll explore-screen">
+      <section className="screen screen--scroll explore-screen explore-screen--v2 explore-screen--search">
         <div className="ex-search-active-bar">
           <div className="ex-search-active-input">
             <SearchIcon size={16} className="ex-search-ico" />
@@ -532,6 +538,15 @@ export function ExploreScreen({
           <div className="ex-h-row">
             <h1 className="ex-h-title">탐색</h1>
           </div>
+
+          {/* Editor's Pick — 큐레이션된 추천 지도 (recommendedMaps[0]) */}
+          {recommendedMaps && recommendedMaps.length > 0 ? (
+            <EditorsPickCard
+              map={recommendedMaps[0]}
+              onOpen={onOpenMap}
+              onSearch={() => setSearchMode("active")}
+            />
+          ) : null}
         </>
       ) : null}
 
@@ -575,82 +590,15 @@ export function ExploreScreen({
       ) : null}
 
       {showEventsSection ? (
-        <>
-          <div className="ex-sec-h">
-            <div>
-              <span className="ex-sec-tag">NEARBY</span>
-              <h2 className="ex-sec-title">근처에서 기록해볼 만한 행사</h2>
-            </div>
-            {events.length > 0 ? (
-              <button type="button" className="ex-sec-more" onClick={() => setShowEventList(true)}>더보기 →</button>
-            ) : null}
-          </div>
-
-          <div className="ex-nearby-row">
-            <span className="ex-location-chip" aria-label="현재 위치">
-              <MapPin size={11} strokeWidth={2} />
-              내 위치 근처
-              <ChevronDown size={9} strokeWidth={2} />
-            </span>
-            {events.length > 0 ? (
-              <span className="ex-nearby-count">총 {events.length}개 · 거리순</span>
-            ) : null}
-          </div>
-
-          {eventsLoading ? (
-            <div className="ex-events-empty">행사를 불러오는 중...</div>
-          ) : eventsError ? (
-            <div className="ex-events-empty">
-              <p>{eventsError}</p>
-            </div>
-          ) : events.length === 0 ? (
-            <div className="ex-events-empty">근처에서 열리는 행사가 없어요</div>
-          ) : (
-            <>
-              <div className="ex-event-list">
-                {events.slice(0, 3).map((event) => {
-                  const status = getEventStatus(event.startDate, event.endDate)
-                  const thumb = pickEventThumb(event.id || event.title)
-                  const period = formatEventPeriod(event.startDate, event.endDate)
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      className="ex-event-card"
-                      onClick={() => openEventDetail(event)}
-                    >
-                      <div className="ex-event-thumb" style={{ background: thumb.gradient }}>
-                        {event.image ? (
-                          <span className="ex-event-thumb__img" style={{ backgroundImage: `url(${event.image})` }} />
-                        ) : (
-                          <span className="ex-event-thumb__ico">{thumb.emoji}</span>
-                        )}
-                      </div>
-                      <div className="ex-event-info">
-                        {period ? <div className="ex-event-period">{period}</div> : null}
-                        <div className="ex-event-title">{event.title}</div>
-                        {event.addr ? (
-                          <div className="ex-event-meta">
-                            <span>{event.addr}</span>
-                          </div>
-                        ) : null}
-                      </div>
-                      {status ? (
-                        <span className={`ex-event-status ex-event-status--${status.kind}`}>{status.label}</span>
-                      ) : null}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {events.length > 3 ? (
-                <button type="button" className="ex-see-more" onClick={() => setShowEventList(true)}>
-                  더보기 <span className="ex-see-more__num">{events.length}개</span> →
-                </button>
-              ) : null}
-            </>
-          )}
-        </>
+        <SpotsSection
+          events={events}
+          loading={eventsLoading}
+          error={eventsError}
+          spotFilter={spotFilter}
+          onSpotFilterChange={setSpotFilter}
+          onOpenEvent={openEventDetail}
+          onSeeMore={() => setShowEventList(true)}
+        />
       ) : null}
 
       <div style={{ height: 18 }} />
@@ -822,5 +770,191 @@ export function ExploreScreen({
         </div>
       ) : null}
     </section>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// 가볼만한 곳 섹션 — 헤더 + 내 위치 칩 + 필터칩 + SpotCard 리스트
+// 참고: 참고자료/design-source/screen-explore.jsx ('가볼만한 곳')
+// ─────────────────────────────────────────────────────────
+function SpotsSection({ events, loading, error, spotFilter, onSpotFilterChange, onOpenEvent, onSeeMore }) {
+  // 행사 데이터를 SpotCard 가 받는 spot 객체로 변환
+  const spotsFromEvents = events.map((event) => {
+    const status = getEventStatus(event.startDate, event.endDate)
+    const period = formatEventPeriod(event.startDate, event.endDate)
+    const thumb = pickEventThumb(event.id || event.title)
+    return {
+      _raw: event,
+      kind: "event",
+      dateLabel: period,
+      day: status?.label || "",
+      urgent: status?.kind === "urgent" || status?.kind === "live",
+      title: event.title,
+      sub: event.contentTypeName || event.category || "행사",
+      loc: event.addr || event.area || "",
+      distance: event.distance ? `${event.distance}` : "",
+      thumb,
+    }
+  })
+
+  // 필터 적용
+  const filtered = spotsFromEvents.filter((s) => {
+    if (spotFilter === "전체") return true
+    if (spotFilter === "행사") return s.kind === "event"
+    if (spotFilter === "인기") return s.kind === "hot" || s.kind === "rising"
+    return true
+  })
+
+  return (
+    <section className="ex-spots">
+      <div className="ex-spots__head">
+        <div>
+          <h2 className="ex-spots__title">가볼만한 곳</h2>
+          <p className="ex-spots__sub">가까운 행사 · 기록 많은 동네 장소</p>
+        </div>
+        <button type="button" className="ex-pill-btn ex-spots__loc">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            <circle cx="12" cy="12" r="5" />
+            <circle cx="12" cy="12" r="1.5" fill="var(--accent)" stroke="none" />
+          </svg>
+          내 위치 <span style={{ color: "var(--ink-mute)", fontWeight: 700 }}>· 근처</span>
+        </button>
+      </div>
+
+      <div className="ex-spots__chips">
+        {["전체", "행사", "인기"].map((f) => (
+          <button
+            key={f}
+            type="button"
+            className={`ex-filter-chip${spotFilter === f ? " is-active" : ""}`}
+            onClick={() => onSpotFilterChange(f)}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="ex-spots__empty">행사를 불러오는 중...</div>
+      ) : error ? (
+        <div className="ex-spots__empty">{error}</div>
+      ) : filtered.length === 0 ? (
+        <div className="ex-spots__empty">
+          {spotFilter === "인기" ? "인기 장소 데이터를 준비 중이에요" : "근처에서 열리는 행사가 없어요"}
+        </div>
+      ) : (
+        <>
+          <div className="ex-spots__list">
+            {filtered.slice(0, 3).map((spot, idx) => (
+              <SpotCard key={spot._raw?.id || idx} spot={spot} onClick={() => onOpenEvent(spot._raw)} />
+            ))}
+          </div>
+          {filtered.length > 3 ? (
+            <button type="button" className="ex-spots__more" onClick={onSeeMore}>
+              더보기 <span className="ex-spots__more-num">{filtered.length}개</span> →
+            </button>
+          ) : null}
+        </>
+      )}
+    </section>
+  )
+}
+
+// SpotCard — 100px 좌측 이미지 + 우측 정보. kind 별 뱃지 변형.
+function SpotCard({ spot, onClick }) {
+  const isEvent = spot.kind === "event"
+  const isRising = spot.kind === "rising"
+  const isHot = spot.kind === "hot"
+  const thumb = spot.thumb || {}
+  return (
+    <button type="button" className="ex-spot-card" onClick={onClick}>
+      <div className="ex-spot-card__thumb" style={thumb.gradient ? { background: thumb.gradient } : undefined}>
+        {spot._raw?.image ? (
+          <span className="ex-spot-card__img" style={{ backgroundImage: `url(${spot._raw.image})` }} />
+        ) : (
+          <span className="ex-spot-card__ico">{thumb.emoji || "🎫"}</span>
+        )}
+        {isEvent && spot.day ? (
+          <span className={`ex-spot-card__day${spot.urgent ? " is-urgent" : ""}`}>{spot.day}</span>
+        ) : null}
+      </div>
+      <div className="ex-spot-card__body">
+        <div className="ex-spot-card__tags">
+          {isEvent ? (
+            <span className="ex-spot-card__kicker">
+              EVENT{spot.dateLabel ? ` · ${spot.dateLabel}` : ""}
+            </span>
+          ) : isRising ? (
+            <>
+              <span className="ex-spot-card__rising">↗ {spot.heatLabel || "뜨고 있어요"}</span>
+              {spot.deltaPct ? <span className="ex-spot-card__delta">+{spot.deltaPct}%</span> : null}
+            </>
+          ) : isHot ? (
+            <span className="ex-spot-card__hot">● {spot.heatLabel || "이번 주 인기"}</span>
+          ) : null}
+        </div>
+        <div className="ex-spot-card__title">{spot.title}</div>
+        {spot.sub ? <div className="ex-spot-card__sub">{spot.sub}</div> : null}
+        <div className="ex-spot-card__foot">
+          <MapPin size={10} strokeWidth={2} />
+          <span className="ex-spot-card__loc">
+            {spot.distance ? `${spot.distance} · ` : ""}{spot.loc}
+          </span>
+          {!isEvent && spot.records > 0 ? (
+            <span className="ex-spot-card__rec">♥ {spot.records}</span>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// Editor's Pick 2:1 큰 카드 — recommendedMaps[0] 사용
+// 어두운 그라데이션 + 흰 타이틀 + "다른 지도 찾기" 흰 필 버튼
+// ─────────────────────────────────────────────────────────
+function EditorsPickCard({ map, onOpen, onSearch }) {
+  if (!map) return null
+  const title = map.title || "이번 주 추천"
+  const meta = map.creator
+    ? `@${String(map.creator).replace(/^@/, "")} · ${map.placeCount || 0}곳`
+    : `${map.placeCount || 0}곳의 장소`
+  const gradient = Array.isArray(map.gradient) && map.gradient.length >= 2
+    ? `linear-gradient(135deg, ${map.gradient[0]}, ${map.gradient[1]})`
+    : undefined
+  return (
+    <div className="ex-editor-section">
+      <div className="ex-editor-head">
+        <div>
+          <span className="ex-editor-kicker">Editor&rsquo;s Pick</span>
+          <h2 className="ex-editor-title">이번 주 추천</h2>
+        </div>
+        <button type="button" className="ex-pill-btn ex-editor-search" onClick={onSearch}>
+          <SearchIcon size={12} strokeWidth={2} />
+          다른 지도 찾기
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="ex-editor-card"
+        onClick={() => onOpen?.(map.mapId || map.id)}
+        aria-label={`${title} 추천 지도 열기`}
+      >
+        <PhotoBlock
+          tone="b"
+          width="100%"
+          height="100%"
+          radius={16}
+          style={gradient ? { background: gradient, aspectRatio: "2 / 1" } : { aspectRatio: "2 / 1" }}
+        >
+          <div className="ex-editor-card__overlay">
+            <div className="ex-editor-card__title">{title}</div>
+            <div className="ex-editor-card__meta">{meta}</div>
+          </div>
+        </PhotoBlock>
+      </button>
+    </div>
   )
 }
