@@ -1,7 +1,12 @@
-﻿import { useEffect, useRef, forwardRef, useImperativeHandle } from "react"
+﻿import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react"
 import { FEATURE_LINE_STYLE_SOLID, getFeatureStyleColor, getFeatureStyleLineStyle, getGoogleDashIcons } from "../lib/featureStyle"
+import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
+import { categoryToEmoji } from "../data/pinIcons"
+import { resolveFeatureEmoji } from "./FeatureEmoji"
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || ""
+const PLACE_LABEL_MIN_ZOOM = 15
+const PLACE_MARKER_EMOJI_SIZE = 24
 
 const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
 const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230F6E56' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
@@ -19,6 +24,106 @@ function loadGoogleMaps() {
     document.head.appendChild(script)
   })
   return loadPromise
+}
+
+const escapeHtml = (str) => {
+  if (!str) return ""
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+}
+
+const isPinLikeEmoji = (emoji) => emoji === "📍" || emoji === "📌"
+
+const getCategoryEmoji = (feature) => {
+  const category = typeof feature?.category === "string" ? feature.category.trim() : ""
+  if (!category) return ""
+  const emoji = categoryToEmoji(category)
+  return isPinLikeEmoji(emoji) ? "" : emoji
+}
+
+const getDefaultPlaceEmoji = () => "✨"
+
+const getPlaceMarkerEmojiHtml = (feature) => {
+  const descriptor = resolveFeatureEmoji(feature)
+  if (descriptor.kind === "pixel") {
+    const art = findPixelArt(descriptor.value)
+    return art
+      ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
+      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultPlaceEmoji())}</span>`
+  }
+  if (descriptor.kind === "photo") {
+    const safeUrl = escapeHtml(descriptor.value || "")
+    return safeUrl
+      ? `<img class="loca-place-marker__photo" src="${safeUrl}" width="${PLACE_MARKER_EMOJI_SIZE}" height="${PLACE_MARKER_EMOJI_SIZE}" alt=""/>`
+      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultPlaceEmoji())}</span>`
+  }
+
+  const emoji = typeof descriptor.value === "string" ? descriptor.value.trim() : ""
+  const displayEmoji = emoji && !isPinLikeEmoji(emoji)
+    ? emoji
+    : (getCategoryEmoji(feature) || getDefaultPlaceEmoji())
+  return `<span class="loca-place-marker__unicode">${escapeHtml(displayEmoji)}</span>`
+}
+
+const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel }) => {
+  const classNames = [
+    "loca-place-marker",
+    isSelected ? "loca-place-marker--selected" : "",
+    shouldShowLabel ? "" : "loca-place-marker--label-hidden",
+  ].filter(Boolean).join(" ")
+  const title = escapeHtml(feature.title || "장소")
+
+  return (
+    `<div class="${classNames}" role="button" aria-label="${title}">`
+      + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
+      + `<div class="loca-place-marker__label">${title}</div>`
+    + `</div>`
+  )
+}
+
+const createGooglePlaceMarkerOverlay = ({ googleMaps, position, content, map, zIndex, onClick }) => {
+  class PlaceMarkerOverlay extends googleMaps.OverlayView {
+    constructor() {
+      super()
+      this.container = null
+      this.handleClick = null
+      this.setMap(map)
+    }
+
+    onAdd() {
+      const container = document.createElement("div")
+      container.style.position = "absolute"
+      container.style.zIndex = String(zIndex)
+      container.innerHTML = content
+      this.handleClick = (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        onClick?.()
+      }
+      container.addEventListener("click", this.handleClick)
+      this.container = container
+      this.getPanes()?.overlayMouseTarget.appendChild(container)
+    }
+
+    draw() {
+      const projection = this.getProjection()
+      if (!projection || !this.container) return
+      const point = projection.fromLatLngToDivPixel(position)
+      if (!point) return
+      this.container.style.left = `${point.x}px`
+      this.container.style.top = `${point.y}px`
+    }
+
+    onRemove() {
+      if (this.container && this.handleClick) {
+        this.container.removeEventListener("click", this.handleClick)
+      }
+      this.container?.remove()
+      this.container = null
+      this.handleClick = null
+    }
+  }
+
+  return new PlaceMarkerOverlay()
 }
 
 export const GoogleMap = forwardRef(function GoogleMap({
@@ -42,6 +147,8 @@ export const GoogleMap = forwardRef(function GoogleMap({
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
   const initialCenterRef = useRef(focusPoint || myLocation || { lat: 37.56, lng: 126.98 })
+  const [mapReady, setMapReady] = useState(false)
+  const [mapZoom, setMapZoom] = useState(14)
 
   useEffect(() => { onMapTapRef.current = onMapTap }, [onMapTap])
 
@@ -92,6 +199,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
   useEffect(() => {
     if (!containerRef.current || !GOOGLE_MAPS_KEY) return
     let cancelled = false
+    let zoomListener = null
 
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return
@@ -113,15 +221,23 @@ export const GoogleMap = forwardRef(function GoogleMap({
           onMapTapRef.current({ lat: e.latLng.lat(), lng: e.latLng.lng() })
         }
       })
+      setMapZoom(map.getZoom() || 14)
+      zoomListener = map.addListener("zoom_changed", () => {
+        setMapZoom(map.getZoom() || 14)
+      })
+      setMapReady(true)
     })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      if (zoomListener) window.google?.maps?.event?.removeListener(zoomListener)
+    }
   }, [])
 
   // 전체 렌더링
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !window.google?.maps) return
+    if (!mapReady || !map || !window.google?.maps) return
 
     // 湲곗〈 留덉빱/?쇱씤/?대━怨??쒓굅
     markersRef.current.forEach((m) => m.setMap(null))
@@ -138,28 +254,19 @@ export const GoogleMap = forwardRef(function GoogleMap({
     // ? 留덉빱
     pins.forEach((pin) => {
       const isSelected = pin.id === selectedFeatureId
-      const pinColor = getFeatureStyleColor(pin, "pin")
-      const marker = new window.google.maps.Marker({
+      const shouldShowPlaceLabel = isSelected || (showLabels && mapZoom >= PLACE_LABEL_MIN_ZOOM)
+      const marker = createGooglePlaceMarkerOverlay({
+        googleMaps: window.google.maps,
         position: { lat: pin.lat, lng: pin.lng },
+        content: createPlaceMarkerContent({
+          feature: pin,
+          isSelected,
+          shouldShowLabel: shouldShowPlaceLabel,
+        }),
         map,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: isSelected ? 8 : 6,
-          fillColor: pinColor,
-          fillOpacity: 1,
-          strokeColor: isSelected ? "#2D4A3E" : "#fff",
-          strokeWeight: 2,
-        },
-        label: showLabels ? {
-          text: pin.title || "",
-          fontSize: "9px",
-          fontWeight: "500",
-          color: "#1A1A1A",
-          className: "gmap-label",
-        } : undefined,
-        zIndex: isSelected ? 10 : 1,
+        zIndex: isSelected ? 300 : 40,
+        onClick: () => onFeatureTap?.(pin.id),
       })
-      marker.addListener("click", () => onFeatureTap?.(pin.id))
       markersRef.current.push(marker)
     })
 
@@ -215,7 +322,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
         polylinesRef.current.push(borderLine)
       }
     })
-  }, [features, selectedFeatureId, showLabels, onFeatureTap])
+  }, [features, mapReady, mapZoom, selectedFeatureId, showLabels, onFeatureTap])
 
   // ?쒕옒?꾪듃 ?ъ씤??(寃쎈줈/援ъ뿭 洹몃━湲?
   useEffect(() => {

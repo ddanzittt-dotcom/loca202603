@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react"
-import { getPinIcon, emojiToCategory, isMappedPinEmoji } from "../data/pinIcons"
+import { categoryToEmoji } from "../data/pinIcons"
 import { getFeatureStyleColor, getFeatureStyleLineStyle, FEATURE_LINE_STYLE_SHORT_DASH, FEATURE_LINE_STYLE_SHORT_DOT } from "../lib/featureStyle"
 import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
 import { resolveFeatureEmoji } from "./FeatureEmoji"
@@ -14,7 +14,7 @@ const escapeHtml = (str) => {
 const getDefaultEmojiForFeature = (feature) => {
   if (feature?.type === "route") return "🛣️"
   if (feature?.type === "area") return "🟩"
-  return "📍"
+  return "✨"
 }
 
 const getLineDashArrayAttr = (lineStyle) => {
@@ -24,9 +24,61 @@ const getLineDashArrayAttr = (lineStyle) => {
 }
 
 const BASE_ZOOM = 14
+const PLACE_LABEL_MIN_ZOOM = 15
+const PLACE_MARKER_EMOJI_SIZE = 24
 const zoomScale = (zoom) => {
   const s = Math.pow(1.12, zoom - BASE_ZOOM)
   return Math.max(0.3, Math.min(s, 1.4))
+}
+
+const isPinLikeEmoji = (emoji) => emoji === "📍" || emoji === "📌"
+
+const getCategoryEmoji = (feature) => {
+  const category = typeof feature?.category === "string" ? feature.category.trim() : ""
+  if (!category) return ""
+  const emoji = categoryToEmoji(category)
+  return isPinLikeEmoji(emoji) ? "" : emoji
+}
+
+const getPlaceMarkerEmojiHtml = (feature) => {
+  const descriptor = resolveFeatureEmoji(feature)
+  if (descriptor.kind === "pixel") {
+    const art = findPixelArt(descriptor.value)
+    return art
+      ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
+      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
+  }
+  if (descriptor.kind === "photo") {
+    const safeUrl = escapeHtml(descriptor.value || "")
+    return safeUrl
+      ? `<img class="loca-place-marker__photo" src="${safeUrl}" width="${PLACE_MARKER_EMOJI_SIZE}" height="${PLACE_MARKER_EMOJI_SIZE}" alt=""/>`
+      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
+  }
+
+  const emoji = typeof descriptor.value === "string" ? descriptor.value.trim() : ""
+  const displayEmoji = emoji && !isPinLikeEmoji(emoji)
+    ? emoji
+    : (getCategoryEmoji(feature) || getDefaultEmojiForFeature(feature))
+  return `<span class="loca-place-marker__unicode">${escapeHtml(displayEmoji)}</span>`
+}
+
+const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel, isChecked }) => {
+  const classNames = [
+    "loca-place-marker",
+    isSelected ? "loca-place-marker--selected" : "",
+    shouldShowLabel ? "" : "loca-place-marker--label-hidden",
+    isChecked ? "loca-place-marker--checked" : "",
+  ].filter(Boolean).join(" ")
+  const title = escapeHtml(feature.title || "장소")
+  const checkBadge = isChecked ? `<div class="loca-place-marker__check" aria-hidden="true">&#10003;</div>` : ""
+
+  return (
+    `<div class="${classNames}" role="button" aria-label="${title}">`
+      + checkBadge
+      + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
+      + `<div class="loca-place-marker__label">${title}</div>`
+    + `</div>`
+  )
 }
 
 const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
@@ -53,6 +105,7 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
   isEventMapRef.current = isEventMap
   const [mapReady, setMapReady] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3) // 1=far, 2=mid, 3=close
+  const [mapZoom, setMapZoom] = useState(14)
 
   useImperativeHandle(ref, () => ({
     async capture() {
@@ -256,7 +309,10 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
           containerRef.current?.setAttribute("data-zoom", zoom < 12 ? "far" : "near")
           // 3?④퀎 以??덈꺼
           const newLevel = zoom < 13 ? 1 : zoom < 16 ? 2 : 3
-          if (!cancelled) setZoomLevel(newLevel)
+          if (!cancelled) {
+            setZoomLevel(newLevel)
+            setMapZoom(zoom)
+          }
         }
         naverMaps.Event.addListener(map, "zoom_changed", applyZoomScale)
         applyZoomScale()
@@ -400,83 +456,27 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
         if (feature.type === "pin") {
           if (feature.lat === 0 && feature.lng === 0) return
           const isSelected = feature.id === selectedFeatureId
-          const pinColor = getFeatureStyleColor(feature, "pin")
           const isChecked = checkedInIds && checkedInIds.has(feature.id)
-          const checkBadge = isChecked ? `<div class="loca-pin-check">??/div>` : ""
-          const descriptor = resolveFeatureEmoji(feature)
-          const emoji = descriptor.kind === "unicode" ? descriptor.value : ""
-          const explicitCategory = typeof feature.category === "string" ? feature.category.trim() : ""
-          const mappedCategory = (descriptor.kind === "unicode" && isMappedPinEmoji(emoji)) ? emojiToCategory(emoji) : ""
-          const catId = explicitCategory || mappedCategory || (descriptor.kind === "unicode" ? emojiToCategory(feature.emoji) : "pin")
-          const iconData = getPinIcon(catId)
-          const hasCustomEmoji = descriptor.kind === "unicode"
-            && !explicitCategory
-            && !mappedCategory
-            && emoji
-            && emoji.length <= 4
-            && !emoji.includes("/")
-
-          // ????????? ???
-          const dotSizes = [8, 10, 14]
-          const dotBorders = [1.5, 2, 2.5]
-          const dotSize = dotSizes[zoomLevel - 1]
-          const dotBorder = dotBorders[zoomLevel - 1]
-          const showBadge = zoomLevel >= 2
-          const baseLabelZoomThreshold = isEventMap ? 2 : 3
-          const expandedLabelZoomThreshold = Math.max(1, baseLabelZoomThreshold - 2)
-          const showPinLabel = showLabels && zoomLevel >= expandedLabelZoomThreshold
-
-          let badgeInnerHtml
-          if (descriptor.kind === "pixel") {
-            const art = findPixelArt(descriptor.value)
-            badgeInnerHtml = art
-              ? `<span class="loca-pin-badge__pixel">${pixelArtToSvgString(art, 14)}</span>`
-              : `<span class="loca-pin-badge__emoji">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
-          } else if (descriptor.kind === "photo") {
-            const safeUrl = escapeHtml(descriptor.value || "")
-            badgeInnerHtml = `<img class="loca-pin-badge__photo" src="${safeUrl}" width="14" height="14" alt=""/>`
-          } else if (hasCustomEmoji) {
-            badgeInnerHtml = `<span class="loca-pin-badge__emoji">${escapeHtml(emoji)}</span>`
-          } else {
-            badgeInnerHtml = descriptor.kind === "unicode"
-              ? `<img src="/icons/pins/${catId}.svg" width="12" height="12" alt=""/>`
-              : `<span class="loca-pin-badge__emoji">${escapeHtml(getDefaultEmojiForFeature(feature))}</span>`
-          }
-          const badgeHtml = showBadge
-            ? `<div class="loca-pin-badge" style="background:${iconData.bg}">${badgeInnerHtml}</div>`
-            : ""
-          const dotStyle = `width:${dotSize}px;height:${dotSize}px;border-width:${dotBorder}px;background:${pinColor};${isSelected ? "border-color:#2D4A3E" : ""}`
-          const labelHtml = `<div class="loca-map-label-anchor"><div class="loca-pin-label loca-pin-label--overlay"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="${pinColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-5-5.2-5-9a5 5 0 1 1 10 0c0 3.8-5 9-5 9z"/><circle cx="12" cy="12" r="1.6"/></svg><span style="color:${pinColor}">${escapeHtml(feature.title)}</span></div></div>`
-          const markerSize = zoomLevel === 1 ? 20 : zoomLevel === 2 ? 30 : 40
-          const anchorY = zoomLevel === 1 ? 10 : zoomLevel === 2 ? 20 : 48
+          const shouldShowPlaceLabel = isSelected || (showLabels && mapZoom >= PLACE_LABEL_MIN_ZOOM)
+          const markerContent = createPlaceMarkerContent({
+            feature,
+            isSelected,
+            shouldShowLabel: shouldShowPlaceLabel,
+            isChecked,
+          })
 
           const marker = new naverMaps.Marker({
             position: toLatLng(feature.lat, feature.lng),
             map,
             icon: {
-              content: `<div class="loca-pin-marker" style="width:${markerSize}px">${checkBadge}${badgeHtml}<div class="loca-pin-dot${isSelected ? " is-selected" : ""}" style="${dotStyle}"></div></div>`,
-              size: new naverMaps.Size(markerSize, markerSize + 30),
-              anchor: new naverMaps.Point(markerSize / 2, anchorY),
+              content: markerContent,
+              size: new naverMaps.Size(1, 1),
+              anchor: new naverMaps.Point(0, 0),
             },
+            zIndex: isSelected ? 300 : 40,
           })
           bindFeatureSelection(marker, feature.id)
           layersRef.current.push(marker)
-
-          if (showPinLabel) {
-            const labelMarker = new naverMaps.Marker({
-              position: toLatLng(feature.lat, feature.lng),
-              map,
-              icon: {
-                content: labelHtml,
-                size: new naverMaps.Size(118, 24),
-                anchor: new naverMaps.Point(59, -18),
-              },
-              clickable: true,
-              zIndex: 20,
-            })
-            bindFeatureSelection(labelMarker, feature.id)
-            layersRef.current.push(labelMarker)
-          }
         } else if (feature.type === "route") {
           const routeColor = getFeatureStyleColor(feature, "route")
           const routeLineStyle = getFeatureStyleLineStyle(feature, "route")
@@ -634,7 +634,7 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
     } catch (e) {
       console.warn("?ㅼ씠踰?吏???덉씠???낅뜲?댄듃 ?ㅽ뙣:", e)
     }
-  }, [checkedInIds, draftMode, draftPoints, features, isEventMap, mapReady, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
+  }, [checkedInIds, draftMode, draftPoints, features, isEventMap, mapReady, mapZoom, myLocation, onFeatureTap, selectedFeatureId, showLabels, zoomLevel])
 
   // Focus
   useEffect(() => {

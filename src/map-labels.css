@@ -24,6 +24,133 @@
 }
 
 /* 핀: 이모지 + 라벨 통합 마커 */
+/* Place marker: emoji + compact lower label */
+.loca-place-marker {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform: translate(-50%, -100%) scale(var(--map-scale, 1));
+  transform-origin: center bottom;
+  pointer-events: auto;
+  user-select: none;
+  min-width: 36px;
+  min-height: 36px;
+  cursor: pointer;
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+  z-index: 1;
+}
+
+.loca-place-marker__emoji {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 24px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(40, 30, 20, 0.16));
+}
+
+.loca-place-marker__unicode {
+  display: block;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.loca-place-marker__pixel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.loca-place-marker__pixel svg {
+  width: 24px;
+  height: 24px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.loca-place-marker__photo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.92);
+}
+
+.loca-place-marker__label {
+  box-sizing: border-box;
+  margin-top: 3px;
+  padding: 4px 8px;
+  max-width: 104px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #2B2B2B;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(40, 30, 20, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.loca-place-marker--label-hidden .loca-place-marker__label {
+  display: none;
+}
+
+.loca-place-marker--selected {
+  z-index: 10;
+  filter: drop-shadow(0 4px 10px rgba(255, 90, 45, 0.12));
+}
+
+.loca-place-marker--selected .loca-place-marker__emoji {
+  filter: drop-shadow(0 4px 8px rgba(40, 30, 20, 0.2));
+}
+
+.loca-place-marker--selected .loca-place-marker__label {
+  color: #FF5A2D;
+  border-color: rgba(255, 90, 45, 0.45);
+  box-shadow:
+    0 6px 18px rgba(255, 90, 45, 0.18),
+    0 4px 14px rgba(40, 30, 20, 0.12);
+}
+
+.loca-place-marker--selected::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  margin-top: -1px;
+  border-radius: 2px;
+  background: #FF5A2D;
+  transform: rotate(45deg);
+  opacity: 0.75;
+}
+
+.loca-place-marker__check {
+  position: absolute;
+  top: -5px;
+  right: 4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: #12B981;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(18, 185, 129, 0.24);
+  z-index: 2;
+}
+
 .loca-pin-marker {
   position: relative;
   box-sizing: border-box;
