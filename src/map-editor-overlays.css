@@ -20,11 +20,16 @@
   padding: 0 32px;
 }
 .welcome-screen__logo {
-  font-size: 36px;
-  font-weight: 500;
-  letter-spacing: -0.5px;
-  color: var(--secondary, #2D4A3E);
+  font-family: var(--font-sans, "Pretendard Variable");
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--ink-strong, #101010);
+  line-height: 1;
   margin-bottom: 12px;
+}
+.welcome-screen__logo-dot {
+  color: var(--accent, #ff4b2e);
 }
 .welcome-screen__character {
   width: 108px;
@@ -1496,6 +1501,65 @@
   color: #667085;
   font-size: 0.82rem;
   margin-bottom: 16px;
+}
+
+.share-sheet__publish {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255, 77, 26, 0.16);
+  border-radius: 16px;
+  background: #FFF7F2;
+}
+
+.share-sheet__publish-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.share-sheet__publish-copy strong {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #15110E;
+}
+
+.share-sheet__publish-copy span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #746A60;
+}
+
+.share-sheet__publish-toggle {
+  flex-shrink: 0;
+  min-width: 54px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(30, 25, 20, 0.08);
+  border-radius: 999px;
+  background: #fff;
+  color: #807668;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: pointer;
+  box-shadow: 0 5px 14px rgba(30, 20, 10, 0.06);
+}
+
+.share-sheet__publish-toggle.is-active {
+  border-color: #FFD0BC;
+  background: #FFEBE0;
+  color: #C2380B;
+}
+
+.share-sheet__publish-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .share-sheet__actions {
@@ -7499,8 +7563,7 @@
   color: #633806;
 }
 
-.map-list-bar .map-filter-chip--record.is-active[data-type="photo"],
-.map-list-bar .map-filter-chip--record.is-active[data-type="memory"] {
+.map-list-bar .map-filter-chip--record.is-active[data-type="record"] {
   background: #fff;
   border-color: rgba(255, 107, 53, 0.32);
   color: #FF6B35;
@@ -7542,7 +7605,7 @@
 }
 
 .map-editor--record-panel-open .me-fabs {
-  bottom: max(204px, calc(env(safe-area-inset-bottom, 0px) + 188px)) !important;
+  bottom: clamp(340px, 52%, 520px) !important;
 }
 
 .map-editor--record-panel-open .search-pin-confirm {

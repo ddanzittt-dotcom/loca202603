@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, MoreHorizontal, Plus } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
@@ -10,7 +10,7 @@ import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { FeatureEmoji } from "../components/FeatureEmoji"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 
-// 경로 길이(km) — 위경도 배열의 haversine 합산
+// 길 길이(km) — 위경도 배열의 haversine 합산
 function computeRouteLengthKm(points) {
   if (!Array.isArray(points) || points.length < 2) return null
   const R = 6371
@@ -35,24 +35,16 @@ function computeRouteLengthKm(points) {
 const RECORD_FILTERS = [
   { id: "all", label: "전체" },
   { id: "pin", label: "장소" },
-  { id: "route", label: "길·코스" },
+  { id: "route", label: "길" },
   { id: "area", label: "영역" },
-  { id: "photo", label: "사진 있음" },
-  { id: "memory", label: "기억 있음" },
+  { id: "record", label: "기록 있음" },
 ]
 
-function getFeaturePhotos(feature) {
-  const ownPhotos = Array.isArray(feature?.photos) ? feature.photos : []
-  const memoPhotos = (feature?.memos || []).flatMap((memo) => (
-    Array.isArray(memo.photos) ? memo.photos : []
-  ))
-  return [...ownPhotos, ...memoPhotos].filter(Boolean)
-}
-
-function hasFeatureMemory(feature) {
+function hasFeatureRecord(feature) {
   return Boolean(
     feature?.note?.trim()
     || (feature?.memos || []).some((memo) => memo.text?.trim() || (memo.photos || []).length > 0)
+    || (feature?.photos || []).length > 0
     || (feature?.voices || []).length > 0,
   )
 }
@@ -97,8 +89,6 @@ export function MapEditorScreen({
   placementRow = null,
   onPublishMap,
   onUnpublishMap,
-  onAddMapToProfile,
-  onRemoveMapFromProfile,
   coachmarkStep = 0,
   onCoachmarkNext,
   onCoachmarkSkip,
@@ -118,16 +108,6 @@ export function MapEditorScreen({
   // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
   const [fabExpanded, setFabExpanded] = useState(false)
   const [capturing, setCapturing] = useState(false)
-  const [mapMenuOpen, setMapMenuOpen] = useState(false)
-  const mapMenuRef = useRef(null)
-  useEffect(() => {
-    if (!mapMenuOpen) return
-    const onPointerDown = (e) => {
-      if (mapMenuRef.current && !mapMenuRef.current.contains(e.target)) setMapMenuOpen(false)
-    }
-    document.addEventListener("pointerdown", onPointerDown)
-    return () => document.removeEventListener("pointerdown", onPointerDown)
-  }, [mapMenuOpen])
   const naverMapRef = useRef(null)
   const voicePlayback = useVoicePlayback()
   const stripRef = useRef(null)
@@ -209,10 +189,10 @@ export function MapEditorScreen({
     }
     if (editorMode === "route") {
       return {
-        title: "\uACBD\uB85C \uC0DD\uC131 \uBAA8\uB4DC",
+        title: "\uAE38 \uC0DD\uC131 \uBAA8\uB4DC",
         description: draftPoints.length > 0
           ? `${draftPoints.length}\uAC1C \uC9C0\uC810\uC744 \uC120\uD0DD\uD588\uC5B4\uC694. \uC6B0\uCE21 \uD558\uB2E8 \uBC84\uD2BC\uC73C\uB85C \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`
-          : "\uC9C0\uB3C4\uC5D0\uC11C \uC21C\uC11C\uB300\uB85C \uC9C0\uC810\uC744 \uD0ED\uD574 \uACBD\uB85C\uB97C \uADF8\uB824 \uBCF4\uC138\uC694.",
+          : "\uC9C0\uB3C4\uC5D0\uC11C \uC21C\uC11C\uB300\uB85C \uC9C0\uC810\uC744 \uD0ED\uD574 \uAE38\uC744 \uADF8\uB824 \uBCF4\uC138\uC694.",
       }
     }
     if (editorMode === "area") {
@@ -236,8 +216,7 @@ export function MapEditorScreen({
     features.filter((feature) => {
       const matchesFilter = (() => {
         if (activeFilter === "all") return true
-        if (activeFilter === "photo") return getFeaturePhotos(feature).length > 0
-        if (activeFilter === "memory") return hasFeatureMemory(feature)
+        if (activeFilter === "record") return hasFeatureRecord(feature)
         return feature.type === activeFilter
       })()
       return matchesFilter
@@ -337,94 +316,54 @@ export function MapEditorScreen({
       {/* 상단 헤더 — v2: 2줄 (제목/액션 행 + 카운터 점 행) */}
       <div className="me-bar me-bar--v2">
         <div className="me-bar__card">
-          <div className="me-bar__left">
-            <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로가기">
-              <ArrowLeft size={16} />
-            </button>
-            <span className="me-bar__name">{map.title}</span>
-          </div>
-          <div className="me-bar__right">
-            {/* 카운트 chip 자리는 v2 에서 2번째 행으로 이동했지만, 비-v2 환경 호환을 위해 제거된 자리는 비워둠 */}
-            {!communityMode ? (
-              <>
-                <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
-                  <Link2 size={16} color="#2D4A3E" />
-                </button>
-                {(placement.canPublish || placement.canUnpublish || placement.canAddToProfile || placement.canRemoveFromProfile) ? (
-                  <div style={{ position: "relative" }} ref={mapMenuRef}>
-                    <button
-                      className="me-bar__share"
-                      type="button"
-                      aria-label="메뉴 열기"
-                      onClick={() => setMapMenuOpen((prev) => !prev)}
-                    >
-                      <MoreHorizontal size={16} color="#2D4A3E" />
-                    </button>
-                    {mapMenuOpen ? (
-                      <div
-                        role="menu"
-                        style={{
-                          position: "absolute",
-                          right: 0, top: "calc(100% + 6px)",
-                          background: "#fff",
-                          border: "0.5px solid rgba(0,0,0,.06)",
-                          borderRadius: 12,
-                          padding: 6,
-                          minWidth: 170,
-                          boxShadow: "0 10px 24px rgba(0,0,0,.15)",
-                          display: "flex", flexDirection: "column", gap: 2,
-                          zIndex: 10,
-                        }}
-                      >
-                        {placement.canPublish && onPublishMap ? (
-                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onPublishMap(map.id) }}>
-                            링크 공유 켜기
-                          </MapMenuItem>
-                        ) : null}
-                        {placement.canAddToProfile && onAddMapToProfile ? (
-                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onAddMapToProfile(map.id) }}>
-                            내 프로필에 공개
-                          </MapMenuItem>
-                        ) : null}
-                        {placement.canRemoveFromProfile && onRemoveMapFromProfile ? (
-                          <MapMenuItem onClick={() => { setMapMenuOpen(false); onRemoveMapFromProfile(map.id) }}>
-                            프로필에서 내리기
-                          </MapMenuItem>
-                        ) : null}
-                        {placement.canUnpublish && onUnpublishMap ? (
-                          <MapMenuItem variant="danger" onClick={() => { setMapMenuOpen(false); onUnpublishMap(map.id) }}>
-                            링크 공유 중지
-                          </MapMenuItem>
-                        ) : null}
-                      </div>
-                    ) : null}
+          <div className="me-bar__main-row">
+            <div className="me-bar__left">
+              <button className="me-bar__back" type="button" onClick={onBack} aria-label="뒤로가기">
+                <ArrowLeft size={16} />
+              </button>
+              <div className="me-bar__title-stack">
+                <span className="me-bar__name">{map.title}</span>
+                {!hideCount ? (
+                  <div className="me-bar__counters" aria-label="지도 기록 수">
+                    <span className="me-bar__counter me-bar__counter--pin">
+                      <span className="me-bar__counter-dot" aria-hidden="true" />
+                      <span className="me-bar__counter-label">장소</span>
+                      <strong className="loca-v2-num">{pinCount}</strong>
+                    </span>
+                    <span className="me-bar__counter me-bar__counter--route">
+                      <span className="me-bar__counter-dot" aria-hidden="true" />
+                      <span className="me-bar__counter-label">길</span>
+                      <strong className="loca-v2-num">{routeCount}</strong>
+                    </span>
+                    <span className="me-bar__counter me-bar__counter--area">
+                      <span className="me-bar__counter-dot" aria-hidden="true" />
+                      <span className="me-bar__counter-label">영역</span>
+                      <strong className="loca-v2-num">{areaCount}</strong>
+                    </span>
                   </div>
                 ) : null}
-              </>
-            ) : null}
+              </div>
+            </div>
+            <div className="me-bar__right">
+              {!communityMode ? (
+                <>
+                  <button
+                    className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
+                    type="button"
+                    onClick={onToggleLabels}
+                    aria-pressed={showLabels}
+                    aria-label="이름 표시 전환"
+                  >
+                    이름 {showLabels ? "ON" : "OFF"}
+                  </button>
+                  <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
+                    <Link2 size={16} color="#2D4A3E" />
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
-
-        {/* v2 2번째 행 — 카운터 점 + 라벨 + 숫자 (장소 · 길 · 영역) */}
-        {!hideCount ? (
-          <div className="me-bar__counters">
-            <span className="me-bar__counter me-bar__counter--pin">
-              <span className="me-bar__counter-dot" aria-hidden="true" />
-              <span className="me-bar__counter-label">장소</span>
-              <strong className="loca-v2-num">{pinCount}</strong>
-            </span>
-            <span className="me-bar__counter me-bar__counter--route">
-              <span className="me-bar__counter-dot" aria-hidden="true" />
-              <span className="me-bar__counter-label">길</span>
-              <strong className="loca-v2-num">{routeCount}</strong>
-            </span>
-            <span className="me-bar__counter me-bar__counter--area">
-              <span className="me-bar__counter-dot" aria-hidden="true" />
-              <span className="me-bar__counter-label">영역</span>
-              <strong className="loca-v2-num">{areaCount}</strong>
-            </span>
-          </div>
-        ) : null}
       </div>
 
       <div className="map-editor__canvas-wrap">
@@ -501,6 +440,10 @@ export function MapEditorScreen({
           />
         </MapErrorBoundary>
 
+        <button className="map-locate-button" type="button" onClick={onLocate} aria-label="내 위치로 이동">
+          <Navigation size={18} />
+        </button>
+
         {pendingSearchPin && canMapPinFromSearch && showExternalPlaceSearch ? (
           <div className="search-pin-confirm">
             <div className="search-pin-confirm__text">
@@ -529,18 +472,7 @@ export function MapEditorScreen({
         ) : null}
 
         {/* v2 펼침형 FAB — 백드롭 */}
-        {fabExpanded ? (
-          <div className="me-fab-backdrop" onClick={() => setFabExpanded(false)} aria-hidden="true" />
-        ) : null}
-
         <div className={`me-fabs me-fabs--v2${fabExpanded ? " is-expanded" : ""}`}>
-          {/* 항상 보이는 유틸리티 (위치 / 라벨 토글) */}
-          <button className="me-fab" type="button" onClick={onLocate} aria-label="내 위치로 이동">
-            <Navigation size={16} />
-          </button>
-          <button className={`me-fab me-fab--label${showLabels ? " is-active" : ""}`} type="button" onClick={onToggleLabels} aria-label="이름 라벨 표시 전환">
-            <span>이름</span>
-          </button>
 
           {/* 펼침형 도구 (장소/길/영역) — fabExpanded 일 때만 보임 */}
           {!readOnly && fabExpanded ? (
@@ -548,29 +480,32 @@ export function MapEditorScreen({
               <button
                 className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "pin" ? "browse" : "pin"); setFabExpanded(false) }}
+                onClick={() => { onModeChange(editorMode === "pin" ? "browse" : "pin"); setFabExpanded(true) }}
                 aria-label="장소 남기기 모드"
                 style={{ animationDelay: "0s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+                <span>장소</span>
               </button>
               <button
                 className={`me-fab me-fab--route me-fab--tool${editorMode === "route" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "route" ? "browse" : "route"); setFabExpanded(false) }}
-                aria-label="경로 그리기 모드"
+                onClick={() => { onModeChange(editorMode === "route" ? "browse" : "route"); setFabExpanded(true) }}
+                aria-label="길 그리기 모드"
                 style={{ animationDelay: "0.04s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                <span>길</span>
               </button>
               <button
                 className={`me-fab me-fab--area me-fab--tool${editorMode === "area" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "area" ? "browse" : "area"); setFabExpanded(false) }}
+                onClick={() => { onModeChange(editorMode === "area" ? "browse" : "area"); setFabExpanded(true) }}
                 aria-label="영역 그리기 모드"
                 style={{ animationDelay: "0.08s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+                <span>영역</span>
               </button>
             </>
           ) : null}
@@ -610,7 +545,7 @@ export function MapEditorScreen({
               마지막 점 취소
             </button>
             <button className="button button--primary" type="button" onClick={editorMode === "area" ? onCompleteArea : onCompleteRoute}>
-              {editorMode === "area" ? "영역 완성하기" : "경로 완성하기"}
+              {editorMode === "area" ? "영역 완성하기" : "길 완성하기"}
             </button>
           </div>
         ) : null}
@@ -629,6 +564,11 @@ export function MapEditorScreen({
               onClose={() => { voicePlayback.stop(); onCloseFeatureSummary?.() }}
               onOpenDetail={
                 canOpenDetailOnHeader
+                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+                  : undefined
+              }
+              onAddRecord={
+                !communityMode && isSummaryAuthor && canOpenDetailOnHeader
                   ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
                   : undefined
               }
@@ -778,6 +718,8 @@ export function MapEditorScreen({
         shareUrl={shareUrl}
         onClose={() => setShareOpen(false)}
         capturing={capturing}
+        onPublishMap={onPublishMap}
+        onUnpublishMap={onUnpublishMap}
         onOpenImageShare={async () => {
           if (capturing || !naverMapRef.current) return
           setCapturing(true)
@@ -801,7 +743,7 @@ export function MapEditorScreen({
         <CoachMark
           step={1}
           totalSteps={3}
-          title="장소, 경로, 영역을 자유롭게 남겨보세요"
+          title="장소, 길, 영역을 자유롭게 남겨보세요"
           description="오른쪽 버튼으로 모드를 선택한 뒤 지도를 탭하면 지도에 기록을 남길 수 있습니다."
           onNext={() => onCoachmarkNext?.(2)}
           onSkip={() => onCoachmarkSkip?.()}
@@ -836,21 +778,3 @@ export function MapEditorScreen({
   )
 }
 
-function MapMenuItem({ onClick, variant = "default", children }) {
-  const color = variant === "danger" ? "#E24B4A" : "#1A1A1A"
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      style={{
-        background: "transparent", border: "none",
-        padding: "8px 10px", borderRadius: 8,
-        fontSize: 12, fontWeight: 500, color,
-        textAlign: "left", width: "100%", cursor: "pointer",
-      }}
-    >
-      {children}
-    </button>
-  )
-}

@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react"
 import { BottomNavV2 } from "./BottomNav.v2"
+import { BrandLogo } from "./BrandLogo"
 
 /**
  * AppShell v2 — 새 디자인의 메인 4탭 셸.
@@ -35,9 +36,7 @@ export function AppShell({
       <header className="loca-v2-shell__header">
         <div className="loca-v2-shell__brand">
           {showBrand ? (
-            <span>
-              loca<span className="loca-v2-shell__brand-dot">.</span>
-            </span>
+            <BrandLogo as="span" dotClassName="loca-v2-shell__brand-dot" />
           ) : null}
         </div>
         <div className="loca-v2-shell__actions">

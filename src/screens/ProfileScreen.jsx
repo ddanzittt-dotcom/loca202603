@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users } from "lucide-react"
+import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users, Edit3, Share2 } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
@@ -390,6 +390,7 @@ export function ProfileScreen({
 
   // 프로필 편집 폼
   const [editName, setEditName] = useState("")
+  const [editAlias, setEditAlias] = useState("")
   const [editHandle, setEditHandle] = useState("")
   const [editBio, setEditBio] = useState("")
   const [editLink, setEditLink] = useState("")
@@ -421,6 +422,21 @@ export function ProfileScreen({
   const openNewWindow = (url) => {
     window.open(url, "_blank", "noopener,noreferrer")
   }
+
+  const handleShareProfile = useCallback(async () => {
+    const shareUrl = window.location.href
+    const shareTitle = `${user.name || "LOCA"} 프로필`
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: shareTitle, url: shareUrl })
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl)
+        alert("프로필 링크를 복사했어요.")
+      }
+    } catch {
+      // 사용자가 공유 시트를 닫은 경우도 있어 조용히 무시합니다.
+    }
+  }, [user.name])
 
   const handleClearCache = () => {
     if (confirm("캐시를 삭제하면 오프라인 데이터가 초기화됩니다. 계속하시겠어요?")) {
@@ -458,6 +474,7 @@ export function ProfileScreen({
 
   const handleOpenEdit = () => {
     setEditName(user.name || "")
+    setEditAlias(user.alias || user.tagline || user.ho || "")
     setEditHandle((user.handle || "").replace(/^@/, ""))
     setEditBio(user.bio || "")
     setEditLink(user.link || "")
@@ -507,8 +524,10 @@ export function ProfileScreen({
   const handleSaveProfile = async () => {
     setSaving(true)
     try {
+      const alias = editAlias.trim()
       onUpdateProfile({
         name: editName.trim() || user.name,
+        alias,
         bio: editBio,
         handle: editHandle,
         link: editLink,
@@ -596,6 +615,16 @@ export function ProfileScreen({
             />
           </div>
           <div className="pf-edit__field">
+            <label className="pf-edit__label">별칭</label>
+            <input
+              className="pf-edit__input"
+              value={editAlias}
+              onChange={(e) => setEditAlias(e.target.value)}
+              placeholder="예: 안녕 글쓴이"
+              maxLength={24}
+            />
+          </div>
+          <div className="pf-edit__field">
             <label className="pf-edit__label">사용자 이름</label>
             <input
               className="pf-edit__input"
@@ -639,46 +668,58 @@ export function ProfileScreen({
     (sum, f) => sum + (Array.isArray(f?.memos) ? f.memos.filter((m) => m?.text?.trim()).length : 0),
     0,
   )
-  const tagline = user.tagline || user.ho || ""
+  const aliasText = user.alias || user.tagline || user.ho || ""
 
   return (
     <section className="screen screen--scroll profile-v4 profile-v4--v2">
       <div className="pf">
-        {/* 단일 화이트 카드 — 아바타 + 호 + 이름 + bio + 링크 + 통계 + 편집 (참고 디자인 A5) */}
+        {/* 단일 화이트 카드 — 참고 이미지처럼 첫 화면에 지도 4개가 보이도록 압축 */}
         <article className="pf-v2-card">
           <div className="pf-v2-card__head">
             <div className="pf-v2-card__avatar" aria-hidden="true">
               {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{profileInitial}</span>}
             </div>
+
+            <div className="pf-v2-card__identity">
+              {aliasText ? (
+                <span className="pf-v2-card__tagline">
+                  <span aria-hidden="true">✦</span> {aliasText}
+                </span>
+              ) : null}
+
+              <div className="pf-v2-card__name-row">
+                <h1 className="pf-v2-card__name">{user.name}</h1>
+                <p className="pf-v2-card__handle">@{handleText}</p>
+              </div>
+            </div>
+
             <button className="pf-v2-card__edit" type="button" onClick={handleOpenEdit}>
+              <Edit3 size={11} strokeWidth={2.2} />
               편집
             </button>
           </div>
-
-          {tagline ? (
-            <span className="pf-v2-card__tagline">
-              <span aria-hidden="true">✦</span> {tagline}
-            </span>
-          ) : null}
-
-          <h1 className="pf-v2-card__name">{user.name}</h1>
-          <p className="pf-v2-card__handle">@{handleText}</p>
 
           {user.bio ? <p className="pf-v2-card__bio">{user.bio}</p> : null}
 
           {user.link ? (
             <a className="pf-v2-card__link" href={linkHref} target="_blank" rel="noopener noreferrer">
-              <span aria-hidden="true">↗</span>
+              <LinkIcon size={11} strokeWidth={2.1} aria-hidden="true" />
               <span>{linkDisplay}</span>
             </a>
           ) : null}
 
-          <div className="pf-v2-card__stats">
-            <span><strong className="loca-v2-num">{placeCountStat}</strong>장소</span>
-            <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
-            <span><strong className="loca-v2-num">{mapCountStat}</strong>지도</span>
-            <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
-            <span><strong className="loca-v2-num">{recordCountStat}</strong>기록</span>
+          <div className="pf-v2-card__foot">
+            <div className="pf-v2-card__stats">
+              <span><strong className="loca-v2-num">{placeCountStat}</strong>장소</span>
+              <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
+              <span><strong className="loca-v2-num">{mapCountStat}</strong>지도</span>
+              <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
+              <span><strong className="loca-v2-num">{recordCountStat}</strong>기록</span>
+            </div>
+            <button className="pf-v2-card__share" type="button" onClick={handleShareProfile}>
+              <Share2 size={11} strokeWidth={2.1} />
+              공유
+            </button>
           </div>
 
           {publicMapCount === 0 ? (
@@ -689,8 +730,8 @@ export function ProfileScreen({
         </article>
 
         <div className="pf__section-head">
-          <h2>내 지도</h2>
-          <span>{publicMapCount}개</span>
+          <h2>내 지도 <em>{publicMapCount}</em></h2>
+          <span>전체 <ChevronRight size={10} strokeWidth={2.4} aria-hidden="true" /></span>
         </div>
 
         {shares.length > 0 ? (

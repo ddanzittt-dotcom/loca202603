@@ -6,7 +6,23 @@ import { getProfilePlacementState } from "../../lib/mapPlacement"
 
 const QR_PREVIEW_SIZE = 200
 const QR_DOWNLOAD_SIZE = 1024
-const QR_LOGO_EMOJI = "📍"
+
+function drawBrandLogo(ctx, x, y, size, align = "center") {
+  ctx.save()
+  ctx.font = `900 ${size}px Pretendard Variable`
+  ctx.textBaseline = "middle"
+  ctx.textAlign = align
+  ctx.fillStyle = "#101010"
+  const word = "loca"
+  const wordWidth = ctx.measureText(word).width
+  const dotWidth = ctx.measureText(".").width
+  const startX = align === "center" ? x - (wordWidth + dotWidth) / 2 : x - wordWidth - dotWidth
+  ctx.textAlign = "left"
+  ctx.fillText(word, startX, y)
+  ctx.fillStyle = "#ff4b2e"
+  ctx.fillText(".", startX + wordWidth, y)
+  ctx.restore()
+}
 
 function getCleanShareUrl(shareUrl) {
   if (!shareUrl) return ""
@@ -37,10 +53,7 @@ function generateHighResQr(shareUrl, mapTitle) {
         qrCtx.beginPath()
         qrCtx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         qrCtx.fill()
-        qrCtx.font = `${logoSize}px Pretendard Variable`
-        qrCtx.textAlign = "center"
-        qrCtx.textBaseline = "middle"
-        qrCtx.fillText(QR_LOGO_EMOJI, cx, cy)
+        drawBrandLogo(qrCtx, cx, cy, Math.round(logoSize * 0.58))
 
         const padding = 80
         const titleHeight = 60
@@ -65,9 +78,7 @@ function generateHighResQr(shareUrl, mapTitle) {
         ctx.fillText(mapTitle || "LOCA", totalW / 2, titleY, QR_DOWNLOAD_SIZE)
 
         ctx.fillStyle = "#b0b8c9"
-        ctx.font = "bold 24px Pretendard Variable"
-        ctx.textAlign = "right"
-        ctx.fillText("LOCA", totalW - padding, totalH - 30)
+        drawBrandLogo(ctx, totalW - padding, totalH - 30, 24, "right")
 
         resolve(finalCanvas)
       })
@@ -117,6 +128,8 @@ export function ShareSheet({
   onClose,
   onOpenImageShare,
   capturing,
+  onPublishMap,
+  onUnpublishMap,
   showToast,
 }) {
   const qrPreviewRef = useRef(null)
@@ -124,6 +137,7 @@ export function ShareSheet({
   const [copying, setCopying] = useState(false)
   const [kakaoSharing, setKakaoSharing] = useState(false)
   const [qrDownloading, setQrDownloading] = useState(false)
+  const [shareToggling, setShareToggling] = useState(false)
 
   const cleanUrl = getCleanShareUrl(rawShareUrl)
   const qrUrl = cleanUrl || null
@@ -147,10 +161,7 @@ export function ShareSheet({
         ctx.beginPath()
         ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         ctx.fill()
-        ctx.font = `${logoSize}px Pretendard Variable`
-        ctx.textAlign = "center"
-        ctx.textBaseline = "middle"
-        ctx.fillText(QR_LOGO_EMOJI, cx, cy)
+        drawBrandLogo(ctx, cx, cy, Math.round(logoSize * 0.58))
       })
       .catch(() => {
         showToast?.("QR 코드를 만들지 못했어요.")
@@ -163,6 +174,7 @@ export function ShareSheet({
       setCopying(false)
       setKakaoSharing(false)
       setQrDownloading(false)
+      setShareToggling(false)
     }
   }, [open])
 
@@ -243,36 +255,47 @@ export function ShareSheet({
   }, [map?.id, map?.slug, map?.title, qrDownloading, qrUrl, showToast])
 
   const placement = getProfilePlacementState(map || {}, null)
-  const statusLabel = placement.isPublished ? "링크 공유 켜짐" : "링크 공유 꺼짐"
-  const statusHint = placement.isPublished
-    ? "공유 링크가 활성화되어 있어요."
-    : "메뉴에서 링크 공유 켜기를 하면 누구나 링크로 볼 수 있어요."
+  const canToggleShare = placement.isPublished
+    ? typeof onUnpublishMap === "function"
+    : typeof onPublishMap === "function"
+  const handleToggleShare = useCallback(async () => {
+    if (!map?.id || shareToggling || !canToggleShare) return
+    setShareToggling(true)
+    try {
+      if (placement.isPublished) {
+        const didTurnOff = await onUnpublishMap(map.id)
+        if (didTurnOff === false) onClose?.()
+        else {
+          showToast?.("링크 공유를 껐어요.")
+          onClose?.()
+        }
+      } else {
+        const didTurnOn = await onPublishMap(map.id)
+        if (didTurnOn) onClose?.()
+      }
+    } finally {
+      setShareToggling(false)
+    }
+  }, [canToggleShare, map?.id, onClose, onPublishMap, onUnpublishMap, placement.isPublished, shareToggling, showToast])
 
   return (
     <BottomSheet open={open} title="공유 링크" onClose={onClose}>
       <div className="share-sheet">
-        <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 12px", marginBottom: 8,
-          background: "#FAF5EE", borderRadius: 10,
-        }}>
-          <span style={{
-            fontSize: 10, fontWeight: 500,
-            padding: "2px 8px", borderRadius: 8,
-            background: placement.isPublished ? "#E1F5EE" : "#FAEEDA",
-            color: placement.isPublished ? "#085041" : "#633806",
-          }}>{statusLabel}</span>
-          <p style={{ fontSize: 11, color: "#666", margin: 0, lineHeight: 1.4 }}>
-            {statusHint}
-          </p>
+        <div className="share-sheet__publish">
+          <div className="share-sheet__publish-copy">
+            <strong>링크 공유</strong>
+            <span>링크 공유를 켜면 누구나 링크로 보고 저장할 수 있어요.</span>
+          </div>
+          <button
+            className={`share-sheet__publish-toggle${placement.isPublished ? " is-active" : ""}`}
+            type="button"
+            onClick={handleToggleShare}
+            disabled={!canToggleShare || shareToggling}
+            aria-pressed={placement.isPublished}
+          >
+            {shareToggling ? "..." : placement.isPublished ? "ON" : "OFF"}
+          </button>
         </div>
-        <p className="share-sheet__hint">
-          링크를 전달하면 상대가 지도를 바로 열고, 내 라이브러리로 저장할 수 있어요.
-        </p>
-        <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 12px", lineHeight: 1.4 }}>
-          보여주고 싶은 지도만 내 프로필에 공개할 수 있어요.
-        </p>
-
         {qrUrl ? (
           <div className="share-sheet__qr-section">
             <canvas

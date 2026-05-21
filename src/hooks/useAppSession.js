@@ -81,6 +81,8 @@ export function useAppSession({
         handle: profile.slug ? `@${profile.slug}` : `@${(profile.nickname || user.email?.split("@")[0] || "loca").toLowerCase().replace(/\s+/g, "_")}`,
         emoji: (profile.avatar_url && !profile.avatar_url.startsWith("http") && !profile.avatar_url.startsWith("data:")) ? profile.avatar_url : me.emoji,
         avatarUrl: (profile.avatar_url && (profile.avatar_url.startsWith("http") || profile.avatar_url.startsWith("data:"))) ? profile.avatar_url : null,
+        alias: profile.alias || profile.tagline || profile.ho || "",
+        tagline: profile.alias || profile.tagline || profile.ho || "",
         bio: profile.bio || me.bio,
         link: profile.link || "",
         followers: appData.followerCount || 0,

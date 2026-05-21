@@ -156,7 +156,7 @@ export const sharesSeed = []
 // ─── 홈 추천 데모 지도 (readOnly) ───
 
 export const demoMaps = [
-  { id: "demo-seongsu", title: "성수 감성카페 7곳", description: "걷기 좋은 동선으로 묶은 카페 컬렉션", theme: "#F59E0B", updatedAt: "2026-03-15T00:00:00.000Z" },
+  { id: "demo-seongsu", title: "성수 감성카페 7곳", description: "걷기 좋은 길로 묶은 카페 컬렉션", theme: "#F59E0B", updatedAt: "2026-03-15T00:00:00.000Z" },
   { id: "demo-ikseon", title: "익선동 골목 맛집", description: "한옥마을 사이사이 숨은 맛집 4곳", theme: "#7C3AED", updatedAt: "2026-03-18T00:00:00.000Z" },
   { id: "demo-mangwon", title: "망원동 로컬 산책", description: "망리단길 중심 카페·빵집 코스", theme: "#12B981", updatedAt: "2026-03-22T00:00:00.000Z" },
 ]

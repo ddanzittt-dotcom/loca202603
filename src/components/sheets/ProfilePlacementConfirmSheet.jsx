@@ -12,11 +12,18 @@ import { BottomSheet } from "../ui"
 //   onCancel    () => void
 export function ProfilePlacementConfirmSheet({ open, mode, mapTitle, submitting = false, onConfirm, onCancel }) {
   const isRemove = mode === "remove"
-  const title = isRemove ? "프로필에서 내릴까요?" : "이 지도를 내 프로필에 공개할까요?"
-  const subtitle = isRemove ? "링크 공유 상태는 그대로 유지돼요" : "이 지도가 내 프로필 갤러리에 나타나요"
-  const primaryLabel = isRemove
-    ? (submitting ? "내리는 중..." : "프로필에서 내리기")
-    : (submitting ? "공개하는 중..." : "내 프로필에 공개")
+  const isRemoveForUnpublish = mode === "removeForUnpublish"
+  const title = isRemoveForUnpublish
+    ? "링크 공유를 끄고 프로필에서도 내릴까요?"
+    : isRemove ? "프로필에서 내릴까요?" : "이 지도를 내 프로필에 공개할까요?"
+  const subtitle = isRemoveForUnpublish
+    ? "링크 공유를 끄면 이 지도는 프로필에서도 보이지 않아요"
+    : isRemove ? "링크 공유 상태는 그대로 유지돼요" : "이 지도가 내 프로필 갤러리에 나타나요"
+  const primaryLabel = isRemoveForUnpublish
+    ? (submitting ? "끄는 중..." : "끄고 내리기")
+    : isRemove
+      ? (submitting ? "내리는 중..." : "프로필에서 내리기")
+      : (submitting ? "공개하는 중..." : "내 프로필에 공개")
 
   return (
     <BottomSheet open={open} title={title} subtitle={subtitle} onClose={onCancel}>
@@ -37,7 +44,7 @@ export function ProfilePlacementConfirmSheet({ open, mode, mapTitle, submitting 
             취소
           </button>
           <button
-            className={`button ${isRemove ? "button--danger" : "button--primary"}`}
+            className={`button ${isRemove || isRemoveForUnpublish ? "button--danger" : "button--primary"}`}
             type="button"
             onClick={onConfirm}
             disabled={submitting}

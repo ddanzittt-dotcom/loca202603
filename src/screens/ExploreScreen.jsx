@@ -157,7 +157,7 @@ export function ExploreScreen({
   const trimmed = query.trim()
   const normalizedQuery = trimmed.toLowerCase()
   const showAllSections = section === "all"
-  const showCommunitySection = section === "all" || section === "community"
+  const showCommunitySection = section === "community"
   const showEventsSection = section === "all" || section === "events"
   const handledSearchRequestRef = useRef(0)
 

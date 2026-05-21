@@ -905,19 +905,19 @@ export function useFeatureEditing({
     }
 
     if (editorMode === "route" || editorMode === "area") {
-      // 모두의 지도: 경로/영역의 각 점도 2km 이내여야 한다 (보고서 11.2)
+      // 모두의 지도: 길/영역의 각 점도 2km 이내여야 한다 (보고서 11.2)
       if (!checkCommunityDistance(activeMapSource, myLocation, sc.lat, sc.lng, showToast)) return
       setDraftPoints((current) => [...current, [sc.lng, sc.lat]])
     }
   }
 
   const completeRoute = async (draftPoints) => {
-    if (!activeMapId || draftPoints.length < 2) return showToast("경로는 최소 2개 지점이 필요해요.")
+    if (!activeMapId || draftPoints.length < 2) return showToast("길은 최소 2개 지점이 필요해요.")
     let nextFeature = {
       id: createId("feat"),
       mapId: activeMapId,
       type: "route",
-      title: "새 경로",
+      title: "새 길",
       emoji: "\uD83D\uDEE3\uFE0F",
       style: getDefaultFeatureStyle("route"),
       points: sanitizePoints(draftPoints),
@@ -939,7 +939,7 @@ export function useFeatureEditing({
           })
         } catch (error) {
           console.error("Failed to create community route", error)
-          return showToast("경로를 저장하지 못했어요.")
+          return showToast("길을 저장하지 못했어요.")
         }
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
@@ -971,7 +971,7 @@ export function useFeatureEditing({
           )
         } catch (error) {
           console.error("Failed to create route", error)
-          return showToast("경로를 저장하지 못했어요.")
+          return showToast("길을 저장하지 못했어요.")
         }
       }
       setFeatures((current) => [nextFeature, ...current])
@@ -991,7 +991,7 @@ export function useFeatureEditing({
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
     setFeatureSheet(toEditableFeature(nextFeature))
-    showToast("경로를 저장했어요.")
+    showToast("길을 저장했어요.")
   }
 
   const completeArea = async (draftPoints) => {

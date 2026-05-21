@@ -17,8 +17,9 @@ import { ReportDialog } from "../components/viewer/ReportDialog"
 import { SpotComments } from "../components/viewer/SpotComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
+import { BrandLogo } from "../components/BrandLogo"
 
-// 경로 길이 (haversine) — FeaturePopupCard 의 routeLengthKm prop 으로 전달
+// 길 길이 (haversine) — FeaturePopupCard 의 routeLengthKm prop 으로 전달
 function computeRouteLengthKm(points) {
   if (!Array.isArray(points) || points.length < 2) return null
   const R = 6371
@@ -800,7 +801,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
         {/* Bottom frame */}
         <div className="lw-ci-bottom">
           <span className="lw-ci-powered">Powered by</span>
-          <span className="lw-ci-powered-logo">loca</span>
+          <BrandLogo as="span" className="lw-ci-powered-logo" dotClassName="lw-ci-powered-logo__dot" />
         </div>
       </div>
 

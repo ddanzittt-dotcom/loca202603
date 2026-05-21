@@ -6,6 +6,23 @@ import QRCode from "qrcode"
 const CANVAS_W = 1080
 const CANVAS_H = 1350
 
+function drawBrandLogo(ctx, x, y, size, align = "center") {
+  ctx.save()
+  ctx.font = `900 ${size}px Pretendard Variable`
+  ctx.textBaseline = "middle"
+  ctx.textAlign = align
+  ctx.fillStyle = "#101010"
+  const word = "loca"
+  const wordWidth = ctx.measureText(word).width
+  const dotWidth = ctx.measureText(".").width
+  const startX = align === "center" ? x - (wordWidth + dotWidth) / 2 : x - wordWidth - dotWidth
+  ctx.textAlign = "left"
+  ctx.fillText(word, startX, y)
+  ctx.fillStyle = "#ff4b2e"
+  ctx.fillText(".", startX + wordWidth, y)
+  ctx.restore()
+}
+
 const FRAMES = [
   { id: "magazine", label: "매거진" },
   { id: "cute", label: "큐트맵" },
@@ -330,7 +347,7 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
     const qrCanvas = document.createElement("canvas")
     QRCode.toCanvas(qrCanvas, qrUrl, { width: 140, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000", light: "#fff" } })
       .then(() => {
-        // Draw logo emoji in center
+        // Draw the same wordmark used in the home tab.
         const ctx = qrCanvas.getContext("2d")
         const logoSize = Math.round(140 * 0.15)
         const cx = 70, cy = 70
@@ -338,10 +355,7 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
         ctx.beginPath()
         ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
         ctx.fill()
-        ctx.font = `${logoSize}px Pretendard Variable`
-        ctx.textAlign = "center"
-        ctx.textBaseline = "middle"
-        ctx.fillText("📍", cx, cy)
+        drawBrandLogo(ctx, cx, cy, Math.round(logoSize * 0.58))
         setQrImage(qrCanvas)
       })
       .catch((err) => {

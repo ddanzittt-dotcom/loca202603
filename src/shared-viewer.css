@@ -500,10 +500,14 @@
 
 .lw-ci-powered-logo {
   font-size: 8px;
-  color: rgba(255,255,255,.4);
+  color: rgba(255,255,255,.55);
   font-family: var(--font-sans, "Pretendard Variable");
-  font-weight: 500;
+  font-weight: 900;
+  letter-spacing: -0.04em;
   margin-left: 2px;
+}
+.lw-ci-powered-logo__dot {
+  color: var(--accent, #ff4b2e);
 }
 
 /* ═══════════════════════════════════════════════
@@ -983,7 +987,7 @@
 .lw-walk-info__nav-btn:active { opacity: 0.8; }
 .lw-walk-info__nav-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* ── 경로 버튼 (헤더 인라인) ── */
+/* ── 길 버튼 (헤더 인라인) ── */
 .lw-route-btn {
   padding: 4px 10px;
   background: #2D4A3E;

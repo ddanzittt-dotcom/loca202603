@@ -79,7 +79,7 @@ export function PlacesScreen({
   onCreateRecord,
   embedded = false,
   title = "장소",
-  subtitle = "저장한 장소와 길·코스를 빠르게 찾기",
+  subtitle = "저장한 장소와 길을 빠르게 찾기",
 }) {
   const [query, setQuery] = useState("")
   const [mapFilter, setMapFilter] = useState("all")

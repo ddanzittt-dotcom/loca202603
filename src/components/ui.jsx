@@ -268,7 +268,7 @@ export function MapCard({
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /></svg>
                 {pins.length}
               </span>
-              <span className="mc__count" aria-label={`경로 ${routes.length}`}>
+              <span className="mc__count" aria-label={`길 ${routes.length}`}>
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 19L10 7L16 14L20 5" /></svg>
                 {routes.length}
               </span>

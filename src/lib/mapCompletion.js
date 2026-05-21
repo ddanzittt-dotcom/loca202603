@@ -57,10 +57,10 @@ export function getMapCompletionSnapshot(map, features) {
   score += tagPoints
   breakdown.push({ key: "tags", label: "태그", points: tagPoints, max: 10, done: tagRatio >= 0.5 })
 
-  // 6. 경로 존재
+  // 6. 길 존재
   const hasRoute = routes.length > 0
   if (hasRoute) score += 10
-  breakdown.push({ key: "route", label: "경로", points: hasRoute ? 10 : 0, max: 10, done: hasRoute })
+  breakdown.push({ key: "route", label: "길", points: hasRoute ? 10 : 0, max: 10, done: hasRoute })
 
   // 7. 영역 존재
   const hasArea = areas.length > 0

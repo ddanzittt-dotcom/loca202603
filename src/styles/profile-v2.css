@@ -15,6 +15,8 @@
 /* ---------- 프로필 카드 ---------- */
 .profile-v4--v2 .pf {
   font-family: var(--font-sans);
+  width: min(100%, 430px);
+  padding-top: 2px;
 }
 
 /* ============================================================
@@ -24,31 +26,30 @@
 .pf-v2-card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: var(--radius-big);
-  padding: 18px 18px 16px;
-  margin: 0 16px 16px;
+  border-radius: 9px;
+  padding: 16px 15px 15px;
+  margin: 0 9px 14px;
   font-family: var(--font-sans);
-  box-shadow: 0 2px 6px var(--line);
+  box-shadow: 0 1px 4px rgba(30, 25, 20, 0.035);
 }
 
 .pf-v2-card__head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 11px;
 }
 
 .pf-v2-card__avatar {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--ink-strong);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.02em;
   flex-shrink: 0;
@@ -60,19 +61,37 @@
   object-fit: cover;
 }
 
+.pf-v2-card__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-v2-card__name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
 .pf-v2-card__edit {
-  background: var(--accent-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  background: var(--card);
   color: var(--accent-deep);
-  border: 1px solid var(--accent-soft);
+  border: 1.2px solid var(--accent);
   border-radius: var(--radius-pill);
-  padding: 6px 14px;
+  min-width: 58px;
+  height: 28px;
+  padding: 0 10px;
   font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: -0.015em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  align-self: flex-start;
 }
 .pf-v2-card__edit:hover {
   background: var(--accent-soft);
@@ -88,37 +107,44 @@
   gap: 5px;
   background: var(--accent-faint);
   color: var(--accent-deep);
-  border-radius: var(--radius-pill);
-  padding: 4px 10px;
-  font-size: 11px;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: -0.015em;
-  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+  margin-bottom: 5px;
 }
 
 .pf-v2-card__name {
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
   font-size: 18px;
   font-weight: 800;
   color: var(--ink-strong);
   letter-spacing: -0.025em;
-  line-height: 1.2;
+  line-height: 1.16;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pf-v2-card__handle {
-  margin: 2px 0 10px;
-  font-size: 12px;
+  margin: 0;
+  overflow: hidden;
+  font-size: 11px;
   font-weight: 600;
   color: var(--ink-mute);
   letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pf-v2-card__bio {
-  margin: 0 0 8px;
-  font-size: 13px;
+  margin: 0 0 7px;
+  font-size: 12.5px;
   color: var(--ink-soft);
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.5;
   letter-spacing: -0.005em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -130,27 +156,49 @@
 .pf-v2-card__link {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  max-width: 100%;
+  gap: 5px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: var(--ink-strong);
-  text-decoration: underline;
+  color: var(--ink-soft);
+  text-decoration: none;
   text-underline-offset: 2px;
   text-decoration-thickness: 1px;
-  margin: 0 0 12px;
+  margin: 0 0 9px;
 }
 .pf-v2-card__link:hover { color: var(--accent-deep); }
+.pf-v2-card__link span:last-child {
+  overflow: hidden;
+  border-bottom: 1px solid var(--ink-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-v2-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+}
 
 .pf-v2-card__stats {
-  display: inline-flex;
+  display: flex;
   align-items: baseline;
-  gap: 6px;
-  font-size: 12.5px;
+  flex: 1;
+  min-width: 0;
+  gap: 7px;
+  font-size: 11.5px;
   color: var(--ink-soft);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
+.pf-v2-card__stats span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 .pf-v2-card__stats strong {
+  font-size: 14.5px;
   font-weight: 800;
   color: var(--ink-strong);
   margin-right: 3px;
@@ -158,6 +206,33 @@
 .pf-v2-card__stats-sep {
   color: var(--ink-faint);
   font-weight: 400;
+}
+
+.pf-v2-card__share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink-strong);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  cursor: pointer;
+}
+.pf-v2-card__share:hover {
+  border-color: var(--accent-soft);
+  color: var(--accent-deep);
+}
+.pf-v2-card__share:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* (지도 없을 때) 첫 공개 CTA — 카드 내부 풀폭 버튼 */
@@ -341,4 +416,84 @@
 .profile-v4--v2 .pf-avatar {
   background: var(--ink-strong);
   color: var(--card);
+}
+
+/* ---------- 프로필 탭 지도 그리드 압축 ---------- */
+.profile-v4--v2 .pf__section-head {
+  align-items: center;
+  padding: 0 9px;
+  margin-bottom: 10px;
+}
+
+.profile-v4--v2 .pf__section-head h2 {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+
+.profile-v4--v2 .pf__section-head h2 em {
+  color: var(--accent-deep);
+  font-style: normal;
+}
+
+.profile-v4--v2 .pf__section-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profile-v4--v2 .pf__gallery {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 9px 18px;
+}
+
+.profile-v4--v2 .pf__mini-card {
+  border-color: var(--line);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(30, 25, 20, 0.035);
+}
+
+.profile-v4--v2 .pf__mini-card:hover {
+  transform: translateY(-1px);
+}
+
+.profile-v4--v2 .pf__mini-map {
+  aspect-ratio: 16 / 11;
+  background: var(--map);
+}
+
+.profile-v4--v2 .pf__mini-body {
+  padding: 10px 11px 12px;
+}
+
+.profile-v4--v2 .pf__mini-title {
+  font-size: 12.5px;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+.profile-v4--v2 .pf__mini-meta {
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+@media (max-width: 340px) {
+  .profile-v4--v2 .pf {
+    width: 100%;
+  }
+
+  .pf-v2-card {
+    margin-inline: 8px;
+  }
+
+  .profile-v4--v2 .pf__section-head,
+  .profile-v4--v2 .pf__gallery {
+    padding-inline: 8px;
+  }
 }

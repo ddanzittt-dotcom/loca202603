@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { markWelcomeSeen } from "../lib/onboarding"
+import { BrandLogo } from "../components/BrandLogo"
 
 export function WelcomeScreen({ onStart, onAddFirstPlace }) {
   const [imgError, setImgError] = useState(false)
@@ -19,7 +20,7 @@ export function WelcomeScreen({ onStart, onAddFirstPlace }) {
   return (
     <section className="welcome-screen">
       <div className="welcome-screen__body">
-        <strong className="welcome-screen__logo">LOCA</strong>
+        <BrandLogo className="welcome-screen__logo" dotClassName="welcome-screen__logo-dot" />
         {imgError ? (
           <span className="welcome-screen__character-fallback">☁️</span>
         ) : (

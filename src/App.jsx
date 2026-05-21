@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { Settings as SettingsIcon } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
+import { BrandLogo } from "./components/BrandLogo"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -130,6 +131,7 @@ export default function App() {
   const [focusPoint, setFocusPoint] = useState(null)
   const [mapSheet, setMapSheet] = useState(null)
   const [featureSheet, setFeatureSheet] = useState(null)
+  const [featureSheetMode, setFeatureSheetMode] = useState("detail")
   // 모두의 지도 → 내 지도 가져오기 타겟 선택 시트
   const [importTargetSheet, setImportTargetSheet] = useState(null) // { featureId } | null
   const [importTargetBusy, setImportTargetBusy] = useState(false)
@@ -145,7 +147,7 @@ export default function App() {
   const [recordTargetMapId, setRecordTargetMapId] = useState(null)
   const [pendingRecordAfterMapCreate, setPendingRecordAfterMapCreate] = useState(false)
   // 프로필 공개/내리기 공통 confirm 시트 상태
-  const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove', mapId, onSuccess? }
+  const [profilePlacementSheet, setProfilePlacementSheet] = useState(null) // { mode: 'add'|'remove'|'removeForUnpublish', mapId, onSuccess? }
   const [profilePlacementSubmitting, setProfilePlacementSubmitting] = useState(false)
   // characterStyle 폐기 (2026-05) — 레벨/XP 위젯 제거에 따라 캐릭터 마커도 제거.
   const [publishSubmitting, setPublishSubmitting] = useState(false)
@@ -490,6 +492,7 @@ export default function App() {
         ? ["🏙️", "🌳", "🏞️", "🏝️", "🏕️", "🏟️", "🛍️", "🏛️", "🏠", "📌"]
         : placeEmojis
     : []
+  const isDraftFeatureSheet = Boolean(featureSheet && ["새 장소", "새 길", "새 영역", `새 ${"\uACBD\uB85C"}`].includes((featureSheet.title || "").trim()))
 
   // --- Hooks ---
 
@@ -842,7 +845,9 @@ export default function App() {
     try {
       const ok = profilePlacementSheet.mode === "remove"
         ? await removeMapFromProfile(profilePlacementSheet.mapId)
-        : await addMapToProfile(profilePlacementSheet.mapId)
+        : profilePlacementSheet.mode === "removeForUnpublish"
+          ? (await unpublish(profilePlacementSheet.mapId), true)
+          : await addMapToProfile(profilePlacementSheet.mapId)
       if (ok) {
         profilePlacementSheet.onSuccess?.()
         setProfilePlacementSheet(null)
@@ -850,7 +855,26 @@ export default function App() {
     } finally {
       setProfilePlacementSubmitting(false)
     }
-  }, [addMapToProfile, profilePlacementSheet, removeMapFromProfile])
+  }, [addMapToProfile, profilePlacementSheet, removeMapFromProfile, unpublish])
+
+  const handleMapEditorPublish = useCallback(async (mapId) => {
+    const publishedMapId = await publishMap(mapId)
+    if (publishedMapId) {
+      requestProfilePlacement("add", publishedMapId)
+    }
+    return publishedMapId
+  }, [publishMap, requestProfilePlacement])
+
+  const handleMapEditorUnpublish = useCallback(async (mapId) => {
+    if (!mapId) return false
+    const isOnProfile = shares.some((share) => share.mapId === mapId)
+    if (isOnProfile) {
+      requestProfilePlacement("removeForUnpublish", mapId)
+      return false
+    }
+    await unpublish(mapId)
+    return true
+  }, [requestProfilePlacement, shares, unpublish])
 
   const handleSaveSharedMap = useCallback(async () => {
     if (savingSharedMap) return
@@ -1229,7 +1253,7 @@ export default function App() {
       <header className={`top-bar${(activeTab === "maps" && mapsView === "list") || activeTab === "explore" ? " top-bar--blank" : ""}`}>
         <div>
           {!((activeTab === "maps" && mapsView === "list") || activeTab === "explore") ? (
-            <strong className="brand">LOCA</strong>
+            <BrandLogo className="brand" dotClassName="brand__dot" />
           ) : null}
           {!(activeTab === "maps" && mapsView === "list") && headerConfig.subtitle ? (
             <span className="top-bar__subtitle">{headerConfig.subtitle}</span>
@@ -1298,11 +1322,14 @@ export default function App() {
             maps={maps}
             features={features}
             recommendedMaps={recommendedMaps}
+            communityMaps={communityMapMeta}
+            communityFeatures={communityMapFeatures}
             viewerProfile={viewerProfile}
             onResumeMyMap={openMapEditor}
             onOpenFeatureInMap={(_, featureId) => openFeatureFromPlaces(featureId)}
             onCreateMap={openRecordFlow}
             onOpenMap={openDemoMap}
+            onOpenCommunityEditor={openCommunityMapEditor}
             onNavigateToExplore={openExploreTab}
             onOpenExploreSearch={openExploreSearch}
             onOpenNotifications={() => setNotiPanelOpen(true)}
@@ -1431,7 +1458,10 @@ export default function App() {
               setEditorMode("browse")
             }}
             onToggleLabels={() => setShowMapLabels((current) => !current)}
-            onOpenFeatureDetail={openFeatureDetail}
+            onOpenFeatureDetail={(featureId) => {
+              setFeatureSheetMode("detail")
+              openFeatureDetail(featureId)
+            }}
             onAddMemo={addMemo}
             importedCommunityFeatureIds={importedCommunityFeatureIds}
             onImportCommunityFeature={handleImportCommunityFeatureRequest}
@@ -1439,11 +1469,8 @@ export default function App() {
             onRequestCommunityUpdateFromSummary={requestCommunityFeatureUpdateById}
             onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
             placementRow={findPlacementForMap(activeMap?.id, shares)}
-            onPublishMap={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
-            onUnpublishMap={(mapId) => {
-              if (!window.confirm("링크 공유를 중지할까요?\n링크 공유를 중지하면 프로필에서도 내려가요.")) return
-              unpublish(mapId)
-            }}
+            onPublishMap={handleMapEditorPublish}
+            onUnpublishMap={handleMapEditorUnpublish}
             onAddMapToProfile={(mapId) => requestProfilePlacement("add", mapId)}
             onRemoveMapFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
             onCloseFeatureSummary={() => {
@@ -1526,7 +1553,7 @@ export default function App() {
       </main>
 
       {/* 공유 지도 viewer / feature 편집 시트 / 키보드 표시 중에는 BottomNav 숨김 */}
-      {(activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer) || keyboardVisible || Boolean(featureSheet) ? null : (
+      {(activeTab === "maps" && mapsView === "editor") || keyboardVisible || Boolean(featureSheet) ? null : (
       <BottomNavV2
         tab={activeTab}
         onTabChange={handleBottomNavChange}
@@ -1559,7 +1586,8 @@ export default function App() {
           activeMapSource === "local"
           || (isCommunityFeature && (featureSheet.createdBy || null) === viewerProfile.id)
         )
-        if (canDirectlyEdit) {
+        const shouldShowEditor = canDirectlyEdit && (featureSheetMode === "edit" || isDraftFeatureSheet || featureSheet?._focusName)
+        if (shouldShowEditor) {
           return (
             <FeatureEditSheet
               featureSheet={featureSheet}
@@ -1567,7 +1595,7 @@ export default function App() {
               mapMode={isCommunityFeature ? "community" : "personal"}
               mapTitle={activeMap?.title || ""}
               readOnly={mapEditorReadOnly}
-              onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
+              onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null); setFeatureSheetMode("detail") }}
               onSave={saveFeatureSheet}
               onDelete={deleteFeature}
               onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
@@ -1589,7 +1617,8 @@ export default function App() {
             activeMapSource={activeMapSource} featureEmojiChoices={featureEmojiChoices}
             readOnly={mapEditorReadOnly}
             currentUserId={viewerProfile.id}
-            onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null) }}
+            onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null); setFeatureSheetMode("detail") }}
+            onEdit={canDirectlyEdit ? () => setFeatureSheetMode("edit") : undefined}
             onSave={saveFeatureSheet} onDelete={deleteFeature}
             onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
             photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}

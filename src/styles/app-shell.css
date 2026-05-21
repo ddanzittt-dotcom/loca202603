@@ -29,7 +29,7 @@
 
 .loca-v2-shell__brand {
   font-family: var(--font-sans);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 900;
   letter-spacing: -0.04em;
   color: var(--ink-strong);
@@ -89,10 +89,12 @@
 /* ----- BottomNavV2 ----- */
 .loca-v2-bottomnav {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  right: auto;
   bottom: 0;
+  width: min(100%, 480px);
   height: 76px;
+  box-sizing: border-box;
   padding-bottom: env(safe-area-inset-bottom, 10px);
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
@@ -101,6 +103,7 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--line);
+  transform: translateX(-50%);
   z-index: 50;
 }
 

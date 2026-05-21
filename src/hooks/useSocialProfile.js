@@ -22,10 +22,13 @@ export function useSocialProfile({
   pendingSharePlace, setPendingSharePlace,
   touchMap, showToast,
 }) {
-  const handleUpdateProfile = useCallback(async ({ name, bio, emoji, avatarUrl, handle, link }) => {
+  const handleUpdateProfile = useCallback(async ({ name, alias, bio, emoji, avatarUrl, handle, link }) => {
     setViewerProfile((prev) => ({
       ...prev,
       name: name ?? prev.name,
+      alias: alias !== undefined ? alias : prev.alias,
+      tagline: alias !== undefined ? alias : prev.tagline,
+      ho: alias !== undefined ? alias : prev.ho,
       bio: bio ?? prev.bio,
       emoji: emoji ?? prev.emoji,
       avatarUrl: avatarUrl !== undefined ? avatarUrl : prev.avatarUrl,
@@ -37,6 +40,7 @@ export function useSocialProfile({
       try {
         const updates = {}
         if (name != null) updates.nickname = name
+        if (alias !== undefined) updates.alias = alias
         if (bio != null) updates.bio = bio
         if (avatarUrl != null) updates.avatar_url = avatarUrl
         else if (emoji != null) updates.avatar_url = emoji

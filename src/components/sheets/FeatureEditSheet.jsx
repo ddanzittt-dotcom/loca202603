@@ -13,7 +13,7 @@ import {
 } from "../../lib/featureStyle"
 
 /*
- * FeatureEditSheet — 장소 · 경로 · 영역 편집 바텀시트 (작성자 편집 전용).
+ * FeatureEditSheet — 장소 · 길 · 영역 편집 바텀시트 (작성자 편집 전용).
  *
  * 시안: design/2.loca_place_card_proposal_v5.html
  * 브리프: design/2.CLAUDE_CODE_BRIEF_PLACE_CARD.md
@@ -27,7 +27,7 @@ import {
  * 기존 useFeatureEditing 훅의 save/delete/addMemo 핸들러를 그대로 재사용한다.
  */
 
-// 핀 색상 팔레트 — 공통 6색 (장소·경로·영역 전부 동일). 시안 기준.
+// 핀 색상 팔레트 — 공통 6색 (장소·길·영역 전부 동일). 시안 기준.
 const PIN_COLOR_PALETTE = [
   "#FF6B35", // orange
   "#2D4A3E", // green
@@ -47,14 +47,15 @@ const DEFAULT_EMOJI_BY_TYPE = {
 const TAG_TONES = ["", "mint", "amber"]
 function tagToneByIndex(idx) { return TAG_TONES[idx % TAG_TONES.length] }
 
+const LEGACY_ROUTE_DEFAULT_TITLE = `새 ${"\uACBD\uB85C"}`
 // 지도 기본 이름 ("새 장소" 등) 탐지 — 빈 상태 UI 분기용
-const DEFAULT_TITLE_TOKENS = new Set(["", "새 장소", "새 경로", "새 영역"])
+const DEFAULT_TITLE_TOKENS = new Set(["", "새 장소", "새 길", "새 영역", LEGACY_ROUTE_DEFAULT_TITLE])
 function isCreatingState(feature) {
   const t = (feature?.title || "").trim()
   return DEFAULT_TITLE_TOKENS.has(t)
 }
 
-// 경로 길이 (km) — haversine 합산
+// 길 길이 (km) — haversine 합산
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const toRad = (d) => (d * Math.PI) / 180
@@ -309,7 +310,7 @@ function MeasureInfo({ type, feature }) {
     const sqm = polygonAreaSqm(feature?.points)
     const label = formatSqm(sqm)
     if (!label) return null
-    // 권역(도보 N분) — 반경 기반 근사
+    // 영역 이동 시간 — 반경 기반 근사
     const radiusKm = sqm ? Math.sqrt(sqm / Math.PI) / 1000 : 0
     const mins = walkingMinutes(radiusKm * 2) // 지름 기준 통과 시간
     return (
@@ -319,7 +320,7 @@ function MeasureInfo({ type, feature }) {
         </svg>
         <span>
           영역 면적 <strong>{label}</strong>
-          {mins ? <> · 도보 {mins}분 권역</> : null}
+          {mins ? <> · 도보 {mins}분 영역</> : null}
         </span>
       </div>
     )
@@ -582,7 +583,7 @@ export function FeatureEditSheet({
   const creating = isCreatingState(featureSheet)
   const style = normalizeFeatureStyle(featureSheet.style, type)
 
-  const sheetTitle = type === "route" ? "경로" : type === "area" ? "영역" : "장소"
+  const sheetTitle = type === "route" ? "길" : type === "area" ? "영역" : "장소"
   const metaLine = (() => {
     if (isCommunity) {
       const authorName = featureSheet.createdByName
@@ -694,17 +695,17 @@ export function FeatureEditSheet({
         {/* --- 색상 --- */}
         <div className="fes-field">
           <FieldLabel hint={
-            type === "route" ? "지도에 표시될 경로 색"
+            type === "route" ? "지도에 표시될 길 색"
               : type === "area" ? "지도에 표시될 영역 색"
                 : "지도에 표시될 장소 색"
           }>색상</FieldLabel>
           <ColorPalette value={style.color} onChange={(color) => updateStyle({ color })} />
         </div>
 
-        {/* --- 선 종류 (경로·영역만) --- */}
+        {/* --- 선 종류 (길·영역만) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
-            <FieldLabel hint={type === "area" ? "영역 외곽선 스타일" : "경로의 선 스타일"}>선 종류</FieldLabel>
+            <FieldLabel hint={type === "area" ? "영역 외곽선 스타일" : "길의 선 스타일"}>선 종류</FieldLabel>
             <LineStylePicker value={style.lineStyle} onChange={(lineStyle) => updateStyle({ lineStyle })} />
           </div>
         ) : null}
@@ -720,7 +721,7 @@ export function FeatureEditSheet({
             value={DEFAULT_TITLE_TOKENS.has(featureSheet.title || "") ? "" : featureSheet.title}
             placeholder={
               type === "pin" ? "장소 이름"
-                : type === "route" ? "경로 이름"
+                : type === "route" ? "길 이름"
                   : "영역 이름"
             }
             onChange={(e) => setFeatureSheet((c) => ({ ...c, title: e.target.value }))}
@@ -746,7 +747,7 @@ export function FeatureEditSheet({
             <FieldLabel>설명</FieldLabel>
           ) : (
             <FieldLabel hint={
-              type === "route" ? "어떤 경로인지 짧게"
+              type === "route" ? "어떤 길인지 짧게"
                 : type === "area" ? "어떤 영역인지 짧게"
                   : "어떤 장소인지 짧게"
             }>한 줄 소개</FieldLabel>
@@ -768,7 +769,7 @@ export function FeatureEditSheet({
           />
         </div>
 
-        {/* --- 측정 정보 (경로·영역) --- */}
+        {/* --- 측정 정보 (길·영역) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
             <MeasureInfo type={type} feature={featureSheet} />
