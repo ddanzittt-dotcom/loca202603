@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { getMedia } from "../lib/mediaStore"
+import { useResolvedMediaUrl } from "../hooks/useResolvedMediaUrl"
 
 function PhotoViewer({ src, onClose }) {
   useEffect(() => {
@@ -16,46 +16,13 @@ function PhotoViewer({ src, onClose }) {
 }
 
 export function MediaPhoto({ mediaId, localId, date, onDelete, cloudUrl }) {
-  const [localSrc, setLocalSrc] = useState(null)
-  const [loadFailed, setLoadFailed] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
-  useEffect(() => {
-    if (cloudUrl) return
-    let url = null
-    let cancelled = false
-    const tryLoad = async () => {
-      // localId → mediaId 순으로 시도
-      for (const key of [localId, mediaId].filter(Boolean)) {
-        try {
-          const blob = await getMedia(key)
-          if (blob && !cancelled) {
-            url = URL.createObjectURL(blob)
-            setLocalSrc(url)
-            return
-          }
-        } catch { /* continue */ }
-      }
-      if (!cancelled) setLoadFailed(true)
-    }
-    tryLoad()
-    return () => { cancelled = true; if (url) URL.revokeObjectURL(url) }
-  }, [mediaId, localId, cloudUrl])
-  const src = cloudUrl || localSrc
-  if (!src && loadFailed) {
-    return (
-      <div className="feature-photo-thumb-wrap">
-        <div className="feature-photo-thumb feature-photo-thumb--lost">
-          <span>사진 손실</span>
-        </div>
-        {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
-      </div>
-    )
-  }
+  const { src, markRemoteFailed } = useResolvedMediaUrl({ id: mediaId, localId, url: cloudUrl })
   if (!src) return null
   const formattedDate = date ? new Date(date).toLocaleDateString("ko-KR", { month: "long", day: "numeric" }) : ""
   return (
     <div className="feature-photo-thumb-wrap">
-      <img src={src} alt="" className="feature-photo-thumb" onClick={() => setViewerOpen(true)} style={{ cursor: "pointer" }} />
+      <img src={src} alt="" className="feature-photo-thumb" onClick={() => setViewerOpen(true)} onError={markRemoteFailed} style={{ cursor: "pointer" }} />
       {onDelete ? <button className="feature-photo-delete" type="button" onClick={onDelete}>&times;</button> : null}
       {formattedDate ? <span className="feature-photo-date">{formattedDate}</span> : null}
       {viewerOpen ? <PhotoViewer src={src} onClose={() => setViewerOpen(false)} /> : null}
@@ -64,22 +31,9 @@ export function MediaPhoto({ mediaId, localId, date, onDelete, cloudUrl }) {
 }
 
 export function MediaVoice({ mediaId, localId, duration, onDelete, cloudUrl }) {
-  const [localSrc, setLocalSrc] = useState(null)
   const [playing, setPlaying] = useState(false)
   const audioRef = useRef(null)
-  useEffect(() => {
-    if (cloudUrl) return
-    let url = null
-    const key = localId || mediaId
-    getMedia(key).then((blob) => {
-      if (blob) {
-        url = URL.createObjectURL(blob)
-        setLocalSrc(url)
-      }
-    })
-    return () => { if (url) URL.revokeObjectURL(url) }
-  }, [mediaId, localId, cloudUrl])
-  const src = cloudUrl || localSrc
+  const { src, markRemoteFailed } = useResolvedMediaUrl({ id: mediaId, localId, url: cloudUrl }, { preferLocal: true })
   const togglePlay = () => {
     if (!audioRef.current) return
     if (playing) {
@@ -92,7 +46,7 @@ export function MediaVoice({ mediaId, localId, duration, onDelete, cloudUrl }) {
   }
   return (
     <div className="feature-voice-card">
-      {src ? <audio ref={audioRef} src={src} onEnded={() => setPlaying(false)} /> : null}
+      {src ? <audio ref={audioRef} src={src} onEnded={() => setPlaying(false)} onError={markRemoteFailed} /> : null}
       <button className="feature-voice-card__play" type="button" onClick={togglePlay} disabled={!src}>
         {playing ? "⏸" : "▶"}
       </button>

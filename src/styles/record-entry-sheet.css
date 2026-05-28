@@ -202,6 +202,16 @@
   flex-shrink: 0;
   background: var(--bg-deep);
 }
+.res-photo-view {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: block;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 .res-photo-thumb img {
   width: 100%;
   height: 100%;

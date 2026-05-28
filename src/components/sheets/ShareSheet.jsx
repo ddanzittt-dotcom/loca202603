@@ -255,9 +255,12 @@ export function ShareSheet({
   }, [map?.id, map?.slug, map?.title, qrDownloading, qrUrl, showToast])
 
   const placement = getProfilePlacementState(map || {}, null)
-  const canToggleShare = placement.isPublished
-    ? typeof onUnpublishMap === "function"
-    : typeof onPublishMap === "function"
+  const canManageShare = map?.canManage !== false
+  const canToggleShare = canManageShare && (
+    placement.isPublished
+      ? typeof onUnpublishMap === "function"
+      : typeof onPublishMap === "function"
+  )
   const handleToggleShare = useCallback(async () => {
     if (!map?.id || shareToggling || !canToggleShare) return
     setShareToggling(true)

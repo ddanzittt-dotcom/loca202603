@@ -1,5 +1,8 @@
+import { useState } from "react"
 import { PhotoBlock } from "./PhotoBlock"
 import { AudioChip } from "./AudioChip"
+import { PhotoViewer } from "./PhotoViewer"
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
 
 /**
  * DiaryBanner — 상세 화면/축약 카드의 일기 entry 카드.
@@ -24,7 +27,41 @@ import { AudioChip } from "./AudioChip"
  *   }
  *   accent — 좌측 보더 컬러 (item 색, 기본 --accent)
  */
+function DiaryPhotoBlock({ photo, onOpen }) {
+  const { src, markRemoteFailed } = useResolvedMediaUrl(photo)
+  return (
+    <button
+      type="button"
+      className="loca-v2-diary-banner__photo-button"
+      onClick={onOpen}
+      aria-label="사진 보기"
+    >
+      <PhotoBlock
+        size={44}
+        radius={7}
+        src={src}
+        alt=""
+        tone={photo?.tone || "a"}
+        onImageError={markRemoteFailed}
+      >
+        {src ? null : (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 5,
+              background:
+                "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 4px)",
+            }}
+          />
+        )}
+      </PhotoBlock>
+    </button>
+  )
+}
+
 export function DiaryBanner({ entry, accent }) {
+  const [viewerIndex, setViewerIndex] = useState(null)
   if (!entry) return null
   const accentColor = accent || "var(--accent)"
   const isToday = Boolean(entry.isToday)
@@ -62,26 +99,11 @@ export function DiaryBanner({ entry, accent }) {
           {photoList.length > 0 ? (
             <div className="loca-v2-diary-banner__photos">
               {photoList.slice(0, 3).map((p, i) => (
-                <PhotoBlock
-                  key={i}
-                  size={44}
-                  radius={7}
-                  src={p?.src}
-                  alt=""
-                  tone={p?.tone || "a"}
-                >
-                  {p?.src ? null : (
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        position: "absolute",
-                        inset: 5,
-                        background:
-                          "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 2px, transparent 2px 4px)",
-                      }}
-                    />
-                  )}
-                </PhotoBlock>
+                <DiaryPhotoBlock
+                  key={p?.id || p?.localId || p?.src || i}
+                  photo={p}
+                  onOpen={() => setViewerIndex(i)}
+                />
               ))}
             </div>
           ) : null}
@@ -99,6 +121,13 @@ export function DiaryBanner({ entry, accent }) {
       {entry.memo ? (
         <p className="loca-v2-diary-banner__memo">{entry.memo}</p>
       ) : null}
+
+      <PhotoViewer
+        open={viewerIndex !== null}
+        photos={photoList}
+        initialIndex={viewerIndex || 0}
+        onClose={() => setViewerIndex(null)}
+      />
     </article>
   )
 }

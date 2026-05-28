@@ -17,12 +17,28 @@ describe("featureMediaMerge", () => {
     expect(merged.memos).toEqual(local.memos)
   })
 
-  it("prefers next media when server media exists", () => {
+  it("keeps localId when matching server media arrives", () => {
+    const local = {
+      id: "f1",
+      photos: [{ id: "server-photo", localId: "local-photo", url: "https://cdn/photo.jpg" }],
+    }
+    const next = {
+      id: "f1",
+      photos: [{ id: "server-photo", url: "https://cdn/photo.jpg" }],
+      voices: [],
+      memos: [],
+    }
+
+    const merged = mergeFeatureMediaFromLocal(next, local)
+    expect(merged.photos).toEqual([{ id: "server-photo", localId: "local-photo", url: "https://cdn/photo.jpg" }])
+  })
+
+  it("keeps local-only media when server media exists", () => {
     const local = { id: "f1", photos: [{ id: "local-photo" }] }
     const next = { id: "f1", photos: [{ id: "server-photo" }], voices: [], memos: [] }
 
     const merged = mergeFeatureMediaFromLocal(next, local)
-    expect(merged.photos).toEqual([{ id: "server-photo" }])
+    expect(merged.photos).toEqual([{ id: "server-photo" }, { id: "local-photo" }])
   })
 
   it("merges list by feature id", () => {

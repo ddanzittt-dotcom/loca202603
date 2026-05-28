@@ -486,6 +486,40 @@
   height: 100% !important;
 }
 
+/* Published share pages mount the map inside the header card. Give that shell
+   a real flex height so the map and place strip cannot collapse on mobile. */
+.lw-viewer--v2 {
+  min-height: 100dvh;
+}
+
+.lw-viewer--v2 .lw-hero {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  padding: 12px 14px 8px;
+}
+
+.lw-viewer--v2 .lw-hero__row1 {
+  flex-shrink: 0;
+}
+
+.lw-viewer--v2 .lw-ci-inner {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.lw-viewer--v2 .lw-event-map {
+  flex: 1 1 auto;
+  min-height: min(58dvh, 520px);
+}
+
+.lw-viewer--v2 .lw-event-map .map-canvas {
+  width: 100%;
+  height: 100% !important;
+  min-height: 100%;
+}
+
 /* Bottom frame */
 .lw-ci-bottom {
   padding: 4px;
@@ -1871,6 +1905,261 @@
   padding: 10px 12px;
   font-size: 13px;
   border-radius: 10px;
+}
+
+/* Mobile shared-map polish: prioritize the map and keep viewer chrome compact. */
+.lw-viewer--v2 .lw-hero {
+  margin: 5px 5px 0;
+  padding: 8px;
+  gap: 6px;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(35, 26, 18, 0.07);
+}
+
+.lw-viewer--v2 .lw-hero__row1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.lw-viewer--v2 .lw-ci-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  background: #FFF0E8;
+  color: #B94725;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lw-viewer--v2 .lw-ci-info {
+  flex: 1 1 calc(100% - 58px);
+  min-width: 0;
+}
+
+.lw-viewer--v2 .lw-ci-title {
+  color: #17120E;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.lw-viewer--v2 .lw-ci-org {
+  color: #84776D;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.lw-viewer--v2 .lw-ci-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 6px;
+}
+
+.lw-viewer--v2 .lw-save-btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  justify-content: center;
+  border-radius: 14px;
+  background: #FFE0D5;
+}
+
+.lw-viewer--v2 .lw-save-btn__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.lw-viewer--v2 .lw-noti-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(45, 74, 62, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  color: #2D4A3E;
+}
+
+.lw-viewer--v2 .lw-share-dropdown {
+  top: calc(100% + 6px);
+  right: 0;
+  border-radius: 16px;
+}
+
+.lw-viewer--v2 .lw-ci-inner {
+  border-radius: 16px;
+  background: #FFFDF9;
+  border: 1px solid rgba(42, 31, 24, 0.06);
+}
+
+.lw-viewer--v2 .lw-chips {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 10px 12px;
+  overflow: visible;
+  border-bottom: 1px solid rgba(42, 31, 24, 0.06);
+}
+
+.lw-viewer--v2 .lw-chips__tools,
+.lw-viewer--v2 .lw-chips__filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.lw-viewer--v2 .lw-chips__tools::-webkit-scrollbar,
+.lw-viewer--v2 .lw-chips__filters::-webkit-scrollbar {
+  display: none;
+}
+
+.lw-viewer--v2 .lw-chips__count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #FFF4EB;
+  color: #D94B25;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lw-viewer--v2 .lw-chip {
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 1px solid rgba(45, 74, 62, 0.12);
+  background: #fff;
+  color: #5D554F;
+  font-size: 12px;
+  font-weight: 750;
+  box-shadow: 0 1px 1px rgba(34, 25, 18, 0.03);
+}
+
+.lw-viewer--v2 .lw-chip.is-active,
+.lw-viewer--v2 .lw-chip--name.is-active {
+  border-color: #2D4A3E;
+  background: #2D4A3E;
+  color: #fff;
+}
+
+.lw-viewer--v2 .lw-chip--locate {
+  color: #2D4A3E;
+}
+
+.lw-viewer--v2 .lw-event-map {
+  margin: 0;
+  border-radius: 16px;
+  min-height: 0;
+}
+
+.lw-viewer--v2 .lw-locate-btn--event {
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(45, 74, 62, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 26px rgba(33, 25, 18, 0.16);
+}
+
+.lw-viewer--v2 .lw-sheet {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border-radius: 16px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(42, 31, 24, 0.08);
+  box-shadow: 0 10px 26px rgba(34, 25, 18, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.lw-viewer--v2 .lw-sheet.is-expanded {
+  max-height: min(58dvh, 520px);
+  border-radius: 16px;
+  padding: 8px;
+}
+
+.lw-viewer--v2 .lw-sheet__handle {
+  background: rgba(45, 74, 62, 0.12);
+  width: 32px;
+  height: 4px;
+  margin-bottom: 5px;
+}
+
+.lw-viewer--v2 .lw-sheet__scroll {
+  gap: 7px;
+  padding: 0 1px 2px;
+  scroll-snap-type: x mandatory;
+}
+
+.lw-viewer--v2 .lw-sheet__card {
+  flex: 0 0 42%;
+  max-width: none;
+  min-width: 0;
+  min-height: 70px;
+  padding: 8px;
+  scroll-snap-align: start;
+  border: 1px solid rgba(42, 31, 24, 0.06);
+  border-radius: 12px;
+  background: #FAF5EE;
+}
+
+.lw-viewer--v2 .lw-sheet__card-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  margin-bottom: 5px;
+}
+
+.lw-viewer--v2 .lw-sheet__card-icon img {
+  width: 12px;
+  height: 12px;
+}
+
+.lw-viewer--v2 .lw-sheet__card-name {
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.lw-viewer--v2 .lw-sheet__card-sub {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.lw-viewer--v2 .lw-ci-bottom {
+  display: none;
+}
+
+@media (max-width: 360px) {
+  .lw-viewer--v2 .lw-hero {
+    margin-inline: 4px;
+    padding: 7px;
+  }
+
+  .lw-viewer--v2 .lw-chip {
+    padding-inline: 12px;
+  }
+
+  .lw-viewer--v2 .lw-sheet__card {
+    flex-basis: 48%;
+  }
 }
 
 /* Keep old class names as aliases for backward compat with NotificationPanel */

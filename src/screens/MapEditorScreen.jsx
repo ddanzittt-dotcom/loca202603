@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
+import { RecordEntrySheet } from "../components/sheets/RecordEntrySheet"
 import { getProfilePlacementState } from "../lib/mapPlacement"
+import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
-import { FeatureEmoji } from "../components/FeatureEmoji"
+import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
+import { createId } from "../lib/appUtils"
+import { buildFeatureRecordGroups, recordEntryId, summarizeRecordGroup } from "../lib/featureRecordGroups"
 
 // 길 길이(km) — 위경도 배열의 haversine 합산
 function computeRouteLengthKm(points) {
@@ -39,6 +43,9 @@ const RECORD_FILTERS = [
   { id: "area", label: "영역" },
   { id: "record", label: "기록 있음" },
 ]
+const LARGE_MAP_STRIP_COLLAPSE_THRESHOLD = 120
+const NEARBY_RECORD_RADIUS_KM = 5
+const DEFAULT_MAP_CENTER = { lat: 37.544, lng: 127.056 }
 
 function hasFeatureRecord(feature) {
   return Boolean(
@@ -47,6 +54,58 @@ function hasFeatureRecord(feature) {
     || (feature?.photos || []).length > 0
     || (feature?.voices || []).length > 0,
   )
+}
+
+const toFiniteNumber = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function getFeatureListPoint(feature) {
+  const representativeLat = toFiniteNumber(feature?.representativeLocation?.lat)
+  const representativeLng = toFiniteNumber(feature?.representativeLocation?.lng)
+  if (representativeLat !== null && representativeLng !== null) {
+    return { lat: representativeLat, lng: representativeLng }
+  }
+
+  const lat = toFiniteNumber(feature?.lat)
+  const lng = toFiniteNumber(feature?.lng)
+  if (lat !== null && lng !== null && !(lat === 0 && lng === 0)) {
+    return { lat, lng }
+  }
+
+  const points = Array.isArray(feature?.points) ? feature.points : []
+  if (points.length === 0) return null
+  let minLat = Infinity
+  let maxLat = -Infinity
+  let minLng = Infinity
+  let maxLng = -Infinity
+  for (const point of points) {
+    const pointLat = toFiniteNumber(point?.[1])
+    const pointLng = toFiniteNumber(point?.[0])
+    if (pointLat === null || pointLng === null) continue
+    minLat = Math.min(minLat, pointLat)
+    maxLat = Math.max(maxLat, pointLat)
+    minLng = Math.min(minLng, pointLng)
+    maxLng = Math.max(maxLng, pointLng)
+  }
+  if (![minLat, maxLat, minLng, maxLng].every(Number.isFinite)) return null
+  return { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }
+}
+
+function distanceKm(from, to) {
+  const lat1 = toFiniteNumber(from?.lat)
+  const lng1 = toFiniteNumber(from?.lng)
+  const lat2 = toFiniteNumber(to?.lat)
+  const lng2 = toFiniteNumber(to?.lng)
+  if ([lat1, lng1, lat2, lng2].some((value) => value === null)) return Infinity
+  const R = 6371
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const s = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
 }
 
 export function MapEditorScreen({
@@ -75,9 +134,22 @@ export function MapEditorScreen({
   onCompleteRoute,
   onCompleteArea,
   onToggleLabels,
-  onOpenFeatureDetail,
+  onOpenCollaborators,
+  onOpenFeatureEdit,
   onCloseFeatureSummary,
   onAddMemo,
+  onUpdateMemo,
+  onDeleteMemo,
+  photoInputRef,
+  isRecording = false,
+  recordingSeconds = 0,
+  onPhotoSelected,
+  onDeletePhoto,
+  onStartRecording,
+  onStopRecording,
+  onDeleteVoice,
+  onBeginFeatureRecord,
+  onEndFeatureRecord,
   importedCommunityFeatureIds,
   onImportCommunityFeature,
   onUnimportCommunityFeature,
@@ -103,8 +175,12 @@ export function MapEditorScreen({
   const [pendingSearchPin, setPendingSearchPin] = useState(null)
   const [mappingSearchPin, setMappingSearchPin] = useState(false)
   const [activeFilter, setActiveFilter] = useState("all")
-  const [stripOpen, setStripOpen] = useState(true)
+  const stripTouchedRef = useRef(false)
+  const [stripOpen, setStripOpen] = useState(() => !(communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD))
   const [shareOpen, setShareOpen] = useState(false)
+  const [summaryRecordOpen, setSummaryRecordOpen] = useState(false)
+  const [summaryRecordDraft, setSummaryRecordDraft] = useState(null)
+  const [mapCenter, setMapCenter] = useState(() => focusPoint || myLocation || DEFAULT_MAP_CENTER)
   // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
   const [fabExpanded, setFabExpanded] = useState(false)
   const [capturing, setCapturing] = useState(false)
@@ -115,19 +191,118 @@ export function MapEditorScreen({
   const trimmedExternalSearchQuery = externalSearchQuery.trim()
   const summaryOpen = Boolean(selectedFeatureSummary)
   const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
+  const isPublicCommunityRecord = selectedFeatureSummary?.sourceContext === "public_community_records"
   // 내 지도(personal)는 본인 지도이므로 항상 작성자. 커뮤니티는 createdBy 로 판정.
   // 데모/공유 등 readOnly 환경에서는 작성자 권한을 주지 않는다.
   const isSummaryAuthor = readOnly ? false : (communityMode ? isSummaryCreator : true)
-  const canEditOwnCommunitySummary = communityMode && !readOnly && isSummaryCreator
+  const canEditSummary = !readOnly && typeof onOpenFeatureEdit === "function" && (communityMode ? isSummaryCreator : true)
   const canRequestSummaryEdit = (
     communityMode
     && !readOnly
+    && !isPublicCommunityRecord
     && !isSummaryCreator
     && typeof onRequestCommunityUpdateFromSummary === "function"
   )
-  const canOpenDetailOnHeader = !communityMode && typeof onOpenFeatureDetail === "function"
+  const showCommunityRecordComments = communityMode && !readOnly && Boolean(selectedFeatureSummary)
   const canMapPinFromSearch = !readOnly && typeof onCreatePinAtLocation === "function"
   const showExternalPlaceSearch = !readOnly
+  const canWriteSummaryRecord = !communityMode && isSummaryAuthor && typeof onAddMemo === "function"
+  const summaryRecordGroups = useMemo(() => (
+    selectedFeatureSummary ? buildFeatureRecordGroups(selectedFeatureSummary) : []
+  ), [selectedFeatureSummary])
+
+  const openSummaryRecord = useCallback(() => {
+    if (!selectedFeatureSummary?.id || !canWriteSummaryRecord) return
+    onBeginFeatureRecord?.(selectedFeatureSummary.id)
+    setSummaryRecordDraft({ id: createId("record"), mode: "create", initialText: "", memoId: null, groupId: null })
+    setSummaryRecordOpen(true)
+  }, [canWriteSummaryRecord, onBeginFeatureRecord, selectedFeatureSummary?.id])
+
+  const openSummaryRecordEdit = useCallback((group) => {
+    if (!selectedFeatureSummary?.id || !canWriteSummaryRecord || !group) return
+    const summary = summarizeRecordGroup(group)
+    const memo = group.memos?.[0] || null
+    const recordId = group.recordId || recordEntryId(memo) || group.id || createId("record")
+    onBeginFeatureRecord?.(selectedFeatureSummary.id)
+    setSummaryRecordDraft({
+      id: recordId,
+      mode: "edit",
+      initialText: summary.text || "",
+      memoId: memo?.id || null,
+      groupId: group.id,
+    })
+    setSummaryRecordOpen(true)
+  }, [canWriteSummaryRecord, onBeginFeatureRecord, selectedFeatureSummary?.id])
+
+  const deleteSummaryRecord = useCallback(async (group) => {
+    if (!selectedFeatureSummary?.id || !canWriteSummaryRecord || !group) return
+    if (!window.confirm("이 기록을 삭제할까요?\n사진, 음성, 메모가 함께 삭제돼요.")) return
+    onBeginFeatureRecord?.(selectedFeatureSummary.id)
+    const photoItems = group.photos || []
+    const voiceItems = group.voices || []
+    const memoItems = group.memos || []
+    for (const photo of photoItems) {
+      const id = photo.id || photo.localId
+      if (id) await onDeletePhoto?.(id, { skipConfirm: true, silent: true, featureId: selectedFeatureSummary.id })
+    }
+    for (const voice of voiceItems) {
+      const id = voice.id || voice.localId
+      if (id) await onDeleteVoice?.(id, { skipConfirm: true, silent: true, featureId: selectedFeatureSummary.id })
+    }
+    for (const memo of memoItems) {
+      if (memo?.id) await onDeleteMemo?.(selectedFeatureSummary.id, memo.id, { silent: true })
+    }
+    onEndFeatureRecord?.()
+    showToast?.("기록을 삭제했어요.")
+  }, [
+    canWriteSummaryRecord,
+    onBeginFeatureRecord,
+    onDeleteMemo,
+    onDeletePhoto,
+    onDeleteVoice,
+    onEndFeatureRecord,
+    selectedFeatureSummary?.id,
+    showToast,
+  ])
+
+  const closeSummaryRecord = useCallback(({ saved = false } = {}) => {
+    if (!saved && summaryRecordDraft?.mode !== "edit" && summaryRecordDraft?.id && selectedFeatureSummary) {
+      const draftId = summaryRecordDraft.id
+      ;(selectedFeatureSummary.photos || [])
+        .filter((photo) => recordEntryId(photo) === draftId)
+        .forEach((photo) => {
+          const id = photo.id || photo.localId
+          if (id) onDeletePhoto?.(id, { skipConfirm: true })
+        })
+      ;(selectedFeatureSummary.voices || [])
+        .filter((voice) => recordEntryId(voice) === draftId)
+        .forEach((voice) => {
+          const id = voice.id || voice.localId
+          if (id) onDeleteVoice?.(id, { skipConfirm: true })
+        })
+    }
+    setSummaryRecordOpen(false)
+    setSummaryRecordDraft(null)
+    onEndFeatureRecord?.()
+  }, [onDeletePhoto, onDeleteVoice, onEndFeatureRecord, selectedFeatureSummary, summaryRecordDraft?.id, summaryRecordDraft?.mode])
+
+  const summaryRecordPhotos = useMemo(() => {
+    if (!summaryRecordDraft?.id) return []
+    if (summaryRecordDraft.groupId) {
+      const group = summaryRecordGroups.find((item) => item.id === summaryRecordDraft.groupId || item.recordId === summaryRecordDraft.id)
+      if (group) return group.photos || []
+    }
+    return (selectedFeatureSummary?.photos || []).filter((photo) => recordEntryId(photo) === summaryRecordDraft.id)
+  }, [selectedFeatureSummary?.photos, summaryRecordDraft?.groupId, summaryRecordDraft?.id, summaryRecordGroups])
+
+  const summaryRecordVoices = useMemo(() => {
+    if (!summaryRecordDraft?.id) return []
+    if (summaryRecordDraft.groupId) {
+      const group = summaryRecordGroups.find((item) => item.id === summaryRecordDraft.groupId || item.recordId === summaryRecordDraft.id)
+      if (group) return group.voices || []
+    }
+    return (selectedFeatureSummary?.voices || []).filter((voice) => recordEntryId(voice) === summaryRecordDraft.id)
+  }, [selectedFeatureSummary?.voices, summaryRecordDraft?.groupId, summaryRecordDraft?.id, summaryRecordGroups])
 
   const handleSummaryRequestEdit = useCallback(async () => {
     if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
@@ -212,7 +387,7 @@ export function MapEditorScreen({
     return null
   })() : null
 
-  const visibleFeatures = useMemo(() => (
+  const filteredFeatures = useMemo(() => (
     features.filter((feature) => {
       const matchesFilter = (() => {
         if (activeFilter === "all") return true
@@ -222,6 +397,44 @@ export function MapEditorScreen({
       return matchesFilter
     })
   ), [activeFilter, features])
+
+  const nearbyVisibleFeatures = useMemo(() => {
+    return filteredFeatures.filter((feature) => {
+      if (feature.id === selectedFeatureId) return true
+      const point = getFeatureListPoint(feature)
+      if (!point) return false
+      return distanceKm(mapCenter, point) <= NEARBY_RECORD_RADIUS_KM
+    })
+  }, [filteredFeatures, mapCenter, selectedFeatureId])
+
+  const handleViewportChange = useCallback(({ center } = {}) => {
+    const lat = toFiniteNumber(center?.lat)
+    const lng = toFiniteNumber(center?.lng)
+    if (lat === null || lng === null) return
+    setMapCenter((current) => {
+      if (current && Math.abs(current.lat - lat) < 0.0001 && Math.abs(current.lng - lng) < 0.0001) return current
+      return { lat, lng }
+    })
+  }, [])
+
+  useEffect(() => {
+    const lat = toFiniteNumber(focusPoint?.lat ?? myLocation?.lat)
+    const lng = toFiniteNumber(focusPoint?.lng ?? myLocation?.lng)
+    if (lat === null || lng === null) return
+    setMapCenter((current) => current || { lat, lng })
+  }, [focusPoint?.lat, focusPoint?.lng, myLocation?.lat, myLocation?.lng])
+
+  useEffect(() => {
+    if (stripTouchedRef.current || stripOpen === false) return
+    if (communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD) {
+      setStripOpen(false)
+    }
+  }, [communityMode, features.length, stripOpen])
+
+  const toggleStripOpen = useCallback(() => {
+    stripTouchedRef.current = true
+    setStripOpen((current) => !current)
+  }, [])
 
   useEffect(() => {
     if (showExternalPlaceSearch) return
@@ -359,6 +572,11 @@ export function MapEditorScreen({
                   <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
                     <Link2 size={16} color="#2D4A3E" />
                   </button>
+                  {typeof onOpenCollaborators === "function" ? (
+                    <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
+                      <Users size={16} color="#2D4A3E" />
+                    </button>
+                  ) : null}
                 </>
               ) : null}
             </div>
@@ -426,7 +644,7 @@ export function MapEditorScreen({
         <MapErrorBoundary>
           <NaverMap
             ref={naverMapRef}
-            features={visibleFeatures}
+            features={filteredFeatures}
             selectedFeatureId={selectedFeatureId}
             draftPoints={draftPoints}
             draftMode={editorMode}
@@ -434,6 +652,7 @@ export function MapEditorScreen({
             fitTrigger={fitTrigger}
             onMapTap={readOnly ? undefined : onMapTap}
             onFeatureTap={onFeatureTap}
+            onViewportChange={handleViewportChange}
             showLabels={showLabels}
             myLocation={myLocation}
             isEventMap={placement.isEventMap}
@@ -550,7 +769,7 @@ export function MapEditorScreen({
           </div>
         ) : null}
         {selectedFeatureSummary ? (
-          <div className="map-feature-summary-wrap">
+          <div className={`map-feature-summary-wrap${showCommunityRecordComments ? " map-feature-summary-wrap--comments" : ""}`}>
             <FeaturePopupCard
               feature={selectedFeatureSummary}
               mapMode={communityMode ? "community" : "personal"}
@@ -561,25 +780,30 @@ export function MapEditorScreen({
                   ? computeRouteLengthKm(selectedFeatureSummary.points)
                   : null
               }
-              onClose={() => { voicePlayback.stop(); onCloseFeatureSummary?.() }}
-              onOpenDetail={
-                canOpenDetailOnHeader
-                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+              onClose={() => { voicePlayback.stop(); closeSummaryRecord(); onCloseFeatureSummary?.() }}
+              onAddRecord={
+                canWriteSummaryRecord
+                  ? openSummaryRecord
                   : undefined
               }
-              onAddRecord={
-                !communityMode && isSummaryAuthor && canOpenDetailOnHeader
-                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+              onEditRecord={
+                canWriteSummaryRecord && typeof onUpdateMemo === "function"
+                  ? openSummaryRecordEdit
+                  : undefined
+              }
+              onDeleteRecord={
+                canWriteSummaryRecord && typeof onDeleteMemo === "function"
+                  ? deleteSummaryRecord
                   : undefined
               }
               onEdit={
-                canEditOwnCommunitySummary
-                  ? () => onOpenFeatureDetail?.(selectedFeatureSummary.id)
+                canEditSummary
+                  ? () => onOpenFeatureEdit?.(selectedFeatureSummary.id)
                   : undefined
               }
               onRequestEdit={canRequestSummaryEdit ? handleSummaryRequestEdit : undefined}
               onAddMemo={
-                communityMode && !readOnly && typeof onAddMemo === "function"
+                communityMode && !readOnly && !isPublicCommunityRecord && typeof onAddMemo === "function"
                   ? (text, files) => onAddMemo(selectedFeatureSummary.id, text, files)
                   : undefined
               }
@@ -608,13 +832,54 @@ export function MapEditorScreen({
                 voicePlayback.toggle(voice, key)
               }}
             />
+            {showCommunityRecordComments ? (
+              <CommunityRecordComments
+                feature={selectedFeatureSummary}
+                className="public-record-comments--app"
+              />
+            ) : null}
           </div>
+        ) : null}
+        {summaryRecordOpen && selectedFeatureSummary ? (
+          <RecordEntrySheet
+            open={summaryRecordOpen}
+            featureTitle={selectedFeatureSummary.title}
+            recordId={summaryRecordDraft?.id || ""}
+            mode={summaryRecordDraft?.mode || "create"}
+            initialText={summaryRecordDraft?.initialText || ""}
+            saveLabel={summaryRecordDraft?.mode === "edit" ? "수정 저장" : undefined}
+            onClose={closeSummaryRecord}
+            onSave={async (text, meta = {}) => {
+              const recordId = meta.recordId || summaryRecordDraft?.id
+              if (summaryRecordDraft?.mode === "edit") {
+                if (summaryRecordDraft.memoId && typeof onUpdateMemo === "function") {
+                  await onUpdateMemo(selectedFeatureSummary.id, summaryRecordDraft.memoId, text, { recordId })
+                  return
+                }
+                if (text?.trim()) {
+                  await onAddMemo?.(selectedFeatureSummary.id, text, [], { recordId })
+                }
+                return
+              }
+              if (text?.trim()) await onAddMemo?.(selectedFeatureSummary.id, text, [], { recordId })
+            }}
+            photos={summaryRecordPhotos}
+            voices={summaryRecordVoices}
+            onPhotoSelected={onPhotoSelected}
+            onDeletePhoto={onDeletePhoto}
+            onStartRecording={onStartRecording}
+            onStopRecording={onStopRecording}
+            onDeleteVoice={onDeleteVoice}
+            isRecording={isRecording}
+            recordingSeconds={recordingSeconds}
+            photoInputRef={photoInputRef}
+          />
         ) : null}
         {features.length > 0 ? (
           <div className={`map-list-bar${stripOpen ? " is-open" : " is-collapsed"}`} aria-label="지도 안 기록 목록">
             <div className="map-list-bar__head">
-              <button className="map-filter-chip map-filter-toggle map-list-bar__toggle" type="button" onClick={() => setStripOpen(!stripOpen)}>
-                지도 안 기록 <span className="map-list-bar__count">{visibleFeatures.length}/{features.length}</span>
+              <button className="map-filter-chip map-filter-toggle map-list-bar__toggle" type="button" onClick={toggleStripOpen}>
+                지도 안 기록 <span className="map-list-bar__count">{nearbyVisibleFeatures.length}/{features.length}</span>
                 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▼" : "▲"}</span>
               </button>
             </div>
@@ -635,7 +900,7 @@ export function MapEditorScreen({
                   ))}
                 </div>
 
-                {visibleFeatures.length === 0 ? (
+                {nearbyVisibleFeatures.length === 0 ? (
                   <div className="map-list-empty">
                     <strong>조건에 맞는 기록이 없어요</strong>
                     <span>검색어나 필터를 조금 넓혀보세요.</span>
@@ -674,7 +939,7 @@ export function MapEditorScreen({
                     }}
                     onTouchEnd={() => { stripDragRef.current.dragging = false }}
                   >
-                    {visibleFeatures.map((feature) => (
+                    {nearbyVisibleFeatures.map((feature) => (
                       <div
                         key={feature.id}
                         className={`map-place-card${selectedFeatureId === feature.id ? " is-active" : ""}`}
@@ -686,7 +951,7 @@ export function MapEditorScreen({
                         <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
                           {feature.type === "pin" ? (
                             <FeatureEmoji
-                              feature={feature}
+                              emoji={resolvePlaceMarkerEmoji(feature)}
                               size={22}
                               unicodeFontSize={17}
                               className="me-strip-icon__emoji"

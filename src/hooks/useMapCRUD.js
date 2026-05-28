@@ -17,6 +17,7 @@ import {
 } from "../lib/mapService"
 import { recordMapAction } from "../lib/gamificationService"
 import { toEditableFeature } from "./useFeatureEditing"
+import { syncFeatureListLocalMediaToCloud } from "../lib/mediaCloudSync"
 
 export function useMapCRUD({
   maps,
@@ -184,6 +185,45 @@ export function useMapCRUD({
     }
   }, [cloudMode, features, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
 
+  const reorderMaps = useCallback(async (orderedIds = []) => {
+    const orderById = new Map(orderedIds.map((id, index) => [id, index]))
+    const previousMaps = maps
+    const applyOrder = (mapItem) => {
+      if (!orderById.has(mapItem.id)) return mapItem
+      return {
+        ...mapItem,
+        config: {
+          ...(mapItem.config || {}),
+          listOrder: orderById.get(mapItem.id),
+        },
+      }
+    }
+
+    setMaps((current) => current.map(applyOrder))
+
+    try {
+      if (cloudMode) {
+        await Promise.all(
+          orderedIds.map((mapId, index) => {
+            const mapItem = maps.find((item) => item.id === mapId)
+            if (!mapItem) return null
+            return updateMapRecord(mapId, {
+              config: {
+                ...(mapItem.config || {}),
+                listOrder: index,
+              },
+            })
+          }).filter(Boolean),
+        )
+      }
+      showToast("지도 순서를 변경했어요.")
+    } catch (error) {
+      console.error("Failed to reorder maps", error)
+      setMaps(previousMaps)
+      showToast(friendlySupabaseError(error))
+    }
+  }, [cloudMode, maps, setMaps, showToast])
+
   const importMapBundleToLocal = useCallback(async (bundle, options = {}) => {
     if (!bundle?.map) return
     const sourceMap = bundle.map
@@ -271,11 +311,20 @@ export function useMapCRUD({
       return null
     }
     if (targetMap?.isPublished) return showToast("이미 링크 공유 중인 지도예요.")
-    const mapFeatureCount = features.filter((f) => f.mapId === effectiveMapId).length
+    const mapFeatures = features.filter((f) => f.mapId === effectiveMapId)
+    const mapFeatureCount = mapFeatures.length
     if (mapFeatureCount === 0) return showToast("장소를 추가해야 링크를 켤 수 있어요.")
 
     try {
       if (cloudMode) {
+        const mediaSync = await syncFeatureListLocalMediaToCloud(mapFeatures, { throwOnFailure: true })
+        if (mediaSync.syncedCount > 0) {
+          const syncedById = new Map(mediaSync.features.map((feature) => [feature.id, feature]))
+          setFeatures((current) => current.map((feature) => {
+            const synced = syncedById.get(feature.id)
+            return synced ? { ...feature, photos: synced.photos, voices: synced.voices } : feature
+          }))
+        }
         const { map: publishedMap } = await publishMapRecord(effectiveMapId, {
           title: targetMap?.title,
           visibility: "public",
@@ -299,7 +348,7 @@ export function useMapCRUD({
       showToast(friendlySupabaseError(error))
       return null
     }
-  }, [cloudMode, features, maps, publishSheet, setMaps, setPublishSheet, showToast, refreshGameProfile])
+  }, [cloudMode, features, maps, publishSheet, setFeatures, setMaps, setPublishSheet, showToast, refreshGameProfile])
 
   // 발행 중단 = is_published=false + publication row 삭제(프로필에서도 내려감).
   // 인자: mapId 또는 postId(shares 항목의 id). 두 경로 모두 지원한다.
@@ -447,6 +496,7 @@ export function useMapCRUD({
     openCommunityMapEditor,
     saveMapSheet,
     deleteMap,
+    reorderMaps,
     importMapBundleToLocal,
     importSharedMapToLocal,
     publishMap,

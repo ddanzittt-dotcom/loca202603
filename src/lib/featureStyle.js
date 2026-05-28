@@ -13,14 +13,14 @@ const ALLOWED_LINE_STYLE_SET = new Set(FEATURE_LINE_STYLE_ITEMS.map((item) => it
 
 const DEFAULT_STYLE_BY_TYPE = {
   pin: { color: "#FF6B35", lineStyle: FEATURE_LINE_STYLE_SOLID },
-  route: { color: "#0F6E56", lineStyle: FEATURE_LINE_STYLE_SOLID },
-  area: { color: "#854F0B", lineStyle: FEATURE_LINE_STYLE_SHORT_DASH },
+  route: { color: "#0A5A46", lineStyle: FEATURE_LINE_STYLE_SOLID },
+  area: { color: "#70430E", lineStyle: FEATURE_LINE_STYLE_SHORT_DASH },
 }
 
 const COLOR_PRESET_BY_TYPE = {
   pin: ["#FF6B35", "#2D4A3E", "#2F80ED", "#E24B4A", "#8B5CF6", "#0EA5A4"],
-  route: ["#0F6E56", "#2D4A3E", "#2F80ED", "#E24B4A", "#854F0B", "#8B5CF6"],
-  area: ["#854F0B", "#2D4A3E", "#2F80ED", "#E24B4A", "#0F6E56", "#8B5CF6"],
+  route: ["#0A5A46", "#244236", "#1D5DB8", "#C2380B", "#70430E", "#6D3FC8"],
+  area: ["#70430E", "#244236", "#1D5DB8", "#C2380B", "#0A5A46", "#6D3FC8"],
 }
 
 export function getFeatureColorPresets(type = "pin") {

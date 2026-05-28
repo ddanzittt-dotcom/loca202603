@@ -271,6 +271,30 @@ export function buildSlugShareUrl(slug, source = "link", origin = window.locatio
   return `${safeOrigin}/s/${encodeURIComponent(slug)}?utm_source=${source}`
 }
 
+export function parseMapImportTarget(input) {
+  const raw = typeof input === "string" ? input.trim() : ""
+  if (!raw) return null
+
+  try {
+    const url = new URL(raw, DEFAULT_PUBLIC_WEB_ORIGIN)
+    const pathname = (url.pathname || "/").replace(/\/+$/u, "") || "/"
+    if (pathname === "/shared") {
+      const data = url.searchParams.get("data")
+      if (data) return { type: "shared", data }
+    }
+    if (pathname.startsWith("/s/")) {
+      const slug = decodeURIComponent(pathname.slice(3)).trim()
+      if (slug && slug.length <= 128) return { type: "slug", slug }
+    }
+  } catch {
+    // Fall through to raw-code parsing.
+  }
+
+  if (raw.startsWith("v2:")) return { type: "shared", data: raw }
+  if (raw.length >= 2 && raw.length <= 128) return { type: "slug", slug: raw }
+  return null
+}
+
 /**
  * 웹 공유/외부 링크에 사용할 안전한 origin을 결정한다.
  * - https는 그대로 사용

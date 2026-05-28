@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Bell, ChevronRight, MapPin, X } from "lucide-react"
+import { Bell, ChevronLeft, ChevronRight, MapPin, X } from "lucide-react"
 import { isEventMap } from "../lib/mapPlacement"
 import { buildGreetingContext, getDailyGreeting } from "../lib/greeting"
 import { PhotoBlock, SectionHead } from "../components/visuals"
@@ -59,6 +59,18 @@ function getDateKey(date) {
   return `${y}-${m}-${d}`
 }
 
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function addMonths(date, delta) {
+  return new Date(date.getFullYear(), date.getMonth() + delta, 1)
+}
+
+function formatMonthTitle(date) {
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 기록`
+}
+
 function getFeatureDate(feature) {
   const value = feature?.createdAt || feature?.created_at || feature?.updatedAt || feature?.updated_at
   const date = value ? new Date(value) : null
@@ -115,6 +127,7 @@ function buildWeekData(today, activityByDate) {
     const future = date > today
     return {
       key,
+      rawDate: date,
       dow: WEEK_LABELS[date.getDay()],
       d: date.getDate(),
       count,
@@ -132,9 +145,10 @@ function getActivityLevel(count) {
   return 4
 }
 
-function buildMonthCells(today, activityByDate) {
-  const year = today.getFullYear()
-  const month = today.getMonth()
+function buildMonthCells(monthDate, activityByDate, today = monthDate) {
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const todayKey = getDateKey(today)
   const first = new Date(year, month, 1)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells = []
@@ -147,7 +161,7 @@ function buildMonthCells(today, activityByDate) {
       rawDate: date,
       date: day,
       count: activityByDate.get(key) || 0,
-      today: key === getDateKey(today),
+      today: key === todayKey,
       future: date > today,
     })
   }
@@ -233,6 +247,22 @@ function formatRecordDate(date) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일`
 }
 
+function createRecordItem(feature, mapById, featureDate) {
+  const mapId = getFeatureMapId(feature)
+  const map = mapById.get(mapId)
+  return {
+    id: getFeatureId(feature) || `${mapId || "unknown"}-${featureDate.getTime()}`,
+    featureId: getFeatureId(feature),
+    mapId,
+    mapTitle: map?.title || "분류 없는 지도",
+    title: feature.title || feature.name || "이름 없는 기록",
+    kind: getFeatureKindLabel(feature),
+    summary: getFeatureSummary(feature),
+    dateLabel: formatRecordDate(featureDate),
+    time: featureDate.getTime(),
+  }
+}
+
 function buildRecordsForDay(features, maps, date) {
   if (!date) return []
   const dayKey = getDateKey(date)
@@ -241,18 +271,23 @@ function buildRecordsForDay(features, maps, date) {
     .map((feature) => {
       const featureDate = getFeatureDate(feature)
       if (!featureDate || getDateKey(featureDate) !== dayKey) return null
-      const mapId = getFeatureMapId(feature)
-      const map = mapById.get(mapId)
-      return {
-        id: getFeatureId(feature) || `${mapId || "unknown"}-${featureDate.getTime()}`,
-        featureId: getFeatureId(feature),
-        mapId,
-        mapTitle: map?.title || "분류 없는 지도",
-        title: feature.title || feature.name || "이름 없는 기록",
-        kind: getFeatureKindLabel(feature),
-        summary: getFeatureSummary(feature),
-        time: featureDate.getTime(),
-      }
+      return createRecordItem(feature, mapById, featureDate)
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.time - a.time)
+}
+
+function buildRecordsForMonth(features, maps, monthDate) {
+  if (!monthDate) return []
+  const year = monthDate.getFullYear()
+  const month = monthDate.getMonth()
+  const mapById = new Map(maps.map((map) => [map.id, map]))
+  return features
+    .map((feature) => {
+      const featureDate = getFeatureDate(feature)
+      if (!featureDate) return null
+      if (featureDate.getFullYear() !== year || featureDate.getMonth() !== month) return null
+      return createRecordItem(feature, mapById, featureDate)
     })
     .filter(Boolean)
     .sort((a, b) => b.time - a.time)
@@ -362,9 +397,37 @@ function RecordDialogShell({ title, stat, onClose, children, wide = false }) {
   )
 }
 
-function MonthRecordDialog({ today, monthCells, monthTotal, onOpenDate, onClose }) {
+function MonthRecordDialog({
+  visibleMonth,
+  monthCells,
+  monthTotal,
+  canGoPreviousMonth,
+  canGoNextMonth,
+  onPreviousMonth,
+  onNextMonth,
+  onOpenDate,
+  onOpenMonthRecords,
+  onClose,
+}) {
   return (
-    <RecordDialogShell title={`${today.getMonth() + 1}월 기록`} stat={`${today.getFullYear()}년 · ${monthTotal}개 기록`} onClose={onClose}>
+    <RecordDialogShell title={formatMonthTitle(visibleMonth)} stat={`${monthTotal}개 기록`} onClose={onClose}>
+      <div className="home-v2-month-nav" aria-label="월 선택">
+        <button type="button" className="home-v2-month-nav__arrow" onClick={onPreviousMonth} disabled={!canGoPreviousMonth} aria-label="이전 달">
+          <ChevronLeft size={16} strokeWidth={2.3} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="home-v2-month-nav__label"
+          onClick={() => onOpenMonthRecords(visibleMonth)}
+          aria-live="polite"
+          aria-label={`${visibleMonth.getFullYear()}년 ${visibleMonth.getMonth() + 1}월 전체 기록 보기`}
+        >
+          <strong>{visibleMonth.getMonth() + 1}월</strong>
+        </button>
+        <button type="button" className="home-v2-month-nav__arrow" onClick={onNextMonth} disabled={!canGoNextMonth} aria-label="다음 달">
+          <ChevronRight size={16} strokeWidth={2.3} aria-hidden="true" />
+        </button>
+      </div>
       <div className="home-v2-month-dows">
         {WEEK_LABELS.map((label) => <span key={label}>{label}</span>)}
       </div>
@@ -386,7 +449,7 @@ function MonthRecordDialog({ today, monthCells, monthTotal, onOpenDate, onClose 
   )
 }
 
-function YearRecordDialog({ today, yearCells, monthlyTotals, yearTotal, activeDays, onOpenDate, onClose }) {
+function YearRecordDialog({ today, yearCells, monthlyTotals, yearTotal, activeDays, onOpenDate, onOpenMonthRecords, onClose }) {
   const maxMonth = Math.max(1, ...monthlyTotals)
   return (
     <RecordDialogShell title={`${today.getFullYear()}년 기록`} stat={`${yearTotal}개 기록 · ${activeDays}일 활동`} onClose={onClose} wide>
@@ -424,11 +487,18 @@ function YearRecordDialog({ today, yearCells, monthlyTotals, yearTotal, activeDa
           const future = index > today.getMonth()
           const pct = future || count === 0 ? 0 : (count / maxMonth) * 100
           return (
-            <div key={MONTH_LABELS[index]} className={`home-v2-monthly__row${future ? " is-future" : ""}${count ? " has-records" : ""}`}>
+            <button
+              key={MONTH_LABELS[index]}
+              type="button"
+              className={`home-v2-monthly__row${future ? " is-future" : ""}${count ? " has-records" : ""}`}
+              onClick={() => onOpenMonthRecords(new Date(today.getFullYear(), index, 1))}
+              disabled={future}
+              aria-label={`${today.getFullYear()}년 ${index + 1}월 ${count || 0}개 기록`}
+            >
               <span>{index + 1}월</span>
               <b><i style={{ width: `${pct}%` }} /></b>
               <strong>{future || count === 0 ? "·" : count}</strong>
-            </div>
+            </button>
           )
         })}
         </div>
@@ -437,9 +507,18 @@ function YearRecordDialog({ today, yearCells, monthlyTotals, yearTotal, activeDa
   )
 }
 
-function RecordListDialog({ date, records, onOpenRecord, onClose }) {
+function RecordListDialog({
+  title,
+  date,
+  records,
+  onOpenRecord,
+  onClose,
+  emptyTitle = "이 날짜에는 아직 기록이 없어요",
+  emptyText = "기록이 있는 날짜를 누르면 지도별 장소와 기록을 모아볼 수 있어요.",
+  showDate = false,
+}) {
   return (
-    <RecordDialogShell title={`${formatRecordDate(date)} 기록`} stat={`${records.length}개 기록`} onClose={onClose}>
+    <RecordDialogShell title={title || `${formatRecordDate(date)} 기록`} stat={`${records.length}개 기록`} onClose={onClose}>
       {records.length ? (
         <div className="home-v2-record-list">
           {records.map((record) => (
@@ -452,7 +531,10 @@ function RecordListDialog({ date, records, onOpenRecord, onClose }) {
               <span className="home-v2-record-item__type">{record.kind}</span>
               <span className="home-v2-record-item__body">
                 <strong>{record.title}</strong>
-                <small>{record.mapTitle} · {record.summary}</small>
+                <small>
+                  {showDate ? `${record.dateLabel} · ` : ""}
+                  {record.mapTitle} · {record.summary}
+                </small>
               </span>
               <ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" />
             </button>
@@ -460,8 +542,8 @@ function RecordListDialog({ date, records, onOpenRecord, onClose }) {
         </div>
       ) : (
         <div className="home-v2-record-empty">
-          <strong>이 날짜에는 아직 기록이 없어요</strong>
-          <span>기록이 있는 날짜를 누르면 지도별 장소와 기록을 모아볼 수 있어요.</span>
+          <strong>{emptyTitle}</strong>
+          <span>{emptyText}</span>
         </div>
       )}
     </RecordDialogShell>
@@ -489,7 +571,10 @@ export function HomeScreen(props) {
   const today = useMemo(() => startOfDay(new Date()), [])
   const [greetingMessage, setGreetingMessage] = useState("")
   const [recordDialog, setRecordDialog] = useState(null)
+  const [recordDialogReturnTo, setRecordDialogReturnTo] = useState(null)
   const [selectedRecordDate, setSelectedRecordDate] = useState(null)
+  const [selectedRecordMonth, setSelectedRecordMonth] = useState(null)
+  const [visibleRecordMonth, setVisibleRecordMonth] = useState(() => startOfMonth(today))
 
   const personalMaps = useMemo(() => (
     maps
@@ -511,16 +596,20 @@ export function HomeScreen(props) {
 
   const activityByDate = useMemo(() => buildActivityIndex(features), [features])
   const weekData = useMemo(() => buildWeekData(today, activityByDate), [activityByDate, today])
-  const monthCells = useMemo(() => buildMonthCells(today, activityByDate), [activityByDate, today])
+  const monthCells = useMemo(() => buildMonthCells(visibleRecordMonth, activityByDate, today), [activityByDate, today, visibleRecordMonth])
   const yearCells = useMemo(() => buildYearCells(today, activityByDate), [activityByDate, today])
   const monthlyTotals = useMemo(() => buildMonthlyTotals(today, activityByDate), [activityByDate, today])
   const weekTotal = weekData.reduce((sum, item) => sum + (item.future ? 0 : item.count || 0), 0)
-  const monthTotal = monthlyTotals[today.getMonth()] || 0
+  const monthTotal = monthCells.reduce((sum, cell) => sum + (cell.empty || cell.future ? 0 : cell.count || 0), 0)
   const yearTotal = monthlyTotals.reduce((sum, count) => sum + count, 0)
   const activeDays = yearCells.filter((cell) => !cell.future && !cell.empty && (cell.count || 0) > 0).length
   const selectedRecords = useMemo(
     () => buildRecordsForDay(features, maps, selectedRecordDate),
     [features, maps, selectedRecordDate],
+  )
+  const selectedMonthRecords = useMemo(
+    () => buildRecordsForMonth(features, maps, selectedRecordMonth),
+    [features, maps, selectedRecordMonth],
   )
   const resumeContext = useMemo(
     () => buildResumeContext(personalMaps, featuresByMapId),
@@ -538,6 +627,10 @@ export function HomeScreen(props) {
       return !oldest || date.getTime() < oldest.getTime() ? date : oldest
     }, null)
   ), [features])
+  const currentRecordMonth = useMemo(() => startOfMonth(today), [today])
+  const oldestRecordMonth = useMemo(() => startOfMonth(firstRecordAt || today), [firstRecordAt, today])
+  const canGoPreviousRecordMonth = visibleRecordMonth > oldestRecordMonth
+  const canGoNextRecordMonth = visibleRecordMonth < currentRecordMonth
   const lastVisitAt = useMemo(() => toValidDate(
     viewerProfile?.lastVisitAt
       || viewerProfile?.last_visit_at
@@ -578,12 +671,39 @@ export function HomeScreen(props) {
     const cm = all.find((m) => m?.slug === "community-map" || m?.isCommunity)
     if (cm && onOpenMap) onOpenMap(cm.id || cm.mapId)
   }
-  const openRecordDate = (date) => {
+  const openMonthDialog = () => {
+    setVisibleRecordMonth(currentRecordMonth)
+    setRecordDialog("month")
+  }
+  const showPreviousRecordMonth = () => {
+    setVisibleRecordMonth((current) => {
+      const next = addMonths(current, -1)
+      return next < oldestRecordMonth ? oldestRecordMonth : next
+    })
+  }
+  const showNextRecordMonth = () => {
+    setVisibleRecordMonth((current) => {
+      const next = addMonths(current, 1)
+      return next > currentRecordMonth ? currentRecordMonth : next
+    })
+  }
+  const openRecordDate = (date, returnTo = null) => {
     if (!date) return
     setSelectedRecordDate(date)
+    setRecordDialogReturnTo(returnTo)
     setRecordDialog("records")
   }
+  const openMonthRecordList = (monthDate, returnTo = null) => {
+    if (!monthDate) return
+    setSelectedRecordMonth(startOfMonth(monthDate))
+    setRecordDialogReturnTo(returnTo)
+    setRecordDialog("monthRecords")
+  }
+  const closeRecordList = () => {
+    setRecordDialog(recordDialogReturnTo || null)
+  }
   const openRecordItem = (record) => {
+    setRecordDialogReturnTo(null)
     setRecordDialog(null)
     if (record.featureId && onOpenFeatureInMap) {
       onOpenFeatureInMap(record.mapId, record.featureId)
@@ -594,15 +714,6 @@ export function HomeScreen(props) {
 
   return (
     <section className="screen screen--scroll home-v2">
-      <div className="home-v2__status" aria-hidden="true">
-        <span>9:41</span>
-        <span className="home-v2__status-icons">
-          <i className="home-v2__status-check" />
-          <i className="home-v2__status-signal" />
-          <i className="home-v2__status-battery" />
-        </span>
-      </div>
-
       <header className="home-v2__header">
         <BrandLogo className="home-v2__brand" dotClassName="home-v2__brand-dot" />
         <button
@@ -653,7 +764,7 @@ export function HomeScreen(props) {
         </button>
       ) : null}
 
-      <SectionHead title="나의 기록" right="전체 보기" onRightClick={() => setRecordDialog("year")} />
+      <SectionHead title="나의 기록" />
       <div className="home-v2__tracker">
         <div className="home-v2__tracker-head">
           <span className="home-v2__tracker-range">
@@ -666,9 +777,13 @@ export function HomeScreen(props) {
         </div>
         <div className="home-v2__tracker-grid">
           {weekData.map((d) => (
-            <div
+            <button
+              type="button"
               key={d.key}
               className={`home-v2__tracker-cell${d.today ? " is-today" : ""}${d.future ? " is-future" : ""}`}
+              onClick={() => openRecordDate(d.rawDate)}
+              disabled={d.future}
+              aria-label={`${formatRecordDate(d.rawDate)} ${d.count || 0}개 기록`}
             >
               <span className="home-v2__tracker-dow">{d.dow}</span>
               <span className="home-v2__tracker-day loca-v2-num">{d.d}</span>
@@ -676,11 +791,11 @@ export function HomeScreen(props) {
                 className={`home-v2__tracker-dot${d.count > 0 ? " has-record" : ""}${d.today && d.count === 0 ? " is-today-empty" : ""}`}
                 aria-hidden="true"
               />
-            </div>
+            </button>
           ))}
         </div>
         <div className="home-v2__record-actions" aria-label="기록 보기">
-          <button type="button" onClick={() => setRecordDialog("month")}>
+          <button type="button" onClick={openMonthDialog}>
             월간 보기
             <ChevronRight size={12} strokeWidth={2.3} aria-hidden="true" />
           </button>
@@ -774,11 +889,6 @@ export function HomeScreen(props) {
                     <span className="home-v2__community-line">
                       이번 주 <span className="home-v2__community-num">{communityPreview.newCount}곳</span> 새로 기록됐어요
                     </span>
-                    <span className="home-v2__community-legend">
-                      <span><i style={{ background: "var(--cat-food)" }} />음식</span>
-                      <span><i style={{ background: "var(--cat-culture)" }} />문화</span>
-                      <span><i style={{ background: "var(--cat-etc)" }} />기타</span>
-                    </span>
                   </>
                 ) : (
                   <span className="home-v2__community-line">
@@ -821,10 +931,15 @@ export function HomeScreen(props) {
           <div onClick={(event) => event.stopPropagation()}>
             {recordDialog === "month" ? (
               <MonthRecordDialog
-                today={today}
+                visibleMonth={visibleRecordMonth}
                 monthCells={monthCells}
                 monthTotal={monthTotal}
-                onOpenDate={openRecordDate}
+                canGoPreviousMonth={canGoPreviousRecordMonth}
+                canGoNextMonth={canGoNextRecordMonth}
+                onPreviousMonth={showPreviousRecordMonth}
+                onNextMonth={showNextRecordMonth}
+                onOpenDate={(date) => openRecordDate(date, "month")}
+                onOpenMonthRecords={(monthDate) => openMonthRecordList(monthDate, "month")}
                 onClose={() => setRecordDialog(null)}
               />
             ) : null}
@@ -835,7 +950,8 @@ export function HomeScreen(props) {
                 monthlyTotals={monthlyTotals}
                 yearTotal={yearTotal}
                 activeDays={activeDays}
-                onOpenDate={openRecordDate}
+                onOpenDate={(date) => openRecordDate(date, "year")}
+                onOpenMonthRecords={(monthDate) => openMonthRecordList(monthDate, "year")}
                 onClose={() => setRecordDialog(null)}
               />
             ) : null}
@@ -844,7 +960,18 @@ export function HomeScreen(props) {
                 date={selectedRecordDate}
                 records={selectedRecords}
                 onOpenRecord={openRecordItem}
-                onClose={() => setRecordDialog(null)}
+                onClose={closeRecordList}
+              />
+            ) : null}
+            {recordDialog === "monthRecords" ? (
+              <RecordListDialog
+                title={formatMonthTitle(selectedRecordMonth || visibleRecordMonth)}
+                records={selectedMonthRecords}
+                onOpenRecord={openRecordItem}
+                onClose={closeRecordList}
+                showDate
+                emptyTitle="이 달에는 아직 기록이 없어요"
+                emptyText="기록이 쌓인 월을 누르면 그 달의 장소와 기록을 모아볼 수 있어요."
               />
             ) : null}
           </div>

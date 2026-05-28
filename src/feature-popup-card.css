@@ -789,6 +789,11 @@
   --fpc-border-card: 1px solid var(--line, rgba(30, 25, 20, 0.06));
   border-radius: 18px;
   box-shadow: 0 16px 42px rgba(30, 20, 10, 0.18);
+  overflow: hidden;
+}
+
+.map-feature-summary-wrap > .fpc.fpc--diary {
+  overflow: hidden;
 }
 
 .fpc-diary-head {
@@ -796,7 +801,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px 10px;
+  padding: 13px 15px 7px;
 }
 
 .fpc-diary-type {
@@ -807,9 +812,9 @@
 }
 
 .fpc-diary-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -820,9 +825,15 @@
 .fpc-diary-icon--route { background: var(--sage-soft, #E1EAD7); color: var(--sage, #5C7A4E); }
 .fpc-diary-icon--area { background: var(--cocoa-soft, #F0DDC4); color: var(--cocoa, #8E5A2C); }
 
+.fpc-diary-feature-emoji svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .fpc-diary-type span:not(.fpc-diary-icon) {
   display: block;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   color: var(--ink-mute, #807668);
   letter-spacing: 0;
@@ -831,7 +842,7 @@
 .fpc-diary-type strong {
   display: block;
   margin-top: 2px;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.18;
   color: var(--ink-strong, #0A0A0A);
@@ -843,7 +854,9 @@
 
 .fpc-diary-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 6px;
   flex-shrink: 0;
 }
@@ -869,8 +882,27 @@
 .fpc-diary-small.is-saved { color: var(--sage, #5C7A4E); background: var(--sage-soft, #E1EAD7); }
 .fpc-diary-icon-btn { width: 30px; padding: 0; }
 
+.fpc-diary-edit-banner {
+  min-width: 68px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-soft, #FFD0BC);
+  background: var(--accent-faint, #FFEBE0);
+  color: var(--accent-deep, #C2380B);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .fpc-diary-body {
-  padding: 0 16px 14px;
+  overflow: visible;
+  padding: 0 15px 10px;
 }
 
 .fpc-diary-meta {
@@ -878,7 +910,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 9px;
+  margin-bottom: 6px;
   color: var(--ink-mute, #807668);
   font-size: 11px;
   font-weight: 700;
@@ -895,13 +927,13 @@
 }
 
 .fpc-diary-desc {
-  margin: 0 0 10px;
+  margin: 0 0 7px;
   color: var(--ink-soft, #3F3A33);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -911,17 +943,17 @@
   gap: 5px;
   overflow-x: auto;
   scrollbar-width: none;
-  margin: 0 -16px 11px;
-  padding: 0 16px;
+  margin: 0 -15px 7px;
+  padding: 0 15px;
 }
 .fpc-diary-tags::-webkit-scrollbar { display: none; }
 .fpc-diary-tags span {
   flex-shrink: 0;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--accent-faint, #FFEBE0);
   color: var(--accent-deep, #C2380B);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
 }
 
@@ -973,9 +1005,569 @@
   font-size: 12.5px;
   font-weight: 800;
   line-height: 1.35;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.fpc-diary-records {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fpc-diary-records-head {
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fpc-diary-records-label {
+  color: var(--ink-mute, #807668);
+  font-size: 10.5px;
+  font-weight: 900;
+}
+
+.fpc-diary-more-link {
+  flex-shrink: 0;
+  height: 26px;
+  min-width: 54px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  background: var(--card, #fff);
+  color: var(--accent-deep, #C2380B);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(30, 20, 10, 0.05);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fpc-diary-record-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 68px;
+  padding: 7px 10px;
+  border-radius: 13px;
+  background: var(--bg, #FAF8F2);
+  cursor: pointer;
+}
+
+.fpc-diary-record-item--bundle {
+  align-items: start;
+  background:
+    linear-gradient(135deg, rgba(255, 235, 224, 0.7), rgba(255, 255, 255, 0) 42%),
+    var(--bg, #FAF8F2);
+}
+
+.fpc-diary-record-item--panel {
+  padding: 11px 12px;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  background:
+    linear-gradient(135deg, rgba(255, 235, 224, 0.62), rgba(255, 255, 255, 0) 46%),
+    var(--card, #fff);
+}
+
+.fpc-diary-record-media {
+  width: 42px;
+  min-height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-deep, #C2380B);
+  background: var(--accent-faint, #FFEBE0);
+  overflow: hidden;
+}
+
+.fpc-diary-record-media--photos {
+  justify-content: flex-start;
+  background: transparent;
+  overflow: visible;
+}
+
+.fpc-diary-record-media--photos > span,
+.fpc-diary-record-media--photos > button.fpc-diary-photo-thumb {
+  width: 32px;
+  height: 38px;
+  padding: 0;
+  border: 2px solid var(--card, #fff);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-deep, #EFE9D8);
+  box-shadow: 0 8px 16px rgba(30, 20, 10, 0.08);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fpc-diary-record-media--photos > span + span,
+.fpc-diary-record-media--photos > button.fpc-diary-photo-thumb + button.fpc-diary-photo-thumb {
+  margin-left: -21px;
+  transform: translateY(4px);
+}
+
+.fpc-diary-record-media--photos b,
+.fpc-diary-photo-more {
+  align-self: flex-end;
+  min-width: 20px;
+  height: 20px;
+  margin-left: -14px;
+  border-radius: 999px;
+  background: var(--ink-strong, #0A0A0A);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  z-index: 1;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fpc-diary-record-media--voice {
+  background: var(--sage-soft, #E1EAD7);
+  color: var(--sage, #5C7A4E);
+}
+
+.fpc-diary-record-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.fpc-diary-record-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-deep, #C2380B);
+  background: var(--accent-faint, #FFEBE0);
+  overflow: hidden;
+}
+
+.fpc-diary-record-mark--voice {
+  background: var(--sage-soft, #E1EAD7);
+  color: var(--sage, #5C7A4E);
+}
+
+.fpc-diary-record-voice {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fpc-diary-record-voice.is-playing {
+  color: #fff;
+  background: var(--sage, #5C7A4E);
+}
+
+.fpc-diary-record-mark--photo {
+  background: var(--bg-deep, #EFE9D8);
+}
+
+.fpc-diary-record-mark > span,
+.fpc-diary-record-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.fpc-diary-record-item .fpc-diary-record-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fpc-diary-record-item .fpc-diary-record-copy strong {
+  font-weight: 850;
+}
+
+.fpc-diary-record-copy em {
+  margin-top: 0;
+  color: var(--ink-mute, #807668);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.fpc-diary-voice-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+.fpc-diary-voice-row button {
+  min-width: 48px;
+  height: 21px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sage-soft, #E1EAD7);
+  color: var(--sage, #5C7A4E);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fpc-diary-voice-row button.is-playing {
+  background: var(--sage, #5C7A4E);
+  color: #fff;
+}
+
+.fpc-diary-more-banner {
+  align-self: center;
+  min-width: 132px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  background: var(--card, #fff);
+  color: var(--ink-strong, #0A0A0A);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fpc-record-banner-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 8500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 14px;
+  pointer-events: auto;
+}
+
+.fpc-record-banner__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(22, 18, 14, 0.36);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.fpc-record-banner {
+  position: relative;
+  width: min(100%, 440px);
+  max-height: min(78vh, 620px);
+  border-radius: 22px;
+  border: 1px solid rgba(30, 25, 20, 0.08);
+  background: var(--bg, #FAF8F2);
+  box-shadow: 0 20px 54px rgba(22, 18, 14, 0.26);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fpc-record-banner__head {
+  min-height: 64px;
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card, #fff);
+  border-bottom: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+}
+
+.fpc-record-banner__head div {
+  min-width: 0;
+}
+
+.fpc-record-banner__head span {
+  display: block;
+  color: var(--accent-deep, #C2380B);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fpc-record-banner__head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-strong, #0A0A0A);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fpc-record-banner__head button {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  border-radius: 999px;
+  background: var(--bg, #FAF8F2);
+  color: var(--ink-soft, #3F3A33);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fpc-record-banner__list {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.fpc-record-banner__list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.fpc-record-banner__list::-webkit-scrollbar-thumb {
+  background: rgba(128, 118, 104, 0.35);
+  border-radius: 999px;
+}
+
+.fpc-record-detail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 8600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 14px;
+  pointer-events: auto;
+}
+
+.fpc-record-detail__scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(22, 18, 14, 0.38);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.fpc-record-detail {
+  position: relative;
+  width: min(100%, 430px);
+  max-height: min(78vh, 620px);
+  border-radius: 22px;
+  border: 1px solid rgba(30, 25, 20, 0.08);
+  background: var(--bg, #FAF8F2);
+  box-shadow: 0 20px 54px rgba(22, 18, 14, 0.26);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.fpc-record-detail__head {
+  min-height: 62px;
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card, #fff);
+  border-bottom: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+}
+
+.fpc-record-detail__head div {
+  min-width: 0;
+}
+
+.fpc-record-detail__head span,
+.fpc-record-detail__section > span {
+  display: block;
+  color: var(--accent-deep, #C2380B);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fpc-record-detail__head strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-strong, #0A0A0A);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fpc-record-detail__head button {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  border-radius: 999px;
+  background: var(--bg, #FAF8F2);
+  color: var(--ink-soft, #3F3A33);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.fpc-record-detail__body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.fpc-record-detail__memo,
+.fpc-record-detail__empty {
+  margin: 0;
+  color: var(--ink-strong, #0A0A0A);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
+.fpc-record-detail__empty {
+  color: var(--ink-mute, #807668);
+}
+
+.fpc-record-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fpc-record-detail__photos {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.fpc-record-detail__photos::-webkit-scrollbar {
+  display: none;
+}
+
+.fpc-record-detail__photos .fpc-diary-photo-thumb {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 2px solid var(--card, #fff);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-deep, #EFE9D8);
+  box-shadow: 0 8px 16px rgba(30, 20, 10, 0.08);
+}
+
+.fpc-record-detail__photos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fpc-record-detail__voices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fpc-record-detail__voices button {
+  min-width: 58px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--sage-soft, #E1EAD7);
+  color: var(--sage, #5C7A4E);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fpc-record-detail__voices button.is-playing {
+  background: var(--sage, #5C7A4E);
+  color: #fff;
+}
+
+.fpc-record-detail__actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line, rgba(30, 25, 20, 0.06));
+  background: var(--card, #fff);
+}
+
+.fpc-record-detail__actions button {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  border-radius: 13px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.fpc-record-detail__danger {
+  border: 1px solid var(--accent-soft, #FFD0BC);
+  background: var(--card, #fff);
+  color: var(--accent-deep, #C2380B);
+}
+
+.fpc-record-detail__primary {
+  border: 1px solid var(--accent, #FF4D1A);
+  background: var(--accent, #FF4D1A);
+  color: #fff;
 }
 
 .fpc-diary-empty {
@@ -990,15 +1582,16 @@
 
 .fpc-diary-foot {
   display: flex;
+  justify-content: center;
   gap: 8px;
-  padding: 12px 16px 16px;
+  padding: 9px 15px 14px;
   border-top: 1px solid var(--line, rgba(30, 25, 20, 0.06));
 }
 
 .fpc-diary-cta {
   flex: 1;
   min-width: 0;
-  height: 42px;
+  height: 40px;
   border-radius: 13px;
   border: 1px solid var(--line, rgba(30, 25, 20, 0.06));
   background: var(--card, #fff);
@@ -1013,6 +1606,7 @@
   cursor: pointer;
 }
 .fpc-diary-cta--record {
+  width: 100%;
   background: var(--accent, #FF4D1A);
   border-color: var(--accent, #FF4D1A);
   color: #fff;

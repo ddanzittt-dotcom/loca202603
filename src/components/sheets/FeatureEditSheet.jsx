@@ -3,12 +3,14 @@ import { X as XIcon, Camera, Mic, FileText, Play } from "lucide-react"
 import { FeatureEmojiPicker } from "../FeatureEmojiPicker"
 import { FeatureEmoji, resolveFeatureEmoji, descriptorToDisplayText } from "../FeatureEmoji"
 import { RecordEntrySheet } from "./RecordEntrySheet"
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
 import { lookupEmojiName } from "../../lib/emojiCatalog"
 import {
   FEATURE_LINE_STYLE_ITEMS,
   FEATURE_LINE_STYLE_SOLID,
   FEATURE_LINE_STYLE_SHORT_DASH,
   FEATURE_LINE_STYLE_SHORT_DOT,
+  getFeatureColorPresets,
   normalizeFeatureStyle,
 } from "../../lib/featureStyle"
 
@@ -26,16 +28,6 @@ import {
  *
  * 기존 useFeatureEditing 훅의 save/delete/addMemo 핸들러를 그대로 재사용한다.
  */
-
-// 핀 색상 팔레트 — 공통 6색 (장소·길·영역 전부 동일). 시안 기준.
-const PIN_COLOR_PALETTE = [
-  "#FF6B35", // orange
-  "#2D4A3E", // green
-  "#3B82F6", // blue
-  "#EF4444", // red
-  "#854F0B", // brown
-  "#A855F7", // purple
-]
 
 const DEFAULT_EMOJI_BY_TYPE = {
   pin: "📍",
@@ -154,41 +146,15 @@ function formatDuration(sec) {
 
 // ---------- 공통 필드 UI ----------
 
-function FieldLabel({ children, hint }) {
+function FieldLabel({ children, hint, hintVariant = "inline" }) {
   return (
     <div className="fes-label">
       <span>{children}</span>
-      {hint ? <span className="fes-hint">· {hint}</span> : null}
-    </div>
-  )
-}
-
-function ColorPalette({ value, onChange }) {
-  const isPreset = PIN_COLOR_PALETTE.includes(value)
-  return (
-    <div className="fes-color-row" role="radiogroup" aria-label="색상 선택">
-      {PIN_COLOR_PALETTE.map((color) => (
-        <button
-          key={color}
-          type="button"
-          role="radio"
-          aria-checked={value === color}
-          aria-label={`${color} 선택${value === color ? " 됨" : ""}`}
-          className={`fes-color-chip${value === color ? " is-selected" : ""}`}
-          style={{ background: color }}
-          onClick={() => onChange(color)}
-        />
-      ))}
-      <label className="fes-color-chip-custom">
-        <span>직접</span>
-        <span className="fes-swatch" style={{ background: isPreset ? value : value }} />
-        <input
-          type="color"
-          value={value || "#FF6B35"}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
-          aria-label="커스텀 색상 선택"
-        />
-      </label>
+      {hint ? (
+        <span className={`fes-hint${hintVariant === "bubble" ? " fes-hint--bubble" : ""}`}>
+          {hintVariant === "bubble" ? hint : `· ${hint}`}
+        </span>
+      ) : null}
     </div>
   )
 }
@@ -215,7 +181,7 @@ function LinePreviewSvg({ lineStyle }) {
   )
 }
 
-function LineStylePicker({ value, onChange }) {
+function LineStylePicker({ value, onChange, disabled = false }) {
   return (
     <div className="fes-line-row">
       {FEATURE_LINE_STYLE_ITEMS.map((item) => {
@@ -227,12 +193,51 @@ function LineStylePicker({ value, onChange }) {
             className={`fes-line-btn${active ? " is-active" : ""}`}
             onClick={() => onChange(item.value)}
             aria-pressed={active}
+            disabled={disabled}
           >
             <span className="fes-line-preview"><LinePreviewSvg lineStyle={item.value} /></span>
             {item.label}
           </button>
         )
       })}
+    </div>
+  )
+}
+
+function ColorPicker({ type, value, onChange, disabled = false }) {
+  const presets = getFeatureColorPresets(type)
+  const selectedColor = String(value || presets[0] || "#0A5A46").toUpperCase()
+  const typeLabel = type === "area" ? "영역" : "길"
+
+  return (
+    <div className="fes-color-row" role="group" aria-label={`${typeLabel} 색상`}>
+      {presets.map((color) => {
+        const normalizedColor = color.toUpperCase()
+        const active = selectedColor === normalizedColor
+        return (
+          <button
+            key={normalizedColor}
+            type="button"
+            className={`fes-color-chip${active ? " is-selected" : ""}`}
+            style={{ backgroundColor: normalizedColor }}
+            onClick={() => onChange(normalizedColor)}
+            aria-label={`${typeLabel} 색상 ${normalizedColor}`}
+            aria-pressed={active}
+            disabled={disabled}
+          />
+        )
+      })}
+      <label className={`fes-color-chip-custom${disabled ? " is-disabled" : ""}`}>
+        <span className="fes-swatch" style={{ backgroundColor: selectedColor }} aria-hidden="true" />
+        직접
+        <input
+          type="color"
+          value={selectedColor.toLowerCase()}
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+          aria-label={`${typeLabel} 색상 직접 선택`}
+          disabled={disabled}
+        />
+      </label>
     </div>
   )
 }
@@ -330,6 +335,25 @@ function MeasureInfo({ type, feature }) {
 
 // ---------- 미디어 / 메모 블록 ----------
 
+function FeaturePhotoThumb({ photo, canEdit, onDelete }) {
+  const { src, markRemoteFailed } = useResolvedMediaUrl(photo)
+  return (
+    <div className="fes-photo-thumb">
+      {src ? <img src={src} alt="" onError={markRemoteFailed} /> : null}
+      {canEdit ? (
+        <button
+          type="button"
+          className="fes-photo-rm"
+          aria-label="사진 삭제"
+          onClick={() => onDelete?.(photo.id || photo.localId)}
+        >
+          <XIcon size={8} />
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
 function PhotoBlock({ photos, canEdit, onDelete }) {
   if (!photos?.length) return null
   return (
@@ -340,20 +364,13 @@ function PhotoBlock({ photos, canEdit, onDelete }) {
         <span className="fes-count">{photos.length}</span>
       </div>
       <div className="fes-photo-grid">
-        {photos.map((p) => (
-          <div key={p.id} className="fes-photo-thumb">
-            {p.url ? <img src={p.url} alt="" /> : null}
-            {canEdit ? (
-              <button
-                type="button"
-                className="fes-photo-rm"
-                aria-label="사진 삭제"
-                onClick={() => onDelete?.(p.id)}
-              >
-                <XIcon size={8} />
-              </button>
-            ) : null}
-          </div>
+        {photos.map((p, index) => (
+          <FeaturePhotoThumb
+            key={p.id || p.localId || `photo-${index}`}
+            photo={p}
+            canEdit={canEdit}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </div>
@@ -595,7 +612,6 @@ export function FeatureEditSheet({
 
   const photos = featureSheet.photos || []
   const voices = featureSheet.voices || []
-  const memos = featureSheet.memos || []
 
   const updateStyle = (patch) => {
     setFeatureSheet((current) => {
@@ -631,6 +647,7 @@ export function FeatureEditSheet({
   }
 
   const canDelete = !readOnly && !creating && typeof onDelete === "function"
+  const saveDisabled = readOnly || Boolean(featureSheet.cloudPending)
   const canRelocate = type === "pin"
     && featureSheet?.id
     && featureSheet.lat != null
@@ -673,7 +690,6 @@ export function FeatureEditSheet({
         {/* --- 이모지 (장소만) --- */}
         {type === "pin" ? (
           <div className="fes-field">
-            <FieldLabel hint="장소를 대표하는 아이콘">이모지</FieldLabel>
             <div className="fes-emoji-row">
               <button
                 type="button"
@@ -692,21 +708,28 @@ export function FeatureEditSheet({
           </div>
         ) : null}
 
-        {/* --- 색상 --- */}
-        <div className="fes-field">
-          <FieldLabel hint={
-            type === "route" ? "지도에 표시될 길 색"
-              : type === "area" ? "지도에 표시될 영역 색"
-                : "지도에 표시될 장소 색"
-          }>색상</FieldLabel>
-          <ColorPalette value={style.color} onChange={(color) => updateStyle({ color })} />
-        </div>
+        {/* --- 색상 (길·영역만) --- */}
+        {type === "route" || type === "area" ? (
+          <div className="fes-field">
+            <FieldLabel hint={type === "area" ? "영역 색상" : "길 색상"}>색상</FieldLabel>
+            <ColorPicker
+              type={type}
+              value={style.color}
+              onChange={(color) => updateStyle({ color })}
+              disabled={readOnly}
+            />
+          </div>
+        ) : null}
 
         {/* --- 선 종류 (길·영역만) --- */}
         {type === "route" || type === "area" ? (
           <div className="fes-field">
             <FieldLabel hint={type === "area" ? "영역 외곽선 스타일" : "길의 선 스타일"}>선 종류</FieldLabel>
-            <LineStylePicker value={style.lineStyle} onChange={(lineStyle) => updateStyle({ lineStyle })} />
+            <LineStylePicker
+              value={style.lineStyle}
+              onChange={(lineStyle) => updateStyle({ lineStyle })}
+              disabled={readOnly}
+            />
           </div>
         ) : null}
 
@@ -733,7 +756,7 @@ export function FeatureEditSheet({
         {/* --- 태그 (내 지도만) --- */}
         {isPersonal ? (
           <div className="fes-field">
-            <FieldLabel hint="엔터로 추가">태그</FieldLabel>
+            <FieldLabel hint="엔터로 추가" hintVariant="bubble">태그</FieldLabel>
             <TagInput
               tagsText={featureSheet.tagsText || ""}
               onChange={(val) => setFeatureSheet((c) => ({ ...c, tagsText: val }))}
@@ -741,16 +764,12 @@ export function FeatureEditSheet({
           </div>
         ) : null}
 
-        {/* --- 설명 (모두의 지도) / 한 줄 소개 (내 지도) --- */}
+        {/* --- 한 줄 소개 --- */}
         <div className="fes-field">
           {isCommunity ? (
             <FieldLabel>설명</FieldLabel>
           ) : (
-            <FieldLabel hint={
-              type === "route" ? "어떤 길인지 짧게"
-                : type === "area" ? "어떤 영역인지 짧게"
-                  : "어떤 장소인지 짧게"
-            }>한 줄 소개</FieldLabel>
+            <FieldLabel>한 줄 소개</FieldLabel>
           )}
           <textarea
             className="fes-textarea"
@@ -761,8 +780,8 @@ export function FeatureEditSheet({
               isCommunity
                 ? "이 장소에 대해 알려주세요"
                 : type === "pin" ? "예: 창가 자리 좋은 카페"
-                  : type === "route" ? "예: 회사 → 중앙시장 → 집, 저녁 산책"
-                    : "예: 베이커리·독립서점이 모인 골목"
+                  : type === "route" ? "예: 회사에서 집까지 걷기 좋은 길"
+                    : "예: 베이커리와 독립서점이 모인 골목"
             }
             disabled={readOnly}
             maxLength={2000}
@@ -776,27 +795,6 @@ export function FeatureEditSheet({
           </div>
         ) : null}
 
-        {/* --- v2: 기록 진입 (메모+사진+음성 RecordEntrySheet) ---
-         * 참고 B8/B9 분리 원칙 — FeatureEditSheet 는 메타만, 미디어 입력은 RecordEntrySheet.
-         */}
-        {isPersonal && !readOnly && !creating ? (
-          <button
-            type="button"
-            className="fes-record-cta"
-            onClick={() => setRecordSheetOpen(true)}
-          >
-            <span className="fes-record-cta__plus" aria-hidden="true">+</span>
-            <span className="fes-record-cta__label">
-              오늘의 기록 남기기
-              {(photos.length + voices.length + memos.length) > 0 ? (
-                <span className="fes-record-cta__count">
-                  · 지금 사진 {photos.length} · 음성 {voices.length} · 메모 {memos.length}
-                </span>
-              ) : null}
-            </span>
-          </button>
-        ) : null}
-
         {/* --- 액션 --- */}
         <div className="fes-action">
           {canDelete ? (
@@ -808,9 +806,9 @@ export function FeatureEditSheet({
             type="button"
             className="fes-btn fes-btn--primary"
             onClick={onSave}
-            disabled={readOnly}
+            disabled={saveDisabled}
           >
-            저장
+            {featureSheet.cloudPending ? "준비 중" : "저장"}
           </button>
         </div>
       </section>

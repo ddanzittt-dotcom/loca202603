@@ -1,0 +1,15 @@
+.git
+.vercel
+.tmp
+.qa-artifacts
+test-results
+node_modules
+dist
+dist-ssr
+android
+ios
+*.log
+tmp-*.png
+.env
+.env.*
+!.env.example

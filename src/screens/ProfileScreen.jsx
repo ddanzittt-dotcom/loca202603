@@ -1,11 +1,17 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react"
-import { MapPin, Moon, Sun, Bell, BellOff, Download, Trash2, ChevronRight, ExternalLink, LogOut, ArrowLeft, Link as LinkIcon, Check, Search, Users, Edit3, Share2 } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Bell, BellOff, Check, ChevronRight, Download, Edit3, ExternalLink, Link as LinkIcon, LogOut, MapPin, Moon, Plus, Search, Settings, Sun, Trash2, Users } from "lucide-react"
 import { BottomSheet, EmptyState } from "../components/ui"
 import { Avatar } from "../components/Avatar"
+import { BrandLogo } from "../components/BrandLogo"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
-import { getProfilePlacementState } from "../lib/mapPlacement"
+import { getProfilePlacementState, isEventMap } from "../lib/mapPlacement"
 import { hasSupabaseEnv } from "../lib/supabase"
+
+const PROFILE_ALIAS_SUGGESTIONS = ["성수 카페 탐험가", "동네 산책러", "주말 미식가", "서울 골목 탐험가"]
+const PROFILE_ALIAS_MAX = 15
+const PROFILE_BIO_MAX = 80
+const CURATION_NOTICE_KEY = "loca.profile_curation_notice_seen"
 
 function renderMiniMapGrid() {
   const vertical = [40, 80, 120, 160].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="138"/>`).join("")
@@ -13,7 +19,7 @@ function renderMiniMapGrid() {
   return `<g stroke="#DDD0B3" stroke-width="0.6">${vertical}${horizontal}</g>`
 }
 
-function generateLocalMiniMapSvg(features) {
+function generateLocalMiniMapSvg(features = []) {
   const pins = features.filter((item) => item.type === "pin" && Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng)))
   const bg = '<rect width="200" height="138" fill="#EFE7D4"/>'
   const grid = renderMiniMapGrid()
@@ -27,14 +33,8 @@ function generateLocalMiniMapSvg(features) {
   const maxLat = Math.max(...coords.map((p) => p.lat))
   const minLng = Math.min(...coords.map((p) => p.lng))
   const maxLng = Math.max(...coords.map((p) => p.lng))
-  const latRange = maxLat - minLat
-  const lngRange = maxLng - minLng
-
-  if (latRange < 0.0005 && lngRange < 0.0005) {
-    const countLabel = pins.length > 1 ? `<text x="100" y="102" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="9" font-weight="700" fill="#4A453E">${pins.length}곳 한 지점</text>` : ""
-    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<circle cx="100" cy="69" r="14" fill="#FF6B35" opacity="0.15"/><circle cx="100" cy="69" r="8" fill="#FF6B35" opacity="0.3"/><circle cx="100" cy="69" r="6" fill="white" stroke="#C44518" stroke-width="1"/><circle cx="100" cy="69" r="3.5" fill="#FF6B35"/>${countLabel}</svg>`
-  }
-
+  const latRange = Math.max(maxLat - minLat, 0.0005)
+  const lngRange = Math.max(maxLng - minLng, 0.0005)
   const padding = 18
   const drawableW = 200 - padding * 2
   const drawableH = 138 - padding * 2
@@ -43,18 +43,47 @@ function generateLocalMiniMapSvg(features) {
   const usedH = latRange * scale
   const offsetX = padding + (drawableW - usedW) / 2
   const offsetY = padding + (drawableH - usedH) / 2
-  const points = coords.map((p) => ({
-    x: offsetX + (p.lng - minLng) * scale,
-    y: offsetY + (maxLat - p.lat) * scale,
-  }))
   const radius = pins.length > 20 ? 3 : pins.length > 10 ? 3.5 : 4.5
-  const dots = points.map((point) => {
-    const x = point.x.toFixed(1)
-    const y = point.y.toFixed(1)
-    return `<circle cx="${x}" cy="${y}" r="${radius}" fill="white" stroke="#C44518" stroke-width="0.8"/><circle cx="${x}" cy="${y}" r="${(radius * 0.62).toFixed(1)}" fill="#FF6B35"/>`
+  const dots = coords.map((point) => {
+    const x = offsetX + (point.lng - minLng) * scale
+    const y = offsetY + (maxLat - point.lat) * scale
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius}" fill="white" stroke="#C44518" stroke-width="0.8"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius * 0.62).toFixed(1)}" fill="#FF6B35"/>`
   }).join("")
 
   return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${bg}${grid}<g>${dots}</g></svg>`
+}
+
+function groupFeaturesByMapId(features = []) {
+  return features.reduce((acc, feature) => {
+    const mapId = feature?.mapId
+    if (!mapId) return acc
+    const list = acc.get(mapId)
+    if (list) list.push(feature)
+    else acc.set(mapId, [feature])
+    return acc
+  }, new Map())
+}
+
+function readJsonSetting(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)) } catch { return fallback }
+}
+
+function getThemeMode() {
+  return localStorage.getItem("loca.themeMode") || "light"
+}
+
+function applyThemeMode(mode) {
+  localStorage.setItem("loca.themeMode", mode)
+  if (mode === "dark") document.documentElement.setAttribute("data-theme", "dark")
+  else document.documentElement.removeAttribute("data-theme")
+}
+
+function readCurationNoticeSeen() {
+  try { return window.localStorage?.getItem(CURATION_NOTICE_KEY) === "true" } catch { return false }
+}
+
+function writeCurationNoticeSeen() {
+  try { window.localStorage?.setItem(CURATION_NOTICE_KEY, "true") } catch { /* noop */ }
 }
 
 function getMapPrivacyLabel(map) {
@@ -65,10 +94,9 @@ function getMapPrivacyLabel(map) {
 }
 
 function ProfileMiniCard({ map, features, onClick }) {
-  const pins = features.filter((f) => f.type === "pin")
+  const pins = features.filter((item) => item.type === "pin")
   const previewSvg = map.previewSvg || map.preview_svg || generateLocalMiniMapSvg(features)
   const privacyLabel = getMapPrivacyLabel(map)
-  const isPrivate = privacyLabel === "비공개"
   const savedCount = map.savedCount || map.saved_count || map.bookmarkCount || map.bookmark_count
 
   return (
@@ -79,7 +107,7 @@ function ProfileMiniCard({ map, features, onClick }) {
         <div className="pf__mini-meta">
           <span>{pins.length} 장소</span>
           <i />
-          <span>{isPrivate ? "🔒 " : ""}{privacyLabel}</span>
+          <span>{privacyLabel}</span>
           {savedCount ? <><i /><span>저장 {savedCount}</span></> : null}
         </div>
       </span>
@@ -87,80 +115,35 @@ function ProfileMiniCard({ map, features, onClick }) {
   )
 }
 
-// 테마 모드 관리
-function getThemeMode() {
-  return localStorage.getItem("loca.themeMode") || "light"
-}
-
-function applyThemeMode(mode) {
-  localStorage.setItem("loca.themeMode", mode)
-  const root = document.documentElement
-  if (mode === "dark") {
-    root.setAttribute("data-theme", "dark")
-  } else if (mode === "light") {
-    root.removeAttribute("data-theme")
-  } else {
-    root.removeAttribute("data-theme")
-  }
-}
-
-// 앱 설정 관리
-function getAppSettings() {
-  try {
-    return JSON.parse(localStorage.getItem("loca.appSettings") || "{}")
-  } catch { return {} }
-}
-
-function saveAppSettings(settings) {
-  localStorage.setItem("loca.appSettings", JSON.stringify(settings))
-}
-
-// 프로필 갤러리 빈 상태 (링크 공유 여부에 따라 분기)
-// 빈 공간에는 캐릭터 + 안내 문구만 보여주고 CTA 버튼은 숨긴다.
-// 프로필 공개 진입점은 상단 액션 버튼 하나로 통일.
 function ProfileEmptyGallery({ maps, shares, characterImage }) {
-  const hasPublishedNotOnProfile = maps.some((m) => {
-    const state = getProfilePlacementState(m)
-    return state.isPublished && !shares.some((s) => s.mapId === m.id)
+  const shareMapIds = new Set(shares.map((share) => share.mapId))
+  const hasPublishedNotOnProfile = maps.some((map) => {
+    if (isEventMap(map)) return false
+    const state = getProfilePlacementState(map)
+    return state.isPublished && !shareMapIds.has(map.id)
   })
-
-  const charImg = characterImage || "/characters/cloud_lv1.svg"
-
-  if (hasPublishedNotOnProfile) {
-    return (
-      <EmptyState
-        variant="character"
-        characterImage={charImg}
-        title="프로필을 꾸며볼까요"
-        description="링크 공유 중인 지도 중에서 보여주고 싶은 것만 프로필에 공개할 수 있어요"
-      />
-    )
-  }
 
   return (
     <EmptyState
       variant="character"
-      characterImage={charImg}
-      title="아직 프로필에 공개한 지도가 없어요"
-      description="지도를 만들고 링크 공유를 켠 뒤 프로필에 공개할 수 있어요"
+      characterImage={characterImage || "/characters/cloud_lv1.svg"}
+      title={hasPublishedNotOnProfile ? "프로필을 꾸며볼까요" : "아직 프로필에 공개한 지도가 없어요"}
+      description={hasPublishedNotOnProfile ? "공유 중인 지도 중 보여주고 싶은 것만 공개할 수 있어요" : "지도를 만들고 링크 공유를 켠 뒤 프로필에 공개할 수 있어요"}
     />
   )
 }
 
-// 프로필 공개 피커 시트
-function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddToProfile }) {
+function ProfilePickerSheet({ open, maps, shares, featuresByMapId, onClose, onBatchAddToProfile }) {
   const [selected, setSelected] = useState(new Set())
-
-  const candidates = useMemo(() => {
-    return maps.filter((m) => {
-      const state = getProfilePlacementState(m)
-      return state.isPublished && !shares.some((s) => s.mapId === m.id)
-    })
-  }, [maps, shares])
+  const shareMapIds = useMemo(() => new Set(shares.map((share) => share.mapId)), [shares])
+  const candidates = useMemo(() => maps.filter((map) => {
+    if (isEventMap(map)) return false
+    return getProfilePlacementState(map).isPublished && !shareMapIds.has(map.id)
+  }), [maps, shareMapIds])
 
   const toggle = (mapId) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
+    setSelected((current) => {
+      const next = new Set(current)
       if (next.has(mapId)) next.delete(mapId)
       else next.add(mapId)
       return next
@@ -178,38 +161,25 @@ function ProfilePickerSheet({ open, maps, shares, features, onClose, onBatchAddT
   return (
     <BottomSheet open={open} title="프로필에 공개할 지도" subtitle="링크 공유 중인 지도 중 보여주고 싶은 것만 공개해보세요" onClose={onClose}>
       <div className="picker-sheet__list">
-        {candidates.length === 0 ? (
-          <p className="picker-sheet__empty">공개할 수 있는 지도가 없어요</p>
-        ) : (
-          candidates.map((map) => {
-            const isSelected = selected.has(map.id)
-            const pins = features.filter((f) => f.mapId === map.id && f.type === "pin").length
-            return (
-              <button
-                key={map.id}
-                type="button"
-                className={`picker-sheet__item${isSelected ? " is-selected" : ""}`}
-                onClick={() => toggle(map.id)}
-              >
-                <span className={`picker-sheet__check${isSelected ? " is-checked" : ""}`}>
-                  {isSelected ? <Check size={14} color="#fff" /> : null}
-                </span>
-                <span className="picker-sheet__info">
-                  <p className="picker-sheet__title">{map.title}</p>
-                  <p className="picker-sheet__meta"><MapPin size={9} /> {pins}개 장소</p>
-                </span>
-              </button>
-            )
-          })
-        )}
+        {candidates.length === 0 ? <p className="picker-sheet__empty">공개할 수 있는 지도가 없어요</p> : null}
+        {candidates.map((map) => {
+          const isSelected = selected.has(map.id)
+          const pins = (featuresByMapId.get(map.id) || []).filter((feature) => feature.type === "pin").length
+          return (
+            <button key={map.id} type="button" className={`picker-sheet__item${isSelected ? " is-selected" : ""}`} onClick={() => toggle(map.id)}>
+              <span className={`picker-sheet__check${isSelected ? " is-checked" : ""}`}>
+                {isSelected ? <Check size={14} color="#fff" /> : null}
+              </span>
+              <span className="picker-sheet__info">
+                <p className="picker-sheet__title">{map.title}</p>
+                <p className="picker-sheet__meta"><MapPin size={9} /> {pins}개 장소</p>
+              </span>
+            </button>
+          )
+        })}
       </div>
       <div className="picker-sheet__footer">
-        <button
-          type="button"
-          className="button button--primary picker-sheet__confirm"
-          disabled={selected.size === 0}
-          onClick={handleConfirm}
-        >
+        <button type="button" className="button button--primary picker-sheet__confirm" disabled={selected.size === 0} onClick={handleConfirm}>
           선택한 지도 공개{selected.size > 0 ? ` (${selected.size})` : ""}
         </button>
       </div>
@@ -231,7 +201,6 @@ function ProfileUserSearchSheet({ open, users = [], currentUserId, onClose, onSe
   const [query, setQuery] = useState("")
   const [cloudResults, setCloudResults] = useState([])
   const [searching, setSearching] = useState(false)
-
   const trimmed = query.trim().toLowerCase()
   const localResults = useMemo(() => {
     if (!trimmed) return []
@@ -264,91 +233,46 @@ function ProfileUserSearchSheet({ open, users = [], currentUserId, onClose, onSe
   }, [])
 
   useEffect(() => {
-    if (!open) return
-    if (!trimmed) {
-      setCloudResults([])
-      setSearching(false)
-      return
-    }
-    const timer = window.setTimeout(() => searchCloud(trimmed), 300)
+    if (!open) return undefined
+    const timer = window.setTimeout(() => searchCloud(query), 300)
     return () => window.clearTimeout(timer)
-  }, [open, searchCloud, trimmed])
+  }, [open, query, searchCloud])
 
-  const results = hasSupabaseEnv ? cloudResults : localResults
-  const hasQuery = trimmed.length > 0
+  const mergedResults = useMemo(() => {
+    const seen = new Set()
+    return [...localResults, ...cloudResults].filter((profile) => {
+      if (!profile?.id || profile.id === currentUserId || seen.has(profile.id)) return false
+      seen.add(profile.id)
+      return true
+    })
+  }, [cloudResults, currentUserId, localResults])
 
-  const handleSelect = (profile) => {
-    onSelectUser?.(profile)
-    onClose()
-  }
+  if (!open) return null
 
   return (
-    <BottomSheet
-      open={open}
-      title="사용자 찾기"
-      subtitle="닉네임이나 아이디로 찾아보세요"
-      onClose={onClose}
-    >
+    <BottomSheet open={open} title="사용자 찾기" subtitle="닉네임이나 아이디로 찾아보세요" onClose={onClose}>
       <div className="profile-search-sheet">
-        <label className="profile-search-input">
+        <label className="profile-search-sheet__input">
           <Search size={15} aria-hidden="true" />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="닉네임 또는 아이디"
-            autoFocus
-          />
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="닉네임 검색" />
         </label>
-
-        {!hasQuery ? (
-          <div className="profile-search-empty">
-            <Users size={20} aria-hidden="true" />
-            <strong>가볍게 찾아보세요</strong>
-            <span>사용자 찾기는 보조 기능이에요. 내 공개 지도는 아래 갤러리에 그대로 있어요.</span>
-          </div>
-        ) : searching ? (
-          <div className="profile-search-empty">
-            <span>검색 중...</span>
-          </div>
-        ) : results.length > 0 ? (
-          <div className="profile-search-results">
-            {results.map((result) => (
-              <button
-                key={result.id}
-                className="profile-search-result"
-                type="button"
-                onClick={() => handleSelect(result)}
-              >
-                <Avatar name={result.name} avatarUrl={result.avatarUrl} size={38} className="profile-search-result__avatar" />
-                <span className="profile-search-result__copy">
-                  <strong>{result.name}</strong>
-                  <small>{result.handle || "아이디 없음"}</small>
-                  {result.bio ? <em>{result.bio}</em> : null}
-                </span>
-                <ChevronRight size={15} aria-hidden="true" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="profile-search-empty">
-            <Search size={20} aria-hidden="true" />
-            <strong>찾는 사용자가 없어요</strong>
-            <span>닉네임이나 아이디를 다시 확인해보세요.</span>
-          </div>
-        )}
+        <div className="profile-search-sheet__list">
+          {searching ? <p className="profile-search-sheet__empty">검색 중...</p> : null}
+          {!searching && mergedResults.length === 0 ? <p className="profile-search-sheet__empty">찾는 사용자가 없어요</p> : null}
+          {mergedResults.map((profile) => (
+            <button key={profile.id} type="button" className="profile-search-sheet__item" onClick={() => { onSelectUser?.(profile); onClose?.() }}>
+              <Avatar user={profile} size={34} />
+              <span>
+                <strong>{profile.name}</strong>
+                {profile.handle ? <em>{profile.handle}</em> : null}
+              </span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
       </div>
     </BottomSheet>
   )
-}
-
-const CURATION_NOTICE_KEY = "loca.profile_curation_notice_seen"
-
-function readCurationNoticeSeen() {
-  try { return window.localStorage?.getItem(CURATION_NOTICE_KEY) === "true" } catch { return false }
-}
-function writeCurationNoticeSeen() {
-  try { window.localStorage?.setItem(CURATION_NOTICE_KEY, "true") } catch { /* noop */ }
 }
 
 export function ProfileScreen({
@@ -362,16 +286,19 @@ export function ProfileScreen({
   characterImage,
   settingsOpen: settingsOpenProp,
   onSettingsOpenChange,
+  canImportLocalData = false,
+  onImportLocalData,
   onSignOut,
   onPublishOpen,
   onSelectPost,
   onSelectUser,
   onUpdateProfile,
   onBatchAddToProfile,
+  onNavigateToMaps,
   onResetCoachmark,
+  hasB2BAccess = false,
+  onB2BAccessChange,
 }) {
-  // 설정 시트 상태: 외부(App top-bar)에서 제어 가능하도록 lift 가능.
-  // prop 미전달 시 내부 fallback state 사용.
   const [settingsOpenLocal, setSettingsOpenLocal] = useState(false)
   const settingsOpen = settingsOpenProp ?? settingsOpenLocal
   const setSettingsOpen = onSettingsOpenChange ?? setSettingsOpenLocal
@@ -379,16 +306,6 @@ export function ProfileScreen({
   const [userSearchOpen, setUserSearchOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [curationNoticeSeen, setCurationNoticeSeen] = useState(() => readCurationNoticeSeen())
-  useEffect(() => {
-    // 프로필 탭에 첫 진입한 시점에 flag 를 기록한다.
-    // dismiss 버튼과 무관하게 1회 이상 본 사용자는 다시 노출하지 않는다.
-    if (!curationNoticeSeen) {
-      writeCurationNoticeSeen()
-      setCurationNoticeSeen(true)
-    }
-  }, [curationNoticeSeen])
-
-  // 프로필 편집 폼
   const [editName, setEditName] = useState("")
   const [editAlias, setEditAlias] = useState("")
   const [editHandle, setEditHandle] = useState("")
@@ -396,72 +313,113 @@ export function ProfileScreen({
   const [editLink, setEditLink] = useState("")
   const [editAvatarPreview, setEditAvatarPreview] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [themeMode, setThemeMode] = useState(getThemeMode)
+  const [appSettings, setAppSettings] = useState(() => readJsonSetting("loca.appSettings", {}))
   const fileInputRef = useRef(null)
 
-  // 테마 모드
-  const [themeMode, setThemeMode] = useState(getThemeMode)
-
-  // 앱 설정
-  const [appSettings, setAppSettings] = useState(getAppSettings)
+  useEffect(() => {
+    if (!curationNoticeSeen) {
+      writeCurationNoticeSeen()
+      setCurationNoticeSeen(true)
+    }
+  }, [curationNoticeSeen])
 
   useEffect(() => {
     applyThemeMode(themeMode)
   }, [themeMode])
 
-  const handleThemeChange = (mode) => {
-    setThemeMode(mode)
-    applyThemeMode(mode)
+  const featuresByMapId = useMemo(() => groupFeaturesByMapId(features), [features])
+  const mapById = useMemo(() => new Map(maps.map((map) => [map.id, map])), [maps])
+  const galleryItems = useMemo(() => shares
+    .map((share) => {
+      const map = mapById.get(share.mapId)
+      if (!map || isEventMap(map)) return null
+      return { share, map, features: featuresByMapId.get(share.mapId) || [] }
+    })
+    .filter(Boolean), [featuresByMapId, mapById, shares])
+  const stats = useMemo(() => ({
+    placeCount: features.filter((feature) => feature?.type === "pin").length,
+    mapCount: maps.filter((map) => !isEventMap(map)).length,
+    recordCount: features.reduce((sum, feature) => sum + (Array.isArray(feature?.memos) ? feature.memos.filter((memo) => memo?.text?.trim()).length : 0), 0),
+  }), [features, maps])
+
+  const aliasText = user.alias || user.tagline || user.ho || ""
+  const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
+  const linkHref = user.link ? (user.link.startsWith("http") ? user.link : `https://${user.link}`) : ""
+  const linkDisplay = user.link ? user.link.replace(/^https?:\/\//, "") : ""
+  const profileInitial = getInitials(user.name).slice(0, 1)
+  const editInitials = getInitials(editName || user.name).slice(0, 1)
+  const editColors = getAvatarColors(editName || user.name)
+
+  const openEdit = () => {
+    setEditName(user.name || "")
+    setEditAlias((user.alias || user.tagline || user.ho || "").slice(0, PROFILE_ALIAS_MAX))
+    setEditHandle((user.handle || "").replace(/^@/, ""))
+    setEditBio((user.bio || "").slice(0, PROFILE_BIO_MAX))
+    setEditLink(user.link || "")
+    setEditAvatarPreview(user.avatarUrl || null)
+    setEditOpen(true)
+  }
+
+  const resizeImage = (file, maxSize = 256) => new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      let width = img.width
+      let height = img.height
+      if (width > height) { height = Math.round((height / width) * maxSize); width = maxSize }
+      else { width = Math.round((width / height) * maxSize); height = maxSize }
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext("2d")?.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL("image/jpeg", 0.85))
+    }
+    img.onerror = () => resolve(null)
+    img.src = URL.createObjectURL(file)
+  })
+
+  const handlePhotoSelect = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      alert("10MB 이하의 이미지만 업로드할 수 있어요.")
+      return
+    }
+    const resized = await resizeImage(file)
+    if (resized) setEditAvatarPreview(resized)
+  }
+
+  const saveProfile = async () => {
+    setSaving(true)
+    try {
+      await onUpdateProfile?.({
+        name: editName.trim() || user.name,
+        alias: editAlias.trim(),
+        bio: editBio,
+        handle: editHandle,
+        link: editLink,
+        avatarUrl: editAvatarPreview || null,
+      })
+      setEditOpen(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const updateSetting = (key, value) => {
     const next = { ...appSettings, [key]: value }
     setAppSettings(next)
-    saveAppSettings(next)
+    localStorage.setItem("loca.appSettings", JSON.stringify(next))
   }
 
-  const openNewWindow = (url) => {
-    window.open(url, "_blank", "noopener,noreferrer")
+  const clearCache = () => {
+    if (!confirm("캐시를 정리할까요? 오프라인 임시 데이터가 초기화될 수 있어요.")) return
+    sessionStorage.clear()
+    alert("캐시를 정리했어요.")
   }
 
-  const handleShareProfile = useCallback(async () => {
-    const shareUrl = window.location.href
-    const shareTitle = `${user.name || "LOCA"} 프로필`
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: shareTitle, url: shareUrl })
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(shareUrl)
-        alert("프로필 링크를 복사했어요.")
-      }
-    } catch {
-      // 사용자가 공유 시트를 닫은 경우도 있어 조용히 무시합니다.
-    }
-  }, [user.name])
-
-  const handleClearCache = () => {
-    if (confirm("캐시를 삭제하면 오프라인 데이터가 초기화됩니다. 계속하시겠어요?")) {
-      sessionStorage.clear()
-      const keysToRemove = []
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key && (key.startsWith("loca.event_queue") || key.startsWith("loca.survey_queue"))) {
-          keysToRemove.push(key)
-        }
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k))
-      alert("캐시가 삭제되었어요.")
-    }
-  }
-
-  const handleExportData = () => {
-    const data = {
-      exportedAt: new Date().toISOString(),
-      profile: user,
-      maps,
-      features,
-      shares,
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+  const exportData = () => {
+    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), profile: user, maps, features, shares }, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
@@ -470,237 +428,35 @@ export function ProfileScreen({
     URL.revokeObjectURL(url)
   }
 
-  // ─── 프로필 편집 ───
-
-  const handleOpenEdit = () => {
-    setEditName(user.name || "")
-    setEditAlias(user.alias || user.tagline || user.ho || "")
-    setEditHandle((user.handle || "").replace(/^@/, ""))
-    setEditBio(user.bio || "")
-    setEditLink(user.link || "")
-    setEditAvatarPreview(user.avatarUrl || null)
-    setEditOpen(true)
-  }
-
-  // 이미지를 canvas로 리사이즈하여 작은 data URL로 변환
-  const resizeImage = (file, maxSize = 256) => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement("canvas")
-        let w = img.width
-        let h = img.height
-        if (w > h) { h = Math.round((h / w) * maxSize); w = maxSize }
-        else { w = Math.round((w / h) * maxSize); h = maxSize }
-        canvas.width = w
-        canvas.height = h
-        const ctx = canvas.getContext("2d")
-        ctx.drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL("image/jpeg", 0.85))
-      }
-      img.onerror = () => resolve(null)
-      img.src = URL.createObjectURL(file)
-    })
-  }
-
-  const handlePhotoSelect = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 10 * 1024 * 1024) {
-      alert("10MB 이하의 이미지만 업로드할 수 있어요.")
-      return
-    }
-    const resized = await resizeImage(file)
-    if (resized) {
-      setEditAvatarPreview(resized)
-    }
-  }
-
-  const handleRemovePhoto = () => {
-    setEditAvatarPreview(null)
-    if (fileInputRef.current) fileInputRef.current.value = ""
-  }
-
-  const handleSaveProfile = async () => {
-    setSaving(true)
-    try {
-      const alias = editAlias.trim()
-      onUpdateProfile({
-        name: editName.trim() || user.name,
-        alias,
-        bio: editBio,
-        handle: editHandle,
-        link: editLink,
-        avatarUrl: editAvatarPreview || null,
-      })
-      setEditOpen(false)
-    } catch (error) {
-      console.error("Profile save failed:", error)
-      alert("프로필 저장에 실패했어요.")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const themeModes = [
-    { id: "light", icon: Sun, label: "라이트" },
-    { id: "dark", icon: Moon, label: "다크" },
-  ]
-
-  const publicMapCount = shares.length
-  // 레벨/XP 시스템 폐기 (2026-05) — 프로필에서 Lv 뱃지 제거.
-  const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
-  const linkHref = user.link ? (user.link.startsWith("http") ? user.link : `https://${user.link}`) : ""
-  const linkDisplay = user.link ? user.link.replace(/^https?:\/\//, "") : ""
-  const profileInitial = getInitials(user.name).slice(0, 1)
-
-  // 프로필 편집 화면
-  if (editOpen) {
-    const editInitials = getInitials(editName || user.name)
-    const editColors = getAvatarColors(editName || user.name)
-
-    return (
-      <section className="pf-edit">
-        {/* 헤더 */}
-        <div className="pf-edit__header">
-          <button className="pf-edit__back" type="button" onClick={() => setEditOpen(false)} aria-label="뒤로가기">
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="pf-edit__title">프로필 편집</h1>
-          <button className="pf-edit__done" type="button" onClick={handleSaveProfile} disabled={saving}>
-            {saving ? "저장 중..." : "완료"}
-          </button>
-        </div>
-
-        {/* 프로필 사진 */}
-        <div className="pf-edit__photo">
-          <button className="pf-edit__avatar-btn" type="button" onClick={() => fileInputRef.current?.click()}>
-            {editAvatarPreview ? (
-              <img src={editAvatarPreview} alt="프로필" className="pf-edit__avatar-img" />
-            ) : (
-              <div className="pf-edit__avatar-fallback" style={{ background: editColors.bg }}>
-                <span style={{ color: editColors.text }}>{editInitials}</span>
-              </div>
-            )}
-          </button>
-          <div className="pf-edit__photo-actions">
-            <button className="pf-edit__photo-btn" type="button" onClick={() => fileInputRef.current?.click()}>
-              사진 수정
-            </button>
-            {editAvatarPreview && (
-              <button className="pf-edit__photo-remove" type="button" onClick={handleRemovePhoto}>
-                사진 삭제
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={handlePhotoSelect}
-          />
-        </div>
-
-        {/* 입력 필드 */}
-        <div className="pf-edit__fields">
-          <div className="pf-edit__field">
-            <label className="pf-edit__label">이름</label>
-            <input
-              className="pf-edit__input"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder="이름"
-              maxLength={30}
-            />
-          </div>
-          <div className="pf-edit__field">
-            <label className="pf-edit__label">별칭</label>
-            <input
-              className="pf-edit__input"
-              value={editAlias}
-              onChange={(e) => setEditAlias(e.target.value)}
-              placeholder="예: 안녕 글쓴이"
-              maxLength={24}
-            />
-          </div>
-          <div className="pf-edit__field">
-            <label className="pf-edit__label">사용자 이름</label>
-            <input
-              className="pf-edit__input"
-              value={editHandle}
-              onChange={(e) => setEditHandle(e.target.value.replace(/[^a-zA-Z0-9._-]/g, ""))}
-              placeholder="사용자 이름"
-              maxLength={30}
-            />
-          </div>
-          <div className="pf-edit__field">
-            <label className="pf-edit__label">소개</label>
-            <textarea
-              className="pf-edit__textarea"
-              value={editBio}
-              onChange={(e) => setEditBio(e.target.value)}
-              placeholder="소개를 입력하세요"
-              rows={3}
-              maxLength={150}
-            />
-            <span className="pf-edit__counter">{editBio.length}/150</span>
-          </div>
-          <div className="pf-edit__field">
-            <label className="pf-edit__label">링크</label>
-            <input
-              className="pf-edit__input"
-              value={editLink}
-              onChange={(e) => setEditLink(e.target.value)}
-              placeholder="링크 추가"
-              type="url"
-            />
-          </div>
-        </div>
-      </section>
-    )
-  }
-
-  // v2: 통계 인라인 — 장소·지도·기록.
-  const placeCountStat = features.filter((f) => f?.type === "pin").length
-  const mapCountStat = maps.filter((m) => !m?.slug?.startsWith("event-")).length
-  const recordCountStat = features.reduce(
-    (sum, f) => sum + (Array.isArray(f?.memos) ? f.memos.filter((m) => m?.text?.trim()).length : 0),
-    0,
-  )
-  const aliasText = user.alias || user.tagline || user.ho || ""
-
   return (
     <section className="screen screen--scroll profile-v4 profile-v4--v2">
+      <header className="profile-v2__header">
+        <BrandLogo className="profile-v2__brand" dotClassName="profile-v2__brand-dot" />
+        <button type="button" className="profile-v2__settings" aria-label="설정" title="설정" onClick={() => setSettingsOpen(true)}>
+          <Settings size={17} strokeWidth={2} aria-hidden="true" />
+        </button>
+      </header>
+
       <div className="pf">
-        {/* 단일 화이트 카드 — 참고 이미지처럼 첫 화면에 지도 4개가 보이도록 압축 */}
         <article className="pf-v2-card">
           <div className="pf-v2-card__head">
             <div className="pf-v2-card__avatar" aria-hidden="true">
               {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{profileInitial}</span>}
             </div>
-
             <div className="pf-v2-card__identity">
-              {aliasText ? (
-                <span className="pf-v2-card__tagline">
-                  <span aria-hidden="true">✦</span> {aliasText}
-                </span>
-              ) : null}
-
+              {aliasText ? <span className="pf-v2-card__tagline"><span aria-hidden="true">·</span> {aliasText}</span> : null}
               <div className="pf-v2-card__name-row">
                 <h1 className="pf-v2-card__name">{user.name}</h1>
                 <p className="pf-v2-card__handle">@{handleText}</p>
               </div>
             </div>
-
-            <button className="pf-v2-card__edit" type="button" onClick={handleOpenEdit}>
+            <button className="pf-v2-card__edit" type="button" onClick={openEdit}>
               <Edit3 size={11} strokeWidth={2.2} />
               편집
             </button>
           </div>
 
           {user.bio ? <p className="pf-v2-card__bio">{user.bio}</p> : null}
-
           {user.link ? (
             <a className="pf-v2-card__link" href={linkHref} target="_blank" rel="noopener noreferrer">
               <LinkIcon size={11} strokeWidth={2.1} aria-hidden="true" />
@@ -710,19 +466,15 @@ export function ProfileScreen({
 
           <div className="pf-v2-card__foot">
             <div className="pf-v2-card__stats">
-              <span><strong className="loca-v2-num">{placeCountStat}</strong>장소</span>
+              <span><strong className="loca-v2-num">{stats.placeCount}</strong>장소</span>
               <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
-              <span><strong className="loca-v2-num">{mapCountStat}</strong>지도</span>
+              <span><strong className="loca-v2-num">{stats.mapCount}</strong>지도</span>
               <span className="pf-v2-card__stats-sep" aria-hidden="true">·</span>
-              <span><strong className="loca-v2-num">{recordCountStat}</strong>기록</span>
+              <span><strong className="loca-v2-num">{stats.recordCount}</strong>기록</span>
             </div>
-            <button className="pf-v2-card__share" type="button" onClick={handleShareProfile}>
-              <Share2 size={11} strokeWidth={2.1} />
-              공유
-            </button>
           </div>
 
-          {publicMapCount === 0 ? (
+          {shares.length === 0 ? (
             <button className="pf-v2-card__publish" type="button" onClick={onPublishOpen}>
               + 첫 지도 프로필에 공개하기
             </button>
@@ -730,174 +482,109 @@ export function ProfileScreen({
         </article>
 
         <div className="pf__section-head">
-          <h2>내 지도 <em>{publicMapCount}</em></h2>
-          <span>전체 <ChevronRight size={10} strokeWidth={2.4} aria-hidden="true" /></span>
+          <h2>내 지도<em>{shares.length}</em></h2>
+          <button className="pf__map-upload" type="button" onClick={() => setPickerOpen(true)} aria-label="프로필에 공개할 지도 올리기">
+            <Plus size={11} strokeWidth={2.4} aria-hidden="true" />
+            지도 올리기
+          </button>
         </div>
 
-        {shares.length > 0 ? (
+        {galleryItems.length > 0 ? (
           <div className="pf__gallery">
-            {shares.map((share) => {
-              const map = maps.find((item) => item.id === share.mapId)
-              const mapFeatures = features.filter((item) => item.mapId === share.mapId)
-              if (!map) return null
-              return <ProfileMiniCard key={share.id} map={map} features={mapFeatures} onClick={() => onSelectPost("own", share.id)} />
-            })}
+            {galleryItems.map((item) => (
+              <ProfileMiniCard key={item.share.id} map={item.map} features={item.features} onClick={() => onSelectPost?.("own", item.share.id)} />
+            ))}
           </div>
         ) : (
-          <ProfileEmptyGallery
-            maps={maps}
-            shares={shares}
-            characterImage={characterImage}
-          />
+          <ProfileEmptyGallery maps={maps} shares={shares} characterImage={characterImage} />
         )}
       </div>
 
-      <ProfilePickerSheet
-        open={pickerOpen}
-        maps={maps}
-        shares={shares}
-        features={features}
-        onClose={() => setPickerOpen(false)}
-        onBatchAddToProfile={onBatchAddToProfile}
-      />
+      {editOpen ? (
+        <div className="pf-edit-banner" role="presentation" onClick={() => setEditOpen(false)}>
+          <section className="pf-edit-banner__sheet" role="dialog" aria-modal="true" aria-label="프로필 편집" onClick={(event) => event.stopPropagation()}>
+            <span className="pf-edit-banner__handle" aria-hidden="true" />
+            <div className="pf-edit-banner__head">
+              <h1>프로필 편집</h1>
+              <button className="pf-edit-banner__save" type="button" onClick={saveProfile} disabled={saving}>{saving ? "저장 중..." : "저장"}</button>
+            </div>
+            <div className="pf-edit-banner__avatar-wrap">
+              <button className="pf-edit-banner__avatar" type="button" onClick={() => fileInputRef.current?.click()} aria-label="프로필 사진 수정">
+                {editAvatarPreview ? <img src={editAvatarPreview} alt="프로필" /> : <span style={{ background: editColors.bg, color: editColors.text }}>{editInitials}</span>}
+                <i aria-hidden="true"><Edit3 size={13} strokeWidth={2.4} /></i>
+              </button>
+              {editAvatarPreview ? <button className="pf-edit-banner__remove-photo" type="button" onClick={() => setEditAvatarPreview(null)}>사진 제거</button> : null}
+              <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoSelect} />
+            </div>
+            <div className="pf-edit-banner__fields">
+              <label className="pf-edit-banner__field"><span className="pf-edit-banner__label">이름</span><input value={editName} onChange={(event) => setEditName(event.target.value)} maxLength={30} /></label>
+              <label className="pf-edit-banner__field">
+                <span className="pf-edit-banner__label-row"><span className="pf-edit-banner__label">나를 표현하는 별명</span><span className="pf-edit-banner__count">{editAlias.length} / {PROFILE_ALIAS_MAX}</span></span>
+                <input value={editAlias} onChange={(event) => setEditAlias(event.target.value)} maxLength={PROFILE_ALIAS_MAX} />
+              </label>
+              <div className="pf-edit-banner__chips" aria-label="별명 예시">
+                {PROFILE_ALIAS_SUGGESTIONS.map((item) => <button key={item} type="button" onClick={() => setEditAlias(item)}>{item}</button>)}
+              </div>
+              <label className="pf-edit-banner__field"><span className="pf-edit-banner__label">아이디</span><input value={editHandle} onChange={(event) => setEditHandle(event.target.value)} /></label>
+              <label className="pf-edit-banner__field">
+                <span className="pf-edit-banner__label-row"><span className="pf-edit-banner__label">소개</span><span className="pf-edit-banner__count">{editBio.length} / {PROFILE_BIO_MAX}</span></span>
+                <textarea value={editBio} onChange={(event) => setEditBio(event.target.value)} rows={3} maxLength={PROFILE_BIO_MAX} />
+              </label>
+              <label className="pf-edit-banner__field"><span className="pf-edit-banner__label">외부 링크</span><input value={editLink} onChange={(event) => setEditLink(event.target.value)} type="url" /></label>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
-      <ProfileUserSearchSheet
-        open={userSearchOpen}
-        users={users}
-        currentUserId={user.id}
-        onClose={() => setUserSearchOpen(false)}
-        onSelectUser={onSelectUser}
-      />
+      <ProfilePickerSheet open={pickerOpen} maps={maps} shares={shares} featuresByMapId={featuresByMapId} onClose={() => setPickerOpen(false)} onBatchAddToProfile={onBatchAddToProfile} />
+      <ProfileUserSearchSheet open={userSearchOpen} users={users} currentUserId={user.id} onClose={() => setUserSearchOpen(false)} onSelectUser={onSelectUser} />
 
-      <BottomSheet
-        open={settingsOpen}
-        title="설정"
-        onClose={() => setSettingsOpen(false)}
-      >
+      <BottomSheet open={settingsOpen} title="설정" onClose={() => setSettingsOpen(false)}>
         <div className="settings-sheet-stack">
-
-          {/* 테마 */}
           <div className="settings-card">
             <h2>테마</h2>
             <div className="settings-theme-row">
-              {themeModes.map((mode) => (
-                <button
-                  key={mode.id}
-                  className={`settings-theme-btn${themeMode === mode.id ? " is-active" : ""}`}
-                  type="button"
-                  onClick={() => handleThemeChange(mode.id)}
-                >
+              {[{ id: "light", icon: Sun, label: "라이트" }, { id: "dark", icon: Moon, label: "다크" }].map((mode) => (
+                <button key={mode.id} className={`settings-theme-btn${themeMode === mode.id ? " is-active" : ""}`} type="button" onClick={() => setThemeMode(mode.id)}>
                   <mode.icon size={18} />
                   <span>{mode.label}</span>
                 </button>
               ))}
             </div>
           </div>
-
-          {/* 알림 */}
           <div className="settings-card">
             <h2>알림</h2>
             <label className="settings-toggle-row">
-              <span className="settings-toggle-label">
-                {appSettings.notifications !== false ? <Bell size={16} /> : <BellOff size={16} />}
-                전체 알림
-              </span>
-              <input
-                type="checkbox"
-                checked={appSettings.notifications !== false}
-                onChange={(e) => updateSetting("notifications", e.target.checked)}
-              />
+              <span className="settings-toggle-label">{appSettings.notifications !== false ? <Bell size={16} /> : <BellOff size={16} />}전체 알림</span>
+              <input type="checkbox" checked={appSettings.notifications !== false} onChange={(event) => updateSetting("notifications", event.target.checked)} />
             </label>
-            {appSettings.notifications !== false && (
-              <div className="settings-noti-detail">
-                {/* 전역 설정은 사용자 실제 기능 중심으로 노출한다. */}
-                {/* 행사 참여용 토글(이벤트 공지, 체크인 리마인더, 완주 축하, 행사 임박, 내 댓글 고정)은 */}
-                {/* 세션 진입 시점에 표시하는 방향으로 이동하므로 전역 설정에서는 숨긴다. */}
-                {/* 저장된 localStorage 값(noti_announcement 등)은 그대로 보존된다. */}
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">내 지도 공유</span>
-                  <input type="checkbox" checked={appSettings.noti_map_viewed !== false} onChange={(e) => updateSetting("noti_map_viewed", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">내 맵핑 댓글</span>
-                  <input type="checkbox" checked={appSettings.noti_feature_comment !== false} onChange={(e) => updateSetting("noti_feature_comment", e.target.checked)} />
-                </label>
-                <label className="settings-toggle-row">
-                  <span className="settings-toggle-label">장소 수정 요청</span>
-                  <input type="checkbox" checked={appSettings.noti_feature_update_request !== false} onChange={(e) => updateSetting("noti_feature_update_request", e.target.checked)} />
-                </label>
-              </div>
-            )}
           </div>
-
-          {/* 데이터 */}
           <div className="settings-card">
-            <h2>데이터</h2>
-            <div className="settings-card__actions">
-              <button className="button button--secondary" type="button" onClick={handleExportData}>
-                <Download size={14} /> 백업 다운로드
-              </button>
-              <button className="button button--danger" type="button" onClick={handleClearCache}>
-                <Trash2 size={14} /> 캐시 삭제
-              </button>
-            </div>
+            <h2>계정</h2>
+            {cloudMode ? <p className="settings-account-email">{cloudEmail}</p> : null}
+            <button type="button" className="settings-row-button" onClick={() => setUserSearchOpen(true)}><Users size={16} />사용자 찾기<ChevronRight size={14} /></button>
+            {canImportLocalData ? <button type="button" className="settings-row-button" onClick={onImportLocalData}><Download size={16} />로컬 데이터 가져오기<ChevronRight size={14} /></button> : null}
+            {onSignOut ? <button type="button" className="settings-row-button" onClick={onSignOut}><LogOut size={16} />로그아웃<ChevronRight size={14} /></button> : null}
           </div>
-
-          {/* 도움말 */}
           <div className="settings-card">
-            <h2>도움말</h2>
-            <div className="settings-link-list">
-              <button
-                className="settings-link-row"
-                type="button"
-                onClick={() => {
-                  onResetCoachmark?.()
-                  setSettingsOpen(false)
-                }}
-              >
-                <span>에디터 가이드 다시 보기</span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <h2>관리</h2>
+            <button type="button" className="settings-row-button" onClick={exportData}><Download size={16} />데이터 내보내기<ChevronRight size={14} /></button>
+            <button type="button" className="settings-row-button" onClick={clearCache}><Trash2 size={16} />캐시 정리<ChevronRight size={14} /></button>
+            {onResetCoachmark ? <button type="button" className="settings-row-button" onClick={onResetCoachmark}><Check size={16} />가이드 다시 보기<ChevronRight size={14} /></button> : null}
+            {onNavigateToMaps ? <button type="button" className="settings-row-button" onClick={onNavigateToMaps}><MapPin size={16} />내 지도 열기<ChevronRight size={14} /></button> : null}
           </div>
-
-          {/* 정보 */}
           <div className="settings-card">
-            <div className="settings-link-list">
-              <button
-                className="settings-link-row"
-                type="button"
-                onClick={() => openNewWindow(buildLegalDocumentUrl("terms"))}
-              >
-                <span>이용약관</span>
-                <ExternalLink size={14} />
-              </button>
-              <button
-                className="settings-link-row"
-                type="button"
-                onClick={() => openNewWindow(buildLegalDocumentUrl("privacy"))}
-              >
-                <span>개인정보처리방침</span>
-                <ExternalLink size={14} />
-              </button>
-              <button className="settings-link-row" type="button" onClick={() => window.open("mailto:danzittt@gmail.com")}>
-                <span>문의하기</span>
-                <ChevronRight size={14} />
-              </button>
-            </div>
-            <p className="settings-card__version">LOCA v1.0.0</p>
+            <h2>비즈니스</h2>
+            <label className="settings-toggle-row">
+              <span className="settings-toggle-label">B2B 기능</span>
+              <input type="checkbox" checked={Boolean(hasB2BAccess)} onChange={(event) => onB2BAccessChange?.(event.target.checked)} />
+            </label>
           </div>
-
-          {/* 계정 */}
-          {cloudMode && onSignOut ? (
-            <div className="settings-card">
-              <p className="settings-card__email">{cloudEmail || "Supabase 계정"}</p>
-              <button className="button button--ghost" type="button" onClick={onSignOut}>
-                <LogOut size={14} /> 로그아웃
-              </button>
-            </div>
-          ) : null}
-
+          <div className="settings-card">
+            <h2>약관</h2>
+            <button type="button" className="settings-row-button" onClick={() => window.open(buildLegalDocumentUrl("terms"), "_blank", "noopener,noreferrer")}><ExternalLink size={16} />이용약관<ChevronRight size={14} /></button>
+            <button type="button" className="settings-row-button" onClick={() => window.open(buildLegalDocumentUrl("privacy"), "_blank", "noopener,noreferrer")}><ExternalLink size={16} />개인정보 처리방침<ChevronRight size={14} /></button>
+          </div>
         </div>
       </BottomSheet>
     </section>

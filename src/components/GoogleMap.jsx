@@ -1,15 +1,17 @@
 ﻿import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react"
-import { FEATURE_LINE_STYLE_SOLID, getFeatureStyleColor, getFeatureStyleLineStyle, getGoogleDashIcons } from "../lib/featureStyle"
+import { FEATURE_LINE_STYLE_SOLID, getDefaultFeatureStyle, getFeatureStyleColor, getFeatureStyleLineStyle, getGoogleDashIcons } from "../lib/featureStyle"
+import { triggerSelectionFeedback } from "../lib/haptics"
 import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
-import { categoryToEmoji } from "../data/pinIcons"
-import { resolveFeatureEmoji } from "./FeatureEmoji"
+import { getDefaultMarkerEmojiForFeature, resolvePlaceMarkerEmoji } from "./FeatureEmoji"
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || ""
 const PLACE_LABEL_MIN_ZOOM = 15
-const PLACE_MARKER_EMOJI_SIZE = 24
+const PLACE_MARKER_EMOJI_SIZE = 28
 
 const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
-const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230F6E56' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
+const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230A5A46' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
+const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
+const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
 let loadPromise = null
 function loadGoogleMaps() {
@@ -31,37 +33,26 @@ const escapeHtml = (str) => {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
-const isPinLikeEmoji = (emoji) => emoji === "📍" || emoji === "📌"
-
-const getCategoryEmoji = (feature) => {
-  const category = typeof feature?.category === "string" ? feature.category.trim() : ""
-  if (!category) return ""
-  const emoji = categoryToEmoji(category)
-  return isPinLikeEmoji(emoji) ? "" : emoji
+const getPixelArtHtml = (pixelId, fallbackEmoji) => {
+  const art = findPixelArt(pixelId)
+  return art
+    ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
+    : `<span class="loca-place-marker__unicode">${escapeHtml(fallbackEmoji || getDefaultMarkerEmojiForFeature())}</span>`
 }
 
-const getDefaultPlaceEmoji = () => "✨"
-
 const getPlaceMarkerEmojiHtml = (feature) => {
-  const descriptor = resolveFeatureEmoji(feature)
+  const descriptor = resolvePlaceMarkerEmoji(feature)
   if (descriptor.kind === "pixel") {
-    const art = findPixelArt(descriptor.value)
-    return art
-      ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
-      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultPlaceEmoji())}</span>`
+    return getPixelArtHtml(descriptor.value, getDefaultMarkerEmojiForFeature(feature))
   }
   if (descriptor.kind === "photo") {
     const safeUrl = escapeHtml(descriptor.value || "")
     return safeUrl
       ? `<img class="loca-place-marker__photo" src="${safeUrl}" width="${PLACE_MARKER_EMOJI_SIZE}" height="${PLACE_MARKER_EMOJI_SIZE}" alt=""/>`
-      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultPlaceEmoji())}</span>`
+      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultMarkerEmojiForFeature(feature))}</span>`
   }
 
-  const emoji = typeof descriptor.value === "string" ? descriptor.value.trim() : ""
-  const displayEmoji = emoji && !isPinLikeEmoji(emoji)
-    ? emoji
-    : (getCategoryEmoji(feature) || getDefaultPlaceEmoji())
-  return `<span class="loca-place-marker__unicode">${escapeHtml(displayEmoji)}</span>`
+  return `<span class="loca-place-marker__unicode">${escapeHtml(descriptor.value || getDefaultMarkerEmojiForFeature(feature))}</span>`
 }
 
 const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel }) => {
@@ -73,9 +64,11 @@ const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel }) => {
   const title = escapeHtml(feature.title || "장소")
 
   return (
-    `<div class="${classNames}" role="button" aria-label="${title}">`
-      + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
-      + `<div class="loca-place-marker__label">${title}</div>`
+    `<div class="loca-place-marker-anchor">`
+      + `<div class="${classNames}" role="button" aria-label="${title}">`
+        + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
+        + `<div class="loca-place-marker__label">${title}</div>`
+      + `</div>`
     + `</div>`
   )
 }
@@ -135,6 +128,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
   fitTrigger,
   onMapTap,
   onFeatureTap,
+  onViewportChange,
   showLabels = true,
   myLocation = null,
 }, ref) {
@@ -146,11 +140,26 @@ export const GoogleMap = forwardRef(function GoogleMap({
   const myLocMarkerRef = useRef(null)
   const lastFitTriggerRef = useRef(0)
   const onMapTapRef = useRef(onMapTap)
+  const onViewportChangeRef = useRef(onViewportChange)
   const initialCenterRef = useRef(focusPoint || myLocation || { lat: 37.56, lng: 126.98 })
   const [mapReady, setMapReady] = useState(false)
   const [mapZoom, setMapZoom] = useState(14)
 
   useEffect(() => { onMapTapRef.current = onMapTap }, [onMapTap])
+  useEffect(() => { onViewportChangeRef.current = onViewportChange }, [onViewportChange])
+
+  const emitViewportChange = () => {
+    const map = mapRef.current
+    if (!map || typeof onViewportChangeRef.current !== "function") return
+    const center = map.getCenter?.()
+    const lat = typeof center?.lat === "function" ? center.lat() : Number(center?.lat)
+    const lng = typeof center?.lng === "function" ? center.lng() : Number(center?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    onViewportChangeRef.current({
+      center: { lat, lng },
+      zoom: typeof map.getZoom === "function" ? map.getZoom() : undefined,
+    })
+  }
 
   useEffect(() => {
     const root = containerRef.current
@@ -199,7 +208,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
   useEffect(() => {
     if (!containerRef.current || !GOOGLE_MAPS_KEY) return
     let cancelled = false
-    let zoomListener = null
+    const listeners = []
 
     loadGoogleMaps().then(() => {
       if (cancelled || !containerRef.current) return
@@ -215,6 +224,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
         ],
       })
       mapRef.current = map
+      const emit = () => emitViewportChange()
 
       map.addListener("click", (e) => {
         if (onMapTapRef.current) {
@@ -222,15 +232,19 @@ export const GoogleMap = forwardRef(function GoogleMap({
         }
       })
       setMapZoom(map.getZoom() || 14)
-      zoomListener = map.addListener("zoom_changed", () => {
+      listeners.push(map.addListener("zoom_changed", () => {
         setMapZoom(map.getZoom() || 14)
-      })
+        emit()
+      }))
+      listeners.push(map.addListener("idle", emit))
+      listeners.push(map.addListener("dragend", emit))
       setMapReady(true)
+      emit()
     })
 
     return () => {
       cancelled = true
-      if (zoomListener) window.google?.maps?.event?.removeListener(zoomListener)
+      listeners.forEach((listener) => window.google?.maps?.event?.removeListener(listener))
     }
   }, [])
 
@@ -250,6 +264,10 @@ export const GoogleMap = forwardRef(function GoogleMap({
     const pins = features.filter((f) => f.type === "pin" && f.lat && f.lng)
     const routes = features.filter((f) => f.type === "route" && f.points?.length >= 2)
     const areas = features.filter((f) => f.type === "area" && f.points?.length >= 3)
+    const handleFeatureTap = (featureId) => {
+      triggerSelectionFeedback()
+      onFeatureTap?.(featureId)
+    }
 
     // ? 留덉빱
     pins.forEach((pin) => {
@@ -265,7 +283,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
         }),
         map,
         zIndex: isSelected ? 300 : 40,
-        onClick: () => onFeatureTap?.(pin.id),
+        onClick: () => handleFeatureTap(pin.id),
       })
       markersRef.current.push(marker)
     })
@@ -281,11 +299,11 @@ export const GoogleMap = forwardRef(function GoogleMap({
         path,
         map,
         strokeColor: routeColor,
-        strokeOpacity: routeDashIcons ? 0 : (isSelected ? 0.95 : 0.8),
+        strokeOpacity: routeDashIcons ? 0 : (isSelected ? 0.98 : 0.88),
         strokeWeight: isSelected ? 4 : 3,
         icons: routeDashIcons || undefined,
       })
-      polyline.addListener("click", () => onFeatureTap?.(route.id))
+      polyline.addListener("click", () => handleFeatureTap(route.id))
       polylinesRef.current.push(polyline)
     })
 
@@ -301,12 +319,12 @@ export const GoogleMap = forwardRef(function GoogleMap({
         paths: path,
         map,
         strokeColor: areaColor,
-        strokeOpacity: areaLineStyle === FEATURE_LINE_STYLE_SOLID ? (isSelected ? 0.9 : 0.7) : 0,
+        strokeOpacity: areaLineStyle === FEATURE_LINE_STYLE_SOLID ? (isSelected ? 0.94 : 0.78) : 0,
         strokeWeight: 2,
         fillColor: areaColor,
-        fillOpacity: isSelected ? 0.25 : 0.1,
+        fillOpacity: isSelected ? 0.3 : 0.16,
       })
-      polygon.addListener("click", () => onFeatureTap?.(area.id))
+      polygon.addListener("click", () => handleFeatureTap(area.id))
       polygonsRef.current.push(polygon)
 
       if (areaLineStyle !== FEATURE_LINE_STYLE_SOLID && closedPath.length >= 2) {
@@ -318,7 +336,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
           strokeWeight: 2,
           icons: areaDashIcons || undefined,
         })
-        borderLine.addListener("click", () => onFeatureTap?.(area.id))
+        borderLine.addListener("click", () => handleFeatureTap(area.id))
         polylinesRef.current.push(borderLine)
       }
     })
@@ -330,14 +348,14 @@ export const GoogleMap = forwardRef(function GoogleMap({
     if (!map || !window.google?.maps || !draftPoints?.length) return
 
     const path = draftPoints.map(([lng, lat]) => ({ lat, lng }))
-    const color = draftMode === "area" ? "#854F0B" : "#0F6E56"
+    const color = draftMode === "area" ? DEFAULT_AREA_DRAW_COLOR : DEFAULT_ROUTE_DRAW_COLOR
 
     const line = new window.google.maps.Polyline({
       path,
       map,
       strokeColor: color,
-      strokeOpacity: 0.6,
-      strokeWeight: 2,
+      strokeOpacity: 0.78,
+      strokeWeight: 3,
       strokeDashArray: [4, 4],
     })
 
@@ -350,6 +368,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
     if (!map || !focusPoint) return
     map.panTo({ lat: focusPoint.lat, lng: focusPoint.lng })
     if (focusPoint.zoom) map.setZoom(focusPoint.zoom)
+    emitViewportChange()
   }, [focusPoint])
 
   // fitBounds

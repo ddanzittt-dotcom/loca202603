@@ -1,61 +1,40 @@
-import { useState } from "react"
-import { markWelcomeSeen } from "../lib/onboarding"
+import { LogIn } from "lucide-react"
 import { BrandLogo } from "../components/BrandLogo"
 
-export function WelcomeScreen({ onStart, onAddFirstPlace }) {
-  const [imgError, setImgError] = useState(false)
-  const handleBrowse = () => {
-    markWelcomeSeen()
-    onStart?.()
-  }
-  const handleAddFirstPlace = () => {
-    markWelcomeSeen()
-    if (onAddFirstPlace) {
-      onAddFirstPlace()
-      return
-    }
-    onStart?.()
-  }
-
+export function WelcomeScreen({ showLoginBanner = false, onStart, onLogin }) {
   return (
-    <section className="welcome-screen">
-      <div className="welcome-screen__body">
-        <BrandLogo className="welcome-screen__logo" dotClassName="welcome-screen__logo-dot" />
-        {imgError ? (
-          <span className="welcome-screen__character-fallback">☁️</span>
-        ) : (
-          <img
-            src="/characters/cloud_lv1.svg"
-            alt=""
-            className="welcome-screen__character"
-            onError={() => setImgError(true)}
-          />
-        )}
-        <p className="welcome-screen__title">
-          좋아한 장소를 모아{"\n"}나만의 지도로 남겨보세요.
-        </p>
-        <p className="welcome-screen__desc">
-          처음은 한 장소면 충분해요.
-        </p>
+    <section className="startup-screen" aria-label="LOCA 시작 화면">
+      <div className="startup-screen__logo-wrap">
+        <BrandLogo as="h1" className="startup-screen__logo" dotClassName="startup-screen__logo-dot" />
       </div>
-      <div className="welcome-screen__footer">
-        <div className="welcome-screen__cta-stack">
-          <button
-            className="welcome-screen__cta"
-            type="button"
-            onClick={handleAddFirstPlace}
-          >
-            첫 장소 남기기
-          </button>
-          <button
-            className="welcome-screen__cta welcome-screen__cta--secondary"
-            type="button"
-            onClick={handleBrowse}
-          >
-            둘러보기
-          </button>
-        </div>
-      </div>
+
+      {showLoginBanner ? (
+        <aside className="startup-login-banner" aria-label="로그인 안내">
+          <div className="startup-login-banner__copy">
+            <strong>좋아했던 장소들을 잃어버리지 않도록</strong>
+            <span>로그인하면 지도와 기록을 오래 간직할 수 있어요.</span>
+          </div>
+          <div className="startup-login-banner__actions">
+            <button
+              className="startup-login-banner__primary"
+              type="button"
+              onClick={onLogin}
+            >
+              <LogIn size={17} strokeWidth={2.2} />
+              로그인
+            </button>
+          </div>
+        </aside>
+      ) : null}
+
+      {!showLoginBanner ? (
+        <button
+          className="startup-screen__skip"
+          type="button"
+          onClick={onStart}
+          aria-label="시작 화면 건너뛰기"
+        />
+      ) : null}
     </section>
   )
 }

@@ -124,6 +124,19 @@ button.loca-v2-audio-chip:focus-visible {
   gap: 5px;
 }
 
+.loca-v2-diary-banner__photo-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.loca-v2-diary-banner__photo-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .loca-v2-diary-banner__memo {
   margin: 0;
   font-size: 13px;
@@ -171,4 +184,139 @@ button.loca-v2-section-head__right:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ---------- PhotoViewer ---------- */
+.loca-photo-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  font-family: var(--font-sans);
+}
+
+.loca-photo-viewer__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(7, 6, 5, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.loca-photo-viewer__panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loca-photo-viewer__top {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.loca-photo-viewer__count {
+  min-width: 52px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.92);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.loca-photo-viewer__close,
+.loca-photo-viewer__nav {
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.loca-photo-viewer__close {
+  width: 38px;
+  height: 38px;
+}
+
+.loca-photo-viewer__stage {
+  width: 100%;
+  height: min(78vh, 760px);
+  overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.loca-photo-viewer__track {
+  height: 100%;
+  display: flex;
+  transition: transform 0.22s var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1));
+}
+
+.loca-photo-viewer__slide {
+  min-width: 100%;
+  height: 100%;
+  padding: 68px 16px 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loca-photo-viewer__slide img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.loca-photo-viewer__empty {
+  width: min(72vw, 360px);
+  aspect-ratio: 1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.loca-photo-viewer__nav {
+  position: absolute;
+  top: 50%;
+  width: 42px;
+  height: 42px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.loca-photo-viewer__nav--prev { left: 14px; }
+.loca-photo-viewer__nav--next { right: 14px; }
+
+.loca-photo-viewer__nav:disabled {
+  opacity: 0.28;
+  cursor: default;
 }

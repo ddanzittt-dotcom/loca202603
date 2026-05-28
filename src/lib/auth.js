@@ -71,10 +71,34 @@ export function signInWithKakao(options) {
   return signInWithOAuth("kakao", options)
 }
 
+export async function signInWithMagicLink(email, options = {}) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: options.redirectTo || getDefaultRedirectTo(),
+      shouldCreateUser: true,
+      data: {
+        source_context: options.sourceContext || "public_saved_box_connect",
+        ...(options.data || {}),
+      },
+    },
+  })
+  if (error) throw error
+  return data
+}
+
 export function signInWithNaver() {
   const redirectTo = getDefaultRedirectTo()
   const naverAuthUrl = `/api/auth/naver?redirect_to=${encodeURIComponent(redirectTo)}`
   window.location.href = naverAuthUrl
+}
+
+export async function signInAnonymously() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.auth.signInAnonymously()
+  if (error) throw error
+  return data
 }
 
 export async function resetPasswordForEmail(email) {

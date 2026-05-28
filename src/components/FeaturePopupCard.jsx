@@ -1,18 +1,28 @@
-import { useMemo } from "react"
-import { Bookmark, Check, ChevronRight, Edit3, FileText, Flag, MapPin, Mic, Plus, Route, Shapes, X } from "lucide-react"
-import { FeatureEmoji } from "./FeatureEmoji"
+import { useMemo, useState } from "react"
+import { Bookmark, Check, Edit3, FileText, Flag, MapPin, Mic, Plus, Route, Shapes, Trash2, X } from "lucide-react"
+import { FeatureEmoji, resolveFeatureEmoji } from "./FeatureEmoji"
+import { PhotoViewer } from "./visuals/PhotoViewer"
+import { useResolvedMediaUrl } from "../hooks/useResolvedMediaUrl"
+import { categoryToEmoji } from "../data/pinIcons"
+import { buildFeatureRecordGroups, formatRecordDate, summarizeRecordGroup } from "../lib/featureRecordGroups"
 
 const EMPTY_LIST = []
 
-function formatDate(value) {
-  if (!value) return ""
-  const d = new Date(value)
-  if (!Number.isFinite(d.getTime())) return ""
-  return d.toLocaleDateString("ko-KR", { month: "long", day: "numeric" })
-}
-
-function photoSrc(photo) {
-  return photo?.url || photo?.thumbnail || photo?.src || photo?.cloudUrl || ""
+function PopupPhotoThumb({ photo, onOpen }) {
+  const { src, markRemoteFailed } = useResolvedMediaUrl(photo)
+  return (
+    <button
+      type="button"
+      className="fpc-diary-photo-thumb"
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpen?.()
+      }}
+      aria-label="사진 보기"
+    >
+      {src ? <img src={src} alt="" onError={markRemoteFailed} /> : null}
+    </button>
+  )
 }
 
 function typeCopy(type) {
@@ -21,16 +31,255 @@ function typeCopy(type) {
   return { label: "장소", Icon: MapPin }
 }
 
-function latestDate(feature) {
-  const dates = [
-    ...(feature?.memos || []).map((item) => item.date || item.createdAt),
-    ...(feature?.photos || []).map((item) => item.date || item.createdAt),
-    ...(feature?.voices || []).map((item) => item.date || item.createdAt),
-  ]
-    .map((value) => new Date(value || 0).getTime())
-    .filter(Number.isFinite)
-  if (dates.length === 0) return ""
-  return formatDate(Math.max(...dates))
+function isPinLikeEmoji(emoji) {
+  return emoji === "📍" || emoji === "📌"
+}
+
+function getFeaturePopupEmoji(feature) {
+  const descriptor = resolveFeatureEmoji(feature)
+  if (descriptor.kind !== "unicode") return descriptor
+
+  const emoji = typeof descriptor.value === "string" ? descriptor.value.trim() : ""
+  if (emoji && !isPinLikeEmoji(emoji)) return descriptor
+
+  const category = typeof feature?.category === "string" ? feature.category.trim() : ""
+  const categoryEmoji = category ? categoryToEmoji(category) : ""
+  if (categoryEmoji && !isPinLikeEmoji(categoryEmoji)) {
+    return { kind: "unicode", value: categoryEmoji }
+  }
+
+  return { kind: "unicode", value: "✨" }
+}
+
+function formatDuration(sec) {
+  const n = Math.max(0, Math.round(sec || 0))
+  const m = Math.floor(n / 60)
+  const s = n % 60
+  return `${m}:${String(s).padStart(2, "0")}`
+}
+
+function isToday(value) {
+  if (!value) return false
+  const d = new Date(value)
+  if (!Number.isFinite(d.getTime())) return false
+  return d.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+}
+
+function voiceKey(voice, index) {
+  return voice?.id || voice?.localId || `voice-${index}`
+}
+
+function RecordMediaPreview({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, isVoicePlaying }) {
+  const leadVoice = group.voices[0] || null
+
+  if (group.photos.length > 0) {
+    return (
+      <span className="fpc-diary-record-media fpc-diary-record-media--photos">
+        {group.photos.slice(0, 2).map((photo, index) => (
+          <PopupPhotoThumb
+            key={photo.id || photo.localId || photo.url || `photo-${index}`}
+            photo={photo}
+            onOpen={() => onPhotoOpen?.(group.photos, index)}
+          />
+        ))}
+        {group.photos.length > 2 ? (
+          <button
+            type="button"
+            className="fpc-diary-photo-more"
+            onClick={(event) => {
+              event.stopPropagation()
+              onPhotoOpen?.(group.photos, 2)
+            }}
+            aria-label={`추가 사진 ${group.photos.length - 2}장 보기`}
+          >
+            +{group.photos.length - 2}
+          </button>
+        ) : null}
+      </span>
+    )
+  }
+
+  if (leadVoice) {
+    const voiceIndex = getVoiceIndex(leadVoice)
+    return (
+      <span className="fpc-diary-record-media fpc-diary-record-media--voice">
+        {onVoiceClick ? (
+          <button
+            type="button"
+            className={`fpc-diary-record-voice ${isVoicePlaying(leadVoice, voiceIndex) ? "is-playing" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation()
+              onVoiceClick(leadVoice, voiceIndex)
+            }}
+            aria-label={isVoicePlaying(leadVoice, voiceIndex) ? "음성 정지" : "음성 재생"}
+          >
+            <Mic size={15} />
+          </button>
+        ) : (
+          <Mic size={15} />
+        )}
+      </span>
+    )
+  }
+
+  return (
+    <span className="fpc-diary-record-media">
+      <FileText size={15} />
+    </span>
+  )
+}
+
+function RecordGroupItem({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, isVoicePlaying, onOpenRecord, panel = false }) {
+  const summary = summarizeRecordGroup(group)
+  const title = isToday(group.dateValue) ? "오늘 기록" : (formatRecordDate(group.dateValue) || "기록")
+  const primaryText = summary.text || summary.assetLabel || "기록을 남겼어요."
+  const showAssetLabel = Boolean(summary.assetLabel && summary.text)
+
+  return (
+    <div
+      className={`fpc-diary-record-item fpc-diary-record-item--bundle${panel ? " fpc-diary-record-item--panel" : ""}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenRecord?.(group)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onOpenRecord?.(group)
+        }
+      }}
+    >
+      <RecordMediaPreview
+        group={group}
+        onPhotoOpen={onPhotoOpen}
+        onVoiceClick={onVoiceClick}
+        getVoiceIndex={getVoiceIndex}
+        isVoicePlaying={isVoicePlaying}
+      />
+      <span className="fpc-diary-record-copy">
+        <span>{title}</span>
+        <strong>{primaryText}</strong>
+        {showAssetLabel ? <em>{summary.assetLabel}</em> : null}
+        {group.voices.length > 0 ? (
+          <span className="fpc-diary-voice-row">
+            {group.voices.slice(0, 2).map((voice, index) => {
+              const voiceIndex = getVoiceIndex(voice)
+              return (
+                <button
+                  key={voiceKey(voice, index)}
+                  type="button"
+                  className={isVoicePlaying(voice, voiceIndex) ? "is-playing" : ""}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onVoiceClick?.(voice, voiceIndex)
+                  }}
+                  disabled={!onVoiceClick}
+                >
+                  <Mic size={10} />
+                  {formatDuration(voice.duration)}
+                </button>
+              )
+            })}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  )
+}
+
+function RecordDetailCard({
+  group,
+  featureTitle,
+  canEdit = false,
+  onClose,
+  onEdit,
+  onDelete,
+  onPhotoOpen,
+  onVoiceClick,
+  getVoiceIndex,
+  isVoicePlaying,
+}) {
+  if (!group) return null
+  const summary = summarizeRecordGroup(group)
+  const title = isToday(group.dateValue) ? "오늘 기록" : (formatRecordDate(group.dateValue) || "기록")
+  const memoText = summary.text || ""
+
+  return (
+    <div className="fpc-record-detail-layer">
+      <button type="button" className="fpc-record-detail__scrim" onClick={onClose} aria-label="기록 닫기" />
+      <section className="fpc-record-detail" role="dialog" aria-modal="true" aria-label={`${featureTitle || "장소"} 기록`}>
+        <header className="fpc-record-detail__head">
+          <div>
+            <span>{title}</span>
+            <strong>{featureTitle || "기록"}</strong>
+          </div>
+          <button type="button" onClick={onClose} aria-label="닫기">
+            <X size={15} />
+          </button>
+        </header>
+
+        <div className="fpc-record-detail__body">
+          {memoText ? (
+            <p className="fpc-record-detail__memo">{memoText}</p>
+          ) : (
+            <p className="fpc-record-detail__empty">메모 없이 남긴 기록이에요.</p>
+          )}
+
+          {group.photos.length > 0 ? (
+            <div className="fpc-record-detail__section">
+              <span>사진 {group.photos.length}</span>
+              <div className="fpc-record-detail__photos">
+                {group.photos.map((photo, index) => (
+                  <PopupPhotoThumb
+                    key={photo.id || photo.localId || photo.url || `detail-photo-${index}`}
+                    photo={photo}
+                    onOpen={() => onPhotoOpen?.(group.photos, index)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {group.voices.length > 0 ? (
+            <div className="fpc-record-detail__section">
+              <span>음성 {group.voices.length}</span>
+              <div className="fpc-record-detail__voices">
+                {group.voices.map((voice, index) => {
+                  const voiceIndex = getVoiceIndex(voice)
+                  return (
+                    <button
+                      key={voiceKey(voice, index)}
+                      type="button"
+                      className={isVoicePlaying(voice, voiceIndex) ? "is-playing" : ""}
+                      onClick={() => onVoiceClick?.(voice, voiceIndex)}
+                      disabled={!onVoiceClick}
+                    >
+                      <Mic size={12} />
+                      {formatDuration(voice.duration)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {canEdit ? (
+          <footer className="fpc-record-detail__actions">
+            {onDelete ? (
+              <button type="button" className="fpc-record-detail__danger" onClick={() => onDelete(group)}>
+                <Trash2 size={13} /> 삭제
+              </button>
+            ) : null}
+            {onEdit ? (
+              <button type="button" className="fpc-record-detail__primary" onClick={() => onEdit(group)}>
+                <Edit3 size={13} /> 수정
+              </button>
+            ) : null}
+          </footer>
+        ) : null}
+      </section>
+    </div>
+  )
 }
 
 export function FeaturePopupCard({
@@ -40,41 +289,77 @@ export function FeaturePopupCard({
   routeLengthKm = null,
   imported = false,
   onClose,
-  onOpenDetail,
   onEdit,
   onRequestEdit,
   onImport,
   onUnimport,
   onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
+  onVoiceClick,
+  currentPlayingVoiceId,
   busyImport = false,
 }) {
+  const [recordsBannerFeatureId, setRecordsBannerFeatureId] = useState(null)
+  const [photoViewer, setPhotoViewer] = useState(null)
+  const [recordDetailGroup, setRecordDetailGroup] = useState(null)
   const type = feature?.type || "pin"
   const copy = typeCopy(type)
   const TypeIcon = copy.Icon
   const tags = Array.isArray(feature?.tags) ? feature.tags : []
-  const photos = Array.isArray(feature?.photos) ? feature.photos : []
-  const voices = Array.isArray(feature?.voices) ? feature.voices : []
-  const memos = Array.isArray(feature?.memos) ? feature.memos : EMPTY_LIST
-  const recordCount = photos.length + voices.length + memos.length
-  const latestMemo = useMemo(() => (
-    memos
-      .slice()
-      .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0))[0] || null
-  ), [memos])
+  const voices = Array.isArray(feature?.voices) ? feature.voices : EMPTY_LIST
+  const recordGroups = useMemo(() => buildFeatureRecordGroups(feature), [feature])
+  const visibleRecords = recordGroups.slice(0, 2)
+  const hasMoreRecords = recordGroups.length > 2
+  const recordsBannerOpen = Boolean(feature?.id && recordsBannerFeatureId === feature.id)
 
   if (!feature) return null
 
   const metric = type === "route" && Number.isFinite(routeLengthKm) && routeLengthKm > 0
     ? `${routeLengthKm < 1 ? `${Math.round(routeLengthKm * 1000)} m` : `${routeLengthKm.toFixed(1)} km`}`
-    : `${recordCount}개 기록`
+    : `${recordGroups.length}개 기록`
+  const latestRecordLabel = recordGroups[0]?.dateValue ? formatRecordDate(recordGroups[0].dateValue) : ""
   const canWriteRecord = mapMode === "personal" && isAuthor && typeof onAddRecord === "function"
+  const canManageRecord = mapMode === "personal" && isAuthor && (typeof onEditRecord === "function" || typeof onDeleteRecord === "function")
+  const popupEmoji = getFeaturePopupEmoji(feature)
+
+  const getVoiceIndex = (voice) => {
+    const key = voice?.id || voice?.localId || ""
+    const index = voices.findIndex((item, voiceIndex) => (
+      (item.id || item.localId || `voice-${voiceIndex}`) === key
+    ))
+    return index >= 0 ? index : 0
+  }
+  const isVoicePlaying = (voice, index) => {
+    const id = voice?.id || voice?.localId || `idx-${index}`
+    return currentPlayingVoiceId === `${feature.id || "feat"}::${id}`
+  }
+  const openPhotoViewer = (photos, index = 0) => {
+    setPhotoViewer({ photos: Array.isArray(photos) ? photos : [], index })
+  }
+  const openRecordDetail = (group) => setRecordDetailGroup(group)
+  const editRecord = (group) => {
+    setRecordDetailGroup(null)
+    setRecordsBannerFeatureId(null)
+    onEditRecord?.(group)
+  }
+  const deleteRecord = (group) => {
+    setRecordDetailGroup(null)
+    setRecordsBannerFeatureId(null)
+    onDeleteRecord?.(group)
+  }
 
   return (
+    <>
     <article className={`fpc fpc--diary fpc--${type}`} role="dialog" aria-label={`${feature.title || copy.label} 미리보기`}>
       <header className="fpc-diary-head">
         <div className="fpc-diary-type">
           <span className={`fpc-diary-icon fpc-diary-icon--${type}`}>
-            {type === "pin" ? <FeatureEmoji feature={feature} size={24} unicodeFontSize={18} /> : <TypeIcon size={18} />}
+            {type === "pin" ? (
+              <FeatureEmoji emoji={popupEmoji} size={28} unicodeFontSize={22} className="fpc-diary-feature-emoji" />
+            ) : (
+              <TypeIcon size={18} />
+            )}
           </span>
           <div>
             <span>{copy.label}</span>
@@ -83,6 +368,11 @@ export function FeaturePopupCard({
         </div>
 
         <div className="fpc-diary-actions">
+          {onEdit ? (
+            <button type="button" className="fpc-diary-edit-banner" onClick={onEdit}>
+              <Edit3 size={13} /> 편집
+            </button>
+          ) : null}
           {mapMode === "community" && (onImport || onUnimport) ? (
             imported ? (
               <button type="button" className="fpc-diary-small is-saved" onClick={onUnimport} disabled={busyImport}>
@@ -93,11 +383,6 @@ export function FeaturePopupCard({
                 <Bookmark size={12} /> 가져오기
               </button>
             )
-          ) : null}
-          {mapMode === "community" && isAuthor && onEdit ? (
-            <button type="button" className="fpc-diary-icon-btn" onClick={onEdit} aria-label="편집">
-              <Edit3 size={14} />
-            </button>
           ) : null}
           {mapMode === "community" && !isAuthor && onRequestEdit ? (
             <button type="button" className="fpc-diary-icon-btn" onClick={onRequestEdit} aria-label="수정 제안">
@@ -115,7 +400,7 @@ export function FeaturePopupCard({
       <div className="fpc-diary-body">
         <div className="fpc-diary-meta">
           <span>{metric}</span>
-          {latestDate(feature) ? <span>최근 {latestDate(feature)}</span> : null}
+          {latestRecordLabel ? <span>최근 {latestRecordLabel}</span> : null}
         </div>
 
         {feature.note ? <p className="fpc-diary-desc">{feature.note}</p> : null}
@@ -126,44 +411,97 @@ export function FeaturePopupCard({
           </div>
         ) : null}
 
-        {(photos.length > 0 || voices.length > 0 || latestMemo) ? (
-          <div className="fpc-diary-record">
-            {photos.length > 0 ? (
-              <div className="fpc-diary-photos">
-                {photos.slice(0, 3).map((photo, index) => (
-                  <span key={photo.id || photo.localId || `photo-${index}`}>
-                    {photoSrc(photo) ? <img src={photoSrc(photo)} alt="" /> : null}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <div className="fpc-diary-record-copy">
-              <span>
-                {voices.length > 0 ? <><Mic size={12} /> 음성 {voices.length}</> : <><FileText size={12} /> 최근 기록</>}
-              </span>
-              <strong>{latestMemo?.text || (photos.length > 0 ? "사진으로 남긴 기록이 있어요." : "기록을 이어서 확인해 보세요.")}</strong>
+        {recordGroups.length > 0 ? (
+          <div className="fpc-diary-records">
+            <div className="fpc-diary-records-head">
+              <span className="fpc-diary-records-label">기록</span>
+              {hasMoreRecords ? (
+                <button type="button" className="fpc-diary-more-link" onClick={() => setRecordsBannerFeatureId(feature.id)}>
+                  더보기
+                </button>
+              ) : null}
             </div>
+            {visibleRecords.map((group) => (
+              <RecordGroupItem
+                key={group.id}
+                group={group}
+                onPhotoOpen={openPhotoViewer}
+                onVoiceClick={onVoiceClick}
+                getVoiceIndex={getVoiceIndex}
+                isVoicePlaying={isVoicePlaying}
+                onOpenRecord={openRecordDetail}
+              />
+            ))}
           </div>
         ) : (
           <div className="fpc-diary-empty">
             <FileText size={15} />
-            <span>아직 기록이 없어요.</span>
+            <span>아직 기록이 없어요</span>
           </div>
         )}
       </div>
 
-      <footer className="fpc-diary-foot">
-        {canWriteRecord ? (
+      {canWriteRecord ? (
+        <footer className="fpc-diary-foot">
           <button type="button" className="fpc-diary-cta fpc-diary-cta--record" onClick={onAddRecord}>
             <Plus size={15} /> 오늘 기록
           </button>
-        ) : null}
-        {onOpenDetail ? (
-          <button type="button" className="fpc-diary-cta" onClick={onOpenDetail}>
-            상세 보기 <ChevronRight size={15} />
-          </button>
-        ) : null}
-      </footer>
+        </footer>
+      ) : null}
     </article>
+    {recordsBannerOpen ? (
+      <div className="fpc-record-banner-layer">
+        <button
+          type="button"
+          className="fpc-record-banner__scrim"
+          onClick={() => setRecordsBannerFeatureId(null)}
+          aria-label="기록 전체 보기 닫기"
+        />
+        <section className="fpc-record-banner" role="dialog" aria-modal="true" aria-label={`${feature.title || copy.label} 기록 전체 보기`}>
+          <header className="fpc-record-banner__head">
+            <div>
+              <span>기록</span>
+              <strong>{feature.title || copy.label}</strong>
+            </div>
+            <button type="button" onClick={() => setRecordsBannerFeatureId(null)} aria-label="닫기">
+              <X size={15} />
+            </button>
+          </header>
+          <div className="fpc-record-banner__list">
+            {recordGroups.map((group) => (
+              <RecordGroupItem
+                key={group.id}
+                group={group}
+                panel
+                onPhotoOpen={openPhotoViewer}
+                onVoiceClick={onVoiceClick}
+                getVoiceIndex={getVoiceIndex}
+                isVoicePlaying={isVoicePlaying}
+                onOpenRecord={openRecordDetail}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
+    ) : null}
+    <RecordDetailCard
+      group={recordDetailGroup}
+      featureTitle={feature.title || copy.label}
+      canEdit={canManageRecord}
+      onClose={() => setRecordDetailGroup(null)}
+      onEdit={typeof onEditRecord === "function" ? editRecord : null}
+      onDelete={typeof onDeleteRecord === "function" ? deleteRecord : null}
+      onPhotoOpen={openPhotoViewer}
+      onVoiceClick={onVoiceClick}
+      getVoiceIndex={getVoiceIndex}
+      isVoicePlaying={isVoicePlaying}
+    />
+    <PhotoViewer
+      open={Boolean(photoViewer?.photos?.length)}
+      photos={photoViewer?.photos || EMPTY_LIST}
+      initialIndex={photoViewer?.index || 0}
+      onClose={() => setPhotoViewer(null)}
+    />
+    </>
   )
 }

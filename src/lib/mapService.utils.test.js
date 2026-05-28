@@ -193,7 +193,7 @@ describe("toFeaturePatch", () => {
 describe("feature style normalization", () => {
   it("normalizeFeature includes style with defaults", () => {
     const result = normalizeFeature({ id: "f-style-1", map_id: "m1", type: "route", points: [[127, 37]] })
-    expect(result.style).toEqual({ color: "#0F6E56", lineStyle: "solid" })
+    expect(result.style).toEqual({ color: "#0A5A46", lineStyle: "solid" })
   })
 
   it("toFeatureInsert stores normalized style", () => {
@@ -203,7 +203,7 @@ describe("feature style normalization", () => {
       points: [[127, 37], [127.1, 37.1], [127.2, 37]],
       style: { color: "not-a-color", lineStyle: "shortdot" },
     })
-    expect(result.style).toEqual({ color: "#854F0B", lineStyle: "shortdot" })
+    expect(result.style).toEqual({ color: "#70430E", lineStyle: "shortdot" })
   })
 
   it("toFeaturePatch stores style when provided", () => {

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { isEventMap } from "../lib/mapPlacement"
+import { BrandLogo } from "../components/BrandLogo"
 import { ExploreScreen } from "./ExploreScreen"
 import { MapsListScreen } from "./MapsListScreen"
 import { PlacesScreen } from "./PlacesScreen"
@@ -13,8 +14,10 @@ export function MyArchiveScreen({
   characterImage,
   onCreate,
   onEdit,
+  onCollaborate,
   onOpen,
   onDelete,
+  onReorder,
   onShare,
   onPublish,
   onUnpublish,
@@ -22,6 +25,9 @@ export function MyArchiveScreen({
   onRemoveFromProfile,
   onOpenFeature,
   onCreateRecord,
+  collaborationInvites = [],
+  onAcceptCollaborationInvite,
+  onRejectCollaborationInvite,
   recommendedMaps = [],
   onOpenDemoMap,
   onOpenCommunityEditor,
@@ -33,33 +39,27 @@ export function MyArchiveScreen({
 }) {
   const [archiveView, setArchiveView] = useState(initialArchiveView)
   const isPlacesHub = initialArchiveView === "places"
-  const personalMapIds = new Set(maps.filter((map) => !isEventMap(map)).map((map) => map.id))
-  const personalPlaceCount = features.filter((feature) => (
+  const personalMaps = maps.filter((map) => !isEventMap(map))
+  const personalMapIds = new Set(personalMaps.map((map) => map.id))
+  const personalFeatures = features.filter((feature) => personalMapIds.has(feature.mapId))
+  const personalShares = shares.filter((share) => personalMapIds.has(share.mapId))
+  const personalPlaceCount = personalFeatures.filter((feature) => (
     ["pin", "route", "area"].includes(feature?.type) && personalMapIds.has(feature.mapId)
   )).length
   const archiveTabs = isPlacesHub
     ? [
       { id: "places", label: "내 장소", count: personalPlaceCount },
       { id: "community", label: "모두의 지도" },
-      { id: "events", label: "내 주변 행사" },
     ]
     : [
-      { id: "maps", label: "지도", count: maps.length },
-      { id: "places", label: "장소", count: features.length },
+      { id: "maps", label: "지도", count: personalMaps.length },
+      { id: "places", label: "장소", count: personalFeatures.length },
     ]
-
-  const title = archiveView === "maps"
-    ? "내 지도"
-    : archiveView === "community"
-      ? "모두의 지도"
-      : archiveView === "events"
-        ? "내 주변 행사"
-        : "장소"
 
   return (
     <section className="screen screen--scroll maps-library-screen maps-library-screen--v2">
       <div className="archive-head archive-head--v2">
-        <h1 className="archive-head__title archive-head__title--v2">{title}</h1>
+        <BrandLogo className="archive-head__brand archive-head__brand--v2" dotClassName="archive-head__brand-dot" />
       </div>
 
       <div className={`maps-segment maps-segment--v2${isPlacesHub ? " maps-segment--hub" : ""}`} role="tablist" aria-label={isPlacesHub ? "장소 보기" : "내 아카이브 보기"}>
@@ -79,25 +79,30 @@ export function MyArchiveScreen({
 
       {archiveView === "maps" ? (
         <MapsListScreen
-          maps={maps}
-          features={features}
-          shares={shares}
+          maps={personalMaps}
+          features={personalFeatures}
+          shares={personalShares}
           characterImage={characterImage}
           onCreate={onCreate}
           onEdit={onEdit}
+          onCollaborate={onCollaborate}
           onOpen={onOpen}
           onDelete={onDelete}
+          onReorder={onReorder}
           onShare={onShare}
           onPublish={onPublish}
           onUnpublish={onUnpublish}
           onAddToProfile={onAddToProfile}
           onRemoveFromProfile={onRemoveFromProfile}
+          collaborationInvites={collaborationInvites}
+          onAcceptCollaborationInvite={onAcceptCollaborationInvite}
+          onRejectCollaborationInvite={onRejectCollaborationInvite}
           loading={loading}
         />
       ) : archiveView === "places" ? (
         <PlacesScreen
-          maps={maps}
-          features={features}
+          maps={personalMaps}
+          features={personalFeatures}
           characterImage={characterImage}
           onOpenFeature={onOpenFeature}
           onCreateRecord={onCreateRecord}
@@ -114,7 +119,7 @@ export function MyArchiveScreen({
           followed={followed}
           onSelectUser={onSelectUser}
           embedded
-          section={archiveView === "events" ? "events" : "community"}
+          section="community"
         />
       )}
     </section>

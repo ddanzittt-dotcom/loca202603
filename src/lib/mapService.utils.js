@@ -85,6 +85,13 @@ export function normalizePublication(row) {
 
 export function normalizeMap(row, publication = null) {
   const userRole = row.user_role || (row.user_id ? "owner" : null)
+  const collabCount = Number(
+    row.collab_count
+    ?? row.collabCount
+    ?? row.collaborator_count
+    ?? row.collaboratorCount
+    ?? 0,
+  )
   return {
     id: row.id,
     title: row.title,
@@ -101,6 +108,8 @@ export function normalizeMap(row, publication = null) {
     createdAt: row.created_at,
     ownerId: row.user_id || null,
     userRole,
+    collabCount,
+    collaboratorCount: collabCount,
     canManage: !userRole || userRole === "owner",
     canEditFeatures: userRole !== "viewer",
     isCommunity: row.slug === "community-map" || row.config?.community === true,
@@ -132,6 +141,7 @@ export function normalizeMemo(row) {
     date: row.created_at,
     text: row.text,
     photos,
+    recordId: row.record_id || null,
   }
 }
 
@@ -147,6 +157,7 @@ export function normalizeMedia(row) {
     sizeBytes: row.size_bytes,
     duration: row.duration_sec ?? null,
     date: row.created_at,
+    recordId: row.record_id || null,
   }
 }
 
@@ -171,6 +182,9 @@ export function normalizeFeature(row, memos = [], photos = [], voices = []) {
     updatedAt: row.updated_at || row.created_at,
     createdBy: row.created_by || null,
     createdByName: row.created_by_name || null,
+    isSample: Boolean(row.is_sample),
+    sampleBatch: row.sample_batch || null,
+    sampleKey: row.sample_key || null,
     regionCode: row.region_code || null,
     regionName: row.region_name || null,
     style: normalizeFeatureStyle(row.style, row.type),
@@ -211,6 +225,10 @@ export function toFeatureInsert(feature = {}, fallbackType = "pin") {
     updated_at: new Date().toISOString(),
   }
 
+  if ("isSample" in feature) payload.is_sample = Boolean(feature.isSample)
+  if ("sampleBatch" in feature) payload.sample_batch = feature.sampleBatch || null
+  if ("sampleKey" in feature) payload.sample_key = feature.sampleKey || null
+
   if (type === "pin") {
     payload.lat = feature.lat
     payload.lng = feature.lng
@@ -248,6 +266,9 @@ export function toFeaturePatch(updates = {}) {
   if ("sortOrder" in updates) payload.sort_order = updates.sortOrder || 0
   if ("createdBy" in updates) payload.created_by = updates.createdBy
   if ("createdByName" in updates) payload.created_by_name = updates.createdByName
+  if ("isSample" in updates) payload.is_sample = Boolean(updates.isSample)
+  if ("sampleBatch" in updates) payload.sample_batch = updates.sampleBatch || null
+  if ("sampleKey" in updates) payload.sample_key = updates.sampleKey || null
   if ("style" in updates) payload.style = normalizeFeatureStyle(updates.style, updates.type || "pin")
   if ("lat" in updates) payload.lat = updates.lat
   if ("lng" in updates) payload.lng = updates.lng
@@ -339,7 +360,17 @@ export async function touchMapRecord(mapId) {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", mapId)
 
-  if (error) throw error
+  if (!error) return
+
+  const denied = error.code === "42501" || `${error.message || ""}`.toLowerCase().includes("permission")
+  if (denied) {
+    const rpcRes = await supabase.rpc("touch_personal_map_updated_at", { p_map_id: mapId })
+    if (!rpcRes.error) return
+    const missingRpc = rpcRes.error.code === "42883" || rpcRes.error.code === "PGRST202"
+    if (!missingRpc) throw rpcRes.error
+  }
+
+  throw error
 }
 
 export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
@@ -354,7 +385,7 @@ export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
   const voicesByFeatureId = new Map()
   for (const row of mediaRows) {
     const m = normalizeMedia(row)
-    const entry = { id: m.id, date: m.date, url: m.url, storagePath: m.storagePath }
+    const entry = { id: m.id, date: m.date, url: m.url, storagePath: m.storagePath, recordId: m.recordId }
     if (m.type === "photo") {
       const arr = photosByFeatureId.get(row.feature_id) || []
       arr.push(entry)

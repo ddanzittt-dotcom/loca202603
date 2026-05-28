@@ -19,7 +19,6 @@ export {
   getMyMaps,
   getMyAppData,
   getMapBundle,
-  getCommunityMapBundle,
   getPublishedMapBySlug,
   getPublishedMaps,
   getCuratedMaps,
@@ -33,11 +32,17 @@ export {
   getUserStats,
   getUserBadges,
   searchUsersForInvite,
+  listCollaborationInvites,
   checkCollaboratorAccess,
   checkAdminRole,
   searchProfiles,
   listFeatureChangeRequests,
 } from "./mapService.read"
+
+// community map read path, intentionally separate from personal map bundles
+export {
+  getCommunityMapBundle,
+} from "./mapService.community"
 
 // write
 export {
@@ -49,6 +54,8 @@ export {
   updateFeature,
   deleteFeature,
   addFeatureMemo,
+  updateFeatureMemo,
+  deleteFeatureMemo,
   createMediaRecord,
   deleteMediaRecord,
   uploadAvatar,
@@ -59,6 +66,7 @@ export {
   getCollaborators,
   addCollaborator,
   removeCollaborator,
+  respondCollaborationInvite,
   linkMapLineage,
 } from "./mapService.write"
 

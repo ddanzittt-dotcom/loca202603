@@ -1,14 +1,23 @@
 import { useMemo, useState } from "react"
-import { Search as SearchIcon, ChevronRight, FileText, Camera, Mic } from "lucide-react"
+import {
+  Search as SearchIcon,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Camera,
+  Mic,
+  MapPin,
+  SlidersHorizontal,
+  X,
+} from "lucide-react"
 import { featureSort } from "../lib/appUtils"
 import { isEventMap } from "../lib/mapPlacement"
-import { FeatureEmoji } from "../components/FeatureEmoji"
 
 const TYPE_FILTERS = [
   { id: "all", label: "전체", dot: null },
-  { id: "pin", label: "PIN", dot: "pin" },
-  { id: "route", label: "PATH", dot: "route" },
-  { id: "area", label: "AREA", dot: "area" },
+  { id: "pin", label: "장소", dot: "pin" },
+  { id: "route", label: "경로", dot: "route" },
+  { id: "area", label: "영역", dot: "area" },
 ]
 
 const CONTENT_FILTERS = [
@@ -39,9 +48,9 @@ function isPersonalRecordType(feature) {
 }
 
 function getTypeLabel(type) {
-  if (type === "route") return "PATH"
-  if (type === "area") return "AREA"
-  return "PIN"
+  if (type === "route") return "경로"
+  if (type === "area") return "영역"
+  return "장소"
 }
 
 function getFeatureDescription(feature) {
@@ -85,6 +94,8 @@ export function PlacesScreen({
   const [mapFilter, setMapFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
   const [contentFilters, setContentFilters] = useState([])
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [sortMode, setSortMode] = useState("latest")
   const personalMaps = useMemo(
     () => maps.filter((map) => !isEventMap(map)),
     [maps],
@@ -123,7 +134,9 @@ export function PlacesScreen({
 
   const filteredFeatures = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    return [...recordFeatures].sort(featureSort).filter((feature) => {
+    return [...recordFeatures].sort((a, b) => (
+      sortMode === "oldest" ? featureSort(b, a) : featureSort(a, b)
+    )).filter((feature) => {
       const matchesMap = mapFilter === "all" || feature.mapId === mapFilter
       const matchesType = typeFilter === "all" || feature.type === typeFilter
       const matchesPhoto = !contentFilters.includes("photo") || getFeaturePhotos(feature).length > 0
@@ -133,7 +146,27 @@ export function PlacesScreen({
       const haystack = [feature.title, feature.note, ...(feature.tags || []), ...memoTexts].join(" ").toLowerCase()
       return matchesMap && matchesType && matchesPhoto && matchesMemory && matchesVoice && (!normalized || haystack.includes(normalized))
     })
-  }, [contentFilters, mapFilter, query, recordFeatures, typeFilter])
+  }, [contentFilters, mapFilter, query, recordFeatures, sortMode, typeFilter])
+
+  const activeFilterChips = useMemo(() => {
+    const chips = []
+    const map = personalMaps.find((item) => item.id === mapFilter)
+    if (map) {
+      chips.push({ id: `map-${map.id}`, kind: "map", label: map.title })
+    }
+    const type = TYPE_FILTERS.find((item) => item.id === typeFilter && item.id !== "all")
+    if (type) {
+      chips.push({ id: `type-${type.id}`, kind: "type", label: type.label })
+    }
+    for (const filterId of contentFilters) {
+      const filterItem = CONTENT_FILTERS.find((item) => item.id === filterId)
+      if (filterItem) chips.push({ id: `content-${filterItem.id}`, kind: "content", filterId, label: filterItem.label })
+    }
+    return chips
+  }, [contentFilters, mapFilter, personalMaps, typeFilter])
+
+  const activeFilterCount = activeFilterChips.length
+  const sortLabel = sortMode === "oldest" ? "오래된순" : "최신순"
 
   const toggleContentFilter = (filterId) => {
     setContentFilters((current) => (
@@ -141,6 +174,24 @@ export function PlacesScreen({
         ? current.filter((item) => item !== filterId)
         : [...current, filterId]
     ))
+  }
+
+  const clearFilterChip = (chip) => {
+    if (chip.kind === "map") setMapFilter("all")
+    if (chip.kind === "type") setTypeFilter("all")
+    if (chip.kind === "content") {
+      setContentFilters((current) => current.filter((item) => item !== chip.filterId))
+    }
+  }
+
+  const resetFilters = () => {
+    setMapFilter("all")
+    setTypeFilter("all")
+    setContentFilters([])
+  }
+
+  const toggleSortMode = () => {
+    setSortMode((current) => (current === "latest" ? "oldest" : "latest"))
   }
 
   const Wrapper = embedded ? "div" : "section"
@@ -157,52 +208,40 @@ export function PlacesScreen({
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 메모로 검색" />
       </div>
 
-      <div className="pl-filter-stack">
-        <div className="pl-filter-row" aria-label="지도별 필터">
-          <span className="pl-filter-label">지도</span>
-          <button className={`pl-chip${mapFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setMapFilter("all")}>
-            전체 <span className="pl-chip__count">{featureCounts.all || 0}</span>
+      <div className={`pl-filter-bar${activeFilterCount > 0 ? " has-active" : ""}`}>
+        <div className="pl-filter-main">
+          <button
+            className={`pl-filter-button${activeFilterCount > 0 ? " is-active" : ""}`}
+            type="button"
+            onClick={() => setFilterSheetOpen(true)}
+          >
+            <SlidersHorizontal size={12} strokeWidth={2.2} aria-hidden="true" />
+            필터
+            {activeFilterCount > 0 ? <span className="pl-filter-button__count">{activeFilterCount}</span> : null}
           </button>
-          {personalMaps.map((map) => (
-            <button key={map.id} className={`pl-chip${mapFilter === map.id ? " is-active" : ""}`} type="button" onClick={() => setMapFilter(map.id)}>
-              {map.title} <span className="pl-chip__count">{featureCounts[map.id] || 0}</span>
-            </button>
-          ))}
+          {activeFilterChips.length > 0 ? (
+            <div className="pl-active-filters" aria-label="적용된 필터">
+              {activeFilterChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  className="pl-active-chip"
+                  type="button"
+                  onClick={() => clearFilterChip(chip)}
+                  aria-label={`${chip.label} 필터 해제`}
+                >
+                  {chip.label}
+                  <X size={10} strokeWidth={2.4} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-
-        <div className="pl-filter-row" aria-label="기록 타입 필터">
-          <span className="pl-filter-label">타입</span>
-          {TYPE_FILTERS.map((filterItem) => (
-            <button
-              key={filterItem.id}
-              className={`pl-chip${typeFilter === filterItem.id ? " is-active" : ""}`}
-              type="button"
-              onClick={() => setTypeFilter(filterItem.id)}
-            >
-              {filterItem.dot ? <span className={`pl-chip__dot pl-chip__dot--${filterItem.dot}`} /> : null}
-              {filterItem.label} <span className="pl-chip__count">{typeCounts[filterItem.id] || 0}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="pl-filter-row" aria-label="기록 내용 필터">
-          <span className="pl-filter-label">기록</span>
-          {CONTENT_FILTERS.map((filterItem) => {
-            const isActive = contentFilters.includes(filterItem.id)
-            const count = contentCounts[filterItem.id] || 0
-            const isEmpty = count === 0 && !isActive
-            return (
-              <button
-                key={filterItem.id}
-                className={`pl-chip${isActive ? " is-active" : ""}${isEmpty ? " pl-chip--empty" : ""}`}
-                type="button"
-                onClick={() => toggleContentFilter(filterItem.id)}
-              >
-                {filterItem.label} <span className="pl-chip__count">{count}</span>
-              </button>
-            )
-          })}
-        </div>
+        {activeFilterCount === 0 ? (
+          <button className="pl-sort-button" type="button" onClick={toggleSortMode}>
+            {sortLabel}
+            <ChevronDown size={11} strokeWidth={2.2} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       {recordFeatures.length === 0 ? (
@@ -278,7 +317,7 @@ export function PlacesScreen({
                   ) : feature.type === "area" ? (
                     <AreaIcon />
                   ) : (
-                    <span className="pl-item__emoji"><FeatureEmoji feature={feature} size={22} unicodeFontSize={18} /></span>
+                    <MapPin size={17} fill="currentColor" stroke="none" aria-hidden="true" />
                   )}
                 </div>
                 <div className="pl-item__info">
@@ -305,6 +344,74 @@ export function PlacesScreen({
           })}
         </div>
       )}
+
+      {filterSheetOpen ? (
+        <div className="pl-filter-overlay" onClick={() => setFilterSheetOpen(false)}>
+          <section className="pl-filter-sheet" role="dialog" aria-modal="true" aria-label="장소 필터" onClick={(event) => event.stopPropagation()}>
+            <span className="pl-filter-sheet__handle" aria-hidden="true" />
+            <div className="pl-filter-sheet__head">
+              <h2>필터</h2>
+              <button type="button" onClick={resetFilters}>초기화</button>
+            </div>
+
+            <div className="pl-filter-sheet__group">
+              <span className="pl-filter-sheet__label">소속 지도</span>
+              <div className="pl-filter-sheet__chips">
+                <button className={`pl-chip${mapFilter === "all" ? " is-active" : ""}`} type="button" onClick={() => setMapFilter("all")}>
+                  전체 <span className="pl-chip__count">{featureCounts.all || 0}</span>
+                </button>
+                {personalMaps.map((map) => (
+                  <button key={map.id} className={`pl-chip${mapFilter === map.id ? " is-active" : ""}`} type="button" onClick={() => setMapFilter(map.id)}>
+                    {map.title} <span className="pl-chip__count">{featureCounts[map.id] || 0}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pl-filter-sheet__group">
+              <span className="pl-filter-sheet__label">유형</span>
+              <div className="pl-filter-sheet__chips">
+                {TYPE_FILTERS.map((filterItem) => (
+                  <button
+                    key={filterItem.id}
+                    className={`pl-chip${typeFilter === filterItem.id ? " is-active" : ""}`}
+                    type="button"
+                    onClick={() => setTypeFilter(filterItem.id)}
+                  >
+                    {filterItem.dot ? <span className={`pl-chip__dot pl-chip__dot--${filterItem.dot}`} /> : null}
+                    {filterItem.label} <span className="pl-chip__count">{typeCounts[filterItem.id] || 0}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="pl-filter-sheet__group">
+              <span className="pl-filter-sheet__label">기록</span>
+              <div className="pl-filter-sheet__chips">
+                {CONTENT_FILTERS.map((filterItem) => {
+                  const isActive = contentFilters.includes(filterItem.id)
+                  const count = contentCounts[filterItem.id] || 0
+                  const isEmpty = count === 0 && !isActive
+                  return (
+                    <button
+                      key={filterItem.id}
+                      className={`pl-chip${isActive ? " is-active" : ""}${isEmpty ? " pl-chip--empty" : ""}`}
+                      type="button"
+                      onClick={() => toggleContentFilter(filterItem.id)}
+                    >
+                      {filterItem.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button className="pl-filter-sheet__submit" type="button" onClick={() => setFilterSheetOpen(false)}>
+              {filteredFeatures.length}개 보기
+            </button>
+          </section>
+        </div>
+      ) : null}
     </Wrapper>
   )
 }

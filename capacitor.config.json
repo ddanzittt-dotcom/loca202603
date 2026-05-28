@@ -13,7 +13,7 @@
     },
     "StatusBar": {
       "style": "LIGHT",
-      "backgroundColor": "#2D4A3E"
+      "backgroundColor": "#FAF8F2"
     }
   },
   "ios": {

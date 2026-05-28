@@ -12,7 +12,7 @@ function friendlyError(message = "") {
   return message || "알 수 없는 오류가 발생했어요."
 }
 
-export function AuthScreen({ title = "LOCA 시작하기", subtitle = "기록을 안전하게 저장하려면 로그인이 필요해요", onSuccess }) {
+export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
   const [mode, setMode] = useState("login")
   const [nickname, setNickname] = useState("")
   const [email, setEmail] = useState("")
@@ -59,8 +59,8 @@ export function AuthScreen({ title = "LOCA 시작하기", subtitle = "기록을 
       <div className="feed-section">
         <div className="section-head">
           <div>
-            <h1 className="section-head__title" style={{ letterSpacing: "-0.3px" }}>{title}</h1>
-            <p className="section-head__subtitle">{subtitle}</p>
+            <h1 className="section-head__title" style={{ letterSpacing: 0 }}>{title}</h1>
+            {subtitle ? <p className="section-head__subtitle">{subtitle}</p> : null}
           </div>
         </div>
 

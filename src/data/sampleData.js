@@ -74,25 +74,6 @@ export const mapsSeed = [
     config: {},
     updatedAt: "2026-03-30T10:00:00.000Z",
   },
-  // 이벤트 지도 (B2B) — 기관/기업용 스탬프투어
-  {
-    id: "map-event-festival",
-    title: "2026 성수 봄 축제",
-    description: "성수동 일대 5곳을 방문하고 스탬프를 모아보세요!",
-    theme: "#F97316",
-    category: "event",
-    config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true },
-    updatedAt: "2026-04-01T10:00:00.000Z",
-  },
-  {
-    id: "map-event-campus",
-    title: "서울대 캠퍼스 투어",
-    description: "신입생 오리엔테이션 캠퍼스 스탬프 투어",
-    theme: "#4F46E5",
-    category: "event",
-    config: { checkin_enabled: true, survey_enabled: true, announcements_enabled: true },
-    updatedAt: "2026-04-02T09:00:00.000Z",
-  },
 ]
 
 export const featuresSeed = [
@@ -131,18 +112,6 @@ export const featuresSeed = [
   { id: "feat-it-wine", mapId: "map-itaewon", type: "pin", title: "르뱅 내추럴", emoji: "🍷", lat: 37.5338, lng: 126.9920, tags: ["와인바"], note: "내추럴 와인 전문. 치즈 플레이트 강추.", highlight: false, updatedAt: "2026-03-30T10:20:00.000Z" },
   { id: "feat-it-kebab", mapId: "map-itaewon", type: "pin", title: "이스탄불 케밥", emoji: "🥙", lat: 37.5355, lng: 126.9940, tags: ["터키", "케밥"], note: "양고기 되네르가 시그니처.", highlight: false, updatedAt: "2026-03-30T10:25:00.000Z" },
 
-  // ── 이벤트 지도: 2026 성수 봄 축제 (5개 체크포인트) ──
-  { id: "feat-ev1", mapId: "map-event-festival", type: "pin", title: "축제 본부", emoji: "1️⃣", lat: 37.5448, lng: 127.0555, tags: ["스탬프"], note: "축제 안내 데스크에서 시작하세요.", highlight: true, updatedAt: "2026-04-01T10:01:00.000Z" },
-  { id: "feat-ev2", mapId: "map-event-festival", type: "pin", title: "성수 연방", emoji: "2️⃣", lat: 37.5425, lng: 127.0590, tags: ["스탬프"], note: "리노베이션된 공장 건물 카페.", highlight: false, updatedAt: "2026-04-01T10:02:00.000Z" },
-  { id: "feat-ev3", mapId: "map-event-festival", type: "pin", title: "아트벙커", emoji: "3️⃣", lat: 37.5410, lng: 127.0565, tags: ["스탬프"], note: "현대미술 전시를 무료로 관람하세요.", highlight: false, updatedAt: "2026-04-01T10:03:00.000Z" },
-  { id: "feat-ev4", mapId: "map-event-festival", type: "pin", title: "뚝섬 수제맥주", emoji: "4️⃣", lat: 37.5380, lng: 127.0610, tags: ["스탬프"], note: "축제 참여자 10% 할인 이벤트.", highlight: false, updatedAt: "2026-04-01T10:04:00.000Z" },
-  { id: "feat-ev5", mapId: "map-event-festival", type: "pin", title: "서울숲 피크닉", emoji: "5️⃣", lat: 37.5440, lng: 127.0375, tags: ["스탬프"], note: "완주 후 여기서 경품을 수령하세요!", highlight: true, updatedAt: "2026-04-01T10:05:00.000Z" },
-
-  // ── 이벤트 지도: 서울대 캠퍼스 투어 (4개 체크포인트) ──
-  { id: "feat-snu1", mapId: "map-event-campus", type: "pin", title: "정문 집합", emoji: "1️⃣", lat: 37.4597, lng: 126.9510, tags: ["스탬프"], note: "투어 시작! 가이드북을 받으세요.", highlight: true, updatedAt: "2026-04-02T09:01:00.000Z" },
-  { id: "feat-snu2", mapId: "map-event-campus", type: "pin", title: "중앙도서관", emoji: "2️⃣", lat: 37.4605, lng: 126.9530, tags: ["스탬프"], note: "관악산 전망이 멋진 6층 열람실.", highlight: false, updatedAt: "2026-04-02T09:02:00.000Z" },
-  { id: "feat-snu3", mapId: "map-event-campus", type: "pin", title: "학생회관", emoji: "3️⃣", lat: 37.4590, lng: 126.9545, tags: ["스탬프"], note: "동아리 소개와 학식 체험.", highlight: false, updatedAt: "2026-04-02T09:03:00.000Z" },
-  { id: "feat-snu4", mapId: "map-event-campus", type: "pin", title: "샤 연못", emoji: "4️⃣", lat: 37.4580, lng: 126.9520, tags: ["스탬프"], note: "투어 완료! 기념품을 수령하세요.", highlight: true, updatedAt: "2026-04-02T09:04:00.000Z" },
 ]
 
 export const communityMapFeaturesSeed = [
@@ -159,6 +128,8 @@ export const demoMaps = [
   { id: "demo-seongsu", title: "성수 감성카페 7곳", description: "걷기 좋은 길로 묶은 카페 컬렉션", theme: "#F59E0B", updatedAt: "2026-03-15T00:00:00.000Z" },
   { id: "demo-ikseon", title: "익선동 골목 맛집", description: "한옥마을 사이사이 숨은 맛집 4곳", theme: "#7C3AED", updatedAt: "2026-03-18T00:00:00.000Z" },
   { id: "demo-mangwon", title: "망원동 로컬 산책", description: "망리단길 중심 카페·빵집 코스", theme: "#12B981", updatedAt: "2026-03-22T00:00:00.000Z" },
+  { id: "demo-hangang", title: "한강 노을 산책 코스", description: "해질녘에 걷기 좋은 강변 포인트", theme: "#2E7D90", updatedAt: "2026-05-18T00:00:00.000Z" },
+  { id: "demo-yeonnam", title: "연남동 주말 산책", description: "숲길과 작은 가게를 느리게 잇는 코스", theme: "#5F8E68", updatedAt: "2026-05-20T00:00:00.000Z" },
 ]
 
 export const demoFeatures = [
@@ -175,4 +146,12 @@ export const demoFeatures = [
   { id: "d8", mapId: "demo-mangwon", type: "pin", title: "카페 레이어드", emoji: "☕", lat: 37.5565, lng: 126.9095, tags: ["카페"], note: "루프탑 뷰가 좋은 대형 카페.", highlight: true, updatedAt: "2026-03-22T00:00:00.000Z" },
   { id: "d9", mapId: "demo-mangwon", type: "pin", title: "망원시장", emoji: "🛒", lat: 37.5558, lng: 126.9085, tags: ["시장"], note: "떡볶이와 호떡이 유명.", highlight: false, updatedAt: "2026-03-22T00:00:00.000Z" },
   { id: "d10", mapId: "demo-mangwon", type: "pin", title: "퍼센트 커피", emoji: "☕", lat: 37.5570, lng: 126.9105, tags: ["카페"], note: "드립 커피 전문. 원두 구매 가능.", highlight: false, updatedAt: "2026-03-22T00:00:00.000Z" },
+  // 한강 노을 산책 코스
+  { id: "d11", mapId: "demo-hangang", type: "pin", title: "반포 달빛무지개분수", emoji: "🌈", lat: 37.5090, lng: 126.9960, tags: ["노을", "산책"], note: "해가 내려갈 때 강물 색이 가장 좋다.", highlight: true, updatedAt: "2026-05-18T00:00:00.000Z" },
+  { id: "d12", mapId: "demo-hangang", type: "pin", title: "세빛섬 앞 데크", emoji: "🌉", lat: 37.5127, lng: 126.9958, tags: ["야경", "사진"], note: "조명이 켜지는 시간대에 들르기 좋다.", highlight: false, updatedAt: "2026-05-18T00:00:00.000Z" },
+  { id: "d13", mapId: "demo-hangang", type: "pin", title: "잠원 한강공원", emoji: "🚶", lat: 37.5198, lng: 127.0135, tags: ["산책", "피크닉"], note: "강변을 따라 천천히 걷기 좋은 구간.", highlight: false, updatedAt: "2026-05-18T00:00:00.000Z" },
+  // 연남동 주말 산책
+  { id: "d14", mapId: "demo-yeonnam", type: "pin", title: "경의선숲길", emoji: "🌿", lat: 37.5597, lng: 126.9235, tags: ["산책"], note: "주말 오후에 가볍게 걷기 좋은 시작점.", highlight: true, updatedAt: "2026-05-20T00:00:00.000Z" },
+  { id: "d15", mapId: "demo-yeonnam", type: "pin", title: "오브젝트", emoji: "🛍️", lat: 37.5605, lng: 126.9255, tags: ["소품샵"], note: "작은 선물을 고르기 좋은 편집숍.", highlight: false, updatedAt: "2026-05-20T00:00:00.000Z" },
+  { id: "d16", mapId: "demo-yeonnam", type: "pin", title: "연남토마", emoji: "🍝", lat: 37.5615, lng: 126.9220, tags: ["맛집"], note: "산책 뒤 식사 코스로 붙이기 좋다.", highlight: false, updatedAt: "2026-05-20T00:00:00.000Z" },
 ]

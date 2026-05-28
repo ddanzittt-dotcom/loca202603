@@ -4,18 +4,71 @@ import { saveMedia, deleteMedia, uploadMediaToCloud, deleteMediaFromCloud } from
 import { createMediaRecord, deleteMediaRecord } from "../lib/mapService"
 import { MEDIA_POLICY, assertPhotoFileAllowed, assertStoredMediaAllowed } from "../lib/mediaPolicy"
 
-export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures, showToast, cloudMode = false }) {
+export function useMediaHandlers({
+  featureSheet,
+  mediaTargetFeature = null,
+  setFeatureSheet,
+  updateFeatures,
+  showToast,
+  cloudMode = false,
+}) {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const mediaRecorderRef = useRef(null)
   const recordingTimerRef = useRef(null)
   const photoInputRef = useRef(null)
-  const featureSheetRef = useRef(featureSheet)
-  useEffect(() => { featureSheetRef.current = featureSheet }, [featureSheet])
+  const activeFeatureRef = useRef(mediaTargetFeature || featureSheet)
+  const activeRecordIdRef = useRef(null)
 
-  const handlePhotoSelected = async (event) => {
+  useEffect(() => {
+    activeFeatureRef.current = mediaTargetFeature || featureSheet
+  }, [featureSheet, mediaTargetFeature])
+
+  const updateFeatureSheetIfOpen = (featureId, patcher) => {
+    setFeatureSheet((current) => {
+      if (!current || current.id !== featureId) return current
+      return patcher(current)
+    })
+  }
+
+  const updateFeatureMedia = (featureId, mediaKey, listUpdater) => {
+    updateFeatures((current) => current.map((feature) => (
+      feature.id === featureId
+        ? { ...feature, [mediaKey]: listUpdater(feature[mediaKey] || []) }
+        : feature
+    )))
+    updateFeatureSheetIfOpen(featureId, (current) => ({
+      ...current,
+      [mediaKey]: listUpdater(current[mediaKey] || []),
+    }))
+  }
+
+  const appendMediaEntry = (featureId, mediaKey, entry) => {
+    updateFeatureMedia(featureId, mediaKey, (items = []) => [...items, entry])
+  }
+
+  const replaceMediaEntry = (featureId, mediaKey, localId, nextEntry) => {
+    updateFeatureMedia(featureId, mediaKey, (items = []) => {
+      let replaced = false
+      const nextItems = items.map((item) => {
+        const isMatch = item.id === localId || item.localId === localId || item.id === nextEntry.id
+        if (!isMatch) return item
+        replaced = true
+        return {
+          ...item,
+          ...nextEntry,
+          localId: nextEntry.localId || item.localId || localId,
+        }
+      })
+      return replaced ? nextItems : [...nextItems, nextEntry]
+    })
+  }
+
+  const handlePhotoSelected = async (event, options = {}) => {
     const file = event.target.files?.[0]
-    if (!file || !featureSheet) return
+    const targetFeature = mediaTargetFeature || featureSheet
+    if (!file || !targetFeature) return
+    const recordId = `${options?.recordId || ""}`.trim()
     try {
       assertPhotoFileAllowed(file)
       const img = await new Promise((resolve, reject) => {
@@ -38,31 +91,54 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       assertStoredMediaAllowed(blob, "photo")
       const photoId = createId("photo")
       await saveMedia(photoId, blob)
-      let photoEntry = { id: photoId, date: new Date().toISOString() }
+      const featureId = targetFeature.id
+      const photoEntry = {
+        id: photoId,
+        localId: photoId,
+        date: new Date().toISOString(),
+        mimeType: blob.type,
+        sizeBytes: blob.size,
+        recordId: recordId || null,
+      }
+      appendMediaEntry(featureId, "photos", photoEntry)
       if (cloudMode) {
-        const cloudMeta = await uploadMediaToCloud(photoId, blob, "photos")
-        if (cloudMeta?.publicUrl) {
-          try {
-            const record = await createMediaRecord(featureSheet.id, {
+        try {
+          const cloudMeta = await uploadMediaToCloud(photoId, blob, "photos")
+          if (cloudMeta?.publicUrl) {
+            let syncedEntry = {
+              ...photoEntry,
+              url: cloudMeta.publicUrl,
               storagePath: cloudMeta.storagePath,
-              publicUrl: cloudMeta.publicUrl,
-              mimeType: cloudMeta.mimeType,
-              fileExt: cloudMeta.fileExt,
-              sizeBytes: cloudMeta.sizeBytes,
-              mediaType: "photo",
-            })
-            // localId 보존: IndexedDB key와 feature entry를 연결
-            photoEntry = { id: record.id, localId: photoId, date: record.date, url: record.url, storagePath: record.storagePath }
-          } catch {
-            // DB 메타 저장 실패 — URL은 로컬에라도 유지
-            photoEntry = { ...photoEntry, url: cloudMeta.publicUrl }
+            }
+            try {
+              const record = await createMediaRecord(targetFeature.id, {
+                storagePath: cloudMeta.storagePath,
+                publicUrl: cloudMeta.publicUrl,
+                mimeType: cloudMeta.mimeType,
+                fileExt: cloudMeta.fileExt,
+                sizeBytes: cloudMeta.sizeBytes,
+                mediaType: "photo",
+                recordId: recordId || undefined,
+              })
+              syncedEntry = {
+                id: record.id,
+                localId: photoId,
+                date: record.date,
+                url: record.url,
+                storagePath: record.storagePath,
+                mimeType: cloudMeta.mimeType,
+                sizeBytes: cloudMeta.sizeBytes,
+                recordId: recordId || record.recordId || null,
+              }
+            } catch (error) {
+              console.warn("Photo cloud record failed; keeping upload metadata for retry", error)
+            }
+            replaceMediaEntry(featureId, "photos", photoId, syncedEntry)
           }
+        } catch (error) {
+          console.warn("Photo cloud upload failed; keeping local media for retry", error)
         }
       }
-      const featureId = featureSheet.id
-      const updater = (f) => f.id === featureId ? { ...f, photos: [...(f.photos || []), photoEntry] } : f
-      updateFeatures((c) => c.map(updater))
-      setFeatureSheet((c) => ({ ...c, photos: [...(c.photos || []), photoEntry] }))
       showToast("사진을 추가했어요.")
     } catch (err) {
       console.error("Photo error", err)
@@ -71,44 +147,48 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
     if (photoInputRef.current) photoInputRef.current.value = ""
   }
 
-  const handleDeletePhoto = async (photoId) => {
-    if (!featureSheet || !window.confirm("이 사진을 삭제할까요?")) return
-    const photo = (featureSheet.photos || []).find((p) => p.id === photoId)
+  const handleDeletePhoto = async (photoId, options = {}) => {
+    const targetFeature = mediaTargetFeature || featureSheet
+    const featureId = options?.featureId || targetFeature?.id
+    if (!featureId) return
+    if (!options?.skipConfirm && !window.confirm("이 사진을 삭제할까요?")) return
+    const photo = (targetFeature?.photos || []).find((item) => item.id === photoId || item.localId === photoId)
     await deleteMedia(photoId)
-    // localId가 있으면 IndexedDB의 원래 키도 삭제
     if (photo?.localId && photo.localId !== photoId) await deleteMedia(photo.localId)
     if (cloudMode) {
       const storagePath = await deleteMediaRecord(photoId).catch(() => null)
       deleteMediaFromCloud(photoId, "photos", storagePath || photo?.storagePath || null)
     }
-    const featureId = featureSheet.id
-    const updater = (f) => f.id === featureId ? { ...f, photos: (f.photos || []).filter((p) => p.id !== photoId) } : f
-    updateFeatures((c) => c.map(updater))
-    setFeatureSheet((c) => ({ ...c, photos: (c.photos || []).filter((p) => p.id !== photoId) }))
-    showToast("사진을 삭제했어요.")
+    const filterPhotos = (photos = []) => photos.filter((item) => item.id !== photoId && item.localId !== photoId)
+    const updater = (feature) => (
+      feature.id === featureId ? { ...feature, photos: filterPhotos(feature.photos) } : feature
+    )
+    updateFeatures((current) => current.map(updater))
+    updateFeatureSheetIfOpen(featureId, (current) => ({ ...current, photos: filterPhotos(current.photos) }))
+    if (!options?.silent) showToast("사진을 삭제했어요.")
   }
 
-  const startRecording = async () => {
-    if (!featureSheet) return
+  const startRecording = async (options = {}) => {
+    if (!activeFeatureRef.current) return
+    activeRecordIdRef.current = `${options?.recordId || ""}`.trim() || null
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      // 브라우저 지원 MIME 타입 자동 선택 (iOS Safari 호환)
       const mimeCandidates = ["audio/webm", "audio/mp4", "audio/ogg", "audio/wav"]
-      const mimeType = mimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) || ""
-      const recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream) // 브라우저 기본값 fallback
+      const mimeType = mimeCandidates.find((type) => MediaRecorder.isTypeSupported(type)) || ""
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
       const chunks = []
       let secs = 0
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+      recorder.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data) }
       recorder.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop())
+        stream.getTracks().forEach((track) => track.stop())
         clearInterval(recordingTimerRef.current)
         setIsRecording(false)
         const duration = secs
         setRecordingSeconds(0)
-        const currentSheet = featureSheetRef.current
-        if (!currentSheet) return
+        const currentTarget = activeFeatureRef.current
+        const recordId = activeRecordIdRef.current
+        activeRecordIdRef.current = null
+        if (!currentTarget) return
         const actualMime = recorder.mimeType || mimeType || "audio/webm"
         const blob = new Blob(chunks, { type: actualMime })
         try {
@@ -119,31 +199,57 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
         }
         const voiceId = createId("voice")
         await saveMedia(voiceId, blob)
-        let voiceEntry = { id: voiceId, duration, date: new Date().toISOString() }
+        const featureId = currentTarget.id
+        const voiceEntry = {
+          id: voiceId,
+          localId: voiceId,
+          duration,
+          date: new Date().toISOString(),
+          mimeType: blob.type,
+          sizeBytes: blob.size,
+          recordId: recordId || null,
+        }
+        appendMediaEntry(featureId, "voices", voiceEntry)
         if (cloudMode) {
-          const cloudMeta = await uploadMediaToCloud(voiceId, blob, "voices")
-          if (cloudMeta?.publicUrl) {
-            try {
-              const record = await createMediaRecord(currentSheet.id, {
+          try {
+            const cloudMeta = await uploadMediaToCloud(voiceId, blob, "voices")
+            if (cloudMeta?.publicUrl) {
+              let syncedEntry = {
+                ...voiceEntry,
+                url: cloudMeta.publicUrl,
                 storagePath: cloudMeta.storagePath,
-                publicUrl: cloudMeta.publicUrl,
-                mimeType: cloudMeta.mimeType,
-                fileExt: cloudMeta.fileExt,
-                sizeBytes: cloudMeta.sizeBytes,
-                mediaType: "voice",
-                duration,
-              })
-              // localId 보존: IndexedDB key와 feature entry를 연결
-              voiceEntry = { id: record.id, localId: voiceId, duration: record.duration ?? duration, date: record.date, url: record.url, storagePath: record.storagePath }
-            } catch {
-              voiceEntry = { ...voiceEntry, url: cloudMeta.publicUrl }
+              }
+              try {
+                const record = await createMediaRecord(currentTarget.id, {
+                  storagePath: cloudMeta.storagePath,
+                  publicUrl: cloudMeta.publicUrl,
+                  mimeType: cloudMeta.mimeType,
+                  fileExt: cloudMeta.fileExt,
+                  sizeBytes: cloudMeta.sizeBytes,
+                  mediaType: "voice",
+                  duration,
+                  recordId: recordId || undefined,
+                })
+                syncedEntry = {
+                  id: record.id,
+                  localId: voiceId,
+                  duration: record.duration ?? duration,
+                  date: record.date,
+                  url: record.url,
+                  storagePath: record.storagePath,
+                  mimeType: cloudMeta.mimeType,
+                  sizeBytes: cloudMeta.sizeBytes,
+                  recordId: recordId || record.recordId || null,
+                }
+              } catch (error) {
+                console.warn("Voice cloud record failed; keeping upload metadata for retry", error)
+              }
+              replaceMediaEntry(featureId, "voices", voiceId, syncedEntry)
             }
+          } catch (error) {
+            console.warn("Voice cloud upload failed; keeping local media for retry", error)
           }
         }
-        const featureId = currentSheet.id
-        const updater = (f) => f.id === featureId ? { ...f, voices: [...(f.voices || []), voiceEntry] } : f
-        updateFeatures((c) => c.map(updater))
-        setFeatureSheet((c) => ({ ...c, voices: [...(c.voices || []), voiceEntry] }))
         showToast("음성을 저장했어요.")
       }
       mediaRecorderRef.current = recorder
@@ -151,13 +257,14 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
       setIsRecording(true)
       setRecordingSeconds(0)
       recordingTimerRef.current = setInterval(() => {
-        secs++
+        secs += 1
         setRecordingSeconds(secs)
         if (secs >= MEDIA_POLICY.voice.maxDurationSeconds) {
           recorder.stop()
         }
       }, 1000)
     } catch (err) {
+      activeRecordIdRef.current = null
       console.error("Recording error", err)
       showToast("마이크를 사용할 수 없어요.")
     }
@@ -169,21 +276,25 @@ export function useMediaHandlers({ featureSheet, setFeatureSheet, updateFeatures
     }
   }
 
-  const handleDeleteVoice = async (voiceId) => {
-    if (!featureSheet || !window.confirm("이 음성을 삭제할까요?")) return
-    const voice = (featureSheet.voices || []).find((v) => v.id === voiceId)
+  const handleDeleteVoice = async (voiceId, options = {}) => {
+    const targetFeature = mediaTargetFeature || featureSheet
+    const featureId = options?.featureId || targetFeature?.id
+    if (!featureId) return
+    if (!options?.skipConfirm && !window.confirm("이 음성을 삭제할까요?")) return
+    const voice = (targetFeature?.voices || []).find((item) => item.id === voiceId || item.localId === voiceId)
     await deleteMedia(voiceId)
-    // localId가 있으면 IndexedDB의 원래 키도 삭제
     if (voice?.localId && voice.localId !== voiceId) await deleteMedia(voice.localId)
     if (cloudMode) {
       const storagePath = await deleteMediaRecord(voiceId).catch(() => null)
       deleteMediaFromCloud(voiceId, "voices", storagePath || voice?.storagePath || null)
     }
-    const featureId = featureSheet.id
-    const updater = (f) => f.id === featureId ? { ...f, voices: (f.voices || []).filter((v) => v.id !== voiceId) } : f
-    updateFeatures((c) => c.map(updater))
-    setFeatureSheet((c) => ({ ...c, voices: (c.voices || []).filter((v) => v.id !== voiceId) }))
-    showToast("음성을 삭제했어요.")
+    const filterVoices = (voices = []) => voices.filter((item) => item.id !== voiceId && item.localId !== voiceId)
+    const updater = (feature) => (
+      feature.id === featureId ? { ...feature, voices: filterVoices(feature.voices) } : feature
+    )
+    updateFeatures((current) => current.map(updater))
+    updateFeatureSheetIfOpen(featureId, (current) => ({ ...current, voices: filterVoices(current.voices) }))
+    if (!options?.silent) showToast("음성을 삭제했어요.")
   }
 
   return {

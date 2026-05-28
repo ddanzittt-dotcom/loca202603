@@ -34,6 +34,13 @@ function isMissingRpc(error) {
   return error.code === "42883" || error.code === "PGRST202"
 }
 
+function isMissingColumn(error, columnName = "") {
+  if (!error) return false
+  const message = `${error.message || ""}`.toLowerCase()
+  const column = `${columnName || ""}`.toLowerCase()
+  return error.code === "42703" && (!column || message.includes(column))
+}
+
 function isMissingStyleColumn(error) {
   if (!error) return false
   if (error.code === "42703") return true
@@ -317,9 +324,10 @@ export async function deleteFeature(featureId, mapId, options = {}) {
 
 // ─── Memo ───
 
-export async function addFeatureMemo(featureId, text, userNameOverride = "", photoUrls = []) {
+export async function addFeatureMemo(featureId, text, userNameOverride = "", photoUrls = [], options = {}) {
   const user = await requireUser()
   const supabase = requireSupabase()
+  const recordId = `${options?.recordId || ""}`.trim()
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("nickname")
@@ -337,6 +345,9 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
     user_name: userNameOverride || profile?.nickname || "익명 사용자",
     text: text.trim(),
   }
+  if (recordId) {
+    payload.record_id = recordId
+  }
   if (normalizedPhotoUrls.length > 0) {
     payload.photo_urls = normalizedPhotoUrls
   }
@@ -346,6 +357,18 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
     .select("*")
     .single()
 
+  let recordIdUnsupported = false
+  if (error && getMissingColumnName(error) === "record_id") {
+    recordIdUnsupported = true
+    const { record_id, ...fallbackPayload } = payload
+    void record_id
+    ;({ data, error } = await supabase
+      .from("feature_memos")
+      .insert(fallbackPayload)
+      .select("*")
+      .single())
+  }
+
   const shouldFallbackWithoutPhotoColumn = Boolean(error)
     && normalizedPhotoUrls.length > 0
     && (
@@ -353,26 +376,86 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
       || `${error.message || ""}`.toLowerCase().includes("photo_urls")
     )
   if (shouldFallbackWithoutPhotoColumn) {
+    const fallbackPayload = {
+      feature_id: featureId,
+      user_id: user.id,
+      user_name: userNameOverride || profile?.nickname || "익명 사용자",
+      text: text.trim(),
+    }
+    if (recordId && !recordIdUnsupported) {
+      fallbackPayload.record_id = recordId
+    }
     const fallback = await supabase
       .from("feature_memos")
-      .insert({
-        feature_id: featureId,
-        user_id: user.id,
-        user_name: userNameOverride || profile?.nickname || "익명 사용자",
-        text: text.trim(),
-      })
+      .insert(fallbackPayload)
       .select("*")
       .single()
     data = fallback.data
     error = fallback.error
+    if (error && getMissingColumnName(error) === "record_id") {
+      const { record_id, ...withoutRecordId } = fallbackPayload
+      void record_id
+      const retry = await supabase
+        .from("feature_memos")
+        .insert(withoutRecordId)
+        .select("*")
+        .single()
+      data = retry.data
+      error = retry.error
+    }
   }
 
   if (error) throw error
   const memo = normalizeMemo(data)
+  const memoWithRecordId = recordId && !memo.recordId ? { ...memo, recordId } : memo
   if (normalizedPhotoUrls.length > 0 && (!memo.photos || memo.photos.length === 0)) {
-    return { ...memo, photos: normalizedPhotoUrls }
+    return { ...memoWithRecordId, photos: normalizedPhotoUrls }
   }
-  return memo
+  return memoWithRecordId
+}
+
+export async function updateFeatureMemo(memoId, text = "", options = {}) {
+  await requireUser()
+  const supabase = requireSupabase()
+  const recordId = `${options?.recordId || ""}`.trim()
+  const payload = { text: `${text || ""}`.trim() }
+  if (recordId) {
+    payload.record_id = recordId
+  }
+  let { data, error } = await supabase
+    .from("feature_memos")
+    .update(payload)
+    .eq("id", memoId)
+    .select("*")
+    .single()
+
+  if (error && getMissingColumnName(error) === "record_id") {
+    const { record_id, ...fallbackPayload } = payload
+    void record_id
+    ;({ data, error } = await supabase
+      .from("feature_memos")
+      .update(fallbackPayload)
+      .eq("id", memoId)
+      .select("*")
+      .single())
+  }
+
+  if (error) throw error
+  const memo = normalizeMemo(data)
+  return recordId && !memo.recordId ? { ...memo, recordId } : memo
+}
+
+export async function deleteFeatureMemo(memoId) {
+  await requireUser()
+  if (!memoId) return false
+  const supabase = requireSupabase()
+  const { error } = await supabase
+    .from("feature_memos")
+    .delete()
+    .eq("id", memoId)
+
+  if (error) throw error
+  return true
 }
 
 export async function saveFeatureOperatorNote(featureId, note = "") {
@@ -429,24 +512,41 @@ export async function saveFeatureOperatorNote(featureId, note = "") {
 
 // ─── Media ───
 
-export async function createMediaRecord(featureId, { storagePath, publicUrl, mimeType, fileExt, sizeBytes, mediaType, duration }) {
+export async function createMediaRecord(featureId, { storagePath, publicUrl, mimeType, fileExt, sizeBytes, mediaType, duration, recordId }) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase
+  const payload = {
+    feature_id: featureId,
+    media_type: mediaType,
+    storage_path: storagePath,
+    public_url: publicUrl,
+    mime_type: mimeType,
+    file_ext: fileExt,
+    size_bytes: sizeBytes || 0,
+    duration_sec: duration ?? null,
+  }
+  if (recordId) {
+    payload.record_id = recordId
+  }
+
+  let { data, error } = await supabase
     .from("feature_media")
-    .insert({
-      feature_id: featureId,
-      media_type: mediaType,
-      storage_path: storagePath,
-      public_url: publicUrl,
-      mime_type: mimeType,
-      file_ext: fileExt,
-      size_bytes: sizeBytes || 0,
-      duration_sec: duration ?? null,
-    })
+    .insert(payload)
     .select("*")
     .single()
+
+  if (error && getMissingColumnName(error) === "record_id") {
+    const { record_id, ...fallbackPayload } = payload
+    void record_id
+    ;({ data, error } = await supabase
+      .from("feature_media")
+      .insert(fallbackPayload)
+      .select("*")
+      .single())
+  }
+
   if (error) throw error
-  return normalizeMedia(data)
+  const media = normalizeMedia(data)
+  return recordId && !media.recordId ? { ...media, recordId } : media
 }
 
 export async function deleteMediaRecord(mediaId) {
@@ -463,6 +563,14 @@ export async function deleteMediaRecord(mediaId) {
 
 // ─── Profile ───
 
+function stripUnsupportedProfileColumns(payload, error) {
+  const column = getMissingColumnName(error)
+  if (!column || !Object.prototype.hasOwnProperty.call(payload || {}, column)) return payload
+  const { [column]: _missing, ...rest } = payload
+  void _missing
+  return rest
+}
+
 export async function uploadAvatar(userId, file) {
   const supabase = requireSupabase()
   const ext = (file.name || "avatar.jpg").split(".").pop() || "jpg"
@@ -477,15 +585,27 @@ export async function updateProfile(userId, updates = {}) {
   const user = await requireUser()
   if (user.id !== userId) throw new Error("자신의 프로필만 수정할 수 있습니다.")
   const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", userId)
-    .select("*")
-    .single()
+  let payload = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  }
+  let data = null
+  let error = null
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    ;({ data, error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", userId)
+      .select("*")
+      .single())
+
+    if (!error) break
+
+    const nextPayload = stripUnsupportedProfileColumns(payload, error)
+    if (Object.keys(nextPayload).length === Object.keys(payload).length) break
+    payload = nextPayload
+  }
 
   if (error) throw error
   return data
@@ -552,35 +672,84 @@ export async function incrementLike(mapId) {
 
 export async function getCollaborators(mapId) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("map_collaborators")
-    .select("id, user_id, role, created_at, profiles:user_id(nickname, emoji)")
+    .select("id, user_id, role, status, created_at, responded_at, profiles:user_id(nickname, avatar_url, slug)")
     .eq("map_id", mapId)
     .order("created_at", { ascending: true })
 
+  if (error && isMissingColumn(error, "status")) {
+    ;({ data, error } = await supabase
+      .from("map_collaborators")
+      .select("id, user_id, role, created_at, profiles:user_id(nickname, avatar_url, slug)")
+      .eq("map_id", mapId)
+      .order("created_at", { ascending: true }))
+  }
+
   if (error) throw error
-  return (data || []).map((row) => ({
-    id: row.id,
-    userId: row.user_id,
-    role: row.role,
-    nickname: row.profiles?.nickname || "사용자",
-    emoji: row.profiles?.emoji || "😀",
-    createdAt: row.created_at,
-  }))
+  return (data || []).map((row) => {
+    const avatarValue = row.profiles?.avatar_url || ""
+    const hasImageAvatar = avatarValue.startsWith("http") || avatarValue.startsWith("data:")
+    const nickname = row.profiles?.nickname || "LOCA 사용자"
+    return {
+      id: row.id,
+      userId: row.user_id,
+      role: row.role,
+      status: row.status || "accepted",
+      nickname,
+      handle: row.profiles?.slug ? `@${row.profiles.slug}` : "",
+      avatarUrl: hasImageAvatar ? avatarValue : null,
+      emoji: hasImageAvatar ? nickname.slice(0, 1) : (avatarValue || nickname.slice(0, 1) || "U"),
+      createdAt: row.created_at,
+      respondedAt: row.responded_at || null,
+    }
+  })
 }
 
 export async function addCollaborator(mapId, userId, role = "editor") {
   const supabase = requireSupabase()
   const user = await requireUser()
-  const normalizedRole = ["operator", "editor", "viewer"].includes(role) ? role : "editor"
-  const { data, error } = await supabase
+  const normalizedRole = ["editor", "viewer"].includes(role) ? role : "editor"
+  const insertInvite = () => supabase
     .from("map_collaborators")
-    .insert({ map_id: mapId, user_id: userId, role: normalizedRole, invited_by: user.id })
-    .select("id, user_id, role, created_at")
+    .insert({ map_id: mapId, user_id: userId, role: normalizedRole, invited_by: user.id, status: "pending" })
+    .select("id, user_id, role, status, created_at")
     .single()
 
+  let { data, error } = await insertInvite()
+  if (error && isMissingColumn(error, "status")) {
+    throw new Error("초대 수락 기능을 사용하려면 Supabase 협업 초대 마이그레이션이 먼저 필요해요.")
+  }
+  if (error?.code === "23505") {
+    const existingRes = await supabase
+      .from("map_collaborators")
+      .select("id, status")
+      .eq("map_id", mapId)
+      .eq("user_id", userId)
+      .maybeSingle()
+    if (!existingRes.error && existingRes.data?.id && existingRes.data.status !== "accepted") {
+      await removeCollaborator(existingRes.data.id)
+      ;({ data, error } = await insertInvite())
+    }
+  }
   if (error) throw error
   return data
+}
+
+export async function respondCollaborationInvite(inviteId, decision) {
+  const supabase = requireSupabase()
+  const normalizedDecision = decision === "accepted" ? "accepted" : "rejected"
+  const { data, error } = await supabase.rpc("respond_map_collaboration_invite", {
+    p_collaborator_id: inviteId,
+    p_decision: normalizedDecision,
+  })
+  if (error) {
+    if (isMissingRpc(error)) {
+      throw new Error("초대 수락/거절 기능을 사용하려면 Supabase 협업 초대 마이그레이션이 먼저 필요해요.")
+    }
+    throw error
+  }
+  return Array.isArray(data) ? data[0] : data
 }
 
 export async function removeCollaborator(collaboratorId) {

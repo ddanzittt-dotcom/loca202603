@@ -1,70 +1,48 @@
 import { useMemo, useState } from "react"
-import { CalendarDays, Edit3, FileText, MapPin, Mic, Plus, Route, Shapes, X } from "lucide-react"
+import { CalendarDays, Edit3, FileText, MapPin, Plus, Route, Shapes, X } from "lucide-react"
 import { BottomSheet } from "../ui"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { DiaryBanner } from "../visuals/DiaryBanner"
 import { RecordEntrySheet } from "./RecordEntrySheet"
+import { createId } from "../../lib/appUtils"
+import { buildFeatureRecordGroups, summarizeRecordGroup } from "../../lib/featureRecordGroups"
 
 const DAY_OF_WEEK_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
-
-function getDateBucketKey(dateValue) {
-  if (!dateValue) return null
-  const d = new Date(dateValue)
-  if (!Number.isFinite(d.getTime())) return null
-  return { iso: d.toISOString().slice(0, 10), date: d }
-}
-
-function buildDiaryBuckets({ memos = [], photos = [], voices = [] }) {
-  const buckets = new Map()
-  const ensure = (key) => {
-    if (!buckets.has(key.iso)) {
-      buckets.set(key.iso, {
-        dateKey: key.iso,
-        dateObj: key.date,
-        photos: [],
-        voices: [],
-        memos: [],
-      })
-    }
-    return buckets.get(key.iso)
-  }
-
-  for (const memo of memos) {
-    const key = getDateBucketKey(memo?.date || memo?.createdAt)
-    if (key) ensure(key).memos.push(memo)
-  }
-  for (const photo of photos) {
-    const key = getDateBucketKey(photo?.date || photo?.createdAt)
-    if (key) ensure(key).photos.push(photo)
-  }
-  for (const voice of voices) {
-    const key = getDateBucketKey(voice?.date || voice?.createdAt)
-    if (key) ensure(key).voices.push(voice)
-  }
-
-  return [...buckets.values()].sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime())
-}
 
 function photoSrc(photo) {
   return photo?.url || photo?.thumbnail || photo?.src || photo?.cloudUrl || ""
 }
 
-function bucketToDiaryEntry(bucket, todayIso) {
-  const d = bucket.dateObj
+function groupToDiaryEntry(group, todayIso) {
+  let d = new Date(group.dateValue || Date.now())
+  if (!Number.isFinite(d.getTime())) d = new Date()
   const date = `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`
-  const memo = bucket.memos
+  const dateKey = Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : ""
+  const memo = group.memos
     .map((item) => `${item?.text || ""}`.trim())
     .filter(Boolean)
     .join("\n\n")
 
   return {
-    isToday: bucket.dateKey === todayIso,
+    isToday: dateKey === todayIso,
     date,
     day: DAY_OF_WEEK_KO[d.getDay()],
-    photos: bucket.photos.map((item) => ({ src: photoSrc(item) })),
-    audio: bucket.voices.map((item) => ({ duration: item?.duration, date })),
+    photos: group.photos.map((item) => ({ ...item, src: photoSrc(item) })),
+    audio: group.voices.map((item) => ({ ...item, duration: item?.duration, date })),
     memo,
   }
+}
+
+function uniqueMedia(items = []) {
+  const seen = new Set()
+  const next = []
+  for (const item of items) {
+    const key = item?.id || item?.localId || item?.url || item?.storagePath
+    if (key && seen.has(key)) continue
+    if (key) seen.add(key)
+    next.push(item)
+  }
+  return next
 }
 
 function routeLengthKm(points) {
@@ -157,31 +135,33 @@ export function FeatureDetailSheet({
   onStopRecording,
   onDeleteVoice,
   onAddMemo,
+  onUpdateMemo,
   onRequestCommunityUpdate,
 }) {
   const [recordOpen, setRecordOpen] = useState(false)
+  const [activeRecord, setActiveRecord] = useState(null)
   const [requestingEdit, setRequestingEdit] = useState(false)
   const [requestMessage, setRequestMessage] = useState("")
   const feature = featureSheet
   const isCommunity = activeMapSource === "community"
+  const isPublicCommunityRecord = feature?.sourceContext === "public_community_records"
   const canEdit = !readOnly && (activeMapSource === "local" || (isCommunity && feature?.createdBy === currentUserId))
-  const canRequestEdit = isCommunity && !readOnly && !canEdit && typeof onRequestCommunityUpdate === "function"
+  const canRequestEdit = isCommunity && !readOnly && !isPublicCommunityRecord && !canEdit && typeof onRequestCommunityUpdate === "function"
 
-  const buckets = useMemo(() => {
+  const recordGroups = useMemo(() => {
     if (!feature) return []
-    return buildDiaryBuckets({
-      memos: feature.memos || [],
-      photos: feature.photos || [],
-      voices: feature.voices || [],
-    })
+    return buildFeatureRecordGroups(feature)
   }, [feature])
 
   if (!feature) return null
 
   const todayIso = new Date().toISOString().slice(0, 10)
-  const todayBucket = buckets.find((bucket) => bucket.dateKey === todayIso)
-  const pastBuckets = buckets.filter((bucket) => bucket.dateKey !== todayIso)
-  const totalRecords = (feature.memos || []).length + (feature.photos || []).length + (feature.voices || []).length
+  const todayGroups = recordGroups.filter((group) => {
+    const d = new Date(group.dateValue || 0)
+    return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === todayIso
+  })
+  const pastGroups = recordGroups.filter((group) => !todayGroups.includes(group))
+  const totalRecords = recordGroups.length
   const copy = typeCopy(feature.type)
   const TypeIcon = copy.Icon
   const tags = Array.isArray(feature.tags) ? feature.tags : []
@@ -193,6 +173,81 @@ export function FeatureDetailSheet({
       setRequestMessage("")
     }
   }
+
+  const openNewRecord = () => {
+    setActiveRecord({
+      id: createId("record"),
+      mode: "create",
+      memoId: null,
+      initialText: "",
+      groupId: null,
+    })
+    setRecordOpen(true)
+  }
+
+  const openEditRecord = (group) => {
+    const summary = summarizeRecordGroup(group)
+    const memo = group.memos?.[0] || null
+    setActiveRecord({
+      id: group.recordId || group.id,
+      mode: "edit",
+      memoId: memo?.id || null,
+      initialText: summary.text || "",
+      groupId: group.id,
+    })
+    setRecordOpen(true)
+  }
+
+  const getActiveRecordGroups = () => {
+    if (!activeRecord) return []
+    return recordGroups.filter((group) => (
+      group.recordId === activeRecord.id
+      || group.id === activeRecord.id
+      || group.id === activeRecord.groupId
+    ))
+  }
+
+  const activeRecordGroups = getActiveRecordGroups()
+  const activeRecordPhotos = uniqueMedia(activeRecordGroups.flatMap((group) => group.photos || []))
+  const activeRecordVoices = uniqueMedia(activeRecordGroups.flatMap((group) => group.voices || []))
+
+  const closeRecordSheet = ({ saved = false } = {}) => {
+    if (!saved && activeRecord?.mode === "create") {
+      activeRecordPhotos.forEach((photo) => {
+        const id = photo.id || photo.localId
+        if (id) onDeletePhoto?.(id, { skipConfirm: true })
+      })
+      activeRecordVoices.forEach((voice) => {
+        const id = voice.id || voice.localId
+        if (id) onDeleteVoice?.(id, { skipConfirm: true })
+      })
+    }
+    setRecordOpen(false)
+    setActiveRecord(null)
+  }
+
+  const saveRecord = async (text, meta = {}) => {
+    if (!feature?.id || !activeRecord) return
+    const recordId = meta.recordId || activeRecord.id
+    if (activeRecord.mode === "edit" && activeRecord.memoId) {
+      await onUpdateMemo?.(feature.id, activeRecord.memoId, text, { recordId })
+      return
+    }
+    if (text?.trim()) {
+      await onAddMemo?.(feature.id, text, [], { recordId })
+    }
+  }
+
+  const renderRecordGroup = (group) => (
+    <div key={group.id} className="fd-detail__record-entry">
+      <DiaryBanner entry={groupToDiaryEntry(group, todayIso)} />
+      {canEdit ? (
+        <button type="button" className="fd-detail__record-edit" onClick={() => openEditRecord(group)}>
+          <Edit3 size={12} /> 수정
+        </button>
+      ) : null}
+    </div>
+  )
 
   return (
     <>
@@ -232,7 +287,7 @@ export function FeatureDetailSheet({
 
             <div className="fd-detail__actions">
               {canEdit ? (
-                <button type="button" className="fd-detail__action fd-detail__action--primary" onClick={() => setRecordOpen(true)}>
+                <button type="button" className="fd-detail__action fd-detail__action--primary" onClick={openNewRecord}>
                   <Plus size={15} /> 오늘 기록
                 </button>
               ) : null}
@@ -271,7 +326,7 @@ export function FeatureDetailSheet({
                 <strong>{totalRecords > 0 ? `${totalRecords}개의 흔적` : "아직 기록 없음"}</strong>
               </div>
               {canEdit ? (
-                <button type="button" onClick={() => setRecordOpen(true)}>
+                <button type="button" onClick={openNewRecord}>
                   <Plus size={13} /> 추가
                 </button>
               ) : null}
@@ -285,21 +340,21 @@ export function FeatureDetailSheet({
               </div>
             ) : (
               <div className="fd-detail__diary">
-                {todayBucket ? (
+                {todayGroups.length > 0 ? (
                   <div className="fd-detail__diary-group">
-                    <span className="fd-detail__diary-label">오늘</span>
-                    <DiaryBanner entry={bucketToDiaryEntry(todayBucket, todayIso)} />
+                    <span className="fd-detail__diary-label">오늘 기록 {todayGroups.length}</span>
+                    {todayGroups.map(renderRecordGroup)}
                   </div>
                 ) : null}
 
-                {pastBuckets.length > 0 ? (
+                {pastGroups.length > 0 ? (
                   <div className="fd-detail__diary-group">
-                    <span className="fd-detail__diary-label">지난 기록 {pastBuckets.length}</span>
+                    <span className="fd-detail__diary-label">지난 기록 {pastGroups.length}</span>
                     <ol className="fd-detail__timeline">
-                      {pastBuckets.map((bucket) => (
-                        <li key={bucket.dateKey}>
+                      {pastGroups.map((group) => (
+                        <li key={group.id}>
                           <span aria-hidden="true" />
-                          <DiaryBanner entry={bucketToDiaryEntry(bucket, todayIso)} />
+                          {renderRecordGroup(group)}
                         </li>
                       ))}
                     </ol>
@@ -314,12 +369,14 @@ export function FeatureDetailSheet({
       <RecordEntrySheet
         open={recordOpen}
         featureTitle={feature.title || copy.label}
-        onClose={() => setRecordOpen(false)}
-        onSave={(text) => {
-          if (text && feature?.id) onAddMemo?.(feature.id, text)
-        }}
-        photos={feature.photos || []}
-        voices={feature.voices || []}
+        recordId={activeRecord?.id || ""}
+        mode={activeRecord?.mode || "create"}
+        initialText={activeRecord?.initialText || ""}
+        saveLabel={activeRecord?.mode === "edit" ? "수정 저장" : undefined}
+        onClose={closeRecordSheet}
+        onSave={saveRecord}
+        photos={activeRecordPhotos}
+        voices={activeRecordVoices}
         onPhotoSelected={onPhotoSelected}
         onDeletePhoto={onDeletePhoto}
         onStartRecording={onStartRecording}

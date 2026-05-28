@@ -559,7 +559,7 @@
   left: auto !important;
   right: 12px !important;
   top: auto !important;
-  bottom: clamp(276px, calc(52% - 64px), 456px) !important;
+  bottom: max(204px, calc(env(safe-area-inset-bottom, 0px) + 188px)) !important;
   transform: none !important;
   width: 56px;
   height: 56px;
@@ -568,7 +568,7 @@
 }
 
 .map-editor--v2.map-editor--record-panel-open .me-fabs {
-  bottom: clamp(276px, calc(52% - 64px), 456px) !important;
+  bottom: max(204px, calc(env(safe-area-inset-bottom, 0px) + 188px)) !important;
 }
 
 .map-editor--v2 .me-fab--main {
@@ -657,7 +657,7 @@
   }
 
   .map-editor--v2.map-editor--record-panel-open .me-fabs {
-    bottom: clamp(276px, calc(52% - 64px), 456px) !important;
+    bottom: max(204px, calc(env(safe-area-inset-bottom, 0px) + 188px)) !important;
   }
 }
 

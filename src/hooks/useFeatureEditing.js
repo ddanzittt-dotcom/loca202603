@@ -4,6 +4,8 @@ import { logEvent } from "../lib/analytics"
 import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import {
   addFeatureMemo as addFeatureMemoRecord,
+  updateFeatureMemo as updateFeatureMemoRecord,
+  deleteFeatureMemo as deleteFeatureMemoRecord,
   createFeature as createFeatureRecord,
   getFeatureOperatorNote,
   saveFeatureOperatorNote,
@@ -16,6 +18,7 @@ import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { me } from "../data/sampleData"
 import { uploadMediaToCloud } from "../lib/mediaStore"
 import { getDefaultFeatureStyle, normalizeFeatureStyle } from "../lib/featureStyle"
+import { triggerSelectionFeedback } from "../lib/haptics"
 
 const toEditableFeature = (feature) => ({
   ...feature,
@@ -89,6 +92,36 @@ function mergeFeatureMedia(saved, current) {
 
 export { toEditableFeature, getFeatureDefaultEmoji, getFeatureCenter, mergeFeatureMedia }
 
+function tagsFromText(tagsText) {
+  return `${tagsText || ""}`
+    .split(",")
+    .map((tag) => tag.trim().slice(0, 50))
+    .filter(Boolean)
+    .slice(0, 20)
+}
+
+function mergePendingSheetDraft(savedFeature, currentSheet) {
+  if (!currentSheet) return { ...savedFeature, cloudPending: false }
+  const tags = typeof currentSheet.tagsText === "string"
+    ? tagsFromText(currentSheet.tagsText)
+    : (currentSheet.tags || savedFeature.tags || [])
+  return mergeFeatureMedia({
+    ...savedFeature,
+    title: currentSheet.title ?? savedFeature.title,
+    note: currentSheet.note ?? savedFeature.note,
+    tags,
+    emoji: Object.prototype.hasOwnProperty.call(currentSheet, "emoji") ? currentSheet.emoji : savedFeature.emoji,
+    emojiKind: currentSheet.emojiKind ?? savedFeature.emojiKind,
+    emojiPixelId: currentSheet.emojiPixelId ?? savedFeature.emojiPixelId,
+    emojiPhotoUrl: currentSheet.emojiPhotoUrl ?? savedFeature.emojiPhotoUrl,
+    category: currentSheet.category ?? savedFeature.category,
+    style: currentSheet.style ?? savedFeature.style,
+    highlight: currentSheet.highlight ?? savedFeature.highlight,
+    operatorNote: currentSheet.operatorNote,
+    cloudPending: false,
+  }, currentSheet)
+}
+
 const isFeatureConflictError = (error) => {
   if (!error) return false
   if (error.code === "LOCA_CONFLICT") return true
@@ -158,6 +191,7 @@ export function useFeatureEditing({
   const focusFeature = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
+    triggerSelectionFeedback()
     if (selectedFeatureSummaryId === featureId) {
       // open detail on second tap
       setSelectedFeatureId(featureId)
@@ -182,6 +216,7 @@ export function useFeatureEditing({
   const focusFeatureOnly = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
+    triggerSelectionFeedback()
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
     const center = getFeatureCenter(feature)
@@ -193,6 +228,7 @@ export function useFeatureEditing({
   const openFeatureDetail = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
+    triggerSelectionFeedback()
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
     setFeatureSheet(toEditableFeature(feature))
@@ -334,6 +370,7 @@ export function useFeatureEditing({
   const saveFeatureSheet = useCallback(async () => {
     const lastKnownUpdatedAt = featureSheet?.updatedAt || null
     const operatorNote = `${featureSheet?.operatorNote || ""}`.slice(0, 4000)
+    if (featureSheet?.cloudPending) return showToast("저장 준비 중이에요. 잠시 후 다시 눌러 주세요.")
     if (!featureSheet?.title.trim()) return showToast("이름을 입력해 주세요.")
     if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
       showToast("내가 등록한 장소만 직접 수정할 수 있어요. 수정 요청을 이용해 주세요.")
@@ -565,9 +602,10 @@ export function useFeatureEditing({
     touchMap,
   ])
 
-  const addMemo = useCallback(async (featureId, text, photoFiles = []) => {
+  const addMemo = useCallback(async (featureId, text, photoFiles = [], options = {}) => {
     const trimmedText = `${text || ""}`.trim()
     const selectedFiles = Array.isArray(photoFiles) ? photoFiles : []
+    const recordId = `${options?.recordId || ""}`.trim()
     if (!trimmedText && selectedFiles.length === 0) return
 
     let uploadedPhotoUrls = []
@@ -602,7 +640,7 @@ export function useFeatureEditing({
     let memo
     if (cloudMode) {
       try {
-        memo = await addFeatureMemoRecord(featureId, trimmedText, currentUserName || me.name, uploadedPhotoUrls)
+        memo = await addFeatureMemoRecord(featureId, trimmedText, currentUserName || me.name, uploadedPhotoUrls, { recordId })
       } catch (error) {
         console.error("Failed to save memo to cloud", error)
         showToast("메모 저장에 실패했어요.")
@@ -616,7 +654,11 @@ export function useFeatureEditing({
         date: new Date().toISOString(),
         text: trimmedText,
         photos: uploadedPhotoUrls,
+        recordId: recordId || null,
       }
+    }
+    if (recordId && !memo.recordId) {
+      memo = { ...memo, recordId }
     }
     if (uploadedPhotoUrls.length > 0 && (!memo.photos || memo.photos.length === 0)) {
       memo = { ...memo, photos: uploadedPhotoUrls }
@@ -657,6 +699,101 @@ export function useFeatureEditing({
     setMemoText,
     showToast,
     communityMapFeatures,
+  ])
+
+  const updateMemo = useCallback(async (featureId, memoId, text, options = {}) => {
+    if (!featureId || !memoId) return null
+    const trimmedText = `${text || ""}`.trim()
+    const recordId = `${options?.recordId || ""}`.trim()
+    let savedMemo = null
+
+    if (cloudMode) {
+      try {
+        savedMemo = await updateFeatureMemoRecord(memoId, trimmedText, { recordId })
+      } catch (error) {
+        console.error("Failed to update memo", error)
+        showToast("기록 수정에 실패했어요.")
+        return null
+      }
+    }
+
+    const updateMemoList = (memos = []) => memos.map((memo) => (
+      memo.id === memoId
+        ? { ...memo, ...(savedMemo || {}), text: savedMemo?.text ?? trimmedText, recordId: savedMemo?.recordId || recordId || memo.recordId || null }
+        : memo
+    ))
+    const isCommunityFeature = communityMapFeatures.some((feature) => feature.id === featureId)
+    if (isCommunityFeature) {
+      setCommunityMapFeatures((current) =>
+        current.map((feature) => (
+          feature.id === featureId ? { ...feature, memos: updateMemoList(feature.memos) } : feature
+        )),
+      )
+    } else {
+      setFeatures((current) =>
+        current.map((feature) => (
+          feature.id === featureId ? { ...feature, memos: updateMemoList(feature.memos) } : feature
+        )),
+      )
+    }
+
+    if (featureSheet && featureSheet.id === featureId) {
+      setFeatureSheet((current) => current ? { ...current, memos: updateMemoList(current.memos) } : current)
+    }
+    showToast("기록을 수정했어요.")
+    return savedMemo || { id: memoId, text: trimmedText, recordId: recordId || null }
+  }, [
+    cloudMode,
+    communityMapFeatures,
+    featureSheet,
+    setCommunityMapFeatures,
+    setFeatureSheet,
+    setFeatures,
+    showToast,
+  ])
+
+  const deleteMemo = useCallback(async (featureId, memoId, options = {}) => {
+    if (!featureId || !memoId) return false
+
+    if (cloudMode) {
+      try {
+        await deleteFeatureMemoRecord(memoId)
+      } catch (error) {
+        console.error("Failed to delete memo", error)
+        showToast("기록 삭제에 실패했어요.")
+        return false
+      }
+    }
+
+    const removeMemoFromList = (memos = []) => memos.filter((memo) => memo.id !== memoId)
+    const isCommunityFeature = communityMapFeatures.some((feature) => feature.id === featureId)
+    if (isCommunityFeature) {
+      setCommunityMapFeatures((current) =>
+        current.map((feature) => (
+          feature.id === featureId ? { ...feature, memos: removeMemoFromList(feature.memos) } : feature
+        )),
+      )
+    } else {
+      setFeatures((current) =>
+        current.map((feature) => (
+          feature.id === featureId ? { ...feature, memos: removeMemoFromList(feature.memos) } : feature
+        )),
+      )
+    }
+
+    if (featureSheet && featureSheet.id === featureId) {
+      setFeatureSheet((current) => current ? { ...current, memos: removeMemoFromList(current.memos) } : current)
+    }
+    if (!options?.silent) showToast("기록을 삭제했어요.")
+    return true
+  }, [
+    cloudMode,
+    communityMapFeatures,
+    featureSheet,
+    setCommunityMapFeatures,
+    setFeatureSheet,
+    setFeatures,
+    showToast,
   ])
 
   // 모두의 지도 → 내 지도 가져오기 / 취소
@@ -739,6 +876,66 @@ export function useFeatureEditing({
     setEditorMode("relocate")
     showToast("지도를 탭해서 새 위치를 지정해 주세요.")
   }, [setEditorMode, setFeatureSheet, showToast])
+
+  const replacePendingFeature = useCallback((tempId, savedFeature, setPool) => {
+    const savedReadyFeature = { ...savedFeature, cloudPending: false }
+    setPool((current) => current.map((feature) => (
+      feature.id === tempId ? mergeFeatureMedia(savedReadyFeature, feature) : feature
+    )))
+    setSelectedFeatureId((current) => (current === tempId ? savedFeature.id : current))
+    setSelectedFeatureSummaryId((current) => (current === tempId ? savedFeature.id : current))
+    setFeatureSheet((current) => {
+      if (!current || current.id !== tempId) return current
+      return toEditableFeature(mergePendingSheetDraft(savedReadyFeature, current))
+    })
+  }, [setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
+
+  const removePendingFeature = useCallback((tempId, setPool, message) => {
+    setPool((current) => current.filter((feature) => feature.id !== tempId))
+    setSelectedFeatureId((current) => (current === tempId ? null : current))
+    setSelectedFeatureSummaryId((current) => (current === tempId ? null : current))
+    setFeatureSheet((current) => (current?.id === tempId ? null : current))
+    showToast(message)
+  }, [setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId, showToast])
+
+  const createFeatureOptimistically = useCallback((draftFeature, {
+    setPool,
+    successToast,
+    failureToast,
+    onBeforeOpen = null,
+    onCreated = null,
+  }) => {
+    const tempId = draftFeature.id
+    const pendingFeature = { ...draftFeature, cloudPending: true }
+    onBeforeOpen?.()
+    setPool((current) => [pendingFeature, ...current])
+    setEditorMode("browse")
+    setSelectedFeatureId(tempId)
+    setFeatureSheet(toEditableFeature(pendingFeature))
+    showToast(successToast)
+
+    createFeatureRecord(activeMapId, {
+      ...draftFeature,
+      mapId: activeMapId,
+    })
+      .then((savedFeature) => {
+        const displayFeature = preserveDraftFeatureFields(savedFeature, draftFeature)
+        replacePendingFeature(tempId, displayFeature, setPool)
+        onCreated?.(displayFeature)
+      })
+      .catch((error) => {
+        console.error("Failed to create feature", error)
+        removePendingFeature(tempId, setPool, failureToast)
+      })
+  }, [
+    activeMapId,
+    removePendingFeature,
+    replacePendingFeature,
+    setEditorMode,
+    setFeatureSheet,
+    setSelectedFeatureId,
+    showToast,
+  ])
 
   const createHandleMapTap = (editorMode) => async ({ lat, lng }) => {
     if (!activeMapId) return
@@ -839,15 +1036,21 @@ export function useFeatureEditing({
 
       if (activeMapSource === "community") {
         if (canPersistCommunityInCloud) {
-          try {
-            nextFeature = await createFeatureRecord(activeMapId, {
-              ...nextFeature,
-              mapId: activeMapId,
-            })
-          } catch (error) {
-            console.error("Failed to create community pin", error)
-            return showToast("장소를 추가하지 못했어요.")
-          }
+          createFeatureOptimistically(nextFeature, {
+            setPool: setCommunityMapFeatures,
+            successToast: "장소를 추가했어요.",
+            failureToast: "장소를 추가하지 못했어요.",
+            onCreated: (createdFeature) => {
+              logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
+              recordMapAction({
+                actionType: "feature_create_pin",
+                eventKey: `pin:${createdFeature.id}`,
+                mapId: activeMapId,
+                featureId: createdFeature.id,
+              }).then(() => refreshGameProfile?.()).catch(() => {})
+            },
+          })
+          return
         }
         setCommunityMapFeatures((current) => [nextFeature, ...current])
       } else {
@@ -872,15 +1075,21 @@ export function useFeatureEditing({
             setFeatureSheet(null)
             return
           }
-          try {
-            nextFeature = preserveDraftFeatureFields(
-              await createFeatureRecord(activeMapId, nextFeature),
-              nextFeature,
-            )
-          } catch (error) {
-            console.error("Failed to create pin", error)
-            return showToast("핀을 추가하지 못했어요.")
-          }
+          createFeatureOptimistically(nextFeature, {
+            setPool: setFeatures,
+            successToast: "핀을 추가했어요.",
+            failureToast: "핀을 추가하지 못했어요.",
+            onCreated: (createdFeature) => {
+              recordMapAction({
+                actionType: "feature_create_pin",
+                eventKey: `pin:${createdFeature.id}`,
+                mapId: activeMapId,
+                featureId: createdFeature.id,
+              }).then(() => refreshGameProfile?.()).catch(() => {})
+            },
+          })
+          logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
+          return
         }
         setFeatures((current) => [nextFeature, ...current])
         touchMap(activeMapId)
@@ -932,15 +1141,22 @@ export function useFeatureEditing({
 
     if (activeMapSource === "community") {
       if (canPersistCommunityInCloud) {
-        try {
-          nextFeature = await createFeatureRecord(activeMapId, {
-            ...nextFeature,
-            mapId: activeMapId,
-          })
-        } catch (error) {
-          console.error("Failed to create community route", error)
-          return showToast("길을 저장하지 못했어요.")
-        }
+        createFeatureOptimistically(nextFeature, {
+          setPool: setCommunityMapFeatures,
+          successToast: "길을 저장했어요.",
+          failureToast: "길을 저장하지 못했어요.",
+          onBeforeOpen: () => setDraftPoints([]),
+          onCreated: (createdFeature) => {
+            logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
+            recordMapAction({
+              actionType: "feature_create_route",
+              eventKey: `route:${createdFeature.id}`,
+              mapId: activeMapId,
+              featureId: createdFeature.id,
+            }).then(() => refreshGameProfile?.()).catch(() => {})
+          },
+        })
+        return
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
@@ -964,15 +1180,22 @@ export function useFeatureEditing({
           setFeatureSheet(null)
           return
         }
-        try {
-          nextFeature = preserveDraftFeatureFields(
-            await createFeatureRecord(activeMapId, nextFeature),
-            nextFeature,
-          )
-        } catch (error) {
-          console.error("Failed to create route", error)
-          return showToast("길을 저장하지 못했어요.")
-        }
+        createFeatureOptimistically(nextFeature, {
+          setPool: setFeatures,
+          successToast: "길을 저장했어요.",
+          failureToast: "길을 저장하지 못했어요.",
+          onBeforeOpen: () => setDraftPoints([]),
+          onCreated: (createdFeature) => {
+            recordMapAction({
+              actionType: "feature_create_route",
+              eventKey: `route:${createdFeature.id}`,
+              mapId: activeMapId,
+              featureId: createdFeature.id,
+            }).then(() => refreshGameProfile?.()).catch(() => {})
+          },
+        })
+        logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
+        return
       }
       setFeatures((current) => [nextFeature, ...current])
       touchMap(activeMapId)
@@ -1015,15 +1238,22 @@ export function useFeatureEditing({
 
     if (activeMapSource === "community") {
       if (canPersistCommunityInCloud) {
-        try {
-          nextFeature = await createFeatureRecord(activeMapId, {
-            ...nextFeature,
-            mapId: activeMapId,
-          })
-        } catch (error) {
-          console.error("Failed to create community area", error)
-          return showToast("영역을 저장하지 못했어요.")
-        }
+        createFeatureOptimistically(nextFeature, {
+          setPool: setCommunityMapFeatures,
+          successToast: "영역을 저장했어요.",
+          failureToast: "영역을 저장하지 못했어요.",
+          onBeforeOpen: () => setDraftPoints([]),
+          onCreated: (createdFeature) => {
+            logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
+            recordMapAction({
+              actionType: "feature_create_area",
+              eventKey: `area:${createdFeature.id}`,
+              mapId: activeMapId,
+              featureId: createdFeature.id,
+            }).then(() => refreshGameProfile?.()).catch(() => {})
+          },
+        })
+        return
       }
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
@@ -1047,15 +1277,22 @@ export function useFeatureEditing({
           setFeatureSheet(null)
           return
         }
-        try {
-          nextFeature = preserveDraftFeatureFields(
-            await createFeatureRecord(activeMapId, nextFeature),
-            nextFeature,
-          )
-        } catch (error) {
-          console.error("Failed to create area", error)
-          return showToast("영역을 저장하지 못했어요.")
-        }
+        createFeatureOptimistically(nextFeature, {
+          setPool: setFeatures,
+          successToast: "영역을 저장했어요.",
+          failureToast: "영역을 저장하지 못했어요.",
+          onBeforeOpen: () => setDraftPoints([]),
+          onCreated: (createdFeature) => {
+            recordMapAction({
+              actionType: "feature_create_area",
+              eventKey: `area:${createdFeature.id}`,
+              mapId: activeMapId,
+              featureId: createdFeature.id,
+            }).then(() => refreshGameProfile?.()).catch(() => {})
+          },
+        })
+        logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
+        return
       }
       setFeatures((current) => [nextFeature, ...current])
       touchMap(activeMapId)
@@ -1086,6 +1323,8 @@ export function useFeatureEditing({
     requestCommunityFeatureUpdateById,
     deleteFeature,
     addMemo,
+    updateMemo,
+    deleteMemo,
     createHandleMapTap,
     completeRoute,
     completeArea,

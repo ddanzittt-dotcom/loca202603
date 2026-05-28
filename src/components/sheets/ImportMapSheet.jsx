@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import jsQR from "jsqr"
+import { parseMapImportTarget } from "../../lib/appUtils"
 
 export function ImportMapSheet({ open, onClose, onImport, showToast }) {
   const [mode, setMode] = useState(null) // null | "qr" | "code"
@@ -66,7 +67,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
       })
 
       if (qrResult?.data) {
-        const extracted = extractCodeFromQR(qrResult.data)
+        const extracted = extractTargetFromQR(qrResult.data)
         if (extracted) {
           stopCamera()
           handleImport(extracted)
@@ -80,26 +81,19 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
     return () => { cancelled = true; stopCamera() }
   }, [mode, stopCamera]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // QR 데이터에서 slug 코드 추출
-  const extractCodeFromQR = (data) => {
-    // URL 형태: /s/slug 또는 전체 URL
-    try {
-      const url = new URL(data, "https://loca.im")
-      const match = url.pathname.match(/\/s\/([^/?]+)/)
-      if (match) return match[1]
-    } catch { /* URL 아닌 경우 */ }
-    // 그냥 코드 문자열인 경우
-    const trimmed = data.trim()
-    if (trimmed && trimmed.length >= 2 && trimmed.length <= 100) return trimmed
-    return null
+  // QR 데이터에서 /s/:slug 또는 /shared?data=... 공유 대상을 추출
+  const extractTargetFromQR = (data) => {
+    return parseMapImportTarget(data)
   }
 
-  const handleImport = async (slugCode) => {
-    const trimmed = (slugCode || code).trim()
-    if (!trimmed) return
+  const handleImport = async (inputTarget = null) => {
+    const target = typeof inputTarget === "object" && inputTarget
+      ? inputTarget
+      : parseMapImportTarget(inputTarget || code)
+    if (!target) return
     setLoading(true)
     try {
-      await onImport(trimmed)
+      await onImport(target)
       onClose()
     } catch (err) {
       showToast?.(err.message || "지도를 불러올 수 없어요.")

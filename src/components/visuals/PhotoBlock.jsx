@@ -32,6 +32,7 @@ export function PhotoBlock({
   radius = 12,
   style,
   className = "",
+  onImageError,
   children,
 }) {
   const finalWidth = width ?? size
@@ -52,6 +53,7 @@ export function PhotoBlock({
           src={src}
           alt={alt}
           loading="lazy"
+          onError={onImageError}
           style={{
             position: "absolute",
             inset: 0,

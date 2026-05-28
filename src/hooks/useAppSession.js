@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { getCurrentSession, onAuthStateChange, signOut } from "../lib/auth"
 import {
@@ -19,9 +19,14 @@ import {
   sharesSeed,
 } from "../data/sampleData"
 import { mergeFeatureListWithLocalMedia } from "../lib/featureMediaMerge"
+import { claimPublicSavedItemsForCurrentUser } from "../lib/publicSavedItems"
+import { syncFeatureLocalMediaToCloud } from "../lib/mediaCloudSync"
+
+const isAnonymousAuthUser = (user) => Boolean(user?.is_anonymous || user?.app_metadata?.provider === "anonymous")
 
 export function useAppSession({
   setMaps, setFeatures, setShares, setFollowed, setViewerProfile,
+  setCollaborationInvites,
   setActiveTab, setMapsView, setActiveMapSource, setActiveMapId,
   setSelectedFeatureId, setSelectedFeatureSummaryId,
   setFeatureSheet, setEditorMode, setDraftPoints,
@@ -33,9 +38,12 @@ export function useAppSession({
   const [authUser, setAuthUser] = useState(null)
   const [hasB2BAccess, setHasB2BAccess] = useState(false)
   const [cloudLoading, setCloudLoading] = useState(false)
+  const [cloudDataReady, setCloudDataReady] = useState(false)
+  const [cloudLoadedUserId, setCloudLoadedUserId] = useState(null)
+  const cloudLoadedUserIdRef = useRef(null)
   // gameProfile / recentReward state 폐기.
 
-  const cloudMode = hasSupabaseEnv && Boolean(authUser)
+  const cloudMode = hasSupabaseEnv && Boolean(authUser) && !isAnonymousAuthUser(authUser)
 
   const readLocalImportData = useCallback(() => {
     const readStored = (key) => {
@@ -66,23 +74,29 @@ export function useAppSession({
 
   const loadCloudData = useCallback(async (user) => {
     if (!hasSupabaseEnv || !user) return
+    if (cloudLoadedUserIdRef.current !== user.id) setCloudDataReady(false)
     setCloudLoading(true)
     try {
       const [appData, profile, b2bAccess] = await Promise.all([
         getMyAppData(),
-        getProfileRecord(user.id),
+        getProfileRecord(user.id).catch((error) => {
+          console.warn("Failed to load profile; using auth metadata fallback", error)
+          return {}
+        }),
         checkB2BAccessRecord().catch(() => false),
       ])
       setHasB2BAccess(b2bAccess)
 
+      const profileAlias = profile.alias || profile.tagline || profile.ho || ""
       const nextProfile = {
         id: user.id,
         name: profile.nickname || user.user_metadata?.name || user.email?.split("@")[0] || "LOCA 사용자",
         handle: profile.slug ? `@${profile.slug}` : `@${(profile.nickname || user.email?.split("@")[0] || "loca").toLowerCase().replace(/\s+/g, "_")}`,
         emoji: (profile.avatar_url && !profile.avatar_url.startsWith("http") && !profile.avatar_url.startsWith("data:")) ? profile.avatar_url : me.emoji,
         avatarUrl: (profile.avatar_url && (profile.avatar_url.startsWith("http") || profile.avatar_url.startsWith("data:"))) ? profile.avatar_url : null,
-        alias: profile.alias || profile.tagline || profile.ho || "",
-        tagline: profile.alias || profile.tagline || profile.ho || "",
+        alias: profileAlias,
+        tagline: profileAlias,
+        ho: profileAlias,
         bio: profile.bio || me.bio,
         link: profile.link || "",
         followers: appData.followerCount || 0,
@@ -103,7 +117,17 @@ export function useAppSession({
       setFeatures((current) => mergeFeatureListWithLocalMedia(appFeatures, current))
       setShares(appData.shares)
       setFollowed(appData.followed)
-      setViewerProfile(nextProfile)
+      setCollaborationInvites?.(appData.collaborationInvites || [])
+      setViewerProfile((current) => {
+        const localAlias = current?.alias || current?.tagline || current?.ho || ""
+        const alias = nextProfile.alias || localAlias
+        return {
+          ...nextProfile,
+          alias,
+          tagline: alias,
+          ho: alias,
+        }
+      })
 
       if (cloudEmpty && hasLocalData) {
         showToast("로컬 데이터를 발견했어요. 프로필 → 설정에서 '데이터 가져오기'를 눌러주세요.")
@@ -119,25 +143,40 @@ export function useAppSession({
         setActiveMapSource("local")
         setActiveMapId(routeAtLoad.mapId)
       }
+      cloudLoadedUserIdRef.current = user.id
+      setCloudLoadedUserId(user.id)
+      setCloudDataReady(true)
+      try { window.localStorage?.setItem("loca.mobile.cloudUserId", user.id) } catch { /* noop */ }
     } catch (error) {
       console.error("Failed to load Supabase app data", error)
       showToast("Supabase 데이터를 불러오지 못했어요.")
+      cloudLoadedUserIdRef.current = user.id
+      setCloudLoadedUserId(user.id)
+      setCloudDataReady(true)
     } finally {
       setCloudLoading(false)
     }
-  }, [readLocalImportData, routeAtLoad, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, showToast, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
+  }, [readLocalImportData, routeAtLoad, setCollaborationInvites, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, showToast, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
   const resetToLoggedOut = useCallback(() => {
+    const keepSharedViewer = routeAtLoad?.type === "shared" || routeAtLoad?.type === "slug"
     setMaps(mapsSeed)
     setFeatures(featuresSeed)
     setShares(sharesSeed)
     setFollowed(followedSeed)
+    setCollaborationInvites?.([])
     setViewerProfile(me)
+    setCloudDataReady(false)
+    cloudLoadedUserIdRef.current = null
+    setCloudLoadedUserId(null)
+    try { window.localStorage?.removeItem("loca.mobile.cloudUserId") } catch { /* noop */ }
     setHasB2BAccess(false)
-    setActiveTab("home")
-    setMapsView("list")
-    setActiveMapSource("local")
-    setActiveMapId(mapsSeed[0]?.id ?? null)
+    if (!keepSharedViewer) {
+      setActiveTab("home")
+      setMapsView("list")
+      setActiveMapSource("local")
+      setActiveMapId(mapsSeed[0]?.id ?? null)
+    }
     setSelectedFeatureId(null)
     setSelectedFeatureSummaryId(null)
     setFeatureSheet(null)
@@ -147,9 +186,9 @@ export function useAppSession({
     setPublishSheet(null)
     setSelectedUserId(null)
     setSelectedPostRef(null)
-    setSharedMapData(null)
+    if (!keepSharedViewer) setSharedMapData(null)
     setShareEditorImage(null)
-  }, [setFeatures, setFollowed, setMaps, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
+  }, [routeAtLoad?.type, setCollaborationInvites, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
 
   // 초기 세션 확인 + auth state 구독
   useEffect(() => {
@@ -160,10 +199,15 @@ export function useAppSession({
     getCurrentSession()
       .then((session) => {
         if (!isMounted) return
-        setAuthUser(session?.user ?? null)
+        const user = session?.user ?? null
+        const appUser = isAnonymousAuthUser(user) ? null : user
+        setAuthUser(appUser)
         setAuthReady(true)
-        if (session?.user) {
-          loadCloudData(session.user)
+        if (appUser) {
+          claimPublicSavedItemsForCurrentUser().catch((error) => {
+            console.warn("Failed to claim public saved items", error)
+          })
+          loadCloudData(appUser)
         }
       })
       .catch((error) => {
@@ -173,10 +217,14 @@ export function useAppSession({
 
     const { data: subscription } = onAuthStateChange((user) => {
       if (!isMounted) return
-      setAuthUser(user)
+      const appUser = isAnonymousAuthUser(user) ? null : user
+      setAuthUser(appUser)
       setAuthReady(true)
-      if (user) {
-        loadCloudData(user)
+      if (appUser) {
+        claimPublicSavedItemsForCurrentUser().catch((error) => {
+          console.warn("Failed to claim public saved items", error)
+        })
+        loadCloudData(appUser)
       } else {
         resetToLoggedOut()
       }
@@ -222,10 +270,15 @@ export function useAppSession({
       for (const localFeature of localData.features) {
         const targetMap = mapIdMap.get(localFeature.mapId)
         if (!targetMap) continue
-        await createFeatureRecord(targetMap.id, {
+        const createdFeature = await createFeatureRecord(targetMap.id, {
           ...localFeature,
           mapId: targetMap.id,
         })
+        await syncFeatureLocalMediaToCloud({
+          ...createdFeature,
+          photos: localFeature.photos || [],
+          voices: localFeature.voices || [],
+        }, { throwOnFailure: true })
       }
 
       for (const localShare of localData.shares) {
@@ -248,19 +301,31 @@ export function useAppSession({
       showToast("이 기기의 로컬 데이터를 계정으로 가져왔어요.")
     } catch (error) {
       console.error("Failed to import local data", error)
+      if (error?.message) {
+        showToast(error.message)
+        return
+      }
       showToast("로컬 데이터를 가져오지 못했어요.")
     }
   }, [authUser, cloudMode, loadCloudData, readLocalImportData, showToast])
+
+  const reloadCloudData = useCallback(async () => {
+    if (!authUser) return
+    await loadCloudData(authUser)
+  }, [authUser, loadCloudData])
 
   return {
     authReady,
     authUser,
     cloudMode,
     cloudLoading,
+    cloudDataReady,
+    cloudLoadedUserId,
     hasB2BAccess,
     setHasB2BAccess,
     readLocalImportData,
     resetToLoggedOut,
+    reloadCloudData,
     handleSignOut,
     importLocalDataToCloud,
   }

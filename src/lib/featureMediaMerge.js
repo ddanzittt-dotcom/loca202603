@@ -1,18 +1,58 @@
+const mediaKeys = (item = {}) => [
+  item.id,
+  item.localId,
+  item.storagePath,
+  item.url,
+  item.cloudUrl,
+  item.src,
+].filter(Boolean).map((value) => `${value}`)
+
+function findLocalMediaMatch(nextItem, localItems, consumed) {
+  const keys = new Set(mediaKeys(nextItem))
+  if (keys.size === 0) return null
+
+  for (const item of localItems) {
+    if (consumed.has(item)) continue
+    if (mediaKeys(item).some((key) => keys.has(key))) return item
+  }
+  return null
+}
+
+function mergeMediaListWithLocal(nextList, localList) {
+  const nextItems = Array.isArray(nextList) ? nextList : []
+  const localItems = Array.isArray(localList) ? localList : []
+  if (nextItems.length === 0) return localItems
+  if (localItems.length === 0) return nextItems
+
+  const consumed = new Set()
+  const merged = nextItems.map((nextItem) => {
+    const localMatch = findLocalMediaMatch(nextItem, localItems, consumed)
+    if (!localMatch) return nextItem
+
+    consumed.add(localMatch)
+    return {
+      ...localMatch,
+      ...nextItem,
+      localId: nextItem.localId || localMatch.localId,
+    }
+  })
+
+  const localOnlyItems = localItems.filter((item) => !consumed.has(item))
+  return [...merged, ...localOnlyItems]
+}
+
 /**
- * 서버에서 받은 feature가 미디어/메모 배열을 비워서 내려줄 때
- * 클라이언트에 이미 있던 로컬 기록을 유지해 저장 누락 체감을 줄인다.
+ * Keep browser-only media references while accepting fresher server rows.
+ * Supabase media rows know the public URL, but the local IndexedDB key lives in
+ * `localId`; losing it makes newly captured photos/voices look like they vanished.
  */
 export function mergeFeatureMediaFromLocal(nextFeature, localFeature) {
   if (!localFeature) return nextFeature
 
   return {
     ...nextFeature,
-    photos: Array.isArray(nextFeature?.photos) && nextFeature.photos.length > 0
-      ? nextFeature.photos
-      : (localFeature.photos || []),
-    voices: Array.isArray(nextFeature?.voices) && nextFeature.voices.length > 0
-      ? nextFeature.voices
-      : (localFeature.voices || []),
+    photos: mergeMediaListWithLocal(nextFeature?.photos, localFeature.photos),
+    voices: mergeMediaListWithLocal(nextFeature?.voices, localFeature.voices),
     memos: Array.isArray(nextFeature?.memos) && nextFeature.memos.length > 0
       ? nextFeature.memos
       : (localFeature.memos || []),

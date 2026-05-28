@@ -1,31 +1,51 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowLeft,
   X,
   MapPin,
   Search as SearchIcon,
   ChevronDown,
+  ChevronRight,
   Clock,
   Map as MapGlyph,
   Users as UsersIcon,
 } from "lucide-react"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { useLocalStorageState } from "../hooks/useAppState"
+import { BrandLogo } from "../components/BrandLogo"
 import { PhotoBlock } from "../components/visuals/PhotoBlock"
 
 // ─────────────────────────────────────────────────────────
-// 정적 큐레이션 (검색 진입 보조 + B 화면 인기 검색 랭킹)
-// 백엔드 trending API 도입 전 정적 fallback. 추후 교체.
+// 검색 진입 추천 fallback. 실제 에디터/추천 지도가 적을 때만 보강한다.
 
-const TRENDING_RANKING = [
-  { text: "벚꽃 명소", change: { kind: "up", value: 3 } },
-  { text: "성수동", change: { kind: "same" } },
-  { text: "한옥 카페", change: { kind: "up", value: 1 } },
-  { text: "감성카페", change: { kind: "down", value: 2 } },
-  { text: "제주 동쪽", change: { kind: "new" } },
-  { text: "독립서점", change: { kind: "same" } },
-  { text: "야경 스팟", change: { kind: "up", value: 4 } },
-  { text: "로컬 빵집", change: { kind: "new" } },
+const SEARCH_EDITOR_FALLBACKS = [
+  {
+    id: "editor-loca",
+    name: "LOCA 에디터",
+    handle: "@loca.editor",
+    meta: "추천지도 4개",
+    bio: "동네에서 바로 써먹기 좋은 지도를 고르고 있어요.",
+    tone: "#FFE2D4",
+    query: "추천",
+  },
+  {
+    id: "editor-walk",
+    name: "산책 편집부",
+    handle: "@walk.note",
+    meta: "산책 코스 중심",
+    bio: "천천히 걷기 좋은 길과 쉬어갈 곳을 모아요.",
+    tone: "#DDF0DF",
+    query: "산책",
+  },
+  {
+    id: "editor-local",
+    name: "로컬 큐레이터",
+    handle: "@local.picks",
+    meta: "카페 · 책방 · 골목",
+    bio: "작지만 다시 가고 싶은 장소를 추천해요.",
+    tone: "#F7E6BD",
+    query: "카페",
+  },
 ]
 
 // ─────────────────────────────────────────────────────────
@@ -112,6 +132,16 @@ const EVENT_THUMB_GRADIENTS = [
   "linear-gradient(135deg, #E6F1FB 0%, #0C447C 100%)",
 ]
 const EVENT_THUMB_EMOJIS = ["🌸", "🎡", "🍞", "🎨", "🎪", "📸", "🍃"]
+const MORE_INITIAL_COUNT = 30
+const MORE_PAGE_SIZE = 20
+const PLACE_THUMB_BY_KIND = {
+  culture: { gradient: "linear-gradient(135deg, #A1C4FD 0%, #C2E9FB 100%)", emoji: "🎨" },
+  attraction: { gradient: "linear-gradient(135deg, #D4FC79 0%, #96E6A1 100%)", emoji: "📍" },
+  cafe: { gradient: "linear-gradient(135deg, #FAD7A1 0%, #D08C45 100%)", emoji: "☕" },
+  leisure: { gradient: "linear-gradient(135deg, #A8E6CF 0%, #3E9B75 100%)", emoji: "🚲" },
+  shopping: { gradient: "linear-gradient(135deg, #FBC2EB 0%, #A18CD1 100%)", emoji: "🛍️" },
+  place: { gradient: "linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%)", emoji: "📌" },
+}
 
 function pickEventThumb(seed) {
   const code = String(seed || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
@@ -119,6 +149,69 @@ function pickEventThumb(seed) {
     gradient: EVENT_THUMB_GRADIENTS[code % EVENT_THUMB_GRADIENTS.length],
     emoji: EVENT_THUMB_EMOJIS[code % EVENT_THUMB_EMOJIS.length],
   }
+}
+
+function pickPlaceThumb(kind) {
+  return PLACE_THUMB_BY_KIND[kind] || PLACE_THUMB_BY_KIND.place
+}
+
+function formatDistance(value) {
+  const km = Number(value)
+  if (!Number.isFinite(km)) return ""
+  if (km < 1) return `${Math.max(50, Math.round(km * 1000 / 50) * 50)}m`
+  return `${km.toFixed(km >= 10 ? 0 : 1)}km`
+}
+
+function toEventSpot(event) {
+  const status = getEventStatus(event.startDate, event.endDate)
+  const period = formatEventPeriod(event.startDate, event.endDate)
+  const thumb = pickEventThumb(event.id || event.title)
+  return {
+    id: `event-${event.id}`,
+    _raw: event,
+    group: "event",
+    kind: "event",
+    dateLabel: period,
+    day: status?.label || "",
+    urgent: status?.kind === "urgent" || status?.kind === "live",
+    title: event.title,
+    sub: event.contentTypeName || event.category || "행사",
+    loc: event.addr || event.area || "",
+    distance: formatDistance(event.distKm) || event.distance || "",
+    image: event.image || "",
+    thumb,
+    score: 56 + (status?.kind === "live" ? 8 : 0),
+  }
+}
+
+function toPlaceSpot(place) {
+  return {
+    id: place.id,
+    _raw: place,
+    group: place.group || "place",
+    kind: place.kind || "place",
+    title: place.title,
+    sub: place.category || place.sourceLabel || "장소",
+    loc: place.addr || "",
+    distance: formatDistance(place.distKm),
+    image: place.image || "",
+    sourceLabel: place.sourceLabel || "",
+    sourceUrl: place.sourceUrl || "",
+    thumb: pickPlaceThumb(place.kind),
+    score: Number(place.score) || 50,
+  }
+}
+
+function isFoodPlace(place) {
+  return place?.kind === "food"
+    || place?.contentTypeId === 39
+    || String(place?.category || "").includes("음식점")
+}
+
+function filterSpotItems(spots, filter) {
+  if (filter === "장소") return spots.filter((spot) => spot.group === "place")
+  if (filter === "행사") return spots.filter((spot) => spot.group === "event")
+  return spots
 }
 
 // 미니맵 마커 위치 (정적)
@@ -133,12 +226,63 @@ const MINIMAP_PINS = [
   { top: "42%", left: "48%", kind: "mint" },
 ]
 
+const EDITOR_PICK_FALLBACK_MAP = {
+  id: "editor-pick-seongsu",
+  mapId: "demo-seongsu",
+  title: "성수 감성카페 7곳",
+  creator: "@seongsu_lover",
+  placeCount: 3,
+  gradient: ["#FFE987", "#F59E0B"],
+  tags: ["카페", "성수", "감성"],
+  placeNames: ["대림창고", "센터커피", "오르에르"],
+}
+
+const EDITOR_RECOMMENDATION_FALLBACK_MAPS = [
+  {
+    id: "editor-rec-taste",
+    mapId: "demo-ikseon",
+    title: "익선동 골목 맛집",
+    creator: "@hanok_walk",
+    placeCount: 4,
+    gradient: ["#F6D7B8", "#C46A3B"],
+    tags: ["한옥", "맛집", "골목"],
+    placeNames: ["온천집", "청수당", "살라댕방콕"],
+  },
+  {
+    id: "editor-rec-nearby",
+    mapId: "demo-hangang",
+    title: "한강 노을 산책 코스",
+    creator: "@river_evening",
+    placeCount: 4,
+    gradient: ["#B7D8E8", "#2E7D90"],
+    tags: ["산책", "노을", "근처"],
+    placeNames: ["반포 달빛무지개분수", "잠원 한강공원", "세빛섬"],
+  },
+  {
+    id: "editor-rec-weekend",
+    mapId: "demo-yeonnam",
+    title: "연남동 주말 산책",
+    creator: "@weekend_stroll",
+    placeCount: 5,
+    gradient: ["#CDE7C6", "#5F8E68"],
+    tags: ["소품샵", "카페", "주말"],
+    placeNames: ["경의선숲길", "독립서점", "오브젝트"],
+  },
+]
+
+const EDITOR_RECOMMENDATION_SLOTS = [
+  { id: "taste", label: "내 취향 추천지도", note: "카페와 골목 기록을 좋아한다면" },
+  { id: "nearby", label: "내 근처 추천지도", note: "가볍게 들르기 좋은 가까운 코스" },
+  { id: "weekend", label: "주말 산책 추천지도", note: "천천히 걷고 기록하기 좋은 곳" },
+]
+
 // ─────────────────────────────────────────────────────────
 
 export function ExploreScreen({
   recommendedMaps = [],
   onOpenMap,
   onOpenCommunityEditor,
+  onAddEventToMap,
   users = [],
   followed = [],
   onSelectUser,
@@ -160,6 +304,66 @@ export function ExploreScreen({
   const showCommunitySection = section === "community"
   const showEventsSection = section === "all" || section === "events"
   const handledSearchRequestRef = useRef(0)
+  const exploreRecommendationMaps = useMemo(() => {
+    const baseMaps = recommendedMaps.length > 0 ? recommendedMaps : [EDITOR_PICK_FALLBACK_MAP]
+    const existingIds = new Set(baseMaps.map((item) => item.mapId || item.id))
+    const fallbackMaps = EDITOR_RECOMMENDATION_FALLBACK_MAPS
+      .filter((item) => !existingIds.has(item.mapId || item.id))
+    return [...baseMaps, ...fallbackMaps]
+  }, [recommendedMaps])
+  const editorRecommendationItems = useMemo(() => {
+    return EDITOR_RECOMMENDATION_SLOTS.map((slot, index) => ({
+      ...slot,
+      map: EDITOR_RECOMMENDATION_FALLBACK_MAPS[index],
+    })).filter((item) => item.map)
+  }, [])
+  const searchRecommendedMaps = useMemo(() => exploreRecommendationMaps.slice(0, 3), [exploreRecommendationMaps])
+  const searchRecommendedEditors = useMemo(() => {
+    const seen = new Set()
+    const fromMaps = exploreRecommendationMaps
+      .map((map, index) => {
+        const rawName = map.recommender_name || map.recommender || map.creator || ""
+        const handle = map.recommender_instagram || (String(rawName).startsWith("@") ? rawName : "")
+        const name = String(rawName || handle || "").replace(/^@/, "").trim()
+        if (!name) return null
+        const key = String(handle || name).toLowerCase()
+        if (seen.has(key)) return null
+        seen.add(key)
+        return {
+          id: `map-editor-${index}-${key}`,
+          name,
+          handle: handle || `@${name.replace(/\s+/g, ".").toLowerCase()}`,
+          meta: `${map.placeCount || map.items?.length || 0}곳 추천`,
+          bio: map.description || map.reason || "에디터가 고른 추천지도를 볼 수 있어요.",
+          tone: map.cover_tone || map.gradient?.[0] || "#FFE2D4",
+          query: name,
+        }
+      })
+      .filter(Boolean)
+    const fromUsers = users
+      .filter((user) => user?.id)
+      .map((user) => {
+        const handle = user.handle ? `@${String(user.handle).replace(/^@/, "")}` : ""
+        const key = String(handle || user.id || user.name).toLowerCase()
+        if (seen.has(key)) return null
+        seen.add(key)
+        return {
+          id: `user-editor-${user.id}`,
+          name: user.name || handle || "LOCA 유저",
+          handle,
+          meta: typeof user.mapCount === "number"
+            ? `지도 ${user.mapCount}개`
+            : followed.includes(user.id)
+              ? "팔로잉 중"
+              : "추천 에디터",
+          bio: user.bio || "공개 지도를 둘러볼 수 있어요.",
+          tone: user.avatarColor || "#DDF0DF",
+          user,
+        }
+      })
+      .filter(Boolean)
+    return [...fromMaps, ...fromUsers, ...SEARCH_EDITOR_FALLBACKS].slice(0, 3)
+  }, [exploreRecommendationMaps, followed, users])
 
   useEffect(() => {
     if (!showAllSections || searchRequestId <= handledSearchRequestRef.current) return
@@ -207,8 +411,8 @@ export function ExploreScreen({
   // 입력 중 → 지도/에디터 검색 (debounce 200ms)
   const filteredMaps = useMemo(() => {
     if (!normalizedQuery) return []
-    return recommendedMaps.filter((item) => toMapSearchText(item).includes(normalizedQuery))
-  }, [normalizedQuery, recommendedMaps])
+    return exploreRecommendationMaps.filter((item) => toMapSearchText(item).includes(normalizedQuery))
+  }, [exploreRecommendationMaps, normalizedQuery])
 
   const localEditorMatches = useMemo(() => {
     if (!normalizedQuery) return []
@@ -243,21 +447,36 @@ export function ExploreScreen({
 
   // ── 이벤트 데이터 ──
   const [events, setEvents] = useState([])
-  const [eventsLoading, setEventsLoading] = useState(true)
+  const [eventsLoading, setEventsLoading] = useState(showEventsSection)
   const [eventsError, setEventsError] = useState("")
+  const [places, setPlaces] = useState([])
+  const [placesLoading, setPlacesLoading] = useState(showEventsSection)
+  const [placesError, setPlacesError] = useState("")
   const [showEventList, setShowEventList] = useState(false)
-  // 가볼만한 곳 필터 — '전체' | '행사' | '인기'
-  const [spotFilter, setSpotFilter] = useState("전체")
+  const [visibleSpotCount, setVisibleSpotCount] = useState(MORE_INITIAL_COUNT)
+  // 가볼만한 곳 필터 — 행사/장소
+  const [spotFilter, setSpotFilter] = useState("행사")
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [eventDetail, setEventDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState("")
   const [overviewExpanded, setOverviewExpanded] = useState(false)
+  const [eventLocation, setEventLocation] = useState(null)
+  const [eventLocationStatus, setEventLocationStatus] = useState("idle")
+  const [eventLocationError, setEventLocationError] = useState("")
   const eventsRequestRef = useRef(0)
+  const placesRequestRef = useRef(0)
   const detailAbortRef = useRef(null)
+  const eventListBodyRef = useRef(null)
+  const eventListSentinelRef = useRef(null)
 
-  const fetchEvents = async () => {
-    const url = `/api/events?_t=${Date.now()}`
+  const fetchEvents = async (location = null) => {
+    const params = new URLSearchParams({ _t: String(Date.now()) })
+    if (Number.isFinite(location?.lat) && Number.isFinite(location?.lng)) {
+      params.set("lat", String(location.lat))
+      params.set("lng", String(location.lng))
+    }
+    const url = `/api/events?${params.toString()}`
     const resp = await fetch(url, { cache: "no-store" })
     const data = await resp.json().catch(() => ({}))
     if (!resp.ok) {
@@ -266,10 +485,64 @@ export function ExploreScreen({
     return data
   }
 
+  const fetchPlaces = async (location = null) => {
+    const params = new URLSearchParams({ _t: String(Date.now()) })
+    if (Number.isFinite(location?.lat) && Number.isFinite(location?.lng)) {
+      params.set("lat", String(location.lat))
+      params.set("lng", String(location.lng))
+    }
+    const url = `/api/places?${params.toString()}`
+    const resp = await fetch(url, { cache: "no-store" })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      throw new Error(typeof data?.error === "string" ? data.error : "장소를 불러오지 못했어요.")
+    }
+    return data
+  }
+
+  const requestEventLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setEventLocationStatus("error")
+      setEventLocationError("이 기기에서는 위치를 확인할 수 없어요.")
+      return
+    }
+    setEventLocationStatus("locating")
+    setEventLocationError("")
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude)
+        const lng = Number(position.coords.longitude)
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setEventLocationStatus("error")
+          setEventLocationError("위치 값을 읽지 못했어요. 다시 시도해보세요.")
+          return
+        }
+        setEventLocation({ lat, lng })
+        setEventLocationStatus("allowed")
+      },
+      (error) => {
+        setEventLocationStatus("error")
+        setEventLocationError(error?.code === error?.PERMISSION_DENIED
+          ? "위치 권한을 허용하면 가까운 순으로 볼 수 있어요."
+          : "현재 위치를 확인하지 못했어요. 다시 시도해보세요.")
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    )
+  }, [])
+
   useEffect(() => {
+    if (!showEventsSection) {
+      setEvents([])
+      setEventsError("")
+      setEventsLoading(false)
+      setShowEventList(false)
+      setSelectedEvent(null)
+      return undefined
+    }
     let cancelled = false
     const requestId = ++eventsRequestRef.current
-    fetchEvents()
+    setEventsLoading(true)
+    fetchEvents(eventLocation)
       .then((data) => {
         if (!cancelled && requestId === eventsRequestRef.current) {
           setEvents(data.items?.length > 0 ? data.items : [])
@@ -286,14 +559,44 @@ export function ExploreScreen({
         if (!cancelled && requestId === eventsRequestRef.current) setEventsLoading(false)
       })
     return () => { cancelled = true }
-  }, [])
+  }, [eventLocation, showEventsSection])
+
+  useEffect(() => {
+    if (!showEventsSection) {
+      setPlaces([])
+      setPlacesError("")
+      setPlacesLoading(false)
+      return undefined
+    }
+    let cancelled = false
+    const requestId = ++placesRequestRef.current
+    setPlacesLoading(true)
+    fetchPlaces(eventLocation)
+      .then((data) => {
+        if (!cancelled && requestId === placesRequestRef.current) {
+          const nextItems = Array.isArray(data.items) ? data.items.filter((item) => !isFoodPlace(item)) : []
+          setPlaces(nextItems)
+          setPlacesError("")
+        }
+      })
+      .catch((error) => {
+        if (!cancelled && requestId === placesRequestRef.current) {
+          setPlaces([])
+          setPlacesError(error?.message || "장소를 불러오지 못했어요.")
+        }
+      })
+      .finally(() => {
+        if (!cancelled && requestId === placesRequestRef.current) setPlacesLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [eventLocation, showEventsSection])
 
   const formatEventDate = (dateStr) => {
     if (!dateStr || dateStr.length !== 8) return ""
     return `${parseInt(dateStr.slice(4, 6))}.${parseInt(dateStr.slice(6, 8))}`
   }
 
-  const openEventDetail = async (event) => {
+  const openEventDetail = useCallback(async (event) => {
     detailAbortRef.current?.abort?.()
     const controller = new AbortController()
     detailAbortRef.current = controller
@@ -323,11 +626,96 @@ export function ExploreScreen({
         detailAbortRef.current = null
       }
     }
-  }
+  }, [])
 
   useEffect(() => () => {
     detailAbortRef.current?.abort?.()
   }, [])
+
+  const handleAddSelectedEventToMap = useCallback(() => {
+    if (!selectedEvent || typeof onAddEventToMap !== "function") return
+    const mergedEvent = {
+      ...selectedEvent,
+      ...(eventDetail || {}),
+      id: eventDetail?.id || selectedEvent.id,
+      title: eventDetail?.title || selectedEvent.title,
+      image: eventDetail?.image || selectedEvent.image,
+      addr: eventDetail?.addr || selectedEvent.addr,
+      addrDetail: eventDetail?.addrDetail || "",
+      tel: eventDetail?.tel || selectedEvent.tel,
+      lat: eventDetail?.lat ?? selectedEvent.lat,
+      lng: eventDetail?.lng ?? selectedEvent.lng,
+      startDate: eventDetail?.eventStartDate || selectedEvent.startDate,
+      endDate: eventDetail?.eventEndDate || selectedEvent.endDate,
+      contentTypeId: eventDetail?.contentTypeId || selectedEvent.contentTypeId,
+    }
+    onAddEventToMap(mergedEvent)
+  }, [eventDetail, onAddEventToMap, selectedEvent])
+
+  const canAddSelectedEventToMap = Boolean(
+    onAddEventToMap
+    && selectedEvent
+    && Number.isFinite(Number(eventDetail?.lat ?? selectedEvent?.lat))
+    && Number.isFinite(Number(eventDetail?.lng ?? selectedEvent?.lng)),
+  )
+  const selectedEventAddressText = [
+    eventDetail?.addr || selectedEvent?.addr,
+    eventDetail?.addrDetail,
+  ].filter(Boolean).join(" ").trim()
+
+  const spotItems = useMemo(() => {
+    const next = [
+      ...events.map(toEventSpot),
+      ...places.map(toPlaceSpot),
+    ]
+    return next.sort((a, b) => (b.score || 0) - (a.score || 0))
+  }, [events, places])
+  const filteredSpotItems = useMemo(
+    () => filterSpotItems(spotItems, spotFilter),
+    [spotFilter, spotItems],
+  )
+  const spotLoading = spotFilter === "장소" ? placesLoading : eventsLoading
+  const spotError = spotFilter === "장소" ? placesError : eventsError
+  const spotListTitle = spotFilter === "장소" ? "기록해볼 만한 장소" : "근처에서 기록해볼 만한 행사"
+  const visibleSpotItems = useMemo(
+    () => filteredSpotItems.slice(0, visibleSpotCount),
+    [filteredSpotItems, visibleSpotCount],
+  )
+  const hasMoreSpotItems = visibleSpotCount < filteredSpotItems.length
+  const revealMoreSpots = useCallback(() => {
+    setVisibleSpotCount((current) => Math.min(current + MORE_PAGE_SIZE, filteredSpotItems.length))
+  }, [filteredSpotItems.length])
+  const handleEventListScroll = useCallback((event) => {
+    const el = event.currentTarget
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 180) revealMoreSpots()
+  }, [revealMoreSpots])
+  const handleOpenSpot = useCallback((spot) => {
+    if (!spot) return
+    if (spot.group === "event") {
+      openEventDetail(spot._raw)
+      return
+    }
+    if (spot.sourceUrl) {
+      window.open(spot.sourceUrl, "_blank", "noopener,noreferrer")
+    }
+  }, [openEventDetail])
+
+  useEffect(() => {
+    if (showEventList) setVisibleSpotCount(MORE_INITIAL_COUNT)
+  }, [showEventList, spotFilter])
+
+  useEffect(() => {
+    if (!showEventList || !hasMoreSpotItems || !eventListSentinelRef.current) return undefined
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) revealMoreSpots()
+    }, {
+      root: eventListBodyRef.current,
+      rootMargin: "180px 0px",
+      threshold: 0,
+    })
+    observer.observe(eventListSentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMoreSpotItems, revealMoreSpots, showEventList, visibleSpotItems.length])
 
   // v2 modifier — Cream & Ember 리톤. 기존 클래스 보존하고 그 위에 추가.
   const sectionClassName = embedded
@@ -392,36 +780,82 @@ export function ExploreScreen({
               </div>
             ) : null}
 
-            <div className="ex-trending-block">
-              <div className="ex-trending-head">
-                <span className="ex-trending-title">인기 검색</span>
-                <span className="ex-trending-time">방금 업데이트</span>
+            <div className="ex-search-recommend">
+              <div className="ex-search-recommend__head">
+                <div>
+                  <span className="ex-search-recommend__eyebrow">추천 지도</span>
+                  <strong>바로 열어볼 만한 지도</strong>
+                </div>
+                <span className="ex-search-recommend__badge">EDITOR PICK</span>
               </div>
-              <div className="ex-trending-grid">
-                {TRENDING_RANKING.map((item, idx) => {
-                  const rank = idx + 1
-                  const isTop = rank <= 3
+
+              <div className="ex-search-map-list">
+                {searchRecommendedMaps.map((item, idx) => {
+                  const gradStart = item.gradient?.[0] || item.cover_tone || ["#F8C7B1", "#CDE7C6", "#F4D68F"][idx % 3]
+                  const gradEnd = item.gradient?.[1] || ["#E86536", "#5D8A65", "#B97A24"][idx % 3]
+                  const tags = (item.tags || item.keywords || []).slice(0, 2)
+                  const creator = item.creator || item.recommender_name || item.recommender || "LOCA"
                   return (
                     <button
-                      key={item.text}
+                      key={item.id || item.mapId}
                       type="button"
-                      className="ex-trending-item"
-                      onClick={() => submitQuery(item.text)}
+                      className="ex-search-map-card"
+                      onClick={() => onOpenMap?.(item.mapId || item.id)}
                     >
-                      <span className={`ex-trending-rank${isTop ? " is-top" : ""}`}>{rank}</span>
-                      <span className="ex-trending-text">{item.text}</span>
-                      {item.change?.kind === "up" ? (
-                        <span className="ex-trending-change up">▲ {item.change.value}</span>
-                      ) : item.change?.kind === "down" ? (
-                        <span className="ex-trending-change down">▼ {item.change.value}</span>
-                      ) : item.change?.kind === "new" ? (
-                        <span className="ex-trending-change new">NEW</span>
-                      ) : (
-                        <span className="ex-trending-change same">—</span>
-                      )}
+                      <span
+                        className="ex-search-map-card__cover"
+                        style={{ background: `linear-gradient(135deg, ${gradStart} 0%, ${gradEnd} 100%)` }}
+                        aria-hidden="true"
+                      >
+                        <MapGlyph size={18} strokeWidth={2.1} />
+                      </span>
+                      <span className="ex-search-map-card__body">
+                        <span className="ex-search-map-card__kicker">{creator}</span>
+                        <strong>{item.title}</strong>
+                        <small>
+                          {(item.placeCount || item.items?.length || 0) > 0 ? `${item.placeCount || item.items?.length}곳` : "추천지도"}
+                          {tags.length > 0 ? ` · ${tags.join(" · ")}` : ""}
+                        </small>
+                      </span>
+                      <ChevronRight size={15} strokeWidth={2.3} aria-hidden="true" />
                     </button>
                   )
                 })}
+              </div>
+
+              <div className="ex-search-editor-panel">
+                <div className="ex-search-editor-panel__head">
+                  <span>추천 에디터</span>
+                  <small>취향이 맞는 지도를 더 빠르게 찾기</small>
+                </div>
+                <div className="ex-search-editor-row">
+                  {searchRecommendedEditors.map((editor) => (
+                    <button
+                      key={editor.id}
+                      type="button"
+                      className="ex-search-editor-card"
+                      onClick={() => {
+                        if (editor.user) {
+                          onSelectUser?.(editor.user)
+                          return
+                        }
+                        submitQuery(editor.query || editor.handle || editor.name)
+                      }}
+                    >
+                      <span
+                        className="ex-search-editor-card__avatar"
+                        style={{ background: editor.tone }}
+                        aria-hidden="true"
+                      >
+                        {String(editor.name || "L").slice(0, 1)}
+                      </span>
+                      <span className="ex-search-editor-card__body">
+                        <strong>{editor.name}</strong>
+                        <small>{editor.handle || editor.meta}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </>
@@ -536,13 +970,14 @@ export function ExploreScreen({
       {showAllSections ? (
         <>
           <div className="ex-h-row">
-            <h1 className="ex-h-title">탐색</h1>
+            <BrandLogo className="ex-brand" dotClassName="ex-brand__dot" />
           </div>
 
           {/* Editor's Pick — 큐레이션된 추천 지도 (recommendedMaps[0]) */}
-          {recommendedMaps && recommendedMaps.length > 0 ? (
+          {exploreRecommendationMaps.length > 0 ? (
             <EditorsPickCard
-              map={recommendedMaps[0]}
+              map={exploreRecommendationMaps[0]}
+              recommendations={editorRecommendationItems}
               onOpen={onOpenMap}
               onSearch={() => setSearchMode("active")}
             />
@@ -591,13 +1026,17 @@ export function ExploreScreen({
 
       {showEventsSection ? (
         <SpotsSection
-          events={events}
-          loading={eventsLoading}
-          error={eventsError}
+          spots={filteredSpotItems}
+          loading={spotLoading}
+          error={filteredSpotItems.length === 0 ? spotError : ""}
           spotFilter={spotFilter}
           onSpotFilterChange={setSpotFilter}
-          onOpenEvent={openEventDetail}
+          onOpenSpot={handleOpenSpot}
           onSeeMore={() => setShowEventList(true)}
+          locationStatus={eventLocationStatus}
+          locationError={eventLocationError}
+          hasLocation={Boolean(eventLocation)}
+          onLocate={requestEventLocation}
         />
       ) : null}
 
@@ -607,43 +1046,27 @@ export function ExploreScreen({
         <div className="event-list-screen">
           <div className="event-list-screen__header">
             <button className="event-list-screen__back" type="button" onClick={() => setShowEventList(false)} aria-label="뒤로가기"><ArrowLeft size={20} /></button>
-            <h2>근처에서 기록해볼 만한 행사</h2>
-            <span className="event-list-screen__count">{events.length}건</span>
+            <h2>{spotListTitle}</h2>
+            <span className="event-list-screen__count">{filteredSpotItems.length}건</span>
           </div>
-          <div className="event-list-screen__body">
-            {events.map((event) => {
-              const status = getEventStatus(event.startDate, event.endDate)
-              const thumb = pickEventThumb(event.id || event.title)
-              const period = formatEventPeriod(event.startDate, event.endDate)
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  className="ex-event-card"
-                  onClick={() => { setShowEventList(false); openEventDetail(event) }}
-                >
-                  <div className="ex-event-thumb" style={{ background: thumb.gradient }}>
-                    {event.image ? (
-                      <span className="ex-event-thumb__img" style={{ backgroundImage: `url(${event.image})` }} />
-                    ) : (
-                      <span className="ex-event-thumb__ico">{thumb.emoji}</span>
-                    )}
-                  </div>
-                  <div className="ex-event-info">
-                    {period ? <div className="ex-event-period">{period}</div> : null}
-                    <div className="ex-event-title">{event.title}</div>
-                    {event.addr ? (
-                      <div className="ex-event-meta">
-                        <span>{event.addr}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {status ? (
-                    <span className={`ex-event-status ex-event-status--${status.kind}`}>{status.label}</span>
-                  ) : null}
-                </button>
-              )
-            })}
+          <div className="event-list-screen__body" ref={eventListBodyRef} onScroll={handleEventListScroll}>
+            {visibleSpotItems.map((spot) => (
+              <SpotCard
+                key={spot.id}
+                spot={spot}
+                onClick={() => {
+                  setShowEventList(false)
+                  handleOpenSpot(spot)
+                }}
+              />
+            ))}
+            {hasMoreSpotItems ? (
+              <div className="event-list-screen__loader" ref={eventListSentinelRef}>
+                더 불러오는 중...
+              </div>
+            ) : filteredSpotItems.length > MORE_INITIAL_COUNT ? (
+              <div className="event-list-screen__loader is-done">마지막 추천이에요</div>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -680,10 +1103,16 @@ export function ExploreScreen({
                         <span>{eventDetail.eventPlace}</span>
                       </div>
                     ) : null}
-                    {eventDetail.addr ? (
-                      <div className="event-detail-sheet__info-row">
+                    {selectedEventAddressText ? (
+                      <div className="event-detail-sheet__info-row event-detail-sheet__info-row--address">
                         <span className="event-detail-sheet__label">🗺 주소</span>
-                        <span>{eventDetail.addr} {eventDetail.addrDetail}</span>
+                        <span className="event-detail-sheet__value">{selectedEventAddressText}</span>
+                        {canAddSelectedEventToMap ? (
+                          <button className="event-detail-sheet__add-map-btn" type="button" onClick={handleAddSelectedEventToMap}>
+                            <MapGlyph size={13} strokeWidth={2.2} />
+                            내 지도에 추가
+                          </button>
+                        ) : null}
                       </div>
                     ) : null}
                     {eventDetail.playTime ? (
@@ -751,10 +1180,16 @@ export function ExploreScreen({
                       <span>{formatEventDate(selectedEvent.startDate)} ~ {formatEventDate(selectedEvent.endDate)}</span>
                     </div>
                   ) : null}
-                  {selectedEvent.addr ? (
-                    <div className="event-detail-sheet__info-row">
+                  {selectedEventAddressText ? (
+                    <div className="event-detail-sheet__info-row event-detail-sheet__info-row--address">
                       <span className="event-detail-sheet__label">🗺 주소</span>
-                      <span>{selectedEvent.addr}</span>
+                      <span className="event-detail-sheet__value">{selectedEventAddressText}</span>
+                      {canAddSelectedEventToMap ? (
+                        <button className="event-detail-sheet__add-map-btn" type="button" onClick={handleAddSelectedEventToMap}>
+                          <MapGlyph size={13} strokeWidth={2.2} />
+                          내 지도에 추가
+                        </button>
+                      ) : null}
                     </div>
                   ) : null}
                   {selectedEvent.tel ? (
@@ -777,53 +1212,45 @@ export function ExploreScreen({
 // 가볼만한 곳 섹션 — 헤더 + 내 위치 칩 + 필터칩 + SpotCard 리스트
 // 참고: 참고자료/design-source/screen-explore.jsx ('가볼만한 곳')
 // ─────────────────────────────────────────────────────────
-function SpotsSection({ events, loading, error, spotFilter, onSpotFilterChange, onOpenEvent, onSeeMore }) {
-  // 행사 데이터를 SpotCard 가 받는 spot 객체로 변환
-  const spotsFromEvents = events.map((event) => {
-    const status = getEventStatus(event.startDate, event.endDate)
-    const period = formatEventPeriod(event.startDate, event.endDate)
-    const thumb = pickEventThumb(event.id || event.title)
-    return {
-      _raw: event,
-      kind: "event",
-      dateLabel: period,
-      day: status?.label || "",
-      urgent: status?.kind === "urgent" || status?.kind === "live",
-      title: event.title,
-      sub: event.contentTypeName || event.category || "행사",
-      loc: event.addr || event.area || "",
-      distance: event.distance ? `${event.distance}` : "",
-      thumb,
-    }
-  })
-
-  // 필터 적용
-  const filtered = spotsFromEvents.filter((s) => {
-    if (spotFilter === "전체") return true
-    if (spotFilter === "행사") return s.kind === "event"
-    if (spotFilter === "인기") return s.kind === "hot" || s.kind === "rising"
-    return true
-  })
-
+function SpotsSection({
+  spots,
+  loading,
+  error,
+  spotFilter,
+  onSpotFilterChange,
+  onOpenSpot,
+  onSeeMore,
+  locationStatus = "idle",
+  locationError = "",
+  hasLocation = false,
+  onLocate,
+}) {
   return (
     <section className="ex-spots">
       <div className="ex-spots__head">
         <div>
           <h2 className="ex-spots__title">가볼만한 곳</h2>
-          <p className="ex-spots__sub">가까운 행사 · 기록 많은 동네 장소</p>
+          <p className="ex-spots__sub">가까운 행사 · 기록할 만한 장소</p>
         </div>
-        <button type="button" className="ex-pill-btn ex-spots__loc">
+        <button
+          type="button"
+          className={`ex-pill-btn ex-spots__loc${hasLocation ? " is-active" : ""}`}
+          onClick={onLocate}
+          disabled={locationStatus === "locating"}
+        >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
             <circle cx="12" cy="12" r="5" />
             <circle cx="12" cy="12" r="1.5" fill="var(--accent)" stroke="none" />
           </svg>
-          내 위치 <span style={{ color: "var(--ink-mute)", fontWeight: 700 }}>· 근처</span>
+          {locationStatus === "locating" ? "확인 중" : "내 위치"}
+          <span style={{ color: "var(--ink-mute)", fontWeight: 700 }}>{hasLocation ? "· 근처" : "· 찾기"}</span>
         </button>
       </div>
+      {locationError ? <p className="ex-spots__hint">{locationError}</p> : null}
 
       <div className="ex-spots__chips">
-        {["전체", "행사", "인기"].map((f) => (
+        {["행사", "장소"].map((f) => (
           <button
             key={f}
             type="button"
@@ -836,23 +1263,25 @@ function SpotsSection({ events, loading, error, spotFilter, onSpotFilterChange, 
       </div>
 
       {loading ? (
-        <div className="ex-spots__empty">행사를 불러오는 중...</div>
+        <div className="ex-spots__empty">
+          {spotFilter === "행사" ? "행사를 불러오는 중..." : "추천 장소를 불러오는 중..."}
+        </div>
       ) : error ? (
         <div className="ex-spots__empty">{error}</div>
-      ) : filtered.length === 0 ? (
+      ) : spots.length === 0 ? (
         <div className="ex-spots__empty">
-          {spotFilter === "인기" ? "인기 장소 데이터를 준비 중이에요" : "근처에서 열리는 행사가 없어요"}
+          {spotFilter === "행사" ? "근처에서 열리는 행사가 없어요" : "추천할 장소를 준비 중이에요"}
         </div>
       ) : (
         <>
           <div className="ex-spots__list">
-            {filtered.slice(0, 3).map((spot, idx) => (
-              <SpotCard key={spot._raw?.id || idx} spot={spot} onClick={() => onOpenEvent(spot._raw)} />
+            {spots.slice(0, 3).map((spot) => (
+              <SpotCard key={spot.id} spot={spot} onClick={() => onOpenSpot(spot)} />
             ))}
           </div>
-          {filtered.length > 3 ? (
+          {spots.length > 3 ? (
             <button type="button" className="ex-spots__more" onClick={onSeeMore}>
-              더보기 <span className="ex-spots__more-num">{filtered.length}개</span> →
+              더보기 <span className="ex-spots__more-num">{spots.length}개</span> →
             </button>
           ) : null}
         </>
@@ -863,15 +1292,15 @@ function SpotsSection({ events, loading, error, spotFilter, onSpotFilterChange, 
 
 // SpotCard — 100px 좌측 이미지 + 우측 정보. kind 별 뱃지 변형.
 function SpotCard({ spot, onClick }) {
-  const isEvent = spot.kind === "event"
-  const isRising = spot.kind === "rising"
-  const isHot = spot.kind === "hot"
+  const isEvent = spot.group === "event"
+  const isPlace = spot.group === "place"
   const thumb = spot.thumb || {}
+  const image = spot.image || spot._raw?.image || ""
   return (
     <button type="button" className="ex-spot-card" onClick={onClick}>
       <div className="ex-spot-card__thumb" style={thumb.gradient ? { background: thumb.gradient } : undefined}>
-        {spot._raw?.image ? (
-          <span className="ex-spot-card__img" style={{ backgroundImage: `url(${spot._raw.image})` }} />
+        {image ? (
+          <span className="ex-spot-card__img" style={{ backgroundImage: `url(${image})` }} />
         ) : (
           <span className="ex-spot-card__ico">{thumb.emoji || "🎫"}</span>
         )}
@@ -885,13 +1314,8 @@ function SpotCard({ spot, onClick }) {
             <span className="ex-spot-card__kicker">
               EVENT{spot.dateLabel ? ` · ${spot.dateLabel}` : ""}
             </span>
-          ) : isRising ? (
-            <>
-              <span className="ex-spot-card__rising">↗ {spot.heatLabel || "뜨고 있어요"}</span>
-              {spot.deltaPct ? <span className="ex-spot-card__delta">+{spot.deltaPct}%</span> : null}
-            </>
-          ) : isHot ? (
-            <span className="ex-spot-card__hot">● {spot.heatLabel || "이번 주 인기"}</span>
+          ) : isPlace ? (
+            <span className="ex-spot-card__kicker">장소{spot.sourceLabel ? ` · ${spot.sourceLabel}` : ""}</span>
           ) : null}
         </div>
         <div className="ex-spot-card__title">{spot.title}</div>
@@ -901,9 +1325,6 @@ function SpotCard({ spot, onClick }) {
           <span className="ex-spot-card__loc">
             {spot.distance ? `${spot.distance} · ` : ""}{spot.loc}
           </span>
-          {!isEvent && spot.records > 0 ? (
-            <span className="ex-spot-card__rec">♥ {spot.records}</span>
-          ) : null}
         </div>
       </div>
     </button>
@@ -914,15 +1335,8 @@ function SpotCard({ spot, onClick }) {
 // Editor's Pick 2:1 큰 카드 — recommendedMaps[0] 사용
 // 어두운 그라데이션 + 흰 타이틀 + "다른 지도 찾기" 흰 필 버튼
 // ─────────────────────────────────────────────────────────
-function EditorsPickCard({ map, onOpen, onSearch }) {
+function EditorsPickCard({ map, recommendations = [], onOpen, onSearch }) {
   if (!map) return null
-  const title = map.title || "이번 주 추천"
-  const meta = map.creator
-    ? `@${String(map.creator).replace(/^@/, "")} · ${map.placeCount || 0}곳`
-    : `${map.placeCount || 0}곳의 장소`
-  const gradient = Array.isArray(map.gradient) && map.gradient.length >= 2
-    ? `linear-gradient(135deg, ${map.gradient[0]}, ${map.gradient[1]})`
-    : undefined
   return (
     <div className="ex-editor-section">
       <div className="ex-editor-head">
@@ -936,25 +1350,44 @@ function EditorsPickCard({ map, onOpen, onSearch }) {
         </button>
       </div>
 
-      <button
-        type="button"
-        className="ex-editor-card"
-        onClick={() => onOpen?.(map.mapId || map.id)}
-        aria-label={`${title} 추천 지도 열기`}
-      >
-        <PhotoBlock
-          tone="b"
-          width="100%"
-          height="100%"
-          radius={16}
-          style={gradient ? { background: gradient, aspectRatio: "2 / 1" } : { aspectRatio: "2 / 1" }}
-        >
-          <div className="ex-editor-card__overlay">
-            <div className="ex-editor-card__title">{title}</div>
-            <div className="ex-editor-card__meta">{meta}</div>
-          </div>
-        </PhotoBlock>
-      </button>
+      {recommendations.length > 0 ? (
+        <div className="ex-editor-recs" aria-label="추천 지도">
+          {recommendations.slice(0, 3).map((item) => {
+            const recMap = item.map
+            const recTitle = recMap.title || "추천 지도"
+            const recCreator = recMap.creator ? `@${String(recMap.creator).replace(/^@/, "")}` : "LOCA"
+            const recMeta = `${recCreator} · ${recMap.placeCount || 0}곳`
+            const recGradient = Array.isArray(recMap.gradient) && recMap.gradient.length >= 2
+              ? `linear-gradient(135deg, ${recMap.gradient[0]}, ${recMap.gradient[1]})`
+              : undefined
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className="ex-editor-rec"
+                onClick={() => onOpen?.(recMap.mapId || recMap.id)}
+                aria-label={`${item.label} ${recTitle} 열기`}
+              >
+                <span className="ex-editor-rec__thumb" aria-hidden="true">
+                  <PhotoBlock
+                    tone="b"
+                    width="100%"
+                    height="100%"
+                    radius={12}
+                    style={recGradient ? { background: recGradient } : undefined}
+                  />
+                </span>
+                <span className="ex-editor-rec__body">
+                  <span className="ex-editor-rec__label">{item.label}</span>
+                  <strong className="ex-editor-rec__title">{recTitle}</strong>
+                  <span className="ex-editor-rec__meta">{item.note} · {recMeta}</span>
+                </span>
+                <ChevronRight className="ex-editor-rec__chevron" size={17} strokeWidth={2.2} aria-hidden="true" />
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
     </div>
   )
 }

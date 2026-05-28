@@ -41,17 +41,18 @@ export function useVoicePlayback() {
 
   const resolveSrc = useCallback(async (voice) => {
     if (!voice) return null
-    if (voice.url) return { src: voice.url, isBlob: false }
-    if (voice.cloudUrl) return { src: voice.cloudUrl, isBlob: false }
+    const remoteUrl = voice.url || voice.cloudUrl || ""
     const key = voice.localId || voice.id
-    if (!key) return null
-    try {
-      const blob = await getMedia(key)
-      if (!blob) return null
-      return { src: URL.createObjectURL(blob), isBlob: true }
-    } catch {
-      return null
+    if (key) {
+      try {
+        const blob = await getMedia(key)
+        if (blob) return { src: URL.createObjectURL(blob), isBlob: true }
+      } catch {
+        // Fall back to the remote URL below.
+      }
     }
+    if (remoteUrl) return { src: remoteUrl, isBlob: false }
+    return null
   }, [])
 
   const play = useCallback(async (voice, scopeKey) => {

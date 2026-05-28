@@ -14,6 +14,7 @@ import {
   buildLegalDocumentUrl,
   resolvePublicWebOrigin,
   parseAppLocation,
+  parseMapImportTarget,
 } from "./appUtils"
 
 describe("createId", () => {
@@ -177,5 +178,21 @@ describe("parseAppLocation", () => {
     const result = parseAppLocation({ pathname: "/s/my-map", search: "", hash: "" })
     expect(result.type).toBe("slug")
     expect(result.slug).toBe("my-map")
+  })
+})
+
+describe("parseMapImportTarget", () => {
+  it("slug URL을 가져오기 대상으로 해석", () => {
+    expect(parseMapImportTarget("https://loca.im/s/my-map?utm_source=qr")).toEqual({
+      type: "slug",
+      slug: "my-map",
+    })
+  })
+
+  it("legacy shared URL의 data payload를 보존", () => {
+    expect(parseMapImportTarget("https://loca.im/shared?data=v2%3Aabc")).toEqual({
+      type: "shared",
+      data: "v2:abc",
+    })
   })
 })

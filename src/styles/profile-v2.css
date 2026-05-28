@@ -10,25 +10,84 @@
   background: var(--bg);
   font-family: var(--font-sans);
   color: var(--ink);
+  padding-top: 0;
+}
+
+.profile-v4--v2.screen--scroll {
+  padding: 0 0 98px;
+}
+
+.profile-v2__header {
+  height: calc(54px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 40px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.profile-v2__brand {
+  display: block;
+  color: var(--ink-strong);
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.profile-v2__brand-dot {
+  color: var(--accent);
+}
+
+.profile-v2__settings {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink-strong);
+  box-shadow: 0 1px 4px rgba(30, 25, 20, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.profile-v2__settings:hover {
+  background: var(--accent-faint);
+  border-color: var(--accent-soft);
+}
+
+.profile-v2__settings:active {
+  transform: scale(0.96);
+}
+
+.profile-v2__settings:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ---------- 프로필 카드 ---------- */
 .profile-v4--v2 .pf {
   font-family: var(--font-sans);
-  width: min(100%, 430px);
-  padding-top: 2px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 40px;
 }
 
 /* ============================================================
  * pf-v2-card — 참고 A5 단일 화이트 카드
- * 아바타 + (호 라벨) + 이름 + @handle + bio + 링크 + 통계 + 편집
+ * 아바타 + (별칭 라벨) + 이름 + @handle + bio + 링크 + 통계 + 편집
  * ============================================================ */
 .pf-v2-card {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 16px 15px 15px;
-  margin: 0 9px 14px;
+  margin: 0 0 14px;
   font-family: var(--font-sans);
   box-shadow: 0 1px 4px rgba(30, 25, 20, 0.035);
 }
@@ -208,33 +267,6 @@
   font-weight: 400;
 }
 
-.pf-v2-card__share {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  background: var(--card);
-  color: var(--ink-strong);
-  font-family: var(--font-sans);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  cursor: pointer;
-}
-.pf-v2-card__share:hover {
-  border-color: var(--accent-soft);
-  color: var(--accent-deep);
-}
-.pf-v2-card__share:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 /* (지도 없을 때) 첫 공개 CTA — 카드 내부 풀폭 버튼 */
 .pf-v2-card__publish {
   display: block;
@@ -265,7 +297,7 @@
   border-radius: var(--radius-big);
 }
 
-/* 호 라벨 (페일 코랄 칩) */
+/* 별칭 라벨 (페일 코랄 칩) */
 .profile-v4--v2 .pf__ho,
 .profile-v4--v2 .pf-ho-pill {
   background: var(--accent-faint);
@@ -361,6 +393,280 @@
   background: var(--accent-soft);
 }
 
+/* ---------- 프로필 편집 배너 시트 ---------- */
+.pf-edit-banner {
+  position: fixed;
+  inset: 0 auto 0 50%;
+  z-index: 220;
+  width: min(100vw, 480px);
+  box-sizing: border-box;
+  padding: 0 12px max(12px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(23, 21, 18, 0.46);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.pf-edit-banner__sheet {
+  position: relative;
+  width: 100%;
+  max-height: min(calc(100dvh - 74px), 650px);
+  overflow: hidden;
+  scrollbar-width: none;
+  padding: 12px 18px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 22px;
+  background: var(--bg);
+  box-shadow: 0 -20px 54px rgba(18, 16, 14, 0.22);
+  animation: pf-edit-banner-in 260ms var(--ease-out) both;
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-edit-banner__sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.pf-edit-banner__handle {
+  display: block;
+  width: 34px;
+  height: 4px;
+  margin: 0 auto 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink-mute) 48%, transparent);
+}
+
+.pf-edit-banner__head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pf-edit-banner__head h1 {
+  margin: 0;
+  color: var(--ink-strong);
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.pf-edit-banner__save {
+  min-width: 44px;
+  height: 32px;
+  padding: 0 4px;
+  color: var(--accent-deep);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.pf-edit-banner__save:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.pf-edit-banner__avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0 12px;
+}
+
+.pf-edit-banner__avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.pf-edit-banner__avatar img,
+.pf-edit-banner__avatar > span {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.pf-edit-banner__avatar i {
+  position: absolute;
+  right: -3px;
+  bottom: 3px;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--ink-strong);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+}
+
+.pf-edit-banner__remove-photo {
+  margin-top: 6px;
+  color: var(--ink-mute);
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.pf-edit-banner__fields {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 1px 4px;
+}
+
+.pf-edit-banner__fields::-webkit-scrollbar {
+  display: none;
+}
+
+.pf-edit-banner__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pf-edit-banner__label,
+.pf-edit-banner__label-row {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.pf-edit-banner__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pf-edit-banner__count {
+  color: var(--ink-mute);
+  font-size: 10.5px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.pf-edit-banner input,
+.pf-edit-banner textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink-strong);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: 0;
+  outline: none;
+  box-shadow: none;
+}
+
+.pf-edit-banner input {
+  height: 36px;
+  padding: 0 12px;
+}
+
+.pf-edit-banner textarea {
+  min-height: 58px;
+  max-height: 92px;
+  resize: vertical;
+  padding: 10px 12px;
+  line-height: 1.45;
+}
+
+.pf-edit-banner input:focus,
+.pf-edit-banner textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
+}
+
+.pf-edit-banner__hint {
+  margin: -6px 0 -2px;
+  color: var(--ink-mute);
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.pf-edit-banner__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: -3px;
+}
+
+.pf-edit-banner__chips button {
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--second-soft);
+  color: var(--ink-soft);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.pf-edit-banner__chips button:hover {
+  border-color: var(--accent-soft);
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+}
+
+@keyframes pf-edit-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  .pf-edit-banner {
+    top: 12px;
+    bottom: 12px;
+    border-radius: 32px;
+    overflow: hidden;
+  }
+
+  .pf-edit-banner__sheet {
+    max-height: 100%;
+    border-radius: 22px 22px 28px 28px;
+  }
+}
+
 /* 타인 프로필 — 즐겨찾기 별 */
 .profile-v4--v2 .pf__fav,
 .profile-v4--v2 .pf-fav-pill {
@@ -445,6 +751,38 @@
   font-weight: 700;
 }
 
+.profile-v4--v2 .pf__map-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--accent-soft);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--accent-deep);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(30, 25, 20, 0.035);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-v4--v2 .pf__map-upload:hover {
+  background: var(--accent-faint);
+  border-color: var(--accent);
+}
+
+.profile-v4--v2 .pf__map-upload:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .profile-v4--v2 .pf__gallery {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
@@ -496,4 +834,9 @@
   .profile-v4--v2 .pf__gallery {
     padding-inline: 8px;
   }
+}
+
+.profile-v4--v2 .pf__section-head,
+.profile-v4--v2 .pf__gallery {
+  padding-inline: 0;
 }

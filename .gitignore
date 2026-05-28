@@ -39,6 +39,7 @@ ios/App/build
 # QA / release artifacts
 .qa-artifacts/
 test-results/
+.tmp/
 
 # Supabase CLI cache
 supabase/.temp/

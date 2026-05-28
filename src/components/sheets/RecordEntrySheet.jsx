@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Mic, Plus, Square, Trash2, X } from "lucide-react"
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
+import { PhotoViewer } from "../visuals/PhotoViewer"
 
 const DAY_OF_WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"]
 
@@ -15,13 +17,37 @@ function formatTime(sec) {
   return `${m}:${String(s).padStart(2, "0")}`
 }
 
-function photoSrc(photo) {
-  return photo?.url || photo?.thumbnail || photo?.src || photo?.cloudUrl || ""
+function RecordPhotoThumb({ photo, onDelete, onOpen }) {
+  const { src, markRemoteFailed } = useResolvedMediaUrl(photo)
+  return (
+    <div className="res-photo-thumb">
+      <button type="button" className="res-photo-view" onClick={onOpen} aria-label="사진 보기">
+        {src ? <img src={src} alt="" onError={markRemoteFailed} /> : null}
+      </button>
+      {onDelete ? (
+        <button
+          type="button"
+          className="res-photo-rm"
+          aria-label="사진 삭제"
+          onClick={(event) => {
+            event.stopPropagation()
+            onDelete()
+          }}
+        >
+          <X size={10} />
+        </button>
+      ) : null}
+    </div>
+  )
 }
 
 export function RecordEntrySheet({
   open,
   featureTitle,
+  recordId = "",
+  mode = "create",
+  initialText = "",
+  saveLabel,
   onClose,
   onSave,
   photos = [],
@@ -36,6 +62,7 @@ export function RecordEntrySheet({
   photoInputRef,
 }) {
   const [text, setText] = useState("")
+  const [viewerIndex, setViewerIndex] = useState(null)
   const textareaRef = useRef(null)
   const todayBadge = useMemo(() => formatTodayBadge(), [])
   const maxChars = 280
@@ -43,11 +70,11 @@ export function RecordEntrySheet({
   useEffect(() => {
     if (!open) return undefined
     const timer = window.setTimeout(() => {
-      setText("")
+      setText(initialText || "")
       textareaRef.current?.focus()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [open])
+  }, [initialText, open])
 
   if (!open) return null
 
@@ -56,10 +83,12 @@ export function RecordEntrySheet({
     return isRecording ? 28 + (seed % 58) : 22 + ((index * 7) % 26)
   })
   const canSave = text.trim().length > 0 || photos.length > 0 || voices.length > 0
+  const isEditMode = mode === "edit"
+  const closeWithoutSave = () => onClose?.({ saved: false })
 
   return (
     <>
-      <div className="res-backdrop" onClick={onClose} />
+      <div className="res-backdrop" onClick={closeWithoutSave} />
       <section className="res-sheet" role="dialog" aria-modal="true" aria-label="오늘의 기록 남기기">
         <div className="res-handle" />
 
@@ -68,11 +97,11 @@ export function RecordEntrySheet({
             <span className="res-today">{todayBadge}</span>
             <h2 className="res-title">
               <span className="res-title__name">{featureTitle || "장소"}</span>
-              <span className="res-title__rest"> 기록하기</span>
+              <span className="res-title__rest">{isEditMode ? " 기록 수정" : " 기록하기"}</span>
             </h2>
-            <p className="res-sub">사진, 음성, 메모를 오늘의 한 장면으로 묶어 저장해요.</p>
+            <p className="res-sub">{isEditMode ? "남겨둔 장면을 다시 정돈해요." : "사진, 음성, 메모를 오늘의 한 장면으로 묶어 저장해요."}</p>
           </div>
-          <button type="button" className="res-close" onClick={onClose} aria-label="닫기">
+          <button type="button" className="res-close" onClick={closeWithoutSave} aria-label="닫기">
             <X size={13} />
           </button>
         </header>
@@ -103,14 +132,12 @@ export function RecordEntrySheet({
             </div>
             <div className="res-photo-row">
               {photos.map((photo, index) => (
-                <div key={photo.id || photo.localId || `photo-${index}`} className="res-photo-thumb">
-                  {photoSrc(photo) ? <img src={photoSrc(photo)} alt="" /> : null}
-                  {onDeletePhoto ? (
-                    <button type="button" className="res-photo-rm" aria-label="사진 삭제" onClick={() => onDeletePhoto(photo.id || photo.localId)}>
-                      <X size={10} />
-                    </button>
-                  ) : null}
-                </div>
+                <RecordPhotoThumb
+                  key={photo.id || photo.localId || `photo-${index}`}
+                  photo={photo}
+                  onOpen={() => setViewerIndex(index)}
+                  onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id || photo.localId) : null}
+                />
               ))}
               <button type="button" className="res-photo-add" onClick={() => photoInputRef?.current?.click()} aria-label="사진 추가">
                 <Plus size={20} strokeWidth={1.8} />
@@ -128,7 +155,7 @@ export function RecordEntrySheet({
               <button
                 type="button"
                 className={`res-voice-mic${isRecording ? " is-recording" : ""}`}
-                onClick={() => { if (isRecording) onStopRecording?.(); else onStartRecording?.() }}
+                onClick={() => { if (isRecording) onStopRecording?.(); else onStartRecording?.({ recordId }) }}
                 aria-label={isRecording ? "녹음 정지" : "음성 녹음 시작"}
               >
                 {isRecording ? <Square size={17} fill="currentColor" /> : <Mic size={20} />}
@@ -166,13 +193,13 @@ export function RecordEntrySheet({
             type="button"
             className="res-save"
             disabled={!canSave || isRecording || text.length > maxChars}
-            onClick={() => {
-              onSave?.(text.trim())
+            onClick={async () => {
+              await onSave?.(text.trim(), { recordId, mode })
               setText("")
-              onClose?.()
+              onClose?.({ saved: true })
             }}
           >
-            {isRecording ? "녹음을 멈춘 뒤 저장하세요" : "오늘의 기록 저장"}
+            {isRecording ? "녹음을 멈춘 뒤 저장하세요" : (saveLabel || (isEditMode ? "수정 저장" : "오늘의 기록 저장"))}
           </button>
         </div>
 
@@ -184,11 +211,17 @@ export function RecordEntrySheet({
             capture="environment"
             style={{ display: "none" }}
             onChange={(event) => {
-              onPhotoSelected?.(event)
+              onPhotoSelected?.(event, { recordId })
               event.target.value = ""
             }}
           />
         ) : null}
+        <PhotoViewer
+          open={viewerIndex !== null}
+          photos={photos}
+          initialIndex={viewerIndex || 0}
+          onClose={() => setViewerIndex(null)}
+        />
       </section>
     </>
   )

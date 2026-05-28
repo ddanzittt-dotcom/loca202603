@@ -724,6 +724,39 @@
   font-weight: 900;
 }
 
+.fd-detail__record-entry {
+  position: relative;
+}
+
+.fd-detail__record-entry .loca-v2-diary-banner {
+  padding-right: 64px;
+}
+
+.fd-detail__record-edit {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(30, 25, 20, 0.1));
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink-soft, #3F3A33);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 9px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(35, 24, 10, 0.08);
+  cursor: pointer;
+}
+
+.fd-detail__record-edit:hover {
+  border-color: var(--accent-soft, #FFD0BC);
+  color: var(--accent-deep, #C2380B);
+}
+
 .fd-detail__timeline {
   list-style: none;
   margin: 0;

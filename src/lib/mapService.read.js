@@ -6,6 +6,21 @@ import {
   normalizeMemo,
   mergeFeaturesWithMemos,
 } from "./mapService.utils"
+import {
+  getPublicRecommendedPixelId,
+  publicPixelEmojiValue,
+} from "../utils/publicMapMarkers"
+
+const SUPABASE_IN_FILTER_CHUNK_SIZE = 100
+
+function chunkArray(items, size = SUPABASE_IN_FILTER_CHUNK_SIZE) {
+  if (!Array.isArray(items) || items.length === 0) return []
+  const chunks = []
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size))
+  }
+  return chunks
+}
 
 // ─── 내부 batch 조회 ───
 
@@ -15,8 +30,120 @@ function isMissingDbObject(error, objectName) {
   return (
     error.code === "42883"
     || error.code === "42P01"
+    || error.code === "PGRST200"
+    || error.code === "PGRST204"
+    || error.code === "PGRST205"
     || message.includes(`${objectName}`.toLowerCase())
   )
+}
+
+function isPermissionDenied(error) {
+  if (!error) return false
+  const message = `${error.message || ""}`.toLowerCase()
+  return error.code === "42501" || message.includes("permission denied")
+}
+
+function canIgnoreOptionalTableRead(error, objectName) {
+  return isMissingDbObject(error, objectName) || isPermissionDenied(error)
+}
+
+function isMissingColumn(error, columnName = "") {
+  if (!error) return false
+  const message = `${error.message || ""}`.toLowerCase()
+  const column = `${columnName || ""}`.toLowerCase()
+  return error.code === "42703" && (!column || message.includes(column))
+}
+
+function normalizeCommunityRecordFeature(row, mapId) {
+  if (!row || typeof row !== "object") return null
+
+  const lat = Number(row.lat)
+  const lng = Number(row.lng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+
+  const recordType = row.type === "route" ? "route" : "place"
+  const type = recordType === "route" ? "route" : "pin"
+  const keywords = Array.isArray(row.keywords)
+    ? row.keywords.map((item) => `${item || ""}`.trim()).filter(Boolean)
+    : []
+  const representativeKeyword = row.representative_keyword || keywords[0] || null
+  const pixelId = getPublicRecommendedPixelId({
+    type: recordType,
+    recordType,
+    title: row.title,
+    description: row.description,
+    note: row.description,
+    keywords,
+    representative_keyword: representativeKeyword,
+    pixel_icon_key: row.pixel_icon_key,
+  })
+  const updatedAt = row.updated_at || row.approved_at || row.created_at || new Date().toISOString()
+
+  return {
+    id: `community-record-${row.id}`,
+    serverRecordId: row.id,
+    recordId: row.id,
+    mapId,
+    type,
+    recordType,
+    geometryType: "representative_point",
+    title: row.title || "모두의 지도 기록",
+    emoji: publicPixelEmojiValue(pixelId),
+    emojiKind: "pixel",
+    emojiPixelId: pixelId,
+    emojiPhotoUrl: null,
+    tags: keywords,
+    keywords,
+    representative_keyword: representativeKeyword,
+    pixel_icon_key: row.pixel_icon_key || pixelId,
+    reason: row.reason || null,
+    category: row.reason || representativeKeyword || null,
+    note: row.description || row.route_summary_text || "",
+    intro: row.description || row.route_summary_text || "",
+    highlight: false,
+    status: row.status || "approved",
+    publicStatus: row.status || "approved",
+    sourceContext: "public_community_records",
+    sourceTable: "community_records",
+    createdBy: null,
+    createdByName: row.author_name || null,
+    createdAt: row.created_at || updatedAt,
+    updatedAt,
+    approvedAt: row.approved_at || null,
+    memos: [],
+    photos: [],
+    voices: [],
+    representativeLocation: { lat, lng },
+    lat,
+    lng,
+    points: type === "route" ? [[lng, lat]] : undefined,
+    publicSubmission: {
+      version: 1,
+      source: "community-web",
+      status: row.status || "approved",
+      reason: row.reason || null,
+      keywords,
+    },
+  }
+}
+
+async function _listApprovedCommunityRecordFeatures(mapId) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("community_records")
+    .select("id,type,title,description,reason,keywords,representative_keyword,pixel_icon_key,lat,lng,route_summary_text,author_name,status,created_at,updated_at,approved_at")
+    .eq("status", "approved")
+    .order("approved_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+
+    if (error) {
+    if (isMissingDbObject(error, "community_records")) return []
+    throw error
+  }
+
+  return (data || [])
+    .map((row) => normalizeCommunityRecordFeature(row, mapId))
+    .filter(Boolean)
 }
 
 function normalizeSnapshotMapRow(liveRevision, requestedSlug) {
@@ -107,7 +234,9 @@ async function getPublishedBundleFromLiveRevision(supabase, liveRevision, slug) 
     memoReq,
     mediaReq,
   ])
-  if (publicationError) throw publicationError
+  if (publicationError && !canIgnoreOptionalTableRead(publicationError, "map_publications")) {
+    throw publicationError
+  }
 
   const publication = normalizePublication(publicationRow)
   return {
@@ -120,58 +249,179 @@ async function getPublishedBundleFromLiveRevision(supabase, liveRevision, slug) 
 export async function listPublicationsForMapIds(mapIds) {
   if (!mapIds.length) return []
   const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("map_publications")
-    .select("*")
-    .in("map_id", mapIds)
+  const rows = []
 
-  if (error) throw error
-  return data || []
+  for (const chunk of chunkArray(mapIds)) {
+    const { data, error } = await supabase
+      .from("map_publications")
+      .select("*")
+      .in("map_id", chunk)
+
+    if (error) {
+      if (canIgnoreOptionalTableRead(error, "map_publications")) return []
+      throw error
+    }
+    rows.push(...(data || []))
+  }
+
+  return rows
+}
+
+export async function listCollaboratorCountsForMapIds(mapIds) {
+  if (!mapIds.length) return new Map()
+  const supabase = requireSupabase()
+  const rows = []
+
+  for (const chunk of chunkArray(mapIds)) {
+    const { data, error } = await supabase
+      .from("map_collaborators")
+      .select("map_id")
+      .in("map_id", chunk)
+      .eq("status", "accepted")
+
+    if (error) {
+      if (isMissingColumn(error, "status")) {
+        const legacyRes = await supabase
+          .from("map_collaborators")
+          .select("map_id")
+          .in("map_id", chunk)
+        if (legacyRes.error) {
+          if (canIgnoreOptionalTableRead(legacyRes.error, "map_collaborators")) return new Map()
+          throw legacyRes.error
+        }
+        rows.push(...(legacyRes.data || []))
+        continue
+      }
+      if (canIgnoreOptionalTableRead(error, "map_collaborators")) return new Map()
+      throw error
+    }
+    rows.push(...(data || []))
+  }
+
+  return rows.reduce((acc, row) => {
+    acc.set(row.map_id, (acc.get(row.map_id) || 0) + 1)
+    return acc
+  }, new Map())
+}
+
+async function listMyAcceptedCollaboratorRows(supabase, userId) {
+  const withStatus = await supabase
+    .from("map_collaborators")
+    .select("map_id, role, status")
+    .eq("user_id", userId)
+    .eq("status", "accepted")
+
+  if (!withStatus.error) return withStatus.data || []
+  if (!isMissingColumn(withStatus.error, "status")) throw withStatus.error
+
+  const legacy = await supabase
+    .from("map_collaborators")
+    .select("map_id, role")
+    .eq("user_id", userId)
+  if (legacy.error) throw legacy.error
+  return legacy.data || []
+}
+
+export async function listCollaborationInvites() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("list_pending_map_collaboration_invites")
+  if (error) {
+    if (isMissingDbObject(error, "list_pending_map_collaboration_invites")) return []
+    throw error
+  }
+  return (data || []).map((row) => ({
+    id: row.id,
+    mapId: row.map_id,
+    role: row.role || "viewer",
+    status: row.status || "pending",
+    createdAt: row.created_at,
+    invitedBy: row.invited_by || row.owner_id || null,
+    mapTitle: row.map_title || "초대받은 지도",
+    mapDescription: row.map_description || "",
+    mapTheme: row.map_theme || "#FF6B35",
+    ownerId: row.owner_id || null,
+    ownerName: row.owner_nickname || "LOCA 사용자",
+    ownerAvatarUrl: row.owner_avatar_url || "",
+  }))
 }
 
 export async function listFeaturesForMapIds(mapIds) {
   if (!mapIds.length) return []
   const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("map_features")
-    .select("*")
-    .in("map_id", mapIds)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })
+  const rows = []
 
-  if (error) throw error
-  return data || []
+  for (const chunk of chunkArray(mapIds)) {
+    const { data, error } = await supabase
+      .from("map_features")
+      .select("*")
+      .in("map_id", chunk)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+
+    if (error) {
+      if (canIgnoreOptionalTableRead(error, "map_features")) return []
+      throw error
+    }
+    rows.push(...(data || []))
+  }
+
+  return rows.sort((a, b) => {
+    const sortOrder = (a.sort_order || 0) - (b.sort_order || 0)
+    if (sortOrder !== 0) return sortOrder
+    return `${a.created_at || ""}`.localeCompare(`${b.created_at || ""}`)
+  })
 }
 
 export async function listMemosForFeatureIds(featureIds) {
   if (!featureIds.length) return []
   const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("feature_memos")
-    .select("*")
-    .in("feature_id", featureIds)
-    .eq("status", "visible")
-    .order("created_at", { ascending: true })
+  const rows = []
 
-  if (error) throw error
-  return data || []
+  for (const chunk of chunkArray(featureIds)) {
+    let { data, error } = await supabase
+      .from("feature_memos")
+      .select("*")
+      .in("feature_id", chunk)
+      .eq("status", "visible")
+      .order("created_at", { ascending: true })
+
+    if (error && isMissingColumn(error, "status")) {
+      ;({ data, error } = await supabase
+        .from("feature_memos")
+        .select("*")
+        .in("feature_id", chunk)
+        .order("created_at", { ascending: true }))
+    }
+
+    if (error) {
+      if (canIgnoreOptionalTableRead(error, "feature_memos")) return []
+      throw error
+    }
+    rows.push(...(data || []))
+  }
+
+  return rows.sort((a, b) => `${a.created_at || ""}`.localeCompare(`${b.created_at || ""}`))
 }
 
 export async function listMediaForFeatureIds(featureIds) {
   if (!featureIds.length) return []
   const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("feature_media")
-    .select("*")
-    .in("feature_id", featureIds)
-    .order("created_at", { ascending: true })
-  // feature_media 테이블이 없거나 조회 실패 시 빈 배열로 폴백 (미디어 누락 방지)
-  if (error) {
-    if (isMissingDbObject(error, "feature_media")) return []
-    console.error("listMediaForFeatureIds error:", error)
-    return []
+  const rows = []
+  for (const chunk of chunkArray(featureIds)) {
+    const { data, error } = await supabase
+      .from("feature_media")
+      .select("*")
+      .in("feature_id", chunk)
+      .order("created_at", { ascending: true })
+    // feature_media 테이블이 없거나 조회 실패 시 빈 배열로 폴백 (미디어 누락 방지)
+    if (error) {
+      if (canIgnoreOptionalTableRead(error, "feature_media")) return []
+      console.error("listMediaForFeatureIds error:", error)
+      return rows.sort((a, b) => `${a.created_at || ""}`.localeCompare(`${b.created_at || ""}`))
+    }
+    rows.push(...(data || []))
   }
-  return data || []
+  return rows.sort((a, b) => `${a.created_at || ""}`.localeCompare(`${b.created_at || ""}`))
 }
 
 // ─── 공개 조회 API ───
@@ -186,19 +436,16 @@ export async function getMyMaps() {
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
-    supabase
-      .from("map_collaborators")
-      .select("map_id, role")
-      .eq("user_id", user.id),
+    listMyAcceptedCollaboratorRows(supabase, user.id).catch((error) => {
+      if (canIgnoreOptionalTableRead(error, "map_collaborators")) return []
+      throw error
+    }),
   ])
 
   if (ownedMapsRes.error) throw ownedMapsRes.error
-  if (collaboratorsRes.error && !isMissingDbObject(collaboratorsRes.error, "map_collaborators")) {
-    throw collaboratorsRes.error
-  }
 
   const ownerMapRows = ownedMapsRes.data || []
-  const collaboratorRows = collaboratorsRes.data || []
+  const collaboratorRows = Array.isArray(collaboratorsRes) ? collaboratorsRes : []
   const ownerMapIdSet = new Set(ownerMapRows.map((row) => row.id))
   const collaboratorMapIds = [...new Set(
     collaboratorRows.map((row) => row.map_id).filter((mapId) => mapId && !ownerMapIdSet.has(mapId)),
@@ -206,13 +453,17 @@ export async function getMyMaps() {
 
   let collaboratorMapRows = []
   if (collaboratorMapIds.length > 0) {
-    const collaboratorMapsRes = await supabase
-      .from("maps")
-      .select("*")
-      .in("id", collaboratorMapIds)
+    for (const chunk of chunkArray(collaboratorMapIds)) {
+      const collaboratorMapsRes = await supabase
+        .from("maps")
+        .select("*")
+        .in("id", chunk)
 
-    if (collaboratorMapsRes.error) throw collaboratorMapsRes.error
-    collaboratorMapRows = collaboratorMapsRes.data || []
+      if (collaboratorMapsRes.error && !canIgnoreOptionalTableRead(collaboratorMapsRes.error, "maps")) {
+        throw collaboratorMapsRes.error
+      }
+      collaboratorMapRows.push(...(collaboratorMapsRes.data || []))
+    }
   }
 
   const mapRows = [...ownerMapRows, ...collaboratorMapRows]
@@ -222,11 +473,22 @@ export async function getMyMaps() {
     if (!roleByMapId.has(row.map_id)) roleByMapId.set(row.map_id, row.role || "viewer")
   })
 
-  const publicationRows = await listPublicationsForMapIds(mapRows.map((row) => row.id))
+  const mapIds = mapRows.map((row) => row.id)
+  const [publicationRows, collaboratorCounts] = await Promise.all([
+    listPublicationsForMapIds(mapIds),
+    listCollaboratorCountsForMapIds(mapIds),
+  ])
   const publicationsByMapId = new Map(publicationRows.map((row) => [row.map_id, normalizePublication(row)]))
 
   return mapRows
-    .map((row) => normalizeMap({ ...row, user_role: roleByMapId.get(row.id) || "owner" }, publicationsByMapId.get(row.id) || null))
+    .map((row) => normalizeMap(
+      {
+        ...row,
+        user_role: roleByMapId.get(row.id) || "owner",
+        collab_count: collaboratorCounts.get(row.id) || 0,
+      },
+      publicationsByMapId.get(row.id) || null,
+    ))
     .sort((a, b) => `${b.updatedAt || ""}`.localeCompare(`${a.updatedAt || ""}`))
 }
 
@@ -240,10 +502,10 @@ export async function getMyAppData() {
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false }),
-    supabase
-      .from("map_collaborators")
-      .select("map_id, role")
-      .eq("user_id", user.id),
+    listMyAcceptedCollaboratorRows(supabase, user.id).catch((error) => {
+      if (canIgnoreOptionalTableRead(error, "map_collaborators")) return []
+      throw error
+    }),
     supabase
       .from("follows")
       .select("following_id")
@@ -255,14 +517,13 @@ export async function getMyAppData() {
   ])
 
   if (ownedMapsRes.error) throw ownedMapsRes.error
-  if (collaboratorsRes.error && !isMissingDbObject(collaboratorsRes.error, "map_collaborators")) {
-    throw collaboratorsRes.error
+  if (followsRes.error && !canIgnoreOptionalTableRead(followsRes.error, "follows")) {
+    throw followsRes.error
   }
-  if (followsRes.error) throw followsRes.error
   // followersRes 에러는 무시 — followerCount 0으로 폴백
 
   const ownerMapRows = ownedMapsRes.data || []
-  const collaboratorRows = collaboratorsRes.data || []
+  const collaboratorRows = Array.isArray(collaboratorsRes) ? collaboratorsRes : []
   const ownerMapIdSet = new Set(ownerMapRows.map((row) => row.id))
   const collaboratorMapIds = [...new Set(
     collaboratorRows.map((row) => row.map_id).filter((mapId) => mapId && !ownerMapIdSet.has(mapId)),
@@ -270,12 +531,16 @@ export async function getMyAppData() {
 
   let collaboratorMapRows = []
   if (collaboratorMapIds.length > 0) {
-    const collaboratorMapsRes = await supabase
-      .from("maps")
-      .select("*")
-      .in("id", collaboratorMapIds)
-    if (collaboratorMapsRes.error) throw collaboratorMapsRes.error
-    collaboratorMapRows = collaboratorMapsRes.data || []
+    for (const chunk of chunkArray(collaboratorMapIds)) {
+      const collaboratorMapsRes = await supabase
+        .from("maps")
+        .select("*")
+        .in("id", chunk)
+      if (collaboratorMapsRes.error && !canIgnoreOptionalTableRead(collaboratorMapsRes.error, "maps")) {
+        throw collaboratorMapsRes.error
+      }
+      collaboratorMapRows.push(...(collaboratorMapsRes.data || []))
+    }
   }
 
   const mapRows = [...ownerMapRows, ...collaboratorMapRows]
@@ -286,14 +551,25 @@ export async function getMyAppData() {
   })
 
   const mapIds = mapRows.map((row) => row.id)
-  const [featureRows, publicationRows] = await Promise.all([
-    listFeaturesForMapIds(mapIds),
+  const [featureRows, publicationRows, collaboratorCounts, collaborationInvites] = await Promise.all([
+    listFeaturesForMapIds(mapIds).catch((error) => {
+      console.error("Failed to load personal map features", error)
+      return []
+    }),
     listPublicationsForMapIds(mapIds),
+    listCollaboratorCountsForMapIds(mapIds),
+    listCollaborationInvites().catch((error) => {
+      console.warn("Failed to load collaboration invites", error)
+      return []
+    }),
   ])
 
   const featureIds = featureRows.map((row) => row.id)
   const [memoRows, mediaRows] = await Promise.all([
-    listMemosForFeatureIds(featureIds),
+    listMemosForFeatureIds(featureIds).catch((error) => {
+      console.error("Failed to load personal feature memos", error)
+      return []
+    }),
     listMediaForFeatureIds(featureIds),
   ])
 
@@ -307,15 +583,46 @@ export async function getMyAppData() {
   return {
     maps: mapRows
       .map((row) => normalizeMap(
-        { ...row, user_role: roleByMapId.get(row.id) || "owner" },
+        {
+          ...row,
+          user_role: roleByMapId.get(row.id) || "owner",
+          collab_count: collaboratorCounts.get(row.id) || 0,
+        },
         normalizePublication(activePublicationRows.find((item) => item.map_id === row.id)),
       ))
       .sort((a, b) => `${b.updatedAt || ""}`.localeCompare(`${a.updatedAt || ""}`)),
     features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
     shares: activePublicationRows.map((row) => normalizePublication(row)),
-    followed: (followsRes.data || []).map((row) => row.following_id),
-    followerCount: followersRes.count ?? 0,
+    followed: followsRes.error ? [] : (followsRes.data || []).map((row) => row.following_id),
+    followerCount: followersRes.error ? 0 : (followersRes.count ?? 0),
+    collaborationInvites,
   }
+}
+
+async function resolveMapUserRole(supabase, mapRow) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return mapRow.visibility === "public" || mapRow.visibility === "unlisted" ? "viewer" : null
+  if (mapRow.user_id === user.id) return "owner"
+
+  let { data, error } = await supabase
+    .from("map_collaborators")
+    .select("role, status")
+    .eq("map_id", mapRow.id)
+    .eq("user_id", user.id)
+    .eq("status", "accepted")
+    .maybeSingle()
+
+  if (error && isMissingColumn(error, "status")) {
+    ;({ data, error } = await supabase
+      .from("map_collaborators")
+      .select("role")
+      .eq("map_id", mapRow.id)
+      .eq("user_id", user.id)
+      .maybeSingle())
+  }
+
+  if (error) return "viewer"
+  return data?.role || "viewer"
 }
 
 export async function getMapBundle(mapId) {
@@ -327,9 +634,17 @@ export async function getMapBundle(mapId) {
   ])
 
   if (mapError) throw mapError
-  if (publicationError) throw publicationError
+  if (publicationError && !canIgnoreOptionalTableRead(publicationError, "map_publications")) {
+    throw publicationError
+  }
 
-  const featureRows = await listFeaturesForMapIds([mapId])
+  const [userRole, featureRows] = await Promise.all([
+    resolveMapUserRole(supabase, mapRow),
+    listFeaturesForMapIds([mapId]),
+  ])
+  const collaboratorCounts = userRole && userRole !== "viewer"
+    ? await listCollaboratorCountsForMapIds([mapId])
+    : new Map()
   const featureIds = featureRows.map((row) => row.id)
   const [memoRows, mediaRows] = await Promise.all([
     listMemosForFeatureIds(featureIds),
@@ -337,7 +652,10 @@ export async function getMapBundle(mapId) {
   ])
 
   return {
-    map: normalizeMap(mapRow, normalizePublication(publicationRow)),
+    map: normalizeMap(
+      { ...mapRow, user_role: userRole, collab_count: collaboratorCounts.get(mapId) || 0 },
+      normalizePublication(publicationRow),
+    ),
     features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
     publication: normalizePublication(publicationRow),
   }
@@ -349,35 +667,8 @@ export async function getMapBundle(mapId) {
  * - 폴백: category='community'
  */
 export async function getCommunityMapBundle() {
-  const supabase = requireSupabase()
-
-  let mapRow = null
-  const bySlugRes = await supabase
-    .from("maps")
-    .select("*")
-    .eq("slug", "community-map")
-    .maybeSingle()
-
-  if (bySlugRes.error) throw bySlugRes.error
-  mapRow = bySlugRes.data || null
-
-  if (!mapRow) {
-    const byCategoryRes = await supabase
-      .from("maps")
-      .select("*")
-      .eq("category", "community")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    if (byCategoryRes.error && !isMissingDbObject(byCategoryRes.error, "maps")) {
-      throw byCategoryRes.error
-    }
-    mapRow = byCategoryRes.data || null
-  }
-
-  if (!mapRow) return null
-  return getMapBundle(mapRow.id)
+  const { getCommunityMapBundle: getCommunityMapBundleFromCommunityService } = await import("./mapService.community")
+  return getCommunityMapBundleFromCommunityService()
 }
 
 export async function getPublishedMapBySlug(slug) {
@@ -485,12 +776,20 @@ export async function getCuratedMaps(limit = 12) {
 
 export async function getFeatureMemos(featureId) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("feature_memos")
     .select("*")
     .eq("feature_id", featureId)
     .eq("status", "visible")
     .order("created_at", { ascending: true })
+
+  if (error && isMissingColumn(error, "status")) {
+    ;({ data, error } = await supabase
+      .from("feature_memos")
+      .select("*")
+      .eq("feature_id", featureId)
+      .order("created_at", { ascending: true }))
+  }
 
   if (error) throw error
   return (data || []).map((row) => normalizeMemo(row))
@@ -611,14 +910,28 @@ export async function getUserBadges() {
 export async function searchUsersForInvite(query) {
   if (!query || query.trim().length < 2) return []
   const supabase = requireSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, nickname, emoji")
+    .select("id, nickname, avatar_url, slug")
     .ilike("nickname", `%${query.trim()}%`)
     .limit(10)
 
   if (error) throw error
-  return data || []
+  return (data || [])
+    .filter((profile) => profile.id !== user?.id)
+    .map((profile) => {
+      const avatarValue = profile.avatar_url || ""
+      const hasImageAvatar = avatarValue.startsWith("http") || avatarValue.startsWith("data:")
+      const name = profile.nickname || "LOCA 사용자"
+      return {
+        id: profile.id,
+        nickname: name,
+        handle: profile.slug ? `@${profile.slug}` : "",
+        avatarUrl: hasImageAvatar ? avatarValue : null,
+        emoji: hasImageAvatar ? name.slice(0, 1) : (avatarValue || name.slice(0, 1) || "U"),
+      }
+    })
 }
 
 export async function getFeatureOperatorNote(featureId) {
@@ -697,12 +1010,22 @@ export async function checkCollaboratorAccess(mapId) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return false
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("map_collaborators")
-    .select("id, role")
+    .select("id, role, status")
     .eq("map_id", mapId)
     .eq("user_id", user.id)
+    .eq("status", "accepted")
     .limit(1)
+
+  if (error && isMissingColumn(error, "status")) {
+    ;({ data, error } = await supabase
+      .from("map_collaborators")
+      .select("id, role")
+      .eq("map_id", mapId)
+      .eq("user_id", user.id)
+      .limit(1))
+  }
 
   if (error) return false
   return data.length > 0 ? data[0].role : false
