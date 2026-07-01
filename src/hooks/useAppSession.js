@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { getCurrentSession, onAuthStateChange, signOut } from "../lib/auth"
 import {
-  checkB2BAccess as checkB2BAccessRecord,
   createFeature as createFeatureRecord,
   createMap as createMapRecord,
   followUser as followUserRecord,
@@ -36,7 +35,6 @@ export function useAppSession({
 }) {
   const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
   const [authUser, setAuthUser] = useState(null)
-  const [hasB2BAccess, setHasB2BAccess] = useState(false)
   const [cloudLoading, setCloudLoading] = useState(false)
   const [cloudDataReady, setCloudDataReady] = useState(false)
   const [cloudLoadedUserId, setCloudLoadedUserId] = useState(null)
@@ -77,15 +75,13 @@ export function useAppSession({
     if (cloudLoadedUserIdRef.current !== user.id) setCloudDataReady(false)
     setCloudLoading(true)
     try {
-      const [appData, profile, b2bAccess] = await Promise.all([
+      const [appData, profile] = await Promise.all([
         getMyAppData(),
         getProfileRecord(user.id).catch((error) => {
           console.warn("Failed to load profile; using auth metadata fallback", error)
           return {}
         }),
-        checkB2BAccessRecord().catch(() => false),
       ])
-      setHasB2BAccess(b2bAccess)
 
       const profileAlias = profile.alias || profile.tagline || profile.ho || ""
       const nextProfile = {
@@ -170,9 +166,8 @@ export function useAppSession({
     cloudLoadedUserIdRef.current = null
     setCloudLoadedUserId(null)
     try { window.localStorage?.removeItem("loca.mobile.cloudUserId") } catch { /* noop */ }
-    setHasB2BAccess(false)
     if (!keepSharedViewer) {
-      setActiveTab("home")
+      setActiveTab("login")
       setMapsView("list")
       setActiveMapSource("local")
       setActiveMapId(mapsSeed[0]?.id ?? null)
@@ -321,8 +316,6 @@ export function useAppSession({
     cloudLoading,
     cloudDataReady,
     cloudLoadedUserId,
-    hasB2BAccess,
-    setHasB2BAccess,
     readLocalImportData,
     resetToLoggedOut,
     reloadCloudData,

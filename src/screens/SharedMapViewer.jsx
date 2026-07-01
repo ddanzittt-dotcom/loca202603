@@ -1,5 +1,5 @@
-﻿import { useState, useCallback, useMemo, useRef, useEffect } from "react"
-import { X, ArrowLeft, Share2 } from "lucide-react"
+import { useState, useCallback, useMemo, useRef } from "react"
+import { ArrowLeft, Share2 } from "lucide-react"
 import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -8,14 +8,6 @@ import { logEvent } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
 import { triggerSelectionFeedback } from "../lib/haptics"
 import { saveMap as saveMapRecord } from "../lib/mapService"
-import { isEventMap as checkIsEventMap } from "../lib/mapPlacement"
-import { useEventMapData, formatDistance } from "../hooks/useEventMapData"
-import { useEventComments } from "../hooks/useEventComments"
-import { useNotifications } from "../hooks/useNotifications"
-import { NotificationPanel, NotificationBanner } from "../components/NotificationPanel"
-import { SurveyPopup } from "../components/viewer/SurveyPopup"
-import { ReportDialog } from "../components/viewer/ReportDialog"
-import { SpotComments } from "../components/viewer/SpotComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { BrandLogo } from "../components/BrandLogo"
@@ -42,24 +34,6 @@ function computeRouteLengthKm(points) {
   return km > 0 ? km : null
 }
 
-const DEFAULT_CHECKIN_RADIUS_M = 50
-
-// 공지 노출 이벤트를 한 번만 발생시키는 버퍼
-const _loggedAnnouncements = new Set()
-function AnnouncementViewTracker({ mapId, announcements, dismissed }) {
-  useEffect(() => {
-    if (!hasSupabaseEnv || !mapId || dismissed || !announcements?.length) return
-    announcements.forEach((a) => {
-      const key = `${mapId}:${a.id}`
-      if (_loggedAnnouncements.has(key)) return
-      _loggedAnnouncements.add(key)
-      logEvent("announcement_view", { map_id: mapId, meta: { announcement_id: a.id } })
-    })
-  }, [mapId, announcements, dismissed])
-  return null
-}
-
-
 // Pin SVG icon for save button
 function PinSvg() {
   return (
@@ -70,28 +44,12 @@ function PinSvg() {
 }
 
 // Save button component
-function SaveButton({ onClick, isEvent, loading = false }) {
+function SaveButton({ onClick, loading = false }) {
   return (
-    <button
-      className={`lw-save-btn${isEvent ? " lw-save-btn--event" : ""}`}
-      type="button"
-      onClick={onClick}
-      disabled={loading}
-    >
+    <button className="lw-save-btn" type="button" onClick={onClick} disabled={loading}>
       <PinSvg />
       <span className="lw-save-btn__text">{loading ? "저장 중..." : "내 라이브러리에 저장"}</span>
     </button>
-  )
-}
-
-// Category icon helper
-function CatIcon({ feature, size = 12 }) {
-  const catId = feature.category || emojiToCategory(feature.emoji)
-  const ic = getPinIcon(catId)
-  return (
-    <span className="lw-cat-icon" style={{ background: ic.bg }}>
-      <img src={`/icons/pins/${catId}.svg`} width={size} height={size} alt="" />
-    </span>
   )
 }
 
@@ -109,34 +67,13 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   const [sheetExpanded, setSheetExpanded] = useState(false)
   const featureViewStart = useRef(null)
   const prevSelectedId = useRef(null)
-  const [spotTab, setSpotTab] = useState("info")
   const voicePlayback = useVoicePlayback()
   const [toastMsg, setToastMsg] = useState("")
-
-  const isEventMap = checkIsEventMap(map)
-  const config = useMemo(() => map.config || {}, [map.config])
 
   const showViewerToast = useCallback((msg) => {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(""), 2500)
   }, [])
-
-  // 이벤트 데이터와 액션
-  const {
-    checkedInIds, handleCheckin, pinDistances, userPos,
-    isCompleted, nextSpot,
-    announcements, announcementDismissed, setAnnouncementDismissed,
-    surveyOpen, setSurveyOpen, surveyRating, setSurveyRating,
-    surveyComment, setSurveyComment, surveySubmitted, handleSurveySubmit,
-  } = useEventMapData({ map, features, config, isEventMap, showViewerToast })
-
-  // 댓글
-  const {
-    comments, commentText, setCommentText, commentLoading, myKey,
-    editingId, setEditingId, editText, setEditText,
-    reportTarget, setReportTarget, commentsEnabled, canComment,
-    handleAddComment, handleEditComment, handleDeleteComment, handleReport,
-  } = useEventComments({ mapId: map.id, selectedId, isEventMap, config, checkedInIds, showViewerToast })
 
   // 공유
   const [shareOpen, setShareOpen] = useState(false)
@@ -211,42 +148,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     setShareOpen(false)
   }, [shareUrl, map, showViewerToast])
 
-  // 알림
-  const [notiPanelOpen, setNotiPanelOpen] = useState(false)
-  const {
-    notifications: notiList,
-    bannerItem: notiBanner,
-    dismissBanner: notiDismissBanner,
-    markRead: notiMarkRead,
-    markAllRead: notiMarkAllRead,
-    removeItem: notiRemove,
-  } = useNotifications({
-    mapId: map.id,
-    mapTitle: map.title,
-    isEventMap,
-    config,
-    announcements,
-    features,
-    checkedInIds,
-    isCompleted,
-    pinDistances,
-  })
-
   const selectedFeature = selectedId ? features.find((f) => f.id === selectedId) : null
-
-  const currentUserPos = userPos || null
-
-  // Extract tag pills for normal map
-  const _mapTags = useMemo(() => {
-    const tagSet = new Set()
-    features.forEach((f) => {
-      const catId = f.category || emojiToCategory(f.emoji)
-      const ic = getPinIcon(catId)
-      if (ic.label) tagSet.add(ic.label)
-      f.tags?.forEach((t) => tagSet.add(t))
-    })
-    return Array.from(tagSet).slice(0, 6)
-  }, [features])
 
   // 장소 선택 이벤트 로깅과 장소별 체류 시간 추적
   const handleFeatureSelect = useCallback((featureId) => {
@@ -275,12 +177,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     setFocusPoint(getFeatureCenter(feature))
   }
 
-  const goToNextSpot = useCallback(() => {
-    if (!nextSpot) return
-    handleFeatureSelect(nextSpot.id)
-    setFocusPoint(getFeatureCenter(nextSpot))
-  }, [nextSpot, handleFeatureSelect])
-
   const handleSave = useCallback(async () => {
     if (savingToApp || !onSaveToApp) return
     if (hasSupabaseEnv && map.id) {
@@ -294,149 +190,28 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     onSaveToApp()
   }, [map.id, onSaveToApp, savingToApp])
 
-  // 체크인 버튼 렌더 헬퍼
-  const renderCheckinBtn = (feature, size = "normal") => {
-    if (!isEventMap || !config.checkin_enabled || feature.type !== "pin") return null
-    const alreadyChecked = checkedInIds.has(feature.id)
-    const dist = pinDistances[feature.id]
-    const radiusM = config.checkin_radius || DEFAULT_CHECKIN_RADIUS_M
-    const noLimit = radiusM === 0
-    const isNearby = noLimit || (dist != null && dist <= radiusM)
-    const tooFar = !noLimit && !isNearby && dist != null
-
-    let label
-    if (alreadyChecked) label = "\uCCB4\uD06C \uC644\uB8CC"
-    else if (tooFar) label = `${formatDistance(dist)} \uAC70\uB9AC`
-    else label = "\uCCB4\uD06C\uC778"
-
-    return (
-      <button
-        className={`lw-checkin-btn${size === "large" ? " lw-checkin-btn--lg" : ""}${alreadyChecked ? " is-checked" : tooFar ? " is-far" : ""}`}
-        type="button"
-        onClick={() => handleCheckin(feature.id)}
-        disabled={alreadyChecked || tooFar}
-      >
-        {label}
-      </button>
-    )
-  }
-
-  // ??? Bottom Sheet (shared by both map types) ???
-  const _renderBottomSheet = (featureList) => (
-    <div className={`lw-sheet${sheetExpanded ? " is-expanded" : ""}`}>
-      <div className="lw-sheet__handle" onClick={() => setSheetExpanded((v) => !v)} />
-      {!sheetExpanded ? (
-        <div className="lw-sheet__scroll">
-          {featureList.map((f) => {
-            const catId = f.category || emojiToCategory(f.emoji)
-            const ic = getPinIcon(catId)
-            return (
-              <button key={f.id} className="lw-sheet__card" type="button" onClick={() => handleSpotTap(f)}>
-                <span className="lw-sheet__card-icon" style={{ background: ic.bg }}>
-                  <img src={`/icons/pins/${catId}.svg`} width="10" height="10" alt="" />
-                </span>
-                <span className="lw-sheet__card-name">{f.title}</span>
-                <span className="lw-sheet__card-sub">{getRegionText(f)}</span>
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <>
-          <div className="lw-sheet__header">장소 목록 ({featureList.length}곳)</div>
-          <div className="lw-sheet__list">
-            {featureList.map((f) => {
-              const catId = f.category || emojiToCategory(f.emoji)
-              const ic = getPinIcon(catId)
-              const checked = isEventMap && checkedInIds.has(f.id)
-              return (
-                <button
-                  key={f.id}
-                  className={`lw-sheet__row${checked ? " is-checked" : ""}`}
-                  type="button"
-                  onClick={() => handleSpotTap(f)}
-                >
-                  <span className="lw-sheet__row-icon" style={{ background: ic.bg }}>
-                    <img src={`/icons/pins/${catId}.svg`} width="18" height="18" alt="" />
-                  </span>
-                  <span className="lw-sheet__row-info">
-                    <span className="lw-sheet__row-name">{f.title}</span>
-                    <span className="lw-sheet__row-sub">{getRegionText(f)}</span>
-                  </span>
-                  {checked ? <span className="lw-sheet__row-badge">체크됨</span> : null}
-                </button>
-              )
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  )
-
-  // ??? Event: next spot / completed row inside bottom sheet ???
-  const renderEventSheetExtras = () => {
-    if (!isEventMap) return null
-    if (isCompleted) {
-      return (
-        <div className="lw-sheet__completed">
-          <span>모든 장소를 방문했어요</span>
-          {config.survey_enabled && !surveySubmitted ? (
-            <button className="lw-sheet__survey-btn" type="button" onClick={() => setSurveyOpen(true)}>
-              설문 참여하기
-            </button>
-          ) : null}
-        </div>
-      )
-    }
-    if (nextSpot) {
-      const catId = nextSpot.category || emojiToCategory(nextSpot.emoji)
-      const ic = getPinIcon(catId)
-      return (
-        <button className="lw-sheet__next-spot" type="button" onClick={goToNextSpot}>
-          <span className="lw-cat-icon" style={{ background: ic.bg }}>
-            <img src={`/icons/pins/${catId}.svg`} width="12" height="12" alt="" />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span className="lw-sheet__next-label">다음 장소</span>
-            <span className="lw-sheet__next-title">{nextSpot.title}</span>
-          </span>
-          {pinDistances[nextSpot.id] != null ? (
-            <span className="lw-sheet__next-dist">{formatDistance(pinDistances[nextSpot.id])}</span>
-          ) : null}
-        </button>
-      )
-    }
-    return null
-  }
-
-  // 비이벤트 지도(일반 공유)
-  // config.ci_* 색상은 추후 사용 예정 — 현 v2 리디자인 단계에서는 미사용.
-  const orgName = config.org_name || map.title
-  const orgLogo = config.org_logo
-  const eventPeriod = config.event_period || ""
+  const orgName = map.title
   // unified shared viewer shell
-    return (
-      <div className="lw-viewer lw-viewer--v2">
-        {/* Hero card header */}
-        <div className="lw-hero">
-          <div className="lw-hero__blob" />
-          <div className="lw-hero__row1">
+  return (
+    <div className="lw-viewer lw-viewer--v2">
+      {/* Hero card header */}
+      <div className="lw-hero">
+        <div className="lw-hero__blob" />
+        <div className="lw-hero__row1">
           {onBack ? (
             <button type="button" onClick={onBack} className="lw-back-btn" aria-label="뒤로">
               <ArrowLeft size={20} />
             </button>
           ) : null}
           <div className="lw-ci-logo">
-            {orgLogo ? <img src={orgLogo} alt="" /> : orgName.slice(0, 2)}
+            {orgName.slice(0, 2)}
           </div>
           <div className="lw-ci-info">
             <span className="lw-ci-title">{map.title}</span>
-            <span className="lw-ci-org">
-              {orgName}{eventPeriod ? ` · ${eventPeriod}` : ""}
-            </span>
+            {map.description ? <span className="lw-ci-org">{map.description}</span> : null}
           </div>
           <div className="lw-ci-actions">
-            {onSaveToApp ? <SaveButton onClick={handleSave} isEvent loading={savingToApp} /> : null}
+            {onSaveToApp ? <SaveButton onClick={handleSave} loading={savingToApp} /> : null}
             <button
               className="lw-noti-btn"
               type="button"
@@ -467,21 +242,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
 
         {/* Inner content area */}
         <div className="lw-ci-inner">
-          {/* Announcement banner */}
-          {announcements.length > 0 && !announcementDismissed ? (
-            <div className="lw-announce">
-              <span className="lw-announce__icon">📢</span>
-              <span className="lw-announce__text">
-                <strong>공지</strong> {announcements[0].title}
-                {announcements[0].body ? ` · ${announcements[0].body}` : ""}
-              </span>
-              <button className="lw-announce__close" type="button" onClick={() => setAnnouncementDismissed(true)}>
-                <X size={8} strokeWidth={1.5} />
-              </button>
-            </div>
-          ) : null}
-          <AnnouncementViewTracker mapId={map.id} announcements={announcements} dismissed={announcementDismissed} />
-
           {/* Map area */}
           <div className="lw-event-map">
             <MapErrorBoundary>
@@ -494,9 +254,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 fitTrigger={fitTrigger}
                 onFeatureTap={handleFeatureSelect}
                 showLabels
-                myLocation={currentUserPos}
-                checkedInIds={config.checkin_enabled ? checkedInIds : null}
-                isEventMap={isEventMap}
               />
             </MapErrorBoundary>
 
@@ -507,48 +264,19 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                   feature={selectedFeature}
                   mapMode="personal"
                   isAuthor={false}
-                  currentUserId={myKey}
+                  currentUserId={null}
                   routeLengthKm={
                     selectedFeature.type === "route"
                       ? computeRouteLengthKm(selectedFeature.points)
                       : null
                   }
                   onClose={() => { voicePlayback.stop(); setSelectedId(null) }}
-                  headerExtra={renderCheckinBtn(selectedFeature)}
                   currentPlayingVoiceId={voicePlayback.playingId}
                   onVoiceClick={(voice, index) => {
                     const key = makeVoiceScopeKey(selectedFeature.id, voice, index)
                     voicePlayback.toggle(voice, key)
                   }}
                 />
-
-                {/* 이벤트 지도: 댓글 영역을 카드 아래에 따라 붙인다 */}
-                {isEventMap && commentsEnabled ? (
-                  <div className="lw-spot-detail-wrap__comments">
-                    <button
-                      type="button"
-                      className={`lw-spot-comments-toggle${spotTab === "comments" ? " is-open" : ""}`}
-                      onClick={() => setSpotTab(spotTab === "comments" ? "info" : "comments")}
-                      aria-expanded={spotTab === "comments"}
-                    >
-                      <span>댓글{comments.length > 0 ? ` ${comments.length}` : ""}</span>
-                      <span className="lw-spot-comments-toggle__chev" aria-hidden>
-                        {spotTab === "comments" ? "▾" : "▸"}
-                      </span>
-                    </button>
-                    {spotTab === "comments" ? (
-                      <SpotComments
-                        comments={comments} commentText={commentText} setCommentText={setCommentText}
-                        commentLoading={commentLoading} myKey={myKey}
-                        editingId={editingId} setEditingId={setEditingId}
-                        editText={editText} setEditText={setEditText}
-                        commentsEnabled={commentsEnabled} canComment={canComment} config={config}
-                        onAddComment={handleAddComment} onEditComment={handleEditComment}
-                        onDeleteComment={handleDeleteComment} onReport={setReportTarget}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
             ) : null}
 
@@ -557,24 +285,21 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
               <div className={`lw-sheet${sheetExpanded ? " is-expanded" : ""}`}>
                 <div className="lw-sheet__handle" onClick={() => setSheetExpanded((v) => !v)} />
                 {!sheetExpanded ? (
-                  <>
-                    {renderEventSheetExtras()}
-                    <div className="lw-sheet__scroll">
-                      {features.map((f) => {
-                        const catId = f.category || emojiToCategory(f.emoji)
-                        const ic = getPinIcon(catId)
-                        return (
-                          <button key={f.id} className="lw-sheet__card" type="button" onClick={() => handleSpotTap(f)}>
-                            <span className="lw-sheet__card-icon" style={{ background: ic.bg }}>
-                              <img src={`/icons/pins/${catId}.svg`} width="10" height="10" alt="" />
-                            </span>
-                            <span className="lw-sheet__card-name">{f.title}</span>
-                            <span className="lw-sheet__card-sub">{getRegionText(f)}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
+                  <div className="lw-sheet__scroll">
+                    {features.map((f) => {
+                      const catId = f.category || emojiToCategory(f.emoji)
+                      const ic = getPinIcon(catId)
+                      return (
+                        <button key={f.id} className="lw-sheet__card" type="button" onClick={() => handleSpotTap(f)}>
+                          <span className="lw-sheet__card-icon" style={{ background: ic.bg }}>
+                            <img src={`/icons/pins/${catId}.svg`} width="10" height="10" alt="" />
+                          </span>
+                          <span className="lw-sheet__card-name">{f.title}</span>
+                          <span className="lw-sheet__card-sub">{getRegionText(f)}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 ) : (
                   <>
                     <div className="lw-sheet__header">장소 목록 ({features.length}곳)</div>
@@ -582,11 +307,10 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                       {features.map((f) => {
                         const catId = f.category || emojiToCategory(f.emoji)
                         const ic = getPinIcon(catId)
-                        const checked = checkedInIds.has(f.id)
                         return (
                           <button
                             key={f.id}
-                            className={`lw-sheet__row${checked ? " is-checked" : ""}`}
+                            className="lw-sheet__row"
                             type="button"
                             onClick={() => handleSpotTap(f)}
                           >
@@ -597,7 +321,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                               <span className="lw-sheet__row-name">{f.title}</span>
                               <span className="lw-sheet__row-sub">{getRegionText(f)}</span>
                             </span>
-                            {checked ? <span className="lw-sheet__row-badge">✓</span> : null}
                           </button>
                         )
                       })}
@@ -615,43 +338,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           <BrandLogo as="span" className="lw-ci-powered-logo" dotClassName="lw-ci-powered-logo__dot" />
         </div>
       </div>
-
-      {/* Report dialog */}
-      {reportTarget ? (
-        <ReportDialog onReport={handleReport} onClose={() => setReportTarget(null)} />
-      ) : null}
-
-      {/* Survey popup */}
-      {surveyOpen ? (
-        <SurveyPopup
-          rating={surveyRating} setRating={setSurveyRating}
-          comment={surveyComment} setComment={setSurveyComment}
-          onSubmit={handleSurveySubmit} onClose={() => setSurveyOpen(false)}
-        />
-      ) : null}
-
-      <NotificationBanner
-        notification={notiBanner}
-        onTap={() => { notiDismissBanner(); setNotiPanelOpen(true) }}
-        onDismiss={notiDismissBanner}
-      />
-
-      {notiPanelOpen && (
-        <NotificationPanel
-          notifications={notiList}
-          onMarkRead={notiMarkRead}
-          onMarkAllRead={notiMarkAllRead}
-          onRemove={notiRemove}
-          onClose={() => setNotiPanelOpen(false)}
-          onTap={(item) => {
-            setNotiPanelOpen(false)
-            if (item.meta?.featureId) {
-              const feat = features.find((f) => f.id === item.meta.featureId)
-              if (feat) handleSpotTap(feat)
-            }
-          }}
-        />
-      )}
 
       {toastMsg ? <div className="lw-toast">{toastMsg}</div> : null}
     </div>

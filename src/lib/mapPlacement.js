@@ -7,19 +7,8 @@
 // - 프로필 노출(isOnProfile)   : 사용자가 명시적으로 프로필에 올려둔 상태
 //   (내부적으로는 map_publications row 존재 여부 = local 모드에서는 shares 배열 존재 여부)
 //
-// 핸드북 OVERRIDE 2 에 따라 event map 도 프로필 노출이 가능하다.
-// 단, event map 의 발행 관리(publish/unpublish)는 대시보드 전용이므로 canPublish/canUnpublish=false.
-
 import { requireSupabase } from "./supabase"
 import { requireUser } from "./mapService.utils"
-
-/**
- * event map 판정 helper. 새 코드에서는 map.category === 'event' 직접 비교 대신
- * 이 helper 를 사용한다. null/undefined 를 안전하게 처리한다.
- */
-export function isEventMap(map) {
-  return Boolean(map) && map.category === "event"
-}
 
 /**
  * 단일 지도의 현재 상태와 가능한 액션을 계산한다.
@@ -32,17 +21,14 @@ export function isEventMap(map) {
  */
 export function getProfilePlacementState(map, placementRow = null) {
   const mapObj = map || {}
-  const isEvent = isEventMap(mapObj)
   const hasSlug = Boolean(mapObj.slug)
   const isPublished = Boolean(mapObj.isPublished || mapObj.is_published || hasSlug)
   const isDraft = !isPublished
   const isOnProfile = Boolean(placementRow)
 
-  // 메인 앱 발행/발행 중단은 non-event map 에만 허용 (핸드북 §1)
-  const canPublish = !isEvent && isDraft
-  const canUnpublish = !isEvent && isPublished
+  const canPublish = isDraft
+  const canUnpublish = isPublished
 
-  // 프로필 노출은 event map 포함 모든 발행된 지도가 대상 (OVERRIDE 2)
   const canAddToProfile = isPublished && !isOnProfile
   const canRemoveFromProfile = isPublished && isOnProfile
 
@@ -50,7 +36,6 @@ export function getProfilePlacementState(map, placementRow = null) {
     isDraft,
     isPublished,
     isOnProfile,
-    isEventMap: isEvent,
     canPublish,
     canUnpublish,
     canAddToProfile,

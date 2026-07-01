@@ -170,121 +170,7 @@ export async function unsaveMap(mapId, options = {}) {
   return typeof data === "string" ? JSON.parse(data) : data
 }
 
-// ─── B2B/B2G 초대코드 ───
-
-export async function redeemInvitationCode(codeText) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("redeem_invitation_code", {
-    code_text: codeText.trim(),
-  })
-  if (error) throw error
-  return data
-}
-
-export async function checkB2BAccess() {
-  const supabase = requireSupabase()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return false
-
-  const { data, error } = await supabase
-    .from("invitation_redemptions")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1)
-
-  if (error) return false
-  return data.length > 0
-}
-
-// ─── 공지사항 ───
-
-export async function getActiveAnnouncements(mapId) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("announcements")
-    .select("id, title, body, created_at")
-    .eq("map_id", mapId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-export async function getAllAnnouncements(mapId) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("announcements")
-    .select("id, title, body, is_active, created_at, updated_at")
-    .eq("map_id", mapId)
-    .order("created_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
-export async function createAnnouncement(mapId, { title, body }) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("announcements")
-    .insert({ map_id: mapId, title: title.trim(), body: (body || "").trim() })
-    .select("*")
-    .single()
-
-  if (error) throw error
-  return data
-}
-
-export async function updateAnnouncement(announcementId, { title, body }) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase
-    .from("announcements")
-    .update({ title: title.trim(), body: (body || "").trim() })
-    .eq("id", announcementId)
-    .select("*")
-    .single()
-
-  if (error) throw error
-  return data
-}
-
-export async function toggleAnnouncementActive(announcementId, isActive) {
-  const supabase = requireSupabase()
-  const { error } = await supabase
-    .from("announcements")
-    .update({ is_active: isActive })
-    .eq("id", announcementId)
-
-  if (error) throw error
-}
-
-export async function deleteAnnouncement(announcementId) {
-  const supabase = requireSupabase()
-  const { error } = await supabase
-    .from("announcements")
-    .delete()
-    .eq("id", announcementId)
-
-  if (error) throw error
-}
-
 // ─── 성장 엔진 RPC (v2) ───
-
-export async function submitEventCheckin(mapId, featureId, sessionId = null, lat = null, lng = null, accuracy = null) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("submit_event_checkin", {
-    p_map_id: mapId,
-    p_feature_id: featureId,
-    p_session_id: sessionId,
-    p_lat: lat,
-    p_lng: lng,
-    p_accuracy: accuracy,
-  })
-  if (error) throw error
-  return data
-}
 
 export async function recordMapAction(actionType, eventKey, mapId = null, featureId = null, payload = {}) {
   const supabase = requireSupabase()
@@ -295,13 +181,6 @@ export async function recordMapAction(actionType, eventKey, mapId = null, featur
     p_feature_id: featureId,
     p_payload: payload,
   })
-  if (error) throw error
-  return data
-}
-
-export async function submitSurveyReward(mapId) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("submit_survey_reward", { p_map_id: mapId })
   if (error) throw error
   return data
 }
@@ -356,6 +235,7 @@ export async function awardBadge(badgeId) {
   return data
 }
 
+// 기념 뱃지(souvenir) 발급 — 마일스톤 게이미피케이션에서 사용.
 export async function awardSouvenir(souvenirCode, mapId = null, meta = {}) {
   const supabase = requireSupabase()
   const { data: { user } } = await supabase.auth.getUser()
@@ -374,24 +254,4 @@ export async function awardSouvenir(souvenirCode, mapId = null, meta = {}) {
 
   if (error && error.code !== "23505") throw error
   return data
-}
-
-// ─── 설문 ───
-
-export async function submitSurveyResponse(mapId, { rating, comment }) {
-  const supabase = requireSupabase()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const { error } = await supabase.from("survey_responses").insert({
-    map_id: mapId,
-    session_id: getSessionId(),
-    user_id: user?.id || null,
-    rating,
-    comment: comment || "",
-    answers: {},
-  })
-
-  if (error) throw error
 }

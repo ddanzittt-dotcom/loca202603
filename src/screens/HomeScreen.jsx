@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
 import { Bell, ChevronLeft, ChevronRight, MapPin, X } from "lucide-react"
-import { isEventMap } from "../lib/mapPlacement"
 import { buildGreetingContext, getDailyGreeting } from "../lib/greeting"
 import { PhotoBlock, SectionHead } from "../components/visuals"
 import { BrandLogo } from "../components/BrandLogo"
@@ -578,7 +577,6 @@ export function HomeScreen(props) {
 
   const personalMaps = useMemo(() => (
     maps
-      .filter((map) => !isEventMap(map))
       .slice()
       .sort((a, b) => getMapTime(b) - getMapTime(a))
   ), [maps])

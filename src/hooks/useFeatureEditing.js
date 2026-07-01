@@ -7,8 +7,6 @@ import {
   updateFeatureMemo as updateFeatureMemoRecord,
   deleteFeatureMemo as deleteFeatureMemoRecord,
   createFeature as createFeatureRecord,
-  getFeatureOperatorNote,
-  saveFeatureOperatorNote,
   updateFeature as updateFeatureRecord,
   deleteFeature as deleteFeatureRecord,
 } from "../lib/mapService"
@@ -117,7 +115,6 @@ function mergePendingSheetDraft(savedFeature, currentSheet) {
     category: currentSheet.category ?? savedFeature.category,
     style: currentSheet.style ?? savedFeature.style,
     highlight: currentSheet.highlight ?? savedFeature.highlight,
-    operatorNote: currentSheet.operatorNote,
     cloudPending: false,
   }, currentSheet)
 }
@@ -133,8 +130,6 @@ export function useFeatureEditing({
   activeMapId,
   activeMapSource,
   cloudMode,
-  isEventMap = false,
-  activeMapRole = "owner",
   setFeatures,
   featureSheet,
   setFeatureSheet,
@@ -165,9 +160,6 @@ export function useFeatureEditing({
     && activeMapId !== "community-map"
     && isSupabaseUuid(activeMapId)
   const canPersistLocalInCloud = cloudMode && activeMapSource === "local" && isSupabaseUuid(activeMapId)
-  const isLocalEventMap = activeMapSource === "local" && isEventMap
-  const canUseOperatorNote = isLocalEventMap && (activeMapRole === "owner" || activeMapRole === "operator")
-  const shouldRequestApproval = cloudMode && isLocalEventMap && activeMapRole === "editor"
 
   const submitFeatureRequest = useCallback(async (action, featureId, payload = {}) => {
     if (!activeMapId) return false
@@ -197,21 +189,11 @@ export function useFeatureEditing({
       setSelectedFeatureId(featureId)
       setSelectedFeatureSummaryId(featureId)
       setFeatureSheet(toEditableFeature(feature))
-      if (cloudMode && canUseOperatorNote) {
-        getFeatureOperatorNote(featureId)
-          .then((operatorNote) => {
-            setFeatureSheet((current) => {
-              if (!current || current.id !== featureId) return current
-              return { ...current, operatorNote: operatorNote || "" }
-            })
-          })
-          .catch(() => {})
-      }
       return
     }
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-  }, [activeFeaturePool, canUseOperatorNote, cloudMode, selectedFeatureSummaryId, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, selectedFeatureSummaryId, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const focusFeatureOnly = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
@@ -232,17 +214,7 @@ export function useFeatureEditing({
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
     setFeatureSheet(toEditableFeature(feature))
-    if (cloudMode && canUseOperatorNote) {
-      getFeatureOperatorNote(featureId)
-        .then((operatorNote) => {
-          setFeatureSheet((current) => {
-            if (!current || current.id !== featureId) return current
-            return { ...current, operatorNote: operatorNote || "" }
-          })
-        })
-        .catch(() => {})
-    }
-  }, [activeFeaturePool, canUseOperatorNote, cloudMode, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   // 지도 완성도 마일스톤 체크 (cloud mode only)
   const checkCompletionMilestone = useCallback((mapId) => {
@@ -369,7 +341,6 @@ export function useFeatureEditing({
 
   const saveFeatureSheet = useCallback(async () => {
     const lastKnownUpdatedAt = featureSheet?.updatedAt || null
-    const operatorNote = `${featureSheet?.operatorNote || ""}`.slice(0, 4000)
     if (featureSheet?.cloudPending) return showToast("저장 준비 중이에요. 잠시 후 다시 눌러 주세요.")
     if (!featureSheet?.title.trim()) return showToast("이름을 입력해 주세요.")
     if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
@@ -416,8 +387,7 @@ export function useFeatureEditing({
             return mergeFeatureMedia(displayFeature, feature)
           }))
           setFeatureSheet((current) => {
-            const merged = toEditableFeature(mergeFeatureMedia(displayFeature, current))
-            return { ...merged, operatorNote: current?.operatorNote || "" }
+            return toEditableFeature(mergeFeatureMedia(displayFeature, current))
           })
           showToast("정보를 저장했어요.")
           return
@@ -434,25 +404,6 @@ export function useFeatureEditing({
       setCommunityMapFeatures(mergeMediaFromCurrent)
     } else {
       if (cloudMode) {
-        if (shouldRequestApproval) {
-          const requested = await submitFeatureRequest("update", nextFeature.id, {
-            type: nextFeature.type,
-            title: nextFeature.title,
-            emoji: nextFeature.emoji,
-            tags: nextFeature.tags || [],
-            note: nextFeature.note || "",
-            highlight: Boolean(nextFeature.highlight),
-            style: nextFeature.style,
-            lat: nextFeature.lat,
-            lng: nextFeature.lng,
-            points: nextFeature.points || null,
-            sortOrder: nextFeature.sortOrder || 0,
-            operatorNote,
-            createdByName: currentUserName || me.name,
-          })
-          if (requested) return
-          return
-        }
         try {
           const savedFeature = await updateFeatureRecord(nextFeature.id, {
             ...nextFeature,
@@ -465,8 +416,7 @@ export function useFeatureEditing({
             return mergeFeatureMedia(displayFeature, feature)
           }))
           setFeatureSheet((current) => {
-            const merged = toEditableFeature(mergeFeatureMedia(displayFeature, current))
-            return { ...merged, operatorNote: current?.operatorNote || "" }
+            return toEditableFeature(mergeFeatureMedia(displayFeature, current))
           })
           setMaps((current) => current.map((mapItem) => (
             mapItem.id === savedFeature.mapId
@@ -483,9 +433,6 @@ export function useFeatureEditing({
             }).catch(() => {})
           }
           checkCompletionMilestone(nextFeature.mapId)
-          if (canUseOperatorNote) {
-            await saveFeatureOperatorNote(nextFeature.id, operatorNote)
-          }
           showToast("정보를 저장했어요.")
           return
         } catch (error) {
@@ -507,20 +454,16 @@ export function useFeatureEditing({
     showToast("정보를 저장했어요.")
   }, [
     activeMapId,
-    canUseOperatorNote,
     activeMapSource,
     canPersistCommunityInCloud,
     cloudMode,
     currentUserId,
-    currentUserName,
     featureSheet,
-    shouldRequestApproval,
     setCommunityMapFeatures,
     setFeatureSheet,
     setFeatures,
     setMaps,
     showToast,
-    submitFeatureRequest,
     touchMap,
     checkCompletionMilestone,
   ])
@@ -550,18 +493,6 @@ export function useFeatureEditing({
       setCommunityMapFeatures((current) => current.filter((feature) => feature.id !== featureSheet.id))
     } else {
       if (cloudMode) {
-        if (shouldRequestApproval) {
-          const requested = await submitFeatureRequest("delete", featureSheet.id, {
-            title: featureSheet.title || "",
-            type: featureSheet.type || "pin",
-          })
-          if (requested) {
-            setFeatureSheet(null)
-            setSelectedFeatureId(null)
-            setSelectedFeatureSummaryId(null)
-          }
-          return
-        }
         try {
           await deleteFeatureRecord(featureSheet.id, featureSheet.mapId, {
             lastKnownUpdatedAt: featureSheet.updatedAt || null,
@@ -591,14 +522,12 @@ export function useFeatureEditing({
     cloudMode,
     currentUserId,
     featureSheet,
-    shouldRequestApproval,
     setCommunityMapFeatures,
     setFeatureSheet,
     setFeatures,
     setSelectedFeatureId,
     setSelectedFeatureSummaryId,
     showToast,
-    submitFeatureRequest,
     touchMap,
   ])
 
@@ -949,15 +878,6 @@ export function useFeatureEditing({
       let relocatedFeature = null
 
       if (cloudMode) {
-        if (shouldRequestApproval && activeMapSource === "local") {
-          await submitFeatureRequest("update", featureId, {
-            lat: sc.lat,
-            lng: sc.lng,
-            title: activeFeaturePool.find((feature) => feature.id === featureId)?.title || "",
-            type: "pin",
-          })
-          return showToast("위치 변경 요청을 보냈어요. 승인 후 반영돼요.")
-        }
         const currentFeature = activeFeaturePool.find((feature) => feature.id === featureId)
         try {
           const saved = await updateFeatureRecord(featureId, {
@@ -1055,26 +975,6 @@ export function useFeatureEditing({
         setCommunityMapFeatures((current) => [nextFeature, ...current])
       } else {
         if (canPersistLocalInCloud) {
-          if (shouldRequestApproval) {
-            await submitFeatureRequest("insert", null, {
-              type: nextFeature.type,
-              title: nextFeature.title,
-              emoji: nextFeature.emoji,
-              tags: nextFeature.tags || [],
-              note: nextFeature.note || "",
-              highlight: Boolean(nextFeature.highlight),
-              style: nextFeature.style,
-              lat: nextFeature.lat,
-              lng: nextFeature.lng,
-              points: null,
-              sortOrder: 0,
-              createdByName: currentUserName || me.name,
-            })
-            setEditorMode("browse")
-            setSelectedFeatureId(null)
-            setFeatureSheet(null)
-            return
-          }
           createFeatureOptimistically(nextFeature, {
             setPool: setFeatures,
             successToast: "핀을 추가했어요.",
@@ -1161,25 +1061,6 @@ export function useFeatureEditing({
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
       if (canPersistLocalInCloud) {
-        if (shouldRequestApproval) {
-          await submitFeatureRequest("insert", null, {
-            type: nextFeature.type,
-            title: nextFeature.title,
-            emoji: nextFeature.emoji,
-            tags: nextFeature.tags || [],
-            note: nextFeature.note || "",
-            highlight: Boolean(nextFeature.highlight),
-            style: nextFeature.style,
-            points: nextFeature.points || [],
-            sortOrder: 0,
-            createdByName: currentUserName || me.name,
-          })
-          setDraftPoints([])
-          setEditorMode("browse")
-          setSelectedFeatureId(null)
-          setFeatureSheet(null)
-          return
-        }
         createFeatureOptimistically(nextFeature, {
           setPool: setFeatures,
           successToast: "길을 저장했어요.",
@@ -1258,25 +1139,6 @@ export function useFeatureEditing({
       setCommunityMapFeatures((current) => [nextFeature, ...current])
     } else {
       if (canPersistLocalInCloud) {
-        if (shouldRequestApproval) {
-          await submitFeatureRequest("insert", null, {
-            type: nextFeature.type,
-            title: nextFeature.title,
-            emoji: nextFeature.emoji,
-            tags: nextFeature.tags || [],
-            note: nextFeature.note || "",
-            highlight: Boolean(nextFeature.highlight),
-            style: nextFeature.style,
-            points: nextFeature.points || [],
-            sortOrder: 0,
-            createdByName: currentUserName || me.name,
-          })
-          setDraftPoints([])
-          setEditorMode("browse")
-          setSelectedFeatureId(null)
-          setFeatureSheet(null)
-          return
-        }
         createFeatureOptimistically(nextFeature, {
           setPool: setFeatures,
           successToast: "영역을 저장했어요.",

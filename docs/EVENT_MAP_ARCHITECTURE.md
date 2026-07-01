@@ -1,11 +1,13 @@
 # LOCA 행사 지도 아키텍처
 
+> 🗑️ **DEPRECATED (2026-07):** LOCA는 B2C 전용으로 전환되어 행사지도(event map)/운영자(manager)/커뮤니티 검수 기능이 전면 제거되었다. 이 문서는 **과거 아키텍처 이력**으로만 보존한다. 현행 방향은 루트 `CLAUDE.md`와 `loca202603/CLAUDE.md`의 B2C 섹션 참조.
+
 ## 역할 분리 원칙
 
 | 구분 | 앱 | 역할 | URL |
 |------|-----|------|-----|
 | **메인 앱** | loca202603 | participant shell only | loca202603.vercel.app |
-| **웹 대시보드** | loca-dashboard | manager console only | 별도 배포 (포트 5174) |
+| **관리자 라우트** | loca202603 | platform_admin operations | `/admin/community-moderation` |
 
 ### 메인 앱 (participant only)
 - 행사 링크를 열면 **항상 참여자 화면**으로 진입
@@ -13,10 +15,10 @@
 - 편집/관리 버튼, 대시보드 진입점, 운영 도구 **일체 없음**
 - 개인 지도(category !== 'event')는 기존 MapEditorScreen으로 편집 가능
 
-### 웹 대시보드 (manager only)
-- 행사 수정, 체크포인트 CRUD, 공지 관리, 댓글 moderation, 운영 지표
+### 관리자 라우트 (platform_admin only)
+- 공개 웹 기록 검수, 숨김, 공개 처리, 추천지도 draft 생성
+- 운영 액션은 Supabase RPC에서 `platform_admin` 권한을 다시 검증
 - 댓글 작성 기능 **없음** (작성은 participant 앱에서만)
-- 4개 탭: 대시보드 / 지도 관리 / 댓글 관리 / 공지 관리
 
 ---
 
@@ -74,10 +76,10 @@
 
 ---
 
-## 댓글 Moderation 흐름 (manager, dashboard)
+## 댓글 Moderation 흐름 (manager)
 
 ```
-댓글 관리 탭 진입
+관리자 라우트 진입
   ↓
 [통계 확인]
   - 전체 / 공개 / 숨김 / 신고 / 오늘 / 최근 7일

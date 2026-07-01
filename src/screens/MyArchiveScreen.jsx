@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { isEventMap } from "../lib/mapPlacement"
 import { BrandLogo } from "../components/BrandLogo"
 import { ExploreScreen } from "./ExploreScreen"
 import { MapsListScreen } from "./MapsListScreen"
@@ -39,7 +38,7 @@ export function MyArchiveScreen({
 }) {
   const [archiveView, setArchiveView] = useState(initialArchiveView)
   const isPlacesHub = initialArchiveView === "places"
-  const personalMaps = maps.filter((map) => !isEventMap(map))
+  const personalMaps = maps
   const personalMapIds = new Set(personalMaps.map((map) => map.id))
   const personalFeatures = features.filter((feature) => personalMapIds.has(feature.mapId))
   const personalShares = shares.filter((share) => personalMapIds.has(share.mapId))

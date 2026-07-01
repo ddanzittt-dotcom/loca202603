@@ -5,25 +5,14 @@ const MAX_ITEMS = 100
 
 /** 알림 유형 */
 export const NOTI_TYPES = {
-  ANNOUNCEMENT: "announcement",
   FEATURE_COMMENT: "feature_comment",
   FEATURE_UPDATE_REQUEST: "feature_update_request",
   MAP_VIEWED: "map_viewed",
-  CHECKIN_REMINDER: "checkin_reminder",
-  COMPLETION: "completion",
   COMMENT_PINNED: "comment_pinned",
-  EVENT_ENDING: "event_ending",
 }
 
 /** 카테고리별 스타일 (SVG 아이콘 + 색상) */
 export const NOTI_CATEGORY = {
-  [NOTI_TYPES.ANNOUNCEMENT]: {
-    label: "이벤트 공지",
-    bg: "#FFF4EB",
-    color: "#FF6B35",
-    // lightning bolt
-    icon: '<path d="M13 2L4.5 12H11L10 22L18.5 12H12L13 2Z" fill="currentColor"/>',
-  },
   [NOTI_TYPES.FEATURE_COMMENT]: {
     label: "내 맵핑 댓글",
     bg: "#E1F5EE",
@@ -45,20 +34,6 @@ export const NOTI_CATEGORY = {
     // bookmark
     icon: '<path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" fill="currentColor"/>',
   },
-  [NOTI_TYPES.CHECKIN_REMINDER]: {
-    label: "체크인 리마인더",
-    bg: "#FAEEDA",
-    color: "#BA7517",
-    // location pin
-    icon: '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>',
-  },
-  [NOTI_TYPES.COMPLETION]: {
-    label: "완주 축하",
-    bg: "#FFF4EB",
-    color: "#FF6B35",
-    // star
-    icon: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>',
-  },
   [NOTI_TYPES.COMMENT_PINNED]: {
     label: "내 댓글 고정",
     bg: "#EEEDFE",
@@ -66,25 +41,14 @@ export const NOTI_CATEGORY = {
     // pinned star
     icon: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>',
   },
-  [NOTI_TYPES.EVENT_ENDING]: {
-    label: "행사 임박",
-    bg: "#FCEBEB",
-    color: "#E24B4A",
-    // clock
-    icon: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><polyline points="12 6 12 12 16 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-  },
 }
 
 /** 알림 설정 키 매핑 (appSettings key -> type) */
 export const NOTI_SETTING_KEYS = {
-  noti_announcement: NOTI_TYPES.ANNOUNCEMENT,
   noti_feature_comment: NOTI_TYPES.FEATURE_COMMENT,
   noti_feature_update_request: NOTI_TYPES.FEATURE_UPDATE_REQUEST,
   noti_map_viewed: NOTI_TYPES.MAP_VIEWED,
-  noti_checkin_reminder: NOTI_TYPES.CHECKIN_REMINDER,
-  noti_completion: NOTI_TYPES.COMPLETION,
   noti_comment_pinned: NOTI_TYPES.COMMENT_PINNED,
-  noti_event_ending: NOTI_TYPES.EVENT_ENDING,
 }
 
 // 내부 helper

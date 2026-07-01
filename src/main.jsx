@@ -1,3 +1,13 @@
+if (import.meta.env.DEV && import.meta.env.VITE_REACT_SCAN === "1") {
+  import("react-scan").then(({ scan }) => {
+    scan({ enabled: true, trackUnnecessaryRenders: true })
+  })
+}
+
+if (import.meta.env.DEV && import.meta.env.VITE_REACT_GRAB === "1") {
+  import("react-grab")
+}
+
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { StatusBar, Style } from "@capacitor/status-bar"
@@ -13,20 +23,16 @@ import "./styles/tokens-v2.css"
 import "./styles/app-shell.css"
 import "./styles/start-screen.css"
 import "./styles/visuals.css"
-import "./styles/home-v2.css"
 import "./styles/maps-v2.css"
-import "./styles/explore-v2.css"
 import "./styles/profile-v2.css"
 import "./styles/map-detail-v2.css"
 import "./styles/feature-detail-v2.css"
 import "./styles/feature-sheets-v2.css"
 import "./styles/record-entry-sheet.css"
 import "./styles/public-community.css"
-import "./styles/admin-moderation.css"
 import "./styles/animations.css"
 import App from "./App"
 import { PublicCommunityPage } from "./screens/PublicCommunityPage"
-import { AdminCommunityModerationScreen } from "./screens/AdminCommunityModerationScreen"
 import { publicRecommendMaps } from "./data/publicRecommendMaps"
 import {
   applyPublicOgMeta,
@@ -75,9 +81,7 @@ const publicPage = recommendMatch
   ? <PublicCommunityPage page="search" />
   : publicPath === "/community-web"
     ? <PublicCommunityPage page="community" />
-    : publicPath === "/admin/community-moderation"
-      ? <AdminCommunityModerationScreen />
-      : <App />
+    : <App />
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

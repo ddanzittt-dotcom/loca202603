@@ -5,7 +5,7 @@ import { Avatar } from "../components/Avatar"
 import { BrandLogo } from "../components/BrandLogo"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
-import { getProfilePlacementState, isEventMap } from "../lib/mapPlacement"
+import { getProfilePlacementState } from "../lib/mapPlacement"
 import { hasSupabaseEnv } from "../lib/supabase"
 
 const PROFILE_ALIAS_SUGGESTIONS = ["성수 카페 탐험가", "동네 산책러", "주말 미식가", "서울 골목 탐험가"]
@@ -118,7 +118,6 @@ function ProfileMiniCard({ map, features, onClick }) {
 function ProfileEmptyGallery({ maps, shares, characterImage }) {
   const shareMapIds = new Set(shares.map((share) => share.mapId))
   const hasPublishedNotOnProfile = maps.some((map) => {
-    if (isEventMap(map)) return false
     const state = getProfilePlacementState(map)
     return state.isPublished && !shareMapIds.has(map.id)
   })
@@ -137,7 +136,6 @@ function ProfilePickerSheet({ open, maps, shares, featuresByMapId, onClose, onBa
   const [selected, setSelected] = useState(new Set())
   const shareMapIds = useMemo(() => new Set(shares.map((share) => share.mapId)), [shares])
   const candidates = useMemo(() => maps.filter((map) => {
-    if (isEventMap(map)) return false
     return getProfilePlacementState(map).isPublished && !shareMapIds.has(map.id)
   }), [maps, shareMapIds])
 
@@ -296,8 +294,6 @@ export function ProfileScreen({
   onBatchAddToProfile,
   onNavigateToMaps,
   onResetCoachmark,
-  hasB2BAccess = false,
-  onB2BAccessChange,
 }) {
   const [settingsOpenLocal, setSettingsOpenLocal] = useState(false)
   const settingsOpen = settingsOpenProp ?? settingsOpenLocal
@@ -333,13 +329,13 @@ export function ProfileScreen({
   const galleryItems = useMemo(() => shares
     .map((share) => {
       const map = mapById.get(share.mapId)
-      if (!map || isEventMap(map)) return null
+      if (!map) return null
       return { share, map, features: featuresByMapId.get(share.mapId) || [] }
     })
     .filter(Boolean), [featuresByMapId, mapById, shares])
   const stats = useMemo(() => ({
     placeCount: features.filter((feature) => feature?.type === "pin").length,
-    mapCount: maps.filter((map) => !isEventMap(map)).length,
+    mapCount: maps.length,
     recordCount: features.reduce((sum, feature) => sum + (Array.isArray(feature?.memos) ? feature.memos.filter((memo) => memo?.text?.trim()).length : 0), 0),
   }), [features, maps])
 
@@ -572,13 +568,6 @@ export function ProfileScreen({
             <button type="button" className="settings-row-button" onClick={clearCache}><Trash2 size={16} />캐시 정리<ChevronRight size={14} /></button>
             {onResetCoachmark ? <button type="button" className="settings-row-button" onClick={onResetCoachmark}><Check size={16} />가이드 다시 보기<ChevronRight size={14} /></button> : null}
             {onNavigateToMaps ? <button type="button" className="settings-row-button" onClick={onNavigateToMaps}><MapPin size={16} />내 지도 열기<ChevronRight size={14} /></button> : null}
-          </div>
-          <div className="settings-card">
-            <h2>비즈니스</h2>
-            <label className="settings-toggle-row">
-              <span className="settings-toggle-label">B2B 기능</span>
-              <input type="checkbox" checked={Boolean(hasB2BAccess)} onChange={(event) => onB2BAccessChange?.(event.target.checked)} />
-            </label>
           </div>
           <div className="settings-card">
             <h2>약관</h2>

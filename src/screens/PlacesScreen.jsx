@@ -11,7 +11,6 @@ import {
   X,
 } from "lucide-react"
 import { featureSort } from "../lib/appUtils"
-import { isEventMap } from "../lib/mapPlacement"
 
 const TYPE_FILTERS = [
   { id: "all", label: "전체", dot: null },
@@ -96,10 +95,7 @@ export function PlacesScreen({
   const [contentFilters, setContentFilters] = useState([])
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [sortMode, setSortMode] = useState("latest")
-  const personalMaps = useMemo(
-    () => maps.filter((map) => !isEventMap(map)),
-    [maps],
-  )
+  const personalMaps = maps
   const personalMapIds = useMemo(
     () => new Set(personalMaps.map((map) => map.id)),
     [personalMaps],

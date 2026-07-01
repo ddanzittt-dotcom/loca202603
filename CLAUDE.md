@@ -5,8 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # LOCA Project Reference
 
 ## Overview
-LOCA는 로컬 큐레이션 지도 앱이다. 사용자가 자신만의 지도를 만들고, 핀/경로/영역을 기록하며, 다른 사용자와 공유하는 모바일 퍼스트 플랫폼이다.
+LOCA는 **B2C 로컬 큐레이션 지도 웹서비스**(도메인 loca.im)다. 사용자가 자신만의 지도를 만들고, 핀/경로/영역을 기록하며, 발행·공유·커뮤니티로 나누는 모바일 퍼스트 플랫폼이다.
 프로덕션 번들에서 복원(recovery)된 소스코드로, 현재 편집 가능한 React/Vite 구조로 재구성되어 있다.
+
+> **⚠️ 2026-07 B2C 전환:** 행사지도(event map)/B2B/운영자(manager) 기능은 앱 코드에서 전면 제거됨. 아래 문서에 남아 있는 이벤트/체크인/설문/공지/대시보드/초대코드/B2B 서술은 **과거 이력**이며 현재 코드에는 없다. **유지된 것:** 지도 제작·편집, 발행·공유, 커뮤니티(모두의 지도), 공동편집 협업(`map_collaborators`), 게이미피케이션(레벨/XP/배지), 알림, 소셜 프로필.
 
 ## Tech Stack
 - **Frontend**: React 19 + Vite 8, JavaScript (JSX), ES2020+, React.lazy 코드 스플리팅
@@ -32,7 +34,7 @@ src/
     MapsListScreen.jsx # 내 지도 목록 + 검색 + 스켈레톤/빈상태
     MapEditorScreen.jsx# 지도 편집, 피처 그리기, 공유, 공지 관리
     MapShareEditor.jsx # 지도 공유 이미지 생성 (프레임/스티커/QR)
-    SharedMapViewer.jsx# 공유 뷰어 + 이벤트 지도 체크인/공지/설문 + 오프라인
+    SharedMapViewer.jsx# 발행/공유 지도 읽기 전용 뷰어 + 라이브러리 저장 + 공유
     PlacesScreen.jsx   # 전체 피처 검색 + EmptyState
     SearchScreen.jsx   # 사용자 검색/팔로우 + EmptyState
     ProfileScreen.jsx  # 프로필, 발행 지도, 캐릭터 선택, 초대코드 입력
@@ -43,9 +45,9 @@ src/
     MapErrorBoundary.jsx
     MediaWidgets.jsx   # 사진/음성 녹음 위젯
     sheets/            # 바텀시트 컴포넌트
-      AnnouncementSheet.jsx  # 공지 CRUD (생성/수정/토글/삭제/미리보기)
       FeatureDetailSheet.jsx
-      MapFormSheet.jsx       # 지도 생성/수정 + B2B 카테고리/템플릿 선택
+      MapFormSheet.jsx       # 지도 생성/수정
+      CollaboratorsSheet.jsx # 공동편집 협업자 초대/관리
       PostDetailSheet.jsx
       PublishSheet.jsx
       SharePlaceSheet.jsx
@@ -67,7 +69,6 @@ src/
     supabaseHealthCheck.js  # 프로덕션 환경 검증 스크립트 (dev 전용, 번들 미포함)
   data/
     sampleData.js      # 데모 데이터 (지도 3개, 피처, 유저, 포스트)
-    templates.js       # 이벤트 지도 템플릿 (스탬프투어, 맛집투어)
   legacy/
     styles.css         # 원본 프로덕션 스타일시트 (보존)
   map-editor-overlays.css  # 에디터 오버레이 + 스피너/스켈레톤/빈상태/에러카드/공지관리 스타일
@@ -111,11 +112,12 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 - **Feature 3종**: Pin(좌표), Route(좌표 배열), Area(다각형)
 - 모든 Feature: title, emoji, tags[], note, highlight, memos[], photos[], voices[]
 
-### DB Tables (Supabase) — 12개
-**기본 (v1):** profiles, maps, map_publications, map_features, feature_memos, follows, view_logs
-**대시보드 (v2):** announcements, survey_responses
-**B2B (v3):** invitation_codes, invitation_redemptions
-**보안 (v4):** invitation_code_attempts (rate limit 추적)
+### DB Tables (Supabase) — 앱이 쓰는 것
+**핵심:** profiles, maps, map_publications, map_features, feature_memos, follows, view_logs
+**협업/커뮤니티:** map_collaborators, community_records(모두의 지도)
+**게이미피케이션:** user_stats, user_badges, user_souvenirs
+
+> 과거 이벤트/B2B 테이블(announcements, survey_responses, event_checkins, invitation_codes 등)은 migrations 이력에 남아 있으나 **앱 코드에서 미사용**.
 
 ### Sharing & OG 메타
 - **미발행 지도**: gzip 압축 → `/shared?data=v2:...` (자체 포함)
@@ -123,11 +125,10 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 - **OG 메타**: Vercel Serverless Function이 봇 UA 감지 → 동적 HTML 반환 (카카오/페이스북/트위터)
 - **OG 이미지**: `/api/og-image/:slug` — 테마 색상 기반 SVG 동적 생성
 
-### B2C / B2B·B2G 모드 분리
-- `maps.category`: `personal` (B2C), `event` (B2B/B2G 유료)
-- 초대코드 → `redeem_invitation_code()` RPC (분당 5회 rate limit)
-- 이벤트 지도 기능: 체크인, 공지사항 (CRUD 관리 UI), 완주 후 설문
-- MapEditorScreen 헤더에 📢 공지 관리 버튼 (이벤트 지도 + cloudMode일 때만)
+### B2C 전용 (구 event/B2B 제거됨)
+- `maps.category`: `personal` 등 B2C 카테고리만 사용. `event` 분기·`isEventMap` 헬퍼는 제거됨
+- 초대코드/B2B 게이팅(`redeemInvitationCode`/`checkB2BAccess`), 체크인·완주·설문·공지 CRUD, 대시보드 진입 UI 모두 제거됨
+- 발행/공유 지도는 `SharedMapViewer`(읽기 전용 + 라이브러리 저장 + 공유)로만 렌더
 
 ### 이벤트 로깅 + 오프라인 큐
 - `analytics.js`: logEvent → 성공 시 즉시 전송, 실패/오프라인 시 `loca.event_queue` localStorage에 저장
@@ -186,12 +187,10 @@ VITE_SUPABASE_ANON_KEY=your-public-anon-key
 ---
 
 ## Supabase 설정 체크리스트 (운영 전 필수)
-- [ ] SQL Editor에서 `002_dashboard_schema.sql` 실행
-- [ ] SQL Editor에서 `003_b2b_schema.sql` 실행
-- [ ] SQL Editor에서 `004_rls_hardening.sql` 실행
+- [ ] `loca_v1_schema.sql` + 최신 migrations 순서대로 실행 (RLS 포함)
 - [ ] Storage → 새 버킷 `media` 생성 (Public 체크)
 - [ ] Authentication → URL Configuration → Site URL + Redirect URLs 설정
-- [ ] 초대코드 추가: `INSERT INTO invitation_codes (code, label) VALUES ('코드', '설명')`
+> 구 이벤트/B2B 마이그레이션(002_dashboard, 003_b2b, 004_rls 등)은 앱에서 미사용 — 신규 환경엔 실행 불필요.
 
 ## Health Check
 개발 서버에서 브라우저 콘솔:

@@ -1,11 +1,10 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { LogIn, X } from "lucide-react"
+import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
-  collections,
   communityMapFeaturesSeed,
   communityPostsSeed,
   demoFeatures,
@@ -25,8 +24,6 @@ import {
   buildOwnPosts,
   buildSlugShareUrl,
   parseAppLocation,
-  parseMapImportTarget,
-  parseMapSharePayload,
   placeEmojis,
   themePalette,
 } from "./lib/appUtils"
@@ -34,16 +31,14 @@ import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord } from "./lib/mapService"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createFeature as createFeatureRecord, createMap as createMapRecord } from "./lib/mapService.write"
+import { createMap as createMapRecord } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
-const WelcomeScreen = lazy(() => import("./screens/WelcomeScreen").then((m) => ({ default: m.WelcomeScreen })))
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
-const HomeScreen = lazy(() => import("./screens/HomeScreen").then((m) => ({ default: m.HomeScreen })))
-const ExploreScreen = lazy(() => import("./screens/ExploreScreen").then((m) => ({ default: m.ExploreScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
-const MyArchiveScreen = lazy(() => import("./screens/MyArchiveScreen").then((m) => ({ default: m.MyArchiveScreen })))
+const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
+const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
 import { useFeaturePool } from "./hooks/useFeaturePool"
@@ -67,24 +62,20 @@ import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
 import { CollaboratorsSheet } from "./components/sheets/CollaboratorsSheet"
-import { resolveEventAccess } from "./lib/eventAccess"
-import { findPlacementForMap, isEventMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
+import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
 import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated } from "./lib/onboarding"
 import { CoachMark } from "./components/CoachMark"
 import { mergeFeatureListWithLocalMedia } from "./lib/featureMediaMerge"
 import { getPendingFeatureMediaSyncKeys, syncFeatureListLocalMediaToCloud } from "./lib/mediaCloudSync"
 const MapShareEditor = lazy(() => import("./screens/MapShareEditor").then((m) => ({ default: m.MapShareEditor })))
-const ImportMapSheet = lazy(() => import("./components/sheets/ImportMapSheet").then((m) => ({ default: m.ImportMapSheet })))
 import "./shared-viewer.css"
 import "./map-share-editor.css"
-
-const STARTUP_AUTO_DISMISS_MS = 2600
 
 function ScreenFallback() {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#999" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🗺️</div>
+        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>LOCA</div>
         <span style={{ fontSize: 14 }}>로딩 중...</span>
       </div>
     </div>
@@ -131,36 +122,131 @@ class AppErrorBoundary extends Component {
   }
 }
 
-function AuthPromptBanner({ onLogin, onDismiss }) {
+const EMPTY_WEB_STATS = []
+const EMPTY_WEB_CUE_ITEMS = []
+
+function WebStatStrip({ items = EMPTY_WEB_STATS }) {
+  if (!items.length) return null
+
   return (
-    <aside className="auth-prompt-banner" aria-label="로그인 안내">
-      <div className="auth-prompt-banner__copy">
-        <strong>로그인이 필요한 기능이에요</strong>
-        <span>내 지도와 프로필은 로그인 후 사용할 수 있어요.</span>
-      </div>
-      <div className="auth-prompt-banner__actions">
-        <button className="auth-prompt-banner__primary" type="button" onClick={onLogin}>
-          <LogIn size={16} strokeWidth={2.2} />
-          로그인
-        </button>
-        <button className="auth-prompt-banner__ghost" type="button" onClick={onDismiss}>
-          나중에
-        </button>
-      </div>
-    </aside>
+    <div className="web-stat-strip" aria-label="화면 요약">
+      {items.map((item) => (
+        <div className="web-stat" key={item.label}>
+          <span>{item.label}</span>
+          <strong>{item.value}</strong>
+          {item.caption ? <em>{item.caption}</em> : null}
+        </div>
+      ))}
+    </div>
   )
 }
 
-function AuthPromptSheet({ children, onClose }) {
+function WebSocialCue({ label, items = EMPTY_WEB_CUE_ITEMS }) {
+  if (!label && !items.length) return null
+
   return (
-    <div className="auth-sheet-backdrop" role="presentation">
-      <section className="auth-sheet-panel" role="dialog" aria-modal="true" aria-label="로그인">
-        <button className="auth-sheet-close" type="button" onClick={onClose} aria-label="로그인 닫기">
-          <X size={19} strokeWidth={2.2} />
-        </button>
-        {children}
-      </section>
+    <div className="web-social-cue" aria-label="저장함 분위기">
+      <div className="web-social-cue__swatches" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
+      </div>
+      <div className="web-social-cue__copy">
+        {label ? <strong>{label}</strong> : null}
+        {items.length ? (
+          <span>{items.join(" · ")}</span>
+        ) : null}
+      </div>
     </div>
+  )
+}
+
+function WebPageFrame({
+  className = "",
+  eyebrow,
+  title,
+  description,
+  action,
+  stats,
+  socialCue,
+  children,
+}) {
+  const frameClassName = ["screen screen--scroll web-section", className].filter(Boolean).join(" ")
+
+  return (
+    <section className={frameClassName}>
+      <div className="web-section__inner">
+        <div className="web-section__head">
+          <div className="web-section__headline">
+            {eyebrow ? <span className="web-section__eyebrow">{eyebrow}</span> : null}
+            <h1 className="web-section__title">{title}</h1>
+            {description ? <p className="web-section__description">{description}</p> : null}
+            {socialCue ? <WebSocialCue {...socialCue} /> : null}
+          </div>
+          {action ? <div className="web-section__actions">{action}</div> : null}
+        </div>
+        <WebStatStrip items={stats} />
+        <div className="web-section__workspace">
+          {children}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function WebAuthLayout({ children }) {
+  return (
+    <section className="screen screen--scroll web-auth-screen">
+      <div className="web-auth-workspace">
+        <aside className="web-auth-workspace__intro" aria-label="LOCA 웹 소개">
+          <span className="web-section__eyebrow">SOFT SOCIAL PLACES</span>
+          <h1>같이 가고 싶은 곳을 지도에 모아요.</h1>
+          <p>친구와 저장한 장소, 내가 만든 코스, 공개할 지도를 한 화면에서 가볍게 이어갑니다.</p>
+          <WebSocialCue label="지금 모으는 지도" items={["주말 산책", "카페 후보", "같이 갈 곳"]} />
+          <div className="web-auth-workspace__flow" aria-label="주요 작업 흐름">
+            <span><PenLine size={15} aria-hidden="true" />장소 저장</span>
+            <span><MapIcon size={15} aria-hidden="true" />지도 공유</span>
+            <span><MapPin size={15} aria-hidden="true" />프로필 공개</span>
+          </div>
+        </aside>
+        <div className="web-auth-workspace__panel">
+          {children}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function SignedInScreen({ user, onOpenMaps, onOpenProfile, onSignOut }) {
+  return (
+    <WebAuthLayout>
+      <div className="web-auth-screen__inner">
+        <div className="web-auth-card">
+          <CheckCircle2 size={26} strokeWidth={2.2} aria-hidden="true" />
+          <div>
+            <strong>로그인되어 있어요</strong>
+            <span>{user?.email || "현재 계정"}</span>
+          </div>
+        </div>
+
+        <div className="web-auth-actions" aria-label="계정 바로가기">
+          <button type="button" onClick={onOpenMaps}>
+            <MapIcon size={17} strokeWidth={2.1} aria-hidden="true" />
+            지도 목록
+          </button>
+          <button type="button" onClick={onOpenProfile}>
+            <User size={17} strokeWidth={2.1} aria-hidden="true" />
+            프로필
+          </button>
+          {onSignOut ? (
+            <button type="button" className="is-ghost" onClick={onSignOut}>
+              로그아웃
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </WebAuthLayout>
   )
 }
 
@@ -170,62 +256,6 @@ const resolveStoredMapTarget = (mapId, maps) => {
   if (demoMaps.some((map) => map.id === mapId)) return { source: "demo", mapId }
   if (maps.some((map) => map.id === mapId)) return { source: "local", mapId }
   return null
-}
-
-const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(`${value || ""}`)
-
-const toFiniteNumber = (value) => {
-  const next = Number(value)
-  return Number.isFinite(next) ? next : null
-}
-
-function formatEventFeatureDate(dateStr) {
-  if (!dateStr || `${dateStr}`.length !== 8) return ""
-  return `${Number(`${dateStr}`.slice(4, 6))}.${Number(`${dateStr}`.slice(6, 8))}`
-}
-
-function buildEventFeatureDraft(event, mapId) {
-  const lat = toFiniteNumber(event?.lat)
-  const lng = toFiniteNumber(event?.lng)
-  if (lat === null || lng === null) return null
-  const title = `${event?.title || "행사"}`.trim() || "행사"
-  const startDate = event?.startDate || event?.eventStartDate || ""
-  const endDate = event?.endDate || event?.eventEndDate || ""
-  const period = startDate ? `${formatEventFeatureDate(startDate)}${endDate ? ` ~ ${formatEventFeatureDate(endDate)}` : ""}` : ""
-  const address = [event?.addr, event?.addrDetail].filter(Boolean).join(" ").trim()
-  const place = event?.eventPlace || event?.place || ""
-  const noteLines = [
-    period ? `기간: ${period}` : "",
-    place ? `장소: ${place}` : "",
-    address ? `주소: ${address}` : "",
-    event?.tel ? `연락처: ${event.tel}` : "",
-    event?.overview ? `${event.overview}`.slice(0, 500) : "",
-  ].filter(Boolean)
-
-  return {
-    id: createId("feat"),
-    mapId,
-    type: "pin",
-    title,
-    emoji: "🎪",
-    tags: ["행사"].concat(period ? [period] : []),
-    note: noteLines.join("\n"),
-    highlight: true,
-    lat,
-    lng,
-    sortOrder: 0,
-    memos: [],
-    photos: [],
-    voices: [],
-    address,
-    category: "event",
-    sourceProvider: "tourapi",
-    sourceEventId: event?.id ? `tourapi:${event.id}` : `tourapi:${title}:${lat}:${lng}`,
-    sourceUrl: event?.homepage || "",
-    image: event?.image || "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
 }
 
 export default function App() {
@@ -251,8 +281,7 @@ export default function App() {
   const initialSharedMapData = routeAtLoad?.type === "shared" ? routeAtLoad.payload : null
   const [sharedMapData, setSharedMapData] = useState(initialSharedMapData)
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
-  const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "home")
-  const [exploreSearchRequestId, setExploreSearchRequestId] = useState(0)
+  const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "login")
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -269,7 +298,7 @@ export default function App() {
   const [inlineRecordFeatureId, setInlineRecordFeatureId] = useState(null)
   const [featureSheetMode, setFeatureSheetMode] = useState("detail")
   // 모두의 지도 → 내 지도 가져오기 타겟 선택 시트
-  const [importTargetSheet, setImportTargetSheet] = useState(null) // { featureId } | { externalEvent } | null
+  const [importTargetSheet, setImportTargetSheet] = useState(null) // { featureId } | null
   const [importTargetBusy, setImportTargetBusy] = useState(false)
   const [publishSheet, setPublishSheet] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -277,7 +306,6 @@ export default function App() {
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [memoText, setMemoText] = useState("")
   const [shareEditorImage, setShareEditorImage] = useState(null)
-  const [importSheetOpen, setImportSheetOpen] = useState(false)
   const [recordSheetOpen, setRecordSheetOpen] = useState(false)
   const [recordSheetInitialView, setRecordSheetInitialView] = useState("target")
   const [recordTargetMapId, setRecordTargetMapId] = useState(null)
@@ -290,10 +318,6 @@ export default function App() {
   const [savingPostMapId, setSavingPostMapId] = useState(null)
   const [savingSharedMap, setSavingSharedMap] = useState(false)
   const [keyboardVisible, setKeyboardVisible] = useState(false)
-  const [startupDismissed, setStartupDismissed] = useState(() => Boolean(initialSharedMapData || initialStoredTarget || routeAtLoad?.type))
-  const [welcomeIntent, setWelcomeIntent] = useState(null)
-  const [authPromptVisible, setAuthPromptVisible] = useState(false)
-  const [authSheetOpen, setAuthSheetOpen] = useState(false)
   const [coachmarkStep, setCoachmarkStep] = useState(0) // 0=off, 1~3=active step
   const [firstPinHintVisible, setFirstPinHintVisible] = useState(false)
   const [communityPendingRequests, setCommunityPendingRequests] = useState([])
@@ -390,7 +414,6 @@ export default function App() {
 
   const {
     authReady, authUser, cloudMode, cloudLoading, cloudDataReady, cloudLoadedUserId,
-    hasB2BAccess, setHasB2BAccess,
     readLocalImportData,
     reloadCloudData, handleSignOut, importLocalDataToCloud,
   } = useAppSession({
@@ -409,64 +432,28 @@ export default function App() {
   const isFirstCloudLoadForUser = cloudLoading && !cloudDataReady && cloudLoadedUserId !== authUser?.id && !hasStoredPersonalCacheForUser
   const requiresAuthForCurrentTab =
     activeTab === "profile" ||
+    activeTab === "places" ||
     (activeTab === "maps" && (mapsView === "list" || activeMapSource === "local"))
   const showPersonalGate = needsAuthForPersonalArea && requiresAuthForCurrentTab
   const showPersonalLoading = hasSupabaseEnv && (!authReady || isFirstCloudLoadForUser) && requiresAuthForCurrentTab
-  const showStartup = !sharedMapData && !startupDismissed
-
-  const openAuthSheet = useCallback(() => {
-    setAuthPromptVisible(true)
-    setAuthSheetOpen(true)
-  }, [])
-
-  const closeAuthPrompt = useCallback(() => {
-    setAuthPromptVisible(false)
-    setAuthSheetOpen(false)
-  }, [])
 
   const requestLoginBanner = useCallback(() => {
-    setAuthPromptVisible(true)
-    setAuthSheetOpen(false)
+    setActiveTab("login")
   }, [])
 
   const handleAuthSuccess = useCallback((mode) => {
     showToast(mode === "signup" ? "회원가입이 완료되었어요." : "로그인했어요.")
-    setStartupDismissed(true)
-    closeAuthPrompt()
-  }, [closeAuthPrompt, showToast])
+    setActiveTab("maps")
+    setMapsView("list")
+    setActiveMapSource("local")
+  }, [setActiveMapSource, setActiveTab, setMapsView, showToast])
 
   useEffect(() => {
-    if (startupDismissed || sharedMapData) return undefined
-    if (hasSupabaseEnv && !authReady) return undefined
-    if (hasSupabaseEnv && !authUser) return undefined
-
-    const timer = window.setTimeout(() => setStartupDismissed(true), STARTUP_AUTO_DISMISS_MS)
-    return () => window.clearTimeout(timer)
-  }, [authReady, authUser, sharedMapData, startupDismissed])
-
-  useEffect(() => {
-    if (!authUser) return
-    setAuthPromptVisible(false)
-    setAuthSheetOpen(false)
-  }, [authUser])
-
-  useEffect(() => {
-    if (!showPersonalGate || showStartup) return
-    setAuthPromptVisible(true)
-    setAuthSheetOpen(false)
-    if (activeTab !== "home") setActiveTab("home")
+    if (!showPersonalGate) return
+    if (activeTab !== "login") setActiveTab("login")
     if (mapsView !== "list") setMapsView("list")
     if (activeMapSource !== "local") setActiveMapSource("local")
-  }, [activeMapSource, activeTab, mapsView, showPersonalGate, showStartup])
-
-  const openExploreTab = useCallback(() => {
-    setActiveTab("explore")
-  }, [])
-
-  const openExploreSearch = useCallback(() => {
-    setActiveTab("explore")
-    setExploreSearchRequestId((current) => current + 1)
-  }, [])
+  }, [activeMapSource, activeTab, mapsView, showPersonalGate])
 
   const openCreateMapSheet = useCallback(() => {
     if (needsAuthForPersonalArea) {
@@ -477,28 +464,6 @@ export default function App() {
     setMapsView("list")
     setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
   }, [needsAuthForPersonalArea, requestLoginBanner])
-
-  const handleWelcomeBrowse = useCallback(() => {
-    setStartupDismissed(true)
-    setWelcomeIntent(null)
-    setActiveTab("home")
-  }, [])
-
-  const handleWelcomeAddFirstPlace = useCallback(() => {
-    setStartupDismissed(true)
-    setWelcomeIntent("first-place")
-    setActiveTab("maps")
-    setMapsView("list")
-    setActiveMapSource("local")
-  }, [])
-
-  useEffect(() => {
-    if (welcomeIntent !== "first-place") return
-    if (!authReady) return
-    if (hasSupabaseEnv && !authUser) return
-    openCreateMapSheet()
-    setWelcomeIntent(null)
-  }, [authReady, authUser, openCreateMapSheet, welcomeIntent])
 
   // --- Gamification ---
 
@@ -515,7 +480,6 @@ export default function App() {
   const [notiPanelOpen, setNotiPanelOpen] = useState(false)
   const {
     notifications: notiList,
-    hasUnread: notiHasUnread,
     bannerItem: notiBanner,
     dismissBanner: notiDismissBanner,
     markRead: notiMarkRead,
@@ -579,10 +543,7 @@ export default function App() {
     if (!communityMapId || communityMapId === "community-map") return
     setActiveMapId(communityMapId)
   }, [activeMapId, activeMapSource, communityMapId, setActiveMapId])
-  const b2cMaps = useMemo(
-    () => maps.filter((mapItem) => !isEventMap(mapItem)),
-    [maps],
-  )
+  const b2cMaps = maps
   const b2cMapIds = useMemo(
     () => new Set(b2cMaps.map((mapItem) => mapItem.id)),
     [b2cMaps],
@@ -691,54 +652,6 @@ export default function App() {
     }
   }, [communityMapFeatures, communityPendingRequests, viewerProfile?.id])
 
-  // 인기 지도: is_curated 우선 → 폴백으로 기존 collections + communityFeed
-  const [curatedMaps, setCuratedMaps] = useState([])
-  useEffect(() => {
-    if (!cloudMode) return
-    let cancelled = false
-    import("./lib/mapService").then((svc) => svc.getCuratedMaps(12))
-      .then((result) => { if (!cancelled) setCuratedMaps(result) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [cloudMode])
-
-  const recommendedMaps = useMemo(() => {
-    // 큐레이션 지도가 있으면 우선 사용
-    if (curatedMaps.length > 0) {
-      return curatedMaps.map((m) => ({
-        id: m.id, mapId: m.id, title: m.title,
-        description: m.description || "",
-        creator: m.creatorName || "", emojis: [], placeCount: m.featureCount || 0,
-        gradient: m.gradient, tags: m.tags,
-        placeNames: Array.isArray(m.placeNames) ? m.placeNames : [],
-      }))
-    }
-    // 폴백: 기존 컬렉션 + 커뮤니티
-    const fromCollections = collections.map((c) => {
-      const demoMap = demoMaps.find((mapItem) => mapItem.id === c.mapId)
-      const relatedDemoFeatures = demoFeatures.filter((feature) => feature.mapId === c.mapId)
-      const placeNames = relatedDemoFeatures.map((feature) => feature.title)
-      const tags = [...new Set(relatedDemoFeatures.flatMap((feature) => feature.tags || []))].slice(0, 4)
-      return {
-        id: c.id, mapId: c.mapId, title: c.title,
-        description: demoMap?.description || "",
-        creator: c.creator, emojis: c.emojis, placeCount: c.places,
-        tags,
-        gradient: c.gradient,
-        placeNames,
-      }
-    })
-    const fromPosts = communityFeed.slice(0, 6).map((p) => ({
-      id: p.id, mapId: p.mapId, title: p.title,
-      description: p.description || p.caption || "",
-      creator: p.user.name, emojis: p.emojis, placeCount: p.placeCount,
-      tags: p.tags,
-      gradient: p.gradient,
-      placeNames: Array.isArray(p.placeNames) ? p.placeNames : [],
-    }))
-    return [...fromCollections, ...fromPosts]
-  }, [communityFeed, curatedMaps])
-
   const selectedUser = selectedUserProfile?.id === selectedUserId
     ? selectedUserProfile
     : selectedUserId
@@ -805,7 +718,7 @@ export default function App() {
 
   const {
     touchMap, resetEditorState,
-    openMapEditor, openDemoMap, openCommunityMapEditor,
+    openMapEditor,
     saveMapSheet, deleteMap: deleteMapAction, reorderMaps,
     importSharedMapToLocal, importMapBundleToLocal,
     publishMap, unpublish, addMapToProfile, removeMapFromProfile,
@@ -821,34 +734,6 @@ export default function App() {
     refreshGameProfile,
     communityMapId,
   })
-
-  const handleImportMap = useCallback(async (importInput) => {
-    const target = typeof importInput === "object" && importInput
-      ? importInput
-      : parseMapImportTarget(importInput)
-    if (!target) throw new Error("공유 코드나 링크를 확인해 주세요.")
-
-    if (target.type === "shared") {
-      const bundle = target.payload || parseMapSharePayload(target.data)
-      await importMapBundleToLocal(bundle, {
-        toastMessage: `"${bundle.map.title}" 지도를 내 라이브러리에 저장했어요.`,
-      })
-      return
-    }
-
-    if (!hasSupabaseEnv) throw new Error("클라우드 연결이 필요해요.")
-    const bundle = await getPublishedMapBySlug(target.slug)
-    if (!bundle) throw new Error("해당 코드의 지도를 찾을 수 없어요.")
-    const { map: importedMap } = bundle
-    if (maps.some((m) => m.id === importedMap.id)) {
-      showToast("이미 라이브러리에 있는 지도예요.")
-      openMapEditor(importedMap.id)
-      return
-    }
-    await importMapBundleToLocal(bundle, {
-      toastMessage: `"${importedMap.title}" 지도를 내 라이브러리에 저장했어요.`,
-    })
-  }, [importMapBundleToLocal, maps, openMapEditor, showToast])
 
   const refreshCommunityPendingRequests = useCallback(async () => {
     if (!hasSupabaseEnv || !authUser || !communityMapId || communityMapId === "community-map") return
@@ -867,7 +752,6 @@ export default function App() {
     startRelocatePin, importCommunityFeatureToMine, unimportCommunityFeature,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
-    isEventMap: isEventMap(activeMap),
     activeMapRole: activeMap?.userRole || "owner",
     setFeatures, featureSheet, setFeatureSheet,
     selectedFeatureSummaryId,
@@ -890,7 +774,7 @@ export default function App() {
 
   const openCollaboratorsForMap = useCallback((mapId) => {
     const targetMap = maps.find((item) => item.id === mapId)
-    if (!targetMap || isEventMap(targetMap) || targetMap.isCommunity) return
+    if (!targetMap || targetMap.isCommunity) return
     if (!cloudMode) {
       showToast("로그인 후 내 지도 협업자를 초대할 수 있어요.")
       return
@@ -932,97 +816,17 @@ export default function App() {
     setImportTargetSheet({ featureId: sourceFeatureId })
   }, [])
 
-  const addExternalEventToMap = useCallback(async (event, targetMapInput = null) => {
-    const targetMap = typeof targetMapInput === "object" && targetMapInput
-      ? targetMapInput
-      : maps.find((mapItem) => mapItem.id === targetMapInput)
-    if (!targetMap || isEventMap(targetMap) || targetMap.canEditFeatures === false) {
-      showToast("추가할 내 지도를 찾지 못했어요.")
-      return false
-    }
-
-    const draft = buildEventFeatureDraft(event, targetMap.id)
-    if (!draft) {
-      showToast("행사 위치 정보가 없어 내 지도에 추가하지 못했어요.")
-      return false
-    }
-
-    const alreadyAdded = (features || []).some((feature) => {
-      if (feature.mapId !== targetMap.id) return false
-      if (feature.sourceEventId && feature.sourceEventId === draft.sourceEventId) return true
-      const lat = toFiniteNumber(feature.lat)
-      const lng = toFiniteNumber(feature.lng)
-      return feature.title === draft.title
-        && lat !== null
-        && lng !== null
-        && Math.abs(lat - draft.lat) < 0.0001
-        && Math.abs(lng - draft.lng) < 0.0001
-    })
-    if (alreadyAdded) {
-      showToast("이미 이 지도에 추가된 행사예요.")
-      return true
-    }
-
-    const draftFeature = {
-      ...draft,
-      createdBy: viewerProfile.id || me.id,
-      createdByName: viewerProfile.name || me.name,
-    }
-
-    try {
-      let nextFeature = draftFeature
-      if (cloudMode && isUuidLike(targetMap.id)) {
-        const saved = await createFeatureRecord(targetMap.id, draftFeature)
-        nextFeature = {
-          ...draftFeature,
-          ...saved,
-          address: draftFeature.address,
-          category: draftFeature.category,
-          sourceProvider: draftFeature.sourceProvider,
-          sourceEventId: draftFeature.sourceEventId,
-          sourceUrl: draftFeature.sourceUrl,
-          image: draftFeature.image,
-        }
-      }
-      setFeatures((current) => [nextFeature, ...current])
-      touchMap?.(targetMap.id)
-      showToast(`'${targetMap.title || "내 지도"}'에 행사를 추가했어요.`)
-      return true
-    } catch (error) {
-      console.error("Failed to add event to map", error)
-      showToast("행사를 내 지도에 추가하지 못했어요.")
-      return false
-    }
-  }, [cloudMode, features, maps, setFeatures, showToast, touchMap, viewerProfile.id, viewerProfile.name])
-
-  const handleAddEventToMapRequest = useCallback((event) => {
-    if (!event) return
-    setImportTargetSheet({ externalEvent: event })
-  }, [])
-
   const handleImportPickMap = useCallback(async (targetMapId) => {
     const featureId = importTargetSheet?.featureId
-    const externalEvent = importTargetSheet?.externalEvent
-    if (!targetMapId || (!featureId && !externalEvent)) return
-    if (externalEvent) {
-      setImportTargetBusy(true)
-      try {
-        const ok = await addExternalEventToMap(externalEvent, targetMapId)
-        if (ok) setImportTargetSheet(null)
-      } finally {
-        setImportTargetBusy(false)
-      }
-      return
-    }
+    if (!targetMapId || !featureId) return
     const ok = importCommunityFeatureToMine(featureId, targetMapId)
     if (ok) setImportTargetSheet(null)
-  }, [addExternalEventToMap, importTargetSheet, importCommunityFeatureToMine])
+  }, [importTargetSheet, importCommunityFeatureToMine])
 
   const handleImportCreateMap = useCallback(async (title) => {
     const featureId = importTargetSheet?.featureId
-    const externalEvent = importTargetSheet?.externalEvent
     const trimmed = `${title || ""}`.trim()
-    if ((!featureId && !externalEvent) || !trimmed) return
+    if (!featureId || !trimmed) return
     setImportTargetBusy(true)
     try {
       let nextMap
@@ -1047,9 +851,7 @@ export default function App() {
       }
       setMaps((current) => [nextMap, ...current])
       // maps state 업데이트 이전에도 import 할 수 있도록 map 객체를 그대로 전달.
-      const ok = externalEvent
-        ? await addExternalEventToMap(externalEvent, nextMap)
-        : importCommunityFeatureToMine(featureId, nextMap)
+      const ok = importCommunityFeatureToMine(featureId, nextMap)
       if (ok) {
         showToast(`'${trimmed}' 지도를 만들고 저장했어요.`)
         setImportTargetSheet(null)
@@ -1060,7 +862,7 @@ export default function App() {
     } finally {
       setImportTargetBusy(false)
     }
-  }, [addExternalEventToMap, cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
+  }, [cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
 
   // --- Social / Profile ---
 
@@ -1083,12 +885,9 @@ export default function App() {
     || (activeMapSource === "local" && activeMap?.canEditFeatures === false)
     || (activeMapSource === "community" && !canEditCommunityMap)
 
-  const { shouldOpenEventViewer } = resolveEventAccess({ activeMap })
-
   const hasUnsavedEditorDraft = activeTab === "maps"
     && mapsView === "editor"
     && activeMapSource === "local"
-    && !shouldOpenEventViewer
     && (draftPoints.length > 0 || ["pin", "route", "area", "relocate"].includes(editorMode))
 
   const confirmDiscardEditorDraft = useCallback(() => {
@@ -1099,7 +898,7 @@ export default function App() {
   const handleMapEditorBack = useCallback(() => {
     if (!confirmDiscardEditorDraft()) return
     if (activeMapSource === "community" || activeMapSource === "shared") {
-      setActiveTab("home")
+      setActiveTab("maps")
     }
     if (activeMapSource === "shared") {
       setSharedMapData(null)
@@ -1112,7 +911,7 @@ export default function App() {
 
   const recoverToHome = useCallback(() => {
     setSharedMapData(null)
-    setActiveTab("home")
+    setActiveTab("maps")
     setMapsView("list")
     setActiveMapSource("local")
     setActiveMapId(maps[0]?.id ?? null)
@@ -1126,7 +925,7 @@ export default function App() {
   }, [])
 
   const startRecordInMap = useCallback(async (mapId, recordMethod = "map") => {
-    const targetMap = maps.find((mapItem) => mapItem.id === mapId && !isEventMap(mapItem))
+    const targetMap = maps.find((mapItem) => mapItem.id === mapId)
     if (!targetMap) {
       showToast("기록할 지도를 선택해 주세요.")
       return false
@@ -1212,23 +1011,82 @@ export default function App() {
     setMapSheet(null)
   }, [mapSheet, pendingRecordAfterMapCreate])
 
-  const handleBottomNavChange = useCallback((nextTab) => {
-    if (needsAuthForPersonalArea && (nextTab === "add-record" || nextTab === "maps" || nextTab === "profile")) {
+  const openMapCreationWorkspace = useCallback(() => {
+    if (needsAuthForPersonalArea) {
       requestLoginBanner()
       return
     }
-    if (nextTab === "add-record") {
-      openRecordFlow()
+    if (activeTab === "maps" && mapsView === "editor") return
+    if (!confirmDiscardEditorDraft()) return
+
+    const currentLocalMapId = activeMapSource === "local" && activeMapId && b2cMapIds.has(activeMapId)
+      ? activeMapId
+      : null
+    const targetMapId = currentLocalMapId || personalRecordMaps[0]?.id || null
+
+    if (targetMapId) {
+      openMapEditor(targetMapId)
+      return
+    }
+
+    setActiveTab("maps")
+    setMapsView("list")
+    setActiveMapSource("local")
+    setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
+  }, [
+    activeMapId,
+    activeMapSource,
+    activeTab,
+    b2cMapIds,
+    confirmDiscardEditorDraft,
+    mapsView,
+    needsAuthForPersonalArea,
+    openMapEditor,
+    personalRecordMaps,
+    requestLoginBanner,
+    setActiveMapSource,
+    setActiveTab,
+    setMapSheet,
+    setMapsView,
+  ])
+
+  const handleBottomNavChange = useCallback((nextTab) => {
+    if (nextTab === "login") {
+      if (activeTab !== "login" && !confirmDiscardEditorDraft()) return
+      handleTabChange("login")
+      return
+    }
+    if (needsAuthForPersonalArea && (nextTab === "create" || nextTab === "maps" || nextTab === "places" || nextTab === "profile")) {
+      requestLoginBanner()
+      return
+    }
+    if (nextTab === "create") {
+      openMapCreationWorkspace()
       return
     }
     if (nextTab !== activeTab && !confirmDiscardEditorDraft()) return
     handleTabChange(nextTab)
+    if (nextTab === "maps") {
+      setMapsView("list")
+      setActiveMapSource("local")
+    }
     if (nextTab !== "maps" && activeMapSource === "shared") {
       setSharedMapData(null)
       setActiveMapSource("local")
       setActiveMapId(maps[0]?.id ?? null)
     }
-  }, [activeMapSource, activeTab, confirmDiscardEditorDraft, handleTabChange, maps, needsAuthForPersonalArea, openRecordFlow, requestLoginBanner])
+  }, [
+    activeMapSource,
+    activeTab,
+    confirmDiscardEditorDraft,
+    handleTabChange,
+    maps,
+    needsAuthForPersonalArea,
+    openMapCreationWorkspace,
+    requestLoginBanner,
+    setActiveMapSource,
+    setMapsView,
+  ])
 
   const handleSavePostMap = useCallback(async (post) => {
     if (!post?.mapId) return
@@ -1636,30 +1494,6 @@ export default function App() {
 
   // --- Render ---
 
-  // 웰컴 화면: 공유 링크 아님 + 미인증 + 웰컴 안 봄
-  if (showStartup) {
-    return (
-      <AppErrorBoundary>
-      <Suspense fallback={<ScreenFallback />}>
-        <WelcomeScreen
-          showLoginBanner={needsAuthForPersonalArea}
-          onStart={handleWelcomeBrowse}
-          onAddFirstPlace={handleWelcomeAddFirstPlace}
-          onLogin={openAuthSheet}
-        />
-        {authSheetOpen ? (
-          <AuthPromptSheet onClose={closeAuthPrompt}>
-            <AuthScreen
-              title="로그인"
-              onSuccess={handleAuthSuccess}
-            />
-          </AuthPromptSheet>
-        ) : null}
-      </Suspense>
-      </AppErrorBoundary>
-    )
-  }
-
   if (sharedMapData) {
     return (
       <AppErrorBoundary>
@@ -1677,19 +1511,43 @@ export default function App() {
   }
 
   const isMapEditorLayout = activeTab === "maps" && mapsView === "editor"
-  const shouldRenderHomeScreen = !showPersonalLoading && (activeTab === "home" || showPersonalGate)
+  const showLoginLoading = hasSupabaseEnv && activeTab === "login" && !authReady
+  const shouldRenderLoginScreen = !showLoginLoading && !showPersonalLoading && activeTab === "login"
   const shouldRenderMissingMapRecovery = !showPersonalLoading
     && !showPersonalGate
     && activeTab === "maps"
     && mapsView === "editor"
     && !activeMap
-  const bottomNavTab = showPersonalGate ? "home" : activeTab
-  const shouldHideBottomNav = (!showPersonalGate && activeTab === "maps" && mapsView === "editor")
-    || keyboardVisible
-    || Boolean(featureSheet)
+  const bottomNavTab = showPersonalGate
+    ? "login"
+    : activeTab === "maps" && mapsView === "editor"
+      ? "create"
+      : activeTab
+  const shouldHideBottomNav = keyboardVisible || Boolean(featureSheet)
+  const shellClassName = [
+    "app-shell",
+    " app-shell--soft-social",
+    isMapEditorLayout ? " app-shell--map-editor" : "",
+    ` app-shell--tab-${bottomNavTab}`,
+  ].join("")
+  const webMapStats = [
+    { label: "내 지도", value: b2cMaps.length, caption: "같이 저장" },
+    { label: "공개 지도", value: b2cShares.length, caption: "프로필에 표시" },
+    { label: "저장 장소", value: b2cFeatures.length, caption: "모아둔 곳" },
+  ]
+  const webPlaceStats = [
+    { label: "장소", value: b2cFeatures.length, caption: "저장함" },
+    { label: "지도", value: new Set(b2cFeatures.map((feature) => feature.mapId)).size, caption: "연결됨" },
+    { label: "공개", value: b2cShares.length, caption: "함께 보기" },
+  ]
+  const webProfileStats = [
+    { label: "공개 지도", value: b2cShares.length, caption: "프로필" },
+    { label: "내 지도", value: b2cMaps.length, caption: "저장함" },
+    { label: "장소", value: b2cFeatures.length, caption: "모음" },
+  ]
 
   return (
-    <div className={`app-shell${isMapEditorLayout ? " app-shell--map-editor" : ""}`}>
+    <div className={shellClassName}>
       {!isOnline ? (
         <div className="offline-banner">오프라인 모드 - 데이터가 자동 저장됩니다</div>
       ) : null}
@@ -1712,13 +1570,6 @@ export default function App() {
         />
       )}
 
-      {authPromptVisible && needsAuthForPersonalArea && !authSheetOpen ? (
-        <AuthPromptBanner
-          onLogin={openAuthSheet}
-          onDismiss={closeAuthPrompt}
-        />
-      ) : null}
-
       <main className="content">
       <AppErrorBoundary>
       <Suspense fallback={<ScreenFallback />}>
@@ -1728,114 +1579,115 @@ export default function App() {
           </section>
         ) : null}
 
-        {shouldRenderHomeScreen ? (
-          <HomeScreen
-            maps={b2cMaps}
-            features={b2cFeatures}
-            recommendedMaps={recommendedMaps}
-            communityMaps={communityMapMeta}
-            communityFeatures={communityMapFeatures}
-            viewerProfile={viewerProfile}
-            onResumeMyMap={openMapEditor}
-            onOpenFeatureInMap={(_, featureId) => openFeatureFromPlaces(featureId)}
-            onCreateMap={openRecordFlow}
-            onOpenMap={openDemoMap}
-            onOpenCommunityEditor={openCommunityMapEditor}
-            onNavigateToExplore={openExploreTab}
-            onOpenExploreSearch={openExploreSearch}
-            onOpenNotifications={() => setNotiPanelOpen(true)}
-            hasUnread={notiHasUnread}
-          />
+        {showLoginLoading ? (
+          <section className="screen screen--scroll" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+            <div style={{ textAlign: "center", color: "#aaa", fontSize: 13 }}>로그인 상태 확인 중...</div>
+          </section>
         ) : null}
 
-        {!showPersonalLoading && !showPersonalGate && activeTab === "explore" ? (
-          <ExploreScreen
-            recommendedMaps={recommendedMaps}
-            onOpenMap={openDemoMap}
-            onOpenCommunityEditor={openCommunityMapEditor}
-            onAddEventToMap={handleAddEventToMapRequest}
-            users={users}
-            followed={followed}
-            onSelectUser={(profile) => {
-              setSelectedUserProfile(profile)
-              setSelectedUserId(profile.id)
-            }}
-            searchRequestId={exploreSearchRequestId}
-          />
+        {shouldRenderLoginScreen ? (
+          authUser ? (
+            <SignedInScreen
+              user={authUser}
+              onOpenMaps={() => {
+                setActiveTab("maps")
+                setMapsView("list")
+                setActiveMapSource("local")
+              }}
+              onOpenProfile={() => setActiveTab("profile")}
+              onSignOut={cloudMode ? handleSignOut : null}
+            />
+          ) : (
+            <WebAuthLayout>
+                <AuthScreen
+                  title="로그인"
+                  subtitle="내 지도와 친구와 모은 장소를 웹에서 이어보세요"
+                  onSuccess={handleAuthSuccess}
+                />
+            </WebAuthLayout>
+          )
         ) : null}
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
-          <MyArchiveScreen
-            key={`archive-${activeTab}`}
-            maps={b2cMaps}
-            features={b2cFeatures}
-            shares={b2cShares}
-            loading={cloudLoading}
-            characterImage="/characters/cloud_lv1.svg"
-            initialArchiveView="maps"
-            onImport={() => setImportSheetOpen(true)}
-            onCreate={() => setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })}
-            onEdit={(mapId) => {
-              const mapItem = maps.find((item) => item.id === mapId)
-              if (mapItem) {
-                setMapSheet({
-                  mode: "edit",
-                  id: mapItem.id,
-                  title: mapItem.title,
-                  description: mapItem.description,
-                  theme: mapItem.theme,
-                  category: mapItem.category || "personal",
-                  config: mapItem.config || {},
-                })
-              }
-            }}
-            onCollaborate={openCollaboratorsForMap}
-            onOpen={openMapEditor}
-            onDelete={(mapId, mapTitle) => {
-              if (!window.confirm(`"${mapTitle}" 지도를 삭제할까요?`)) return
-              deleteMapAction(mapId)
-            }}
-            onReorder={reorderMaps}
-            onShare={(mapId) => {
-              // MapsList 에서 공유 호출 시 해당 지도로 에디터를 열고, 에디터의 ShareSheet 를 사용한다.
-              openMapEditor(mapId)
-            }}
-            onPublish={(mapId) => setPublishSheet({ caption: "", selectedMapId: mapId })}
-            onUnpublish={(mapId) => {
-              if (!window.confirm("링크 공유를 중지할까요?\n링크 공유를 중지하면 프로필에서도 내려가요.")) return
-              unpublish(mapId)
-            }}
-            onAddToProfile={(mapId) => requestProfilePlacement("add", mapId)}
-            onRemoveFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
-            collaborationInvites={collaborationInvites}
-            onAcceptCollaborationInvite={(inviteId) => handleCollaborationInviteResponse(inviteId, "accepted")}
-            onRejectCollaborationInvite={(inviteId) => handleCollaborationInviteResponse(inviteId, "rejected")}
-            onOpenFeature={openFeatureFromPlaces}
-            onCreateRecord={openRecordFlow}
-            recommendedMaps={recommendedMaps}
-            onOpenDemoMap={openDemoMap}
-            onOpenCommunityEditor={openCommunityMapEditor}
-            users={users}
-            followed={followed}
-            onSelectUser={(profile) => {
-              setSelectedUserProfile(profile)
-              setSelectedUserId(profile.id)
-            }}
-          />
+          <WebPageFrame
+            className="web-section--maps maps-library-screen--v2"
+            eyebrow="SHARED MAPS"
+            title="지도 목록"
+            description="내가 만든 지도와 같이 저장 중인 코스를 한곳에 모아봅니다."
+            stats={webMapStats}
+            socialCue={{ label: "함께 모으는 지도", items: ["주말 산책", "카페 후보", "공개 준비"] }}
+            action={(
+              <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
+                <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
+                새 지도
+              </button>
+            )}
+          >
+            <MapsListScreen
+              maps={b2cMaps}
+              features={b2cFeatures}
+              shares={b2cShares}
+              loading={cloudLoading}
+              characterImage="/characters/cloud_lv1.svg"
+              onCreate={openCreateMapSheet}
+              onEdit={(mapId) => {
+                const mapItem = maps.find((item) => item.id === mapId)
+                if (mapItem) {
+                  setMapSheet({
+                    mode: "edit",
+                    id: mapItem.id,
+                    title: mapItem.title,
+                    description: mapItem.description,
+                    theme: mapItem.theme,
+                    category: mapItem.category || "personal",
+                    config: mapItem.config || {},
+                  })
+                }
+              }}
+              onCollaborate={openCollaboratorsForMap}
+              onOpen={openMapEditor}
+              onDelete={(mapId, mapTitle) => {
+                if (!window.confirm(`"${mapTitle}" 지도를 삭제할까요?`)) return
+                deleteMapAction(mapId)
+              }}
+              onReorder={reorderMaps}
+              collaborationInvites={collaborationInvites}
+              onAcceptCollaborationInvite={(inviteId) => handleCollaborationInviteResponse(inviteId, "accepted")}
+              onRejectCollaborationInvite={(inviteId) => handleCollaborationInviteResponse(inviteId, "rejected")}
+            />
+          </WebPageFrame>
         ) : null}
 
-        {/* 행사 지도는 역할과 무관하게 항상 participant shell (SharedMapViewer) 로 렌더 */}
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && shouldOpenEventViewer ? (
-          <SharedMapViewer
-            map={activeMap}
-            features={activeFeatures}
-            onSaveToApp={null}
-            onBack={handleMapEditorBack}
-          />
+        {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? (
+          <WebPageFrame
+            className="web-section--places maps-library-screen--v2"
+            eyebrow="SAVED PLACES"
+            title="장소 목록"
+            description="최근 저장한 장소와 친구에게 보여줄 코스 재료를 빠르게 찾습니다."
+            stats={webPlaceStats}
+            socialCue={{ label: "최근 저장함", items: ["플랫바이트", "온유나흘", "여의도 한강공원"] }}
+            action={(
+              <button className="web-section__action" type="button" onClick={openRecordFlow}>
+                <Database size={16} strokeWidth={2.2} aria-hidden="true" />
+                기록 추가
+              </button>
+            )}
+          >
+            <PlacesScreen
+              maps={b2cMaps}
+              features={b2cFeatures}
+              characterImage="/characters/cloud_lv1.svg"
+              onOpenFeature={openFeatureFromPlaces}
+              onCreateRecord={openRecordFlow}
+              embedded
+              title="장소 목록"
+              subtitle="내 지도에 모은 장소를 검색하고 다시 열어보세요"
+            />
+          </WebPageFrame>
         ) : null}
 
-        {/* 일반 지도 MapEditorScreen (non-event only) */}
-        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap && !shouldOpenEventViewer ? (
+        {/* 지도 편집기 (MapEditorScreen) */}
+        {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "editor" && activeMap ? (
           <MapEditorScreen
             map={activeMap}
             features={activeFeatures}
@@ -1874,7 +1726,7 @@ export default function App() {
               setEditorMode("browse")
             }}
             onToggleLabels={() => setShowMapLabels((current) => !current)}
-            onOpenCollaborators={activeMapSource === "local" && cloudMode && activeMap && !isEventMap(activeMap)
+            onOpenCollaborators={activeMapSource === "local" && cloudMode && activeMap
               ? () => openCollaboratorsForMap(activeMap.id)
               : undefined}
             onOpenFeatureDetail={(featureId) => {
@@ -1944,51 +1796,68 @@ export default function App() {
         {shouldRenderMissingMapRecovery ? (
           <AppRecoveryScreen
             title="지도를 다시 찾지 못했어요"
-            message="탭 이동 중 이전 지도 상태가 남아 있었어요. 홈으로 돌아가면 바로 다시 사용할 수 있어요."
-            actionLabel="홈으로 돌아가기"
+            message="탭 이동 중 이전 지도 상태가 남아 있었어요. 지도 목록으로 돌아가면 바로 다시 사용할 수 있어요."
+            actionLabel="지도 목록으로 돌아가기"
             onRetry={recoverToHome}
           />
         ) : null}
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
-          <ProfileScreen
-            user={viewerProfile}
-            shares={b2cShares}
-            maps={b2cMaps}
-            features={b2cFeatures}
-            users={users}
-            cloudMode={cloudMode}
-            cloudEmail={authUser?.email || ""}
-            characterImage="/characters/cloud_lv1.svg"
-            canImportLocalData={cloudMode && readLocalImportData().hasAny}
-            onImportLocalData={importLocalDataToCloud}
-            onSignOut={cloudMode ? handleSignOut : null}
-            onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
-            onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
-            onSelectUser={(profile) => {
-              setSelectedUserProfile(profile)
-              setSelectedUserId(profile.id)
-            }}
-            onUpdateProfile={handleUpdateProfile}
-            onBatchAddToProfile={async (mapIds) => {
-              const results = await Promise.allSettled(mapIds.map((id) => addMapToProfile(id)))
-              const succeeded = results.filter((r) => r.status === "fulfilled").length
-              if (succeeded === mapIds.length) {
-                showToast(`${succeeded}개 지도를 프로필에 공개했어요`)
-              } else if (succeeded > 0) {
-                showToast(`${succeeded}/${mapIds.length}개 지도를 프로필에 공개했어요`)
-              } else {
-                showToast("프로필에 공개하지 못했어요")
-              }
-            }}
-            onNavigateToMaps={() => setActiveTab("maps")}
-            onResetCoachmark={() => {
-              resetCoachmark()
-              showToast("다음 편집기 진입 시 가이드가 다시 표시돼요")
-            }}
-            hasB2BAccess={hasB2BAccess}
-            onB2BAccessChange={setHasB2BAccess}
-          />
+          <WebPageFrame
+            className="web-section--profile"
+            eyebrow="PROFILE"
+            title="프로필"
+            description="친구에게 보여줄 지도와 내 소개를 가볍게 정리합니다."
+            stats={webProfileStats}
+            socialCue={{ label: "공개 준비", items: ["커버", "소개글", "첫 지도"] }}
+            action={(
+              <button
+                className="web-section__action"
+                type="button"
+                onClick={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
+              >
+                <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
+                지도 올리기
+              </button>
+            )}
+          >
+            <ProfileScreen
+              user={viewerProfile}
+              shares={b2cShares}
+              maps={b2cMaps}
+              features={b2cFeatures}
+              users={users}
+              cloudMode={cloudMode}
+              cloudEmail={authUser?.email || ""}
+              characterImage="/characters/cloud_lv1.svg"
+              canImportLocalData={cloudMode && readLocalImportData().hasAny}
+              onImportLocalData={importLocalDataToCloud}
+              onSignOut={cloudMode ? handleSignOut : null}
+              onPublishOpen={() => setPublishSheet({ caption: "", selectedMapId: profileUploadCandidates[0]?.id ?? null })}
+              onSelectPost={(source, id) => setSelectedPostRef({ source, id })}
+              onSelectUser={(profile) => {
+                setSelectedUserProfile(profile)
+                setSelectedUserId(profile.id)
+              }}
+              onUpdateProfile={handleUpdateProfile}
+              onBatchAddToProfile={async (mapIds) => {
+                const results = await Promise.allSettled(mapIds.map((id) => addMapToProfile(id)))
+                const succeeded = results.filter((r) => r.status === "fulfilled").length
+                if (succeeded === mapIds.length) {
+                  showToast(`${succeeded}개 지도를 프로필에 공개했어요`)
+                } else if (succeeded > 0) {
+                  showToast(`${succeeded}/${mapIds.length}개 지도를 프로필에 공개했어요`)
+                } else {
+                  showToast("프로필에 공개하지 못했어요")
+                }
+              }}
+              onNavigateToMaps={() => setActiveTab("maps")}
+              onResetCoachmark={() => {
+                resetCoachmark()
+                showToast("다음 편집기 진입 시 가이드가 다시 표시돼요")
+              }}
+            />
+          </WebPageFrame>
         ) : null}
       </Suspense>
       </AppErrorBoundary>
@@ -1999,7 +1868,6 @@ export default function App() {
       <BottomNavV2
         tab={bottomNavTab}
         onTabChange={handleBottomNavChange}
-        onFabClick={() => handleBottomNavChange("add-record")}
       />
       )}
 
@@ -2166,26 +2034,6 @@ export default function App() {
         onConfirm={handleProfilePlacementConfirm}
         onCancel={handleProfilePlacementCancel}
       />
-      {importSheetOpen ? (
-        <Suspense fallback={null}>
-          <ImportMapSheet
-            open={importSheetOpen} onClose={() => setImportSheetOpen(false)}
-            onImport={handleImportMap} showToast={showToast}
-          />
-        </Suspense>
-      ) : null}
-
-      {authSheetOpen ? (
-        <Suspense fallback={null}>
-          <AuthPromptSheet onClose={closeAuthPrompt}>
-            <AuthScreen
-              title="로그인"
-              onSuccess={handleAuthSuccess}
-            />
-          </AuthPromptSheet>
-        </Suspense>
-      ) : null}
-
       <Toast message={toast.message} />
     </div>
   )

@@ -852,21 +852,6 @@ export async function getFollowingIds(userId) {
   return (data || []).map((row) => row.following_id)
 }
 
-export async function getMyCheckins(mapId) {
-  const supabase = requireSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data, error } = await supabase
-    .from("event_checkins")
-    .select("feature_id, created_at")
-    .eq("user_id", user.id)
-    .eq("map_id", mapId)
-
-  if (error) throw error
-  return data || []
-}
-
 export async function getGameProfile(userId = null) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc("get_game_profile", {

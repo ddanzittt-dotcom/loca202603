@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { MapPin, Plus } from "lucide-react"
 import { BottomSheet } from "../ui"
-import { isEventMap } from "../../lib/mapPlacement"
 
 /**
  * 모두의 지도에서 가져오기 → 내 지도 선택 바텀시트.
@@ -30,7 +29,7 @@ function ImportTargetMapSheetInner({
   const [title, setTitle] = useState("")
 
   const candidates = useMemo(() => (
-    maps.filter((m) => !isEventMap(m) && m.canEditFeatures !== false)
+    maps.filter((m) => m.canEditFeatures !== false)
   ), [maps])
 
   const placeCountByMap = useMemo(() => {

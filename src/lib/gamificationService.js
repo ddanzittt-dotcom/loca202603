@@ -13,11 +13,8 @@ import { hasSupabaseEnv } from "./supabase"
 import {
   getGameProfile as rpcGetGameProfile,
   recordMapAction as rpcRecordMapAction,
-  submitEventCheckin as rpcSubmitEventCheckin,
-  submitSurveyReward as rpcSubmitSurveyReward,
-  getMyCheckins as rpcGetMyCheckins,
-  awardSouvenir as rpcAwardSouvenir,
   updateStreak as rpcUpdateStreak,
+  awardSouvenir as rpcAwardSouvenir,
 } from "./mapService"
 import { computeStatsFromLocal, MILESTONE_SOUVENIRS } from "../data/gamification"
 // re-export for convenience
@@ -96,41 +93,6 @@ export async function recordMapAction({ actionType, eventKey, mapId, featureId, 
 }
 
 /**
- * 이벤트 체크인
- * @param {object} params
- * @param {string} params.mapId
- * @param {string} params.featureId
- * @param {string} [params.proofType] - 'gps' (기본)
- * @param {object} [params.proofMeta] - { lat, lng, accuracy }
- * @param {string} [params.sessionId]
- */
-export async function submitEventCheckin({ mapId, featureId, proofMeta, sessionId }) {
-  if (!hasSupabaseEnv) return null
-  const lat = proofMeta?.lat || null
-  const lng = proofMeta?.lng || null
-  const accuracy = proofMeta?.accuracy || null
-  try {
-    return await rpcSubmitEventCheckin(mapId, featureId, sessionId || null, lat, lng, accuracy)
-  } catch {
-    return null
-  }
-}
-
-/**
- * 설문 제출 보상
- * @param {object} params
- * @param {string} params.mapId
- */
-export async function submitSurveyReward({ mapId }) {
-  if (!hasSupabaseEnv) return null
-  try {
-    return await rpcSubmitSurveyReward(mapId)
-  } catch {
-    return null
-  }
-}
-
-/**
  * 기념 뱃지 목록 조회 (getGameProfile 에 포함되므로 단독 호출은 드묾).
  * 내부 저장은 user_souvenirs 테이블 — API 명은 하위 호환을 위해 souvenir 유지.
  */
@@ -145,6 +107,18 @@ export async function getUserSouvenirs() {
 }
 
 /**
+ * 스트릭 갱신 (하루 1회)
+ */
+export async function updateStreak() {
+  if (!hasSupabaseEnv) return
+  try {
+    await rpcUpdateStreak()
+  } catch {
+    // silent
+  }
+}
+
+/**
  * 기념 뱃지 발급.
  * 내부 저장은 user_souvenirs 테이블 — API 명은 하위 호환을 위해 souvenir 유지.
  */
@@ -154,30 +128,6 @@ export async function awardSouvenir(souvenirCode, mapId, meta) {
     return await rpcAwardSouvenir(souvenirCode, mapId || null, meta || {})
   } catch {
     return null
-  }
-}
-
-/**
- * 특정 지도의 내 체크인 목록
- */
-export async function getMyCheckins(mapId) {
-  if (!hasSupabaseEnv) return []
-  try {
-    return await rpcGetMyCheckins(mapId)
-  } catch {
-    return []
-  }
-}
-
-/**
- * 스트릭 갱신 (하루 1회)
- */
-export async function updateStreak() {
-  if (!hasSupabaseEnv) return
-  try {
-    await rpcUpdateStreak()
-  } catch {
-    // silent
   }
 }
 

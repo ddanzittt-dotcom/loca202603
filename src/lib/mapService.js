@@ -8,7 +8,7 @@
  *   mapService.utils.js   — 에러 처리, normalize, 변환 헬퍼
  *   mapService.read.js    — 조회 (get*, list*, check*, search*)
  *   mapService.write.js   — 생성/수정/삭제 (create*, update*, delete*, add*, follow*)
- *   mapService.publish.js — 발행, 공지, B2B, gamification RPC, 설문
+ *   mapService.publish.js — 발행, gamification RPC
  */
 
 // utils
@@ -27,7 +27,6 @@ export {
   getProfile,
   getProfileBySlug,
   getFollowingIds,
-  getMyCheckins,
   getGameProfile,
   getUserStats,
   getUserBadges,
@@ -88,26 +87,15 @@ export {
   PROFILE_CURATION_RESET_FLAG,
 } from "./mapPlacement"
 
-// publish / announcements / B2B / gamification / survey
+// publish / gamification
 export {
   publishMap,
   unpublishMap,
   saveMap,
   unsaveMap,
-  redeemInvitationCode,
-  checkB2BAccess,
-  getActiveAnnouncements,
-  getAllAnnouncements,
-  createAnnouncement,
-  updateAnnouncement,
-  toggleAnnouncementActive,
-  deleteAnnouncement,
-  submitEventCheckin,
   recordMapAction,
-  submitSurveyReward,
   upsertUserStats,
   updateStreak,
   awardBadge,
   awardSouvenir,
-  submitSurveyResponse,
 } from "./mapService.publish"

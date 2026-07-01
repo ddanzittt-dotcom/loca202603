@@ -22,23 +22,15 @@ export const XP_VALUES = {
   pin_add: 5,
   route_add: 10,
   area_add: 10,
-  checkin: 15,
-  completion: 50,
   memo_add: 3,
   map_publish: 30,
   map_import: 10,
-  survey_submit: 5,
 }
 
 // ─── 기념 뱃지 milestone 정의 ───
-// 행사 참여 경험을 기념하는 자동 발급 뱃지. user_souvenirs 테이블에 souvenir_code 로 저장된다.
+// 지도 제작·기록 경험을 기념하는 자동 발급 뱃지. user_souvenirs 테이블에 souvenir_code 로 저장된다.
 // condition 이 참이면 awardSouvenir(souvenir_code) 로 1회 발급하고, 이후 중복 호출은 서버에서 무시.
-export const MILESTONE_SOUVENIRS = [
-  { code: "first_checkin",    title: "첫 발자국", emoji: "🏃", desc: "첫 체크인 완료",           condition: (s) => s.checkins >= 1 },
-  { code: "first_completion", title: "완주자",    emoji: "🎯", desc: "행사 첫 완주",             condition: (s) => s.completions >= 1 },
-  { code: "five_completions", title: "5관왕",     emoji: "🏅", desc: "행사 5개 완주",            condition: (s) => s.completions >= 5 },
-  { code: "three_regions",    title: "3개 도시",  emoji: "🌏", desc: "3개 이상 지역에서 체크인", condition: (s) => s.regions >= 3 },
-]
+export const MILESTONE_SOUVENIRS = []
 
 // ─── 유틸리티 함수 ───
 
@@ -106,8 +98,6 @@ export function computeStatsFromLocal({ maps, features, checkins, completions, m
     stats.pins * XP_VALUES.pin_add +
     stats.routes * XP_VALUES.route_add +
     stats.areas * XP_VALUES.area_add +
-    stats.checkins * XP_VALUES.checkin +
-    stats.completions * XP_VALUES.completion +
     stats.memos * XP_VALUES.memo_add +
     stats.publishes * XP_VALUES.map_publish +
     stats.imports * XP_VALUES.map_import

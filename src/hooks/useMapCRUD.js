@@ -3,7 +3,6 @@ import { createId } from "../lib/appUtils"
 import { logEvent } from "../lib/analytics"
 import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import { friendlySupabaseError } from "../lib/mapService"
-import { isEventMap } from "../lib/mapPlacement"
 import {
   createMap as createMapRecord,
   updateMap as updateMapRecord,
@@ -305,11 +304,6 @@ export function useMapCRUD({
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
     if (!effectiveMapId) return showToast("링크를 켤 지도를 먼저 선택해 주세요.")
     const targetMap = maps.find((item) => item.id === effectiveMapId)
-    // 행사지도 발행은 대시보드 전용 — 메인 앱 발행 흐름에서 차단
-    if (isEventMap(targetMap)) {
-      setPublishSheet(null)
-      return null
-    }
     if (targetMap?.isPublished) return showToast("이미 링크 공유 중인 지도예요.")
     const mapFeatures = features.filter((f) => f.mapId === effectiveMapId)
     const mapFeatureCount = mapFeatures.length
@@ -357,9 +351,6 @@ export function useMapCRUD({
       const targetShare = shares.find((share) => share.id === idOrPostId)
       const targetMapId = targetShare?.mapId || idOrPostId
       if (!targetMapId) return
-      const targetMap = maps.find((item) => item.id === targetMapId)
-      // 행사지도는 대시보드에서만 발행 중단한다.
-      if (isEventMap(targetMap)) return
       if (cloudMode) {
         await unpublishMapRecord(targetMapId)
       }
@@ -380,7 +371,7 @@ export function useMapCRUD({
       console.error("Failed to unpublish map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, maps, setMaps, setSelectedPostRef, setShares, shares, showToast])
+  }, [cloudMode, setMaps, setSelectedPostRef, setShares, shares, showToast])
 
   // 프로필에 올리기 = publication row 생성 (발행된 지도 한정).
   const addMapToProfile = useCallback(async (mapId) => {

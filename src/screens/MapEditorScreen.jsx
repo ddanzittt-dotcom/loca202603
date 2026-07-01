@@ -6,7 +6,6 @@ import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 import { RecordEntrySheet } from "../components/sheets/RecordEntrySheet"
-import { getProfilePlacementState } from "../lib/mapPlacement"
 import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
@@ -158,7 +157,6 @@ export function MapEditorScreen({
   onStripFeatureTap,
   showToast,
   shareUrl = "",
-  placementRow = null,
   onPublishMap,
   onUnpublishMap,
   coachmarkStep = 0,
@@ -167,7 +165,6 @@ export function MapEditorScreen({
   firstPinHintVisible = false,
   onDismissFirstPinHint,
 }) {
-  const placement = getProfilePlacementState(map, placementRow)
   const [externalSearchQuery, setExternalSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
@@ -655,7 +652,6 @@ export function MapEditorScreen({
             onViewportChange={handleViewportChange}
             showLabels={showLabels}
             myLocation={myLocation}
-            isEventMap={placement.isEventMap}
           />
         </MapErrorBoundary>
 

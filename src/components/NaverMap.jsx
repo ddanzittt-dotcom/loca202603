@@ -138,7 +138,7 @@ const createAreaLabelContent = ({ feature, color, dashArray, isSelected = false 
   )
 }
 
-const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel, isChecked, markerStyle, showRouteBadge }) => {
+const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel, markerStyle, showRouteBadge }) => {
   if (markerStyle === "pixel") {
     return createPublicPixelMarkerContent({ feature, isSelected, shouldShowLabel, showRouteBadge })
   }
@@ -146,15 +146,12 @@ const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel, isChec
     "loca-place-marker",
     isSelected ? "loca-place-marker--selected" : "",
     shouldShowLabel ? "" : "loca-place-marker--label-hidden",
-    isChecked ? "loca-place-marker--checked" : "",
   ].filter(Boolean).join(" ")
   const title = escapeHtml(feature.title || "장소")
-  const checkBadge = isChecked ? `<div class="loca-place-marker__check" aria-hidden="true">&#10003;</div>` : ""
 
   return (
     `<div class="loca-place-marker-anchor">`
       + `<div class="${classNames}" role="button" aria-label="${title}">`
-        + checkBadge
         + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
         + `<div class="loca-place-marker__label">${title}</div>`
       + `</div>`
@@ -167,15 +164,13 @@ const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
 const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
-const LOCA_DARK_STYLE_ID = "90019b0b-7cdc-4f96-baa6-438d871a37d5"
-
 // 레벨/XP 시스템 제거 (2026-05). 내 위치 마커는 단순 펄스 + 방향 화살표만 표시 (캐릭터 이모지 제거).
 // characterStyle / levelEmoji prop 은 호출부 호환을 위해 props 로 받지만 무시.
 export const NaverMap = forwardRef(function NaverMap(props, ref) {
   const {
     features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger,
     onMapTap, onFeatureTap, showLabels = true, myLocation = null,
-    checkedInIds = null, isEventMap = false, markerStyle = "default", showRouteBadge = false,
+    markerStyle = "default", showRouteBadge = false,
     onViewportChange,
   } = props
   const containerRef = useRef(null)
@@ -186,8 +181,6 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
   const onViewportChangeRef = useRef(onViewportChange)
   const ignoreMapTapUntilRef = useRef(0)
   const lastFeatureTapRef = useRef({ featureId: null, at: 0 })
-  const isEventMapRef = useRef(isEventMap)
-  isEventMapRef.current = isEventMap
   const [mapReady, setMapReady] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(3) // 1=far, 2=mid, 3=close
   const [mapZoom, setMapZoom] = useState(14)
@@ -407,10 +400,6 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
           logoControl: true,
           logoControlOptions: { position: naverMaps.Position.BOTTOM_LEFT },
           mapDataControl: false,
-        }
-        if (isEventMapRef.current) {
-          mapOptions.gl = true
-          mapOptions.customStyleId = LOCA_DARK_STYLE_ID
         }
         const map = new naverMaps.Map(containerRef.current, mapOptions)
         naverMaps.Event.addListener(map, "click", (e) => {
@@ -723,13 +712,11 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
         if (feature.type === "pin") {
           if (feature.lat === 0 && feature.lng === 0) return
           const isSelected = feature.id === selectedFeatureId
-          const isChecked = checkedInIds && checkedInIds.has(feature.id)
           const shouldShowPlaceLabel = isSelected || (showLabels && mapZoom >= PLACE_LABEL_MIN_ZOOM)
           const markerContent = createPlaceMarkerContent({
             feature,
             isSelected,
             shouldShowLabel: shouldShowPlaceLabel,
-            isChecked,
             markerStyle,
             showRouteBadge,
           })
@@ -940,7 +927,7 @@ export const NaverMap = forwardRef(function NaverMap(props, ref) {
     } catch (e) {
       console.warn("?ㅼ씠踰?吏???덉씠???낅뜲?댄듃 ?ㅽ뙣:", e)
     }
-  }, [checkedInIds, draftMode, draftPoints, features, isEventMap, mapReady, mapZoom, markerStyle, myLocation, onFeatureTap, selectedFeatureId, showLabels, showRouteBadge, viewportRenderVersion, zoomLevel])
+  }, [draftMode, draftPoints, features, mapReady, mapZoom, markerStyle, myLocation, onFeatureTap, selectedFeatureId, showLabels, showRouteBadge, viewportRenderVersion, zoomLevel])
 
   // Focus
   useEffect(() => {
