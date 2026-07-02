@@ -18,6 +18,7 @@
     { "src": "/terms/?", "dest": "/legal/terms.html" },
     { "src": "/privacy/?", "dest": "/legal/privacy.html" },
     { "handle": "filesystem" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "headers": [
