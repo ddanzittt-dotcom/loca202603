@@ -33,7 +33,7 @@ function computeZoom(minLat, maxLat, minLng, maxLng, width, height) {
 }
 
 export default async function handler(req, res) {
-  const { mapId } = req.query
+  const mapId = req.query.id || req.query.mapId
   if (!mapId || !/^[0-9a-fA-F-]{16,64}$/u.test(mapId)) {
     res.status(404).end()
     return
