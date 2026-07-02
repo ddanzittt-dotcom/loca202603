@@ -122,24 +122,7 @@ class AppErrorBoundary extends Component {
   }
 }
 
-const EMPTY_WEB_STATS = []
 const EMPTY_WEB_CUE_ITEMS = []
-
-function WebStatStrip({ items = EMPTY_WEB_STATS }) {
-  if (!items.length) return null
-
-  return (
-    <div className="web-stat-strip" aria-label="화면 요약">
-      {items.map((item) => (
-        <div className="web-stat" key={item.label}>
-          <span>{item.label}</span>
-          <strong>{item.value}</strong>
-          {item.caption ? <em>{item.caption}</em> : null}
-        </div>
-      ))}
-    </div>
-  )
-}
 
 function WebSocialCue({ label, items = EMPTY_WEB_CUE_ITEMS }) {
   if (!label && !items.length) return null
@@ -162,14 +145,11 @@ function WebSocialCue({ label, items = EMPTY_WEB_CUE_ITEMS }) {
   )
 }
 
+// 29CM/핀터레스트 문법: 큰 제목 + 여백. 레이블·설명문·통계 스트립은 걷어냈다.
 function WebPageFrame({
   className = "",
-  eyebrow,
   title,
-  description,
   action,
-  stats,
-  socialCue,
   children,
 }) {
   const frameClassName = ["screen screen--scroll web-section", className].filter(Boolean).join(" ")
@@ -179,14 +159,10 @@ function WebPageFrame({
       <div className="web-section__inner">
         <div className="web-section__head">
           <div className="web-section__headline">
-            {eyebrow ? <span className="web-section__eyebrow">{eyebrow}</span> : null}
             <h1 className="web-section__title">{title}</h1>
-            {description ? <p className="web-section__description">{description}</p> : null}
-            {socialCue ? <WebSocialCue {...socialCue} /> : null}
           </div>
           {action ? <div className="web-section__actions">{action}</div> : null}
         </div>
-        <WebStatStrip items={stats} />
         <div className="web-section__workspace">
           {children}
         </div>
@@ -1529,21 +1505,6 @@ export default function App() {
     isMapEditorLayout ? " app-shell--map-editor" : "",
     ` app-shell--tab-${bottomNavTab}`,
   ].join("")
-  const webMapStats = [
-    { label: "내 지도", value: b2cMaps.length },
-    { label: "공개 지도", value: b2cShares.length },
-    { label: "저장 장소", value: b2cFeatures.length },
-  ]
-  const webPlaceStats = [
-    { label: "장소", value: b2cFeatures.length },
-    { label: "담긴 지도", value: new Set(b2cFeatures.map((feature) => feature.mapId)).size },
-  ]
-  const webProfileStats = [
-    { label: "공개 지도", value: b2cShares.length },
-    { label: "내 지도", value: b2cMaps.length },
-    { label: "장소", value: b2cFeatures.length },
-  ]
-
 
   return (
     <div className={shellClassName}>
@@ -1611,9 +1572,7 @@ export default function App() {
         {activeTab === "explore" ? (
           <WebPageFrame
             className="web-section--explore"
-            eyebrow="EXPLORE"
             title="탐색"
-            description="공개된 지도를 로그인 없이 검색하고 구경할 수 있어요."
           >
             <ExplorePublicScreen
               onOpenMap={(slug) => {
@@ -1626,10 +1585,7 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
           <WebPageFrame
             className="web-section--maps maps-library-screen--v2"
-            eyebrow="MY MAPS"
-            title="지도 목록"
-            description="내가 만든 지도와 함께 만드는 지도를 한곳에서 관리해요."
-            stats={webMapStats}
+            title="내 지도"
             action={(
               <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
                 <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1675,10 +1631,7 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? (
           <WebPageFrame
             className="web-section--places maps-library-screen--v2"
-            eyebrow="SAVED PLACES"
-            title="장소 목록"
-            description="지도에 저장한 장소를 검색하고 다시 열어봐요."
-            stats={webPlaceStats}
+            title="내 장소"
             action={(
               <button className="web-section__action" type="button" onClick={openRecordFlow}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1819,10 +1772,7 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
           <WebPageFrame
             className="web-section--profile"
-            eyebrow="PROFILE"
             title="프로필"
-            description="친구에게 보여줄 공개 지도와 내 소개를 정리해요."
-            stats={webProfileStats}
             action={(
               <button
                 className="web-section__action"

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Check, ChevronDown, GripVertical, Lock, MoreHorizontal, MoveVertical, Pencil, Search as SearchIcon, Trash2, Users, X } from "lucide-react"
 import { EmptyState, SkeletonCard } from "../components/ui"
 import { getProfilePlacementState } from "../lib/mapPlacement"
-import { generateMiniMapSvg } from "../lib/miniMapPreview"
-import { MapCoverThumb } from "../components/MapCoverThumb"
+import { MapCoverArt } from "../components/MapCoverArt"
 
 const MAP_FILTERS = [
   { id: "all", label: "전체" },
@@ -145,11 +144,7 @@ function MapsV3Card({
       }}
     >
       <span className="maps-v3-card__preview">
-        <MapCoverThumb
-          mapId={item.map.id}
-          version={item.map.updatedAt || item.map.updated_at}
-          fallbackSvg={item.previewSvg}
-        />
+        <MapCoverArt map={item.map} features={item.features} />
       </span>
       <StatusBadge status={item.status} collabCount={item.collabCount} />
       <span className="maps-v3-card__info">
@@ -275,7 +270,7 @@ export function MapsListScreen({
         collabCount: getCollabCount(map),
         placeCount: mapFeatures.length,
         updatedLabel: formatRelativeDate(map.updatedAt || map.updated_at || map.modifiedAt || map.modified_at),
-        previewSvg: map.previewSvg || map.preview_svg || generateMiniMapSvg(mapFeatures, { theme: map.theme }),
+        features: mapFeatures,
         searchable: [
           map.title,
           map.description,
