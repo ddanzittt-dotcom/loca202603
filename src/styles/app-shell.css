@@ -1224,3 +1224,120 @@
   padding: 9px 16px;
   cursor: pointer;
 }
+
+/* PlaceCardPop — 사진/기록 섹션 */
+
+.pcp-card {
+  max-height: min(82dvh, 640px);
+  overflow-y: auto;
+}
+
+.pcp-card__hero {
+  position: relative;
+  height: 168px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #E9F4DF;
+}
+
+.pcp-card__hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pcp-card__hero-emoji {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.pcp-card__photos {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 10px 0 4px;
+  padding-bottom: 2px;
+}
+
+.pcp-card__photos img {
+  flex: 0 0 auto;
+  width: 74px;
+  height: 74px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.pcp-card__records {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(23, 24, 23, 0.12);
+}
+
+.pcp-card__records h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7C847B;
+  letter-spacing: 0.02em;
+}
+
+.pcp-card__records ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pcp-card__records li {
+  background: #F8FBF7;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.pcp-card__record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pcp-card__record-head time {
+  font-size: 11px;
+  color: #7C847B;
+  font-variant-numeric: tabular-nums;
+}
+
+.pcp-card__record-head em {
+  font-style: normal;
+  font-size: 11px;
+  color: #49B88E;
+}
+
+.pcp-card__records li p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #22261F;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pcp-card__records-more {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: #7C847B;
+  text-align: center;
+}

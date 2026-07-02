@@ -1,12 +1,23 @@
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { MapPin, X } from "lucide-react"
 import { FeatureEmoji } from "./FeatureEmoji"
+import { buildFeatureRecordGroups } from "../lib/featureRecordGroups"
 
 const TYPE_LABELS = { pin: "장소", route: "길", area: "영역" }
 
+function photoSrc(photo) {
+  return photo?.url || photo?.thumbnail || photo?.src || photo?.cloudUrl || ""
+}
+
+function formatDate(value) {
+  const date = new Date(value || NaN)
+  if (Number.isNaN(date.getTime())) return null
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`
+}
+
 /**
  * PlaceCardPop — 장소 목록에서 장소를 누르면 뿅 하고 뜨는 장소 카드.
- * 지도로 이동하지 않고 카드 한 장으로 먼저 보여준다. (지도 이동은 카드 안 버튼)
+ * 사진·메모 등 그 장소에 남긴 기록을 카드 한 장으로 모아 보여준다.
  */
 export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
   useEffect(() => {
@@ -17,16 +28,56 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
     return () => window.removeEventListener("keydown", handleKey)
   }, [onClose])
 
+  const recordGroups = useMemo(() => {
+    if (!feature) return []
+    const groups = buildFeatureRecordGroups(feature)
+    return [...groups].sort((a, b) => new Date(b.dateValue || 0) - new Date(a.dateValue || 0))
+  }, [feature])
+
+  const photos = useMemo(() => {
+    const seen = new Set()
+    const next = []
+    for (const group of recordGroups) {
+      for (const photo of group.photos || []) {
+        const src = photoSrc(photo)
+        if (!src || seen.has(src)) continue
+        seen.add(src)
+        next.push({ ...photo, src })
+      }
+    }
+    return next
+  }, [recordGroups])
+
+  const records = useMemo(() => (
+    recordGroups
+      .map((group) => {
+        const text = (group.memos || [])
+          .map((memo) => `${memo?.text || memo?.memo || memo?.content || ""}`.trim())
+          .filter(Boolean)
+          .join("\n")
+        const extras = []
+        if (group.photos?.length) extras.push(`사진 ${group.photos.length}`)
+        if (group.voices?.length) extras.push(`음성 ${group.voices.length}`)
+        if (!text && !extras.length) return null
+        return {
+          id: group.id,
+          date: formatDate(group.dateValue),
+          text,
+          extras: extras.join(" · "),
+        }
+      })
+      .filter(Boolean)
+  ), [recordGroups])
+
   if (!feature) return null
 
   const title = (feature.title || "").trim() || "이름 없는 장소"
   const typeLabel = TYPE_LABELS[feature.type] || "장소"
   const tags = Array.isArray(feature.tags) ? feature.tags.filter(Boolean).slice(0, 4) : []
   const note = (feature.note || "").trim()
-  const savedDate = feature.updatedAt ? new Date(feature.updatedAt) : null
-  const savedLabel = savedDate && !Number.isNaN(savedDate.getTime())
-    ? `${savedDate.getFullYear()}.${String(savedDate.getMonth() + 1).padStart(2, "0")}.${String(savedDate.getDate()).padStart(2, "0")}`
-    : null
+  const savedLabel = formatDate(feature.updatedAt)
+  const heroPhoto = photos[0] || null
+  const restPhotos = photos.slice(1, 7)
 
   return (
     <div className="pcp-backdrop" onClick={onClose} role="presentation">
@@ -41,9 +92,18 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
           <X size={16} strokeWidth={2.2} />
         </button>
 
-        <div className="pcp-card__stage">
-          <FeatureEmoji feature={feature} size={72} unicodeFontSize={44} ariaLabel={title} />
-        </div>
+        {heroPhoto ? (
+          <div className="pcp-card__hero">
+            <img src={heroPhoto.src} alt={`${title} 사진`} />
+            <span className="pcp-card__hero-emoji" aria-hidden="true">
+              <FeatureEmoji feature={feature} size={34} unicodeFontSize={20} />
+            </span>
+          </div>
+        ) : (
+          <div className="pcp-card__stage">
+            <FeatureEmoji feature={feature} size={72} unicodeFontSize={44} ariaLabel={title} />
+          </div>
+        )}
 
         <div className="pcp-card__meta">
           <span className="pcp-card__type">{typeLabel}</span>
@@ -59,6 +119,34 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
         ) : null}
 
         {note ? <p className="pcp-card__note">{note}</p> : null}
+
+        {restPhotos.length ? (
+          <div className="pcp-card__photos" aria-label="사진">
+            {restPhotos.map((photo) => (
+              <img key={photo.src} src={photo.src} alt="" loading="lazy" />
+            ))}
+          </div>
+        ) : null}
+
+        {records.length ? (
+          <section className="pcp-card__records" aria-label="기록">
+            <h3>기록 {records.length}</h3>
+            <ul>
+              {records.slice(0, 5).map((record) => (
+                <li key={record.id}>
+                  <div className="pcp-card__record-head">
+                    {record.date ? <time>{record.date}</time> : <span />}
+                    {record.extras ? <em>{record.extras}</em> : null}
+                  </div>
+                  {record.text ? <p>{record.text}</p> : null}
+                </li>
+              ))}
+            </ul>
+            {records.length > 5 ? (
+              <p className="pcp-card__records-more">기록 {records.length - 5}개 더 — 지도에서 전체 보기</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <footer className="pcp-card__foot">
           {mapTitle ? (
