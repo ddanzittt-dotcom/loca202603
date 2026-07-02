@@ -166,7 +166,8 @@ export function useAppSession({
     setCloudLoadedUserId(null)
     try { window.localStorage?.removeItem("loca.mobile.cloudUserId") } catch { /* noop */ }
     if (!keepSharedViewer) {
-      setActiveTab("login")
+      // 비로그인 상태의 홈은 탐색(공개 지도 구경) — 로그인 강요 없이 시작
+      setActiveTab("explore")
       setMapsView("list")
       setActiveMapSource("local")
       setActiveMapId(mapsSeed[0]?.id ?? null)

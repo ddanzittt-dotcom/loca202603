@@ -37,6 +37,7 @@ import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
+const ExplorePublicScreen = lazy(() => import("./screens/ExplorePublicScreen").then((m) => ({ default: m.ExplorePublicScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
 const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
 const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
@@ -330,7 +331,8 @@ export default function App() {
   const initialSharedMapData = routeAtLoad?.type === "shared" ? routeAtLoad.payload : null
   const [sharedMapData, setSharedMapData] = useState(initialSharedMapData)
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
-  const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "login")
+  // 첫 진입은 로그인 없이 구경할 수 있는 탐색 탭으로
+  const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "explore")
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -1603,6 +1605,22 @@ export default function App() {
                 />
             </WebAuthLayout>
           )
+        ) : null}
+
+        {/* 탐색 — 발행된 공개 지도, 로그인 불필요 */}
+        {activeTab === "explore" ? (
+          <WebPageFrame
+            className="web-section--explore"
+            eyebrow="EXPLORE"
+            title="탐색"
+            description="공개된 지도를 로그인 없이 검색하고 구경할 수 있어요."
+          >
+            <ExplorePublicScreen
+              onOpenMap={(slug) => {
+                window.location.href = `/s/${encodeURIComponent(slug)}`
+              }}
+            />
+          </WebPageFrame>
         ) : null}
 
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
