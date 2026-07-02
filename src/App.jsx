@@ -46,8 +46,6 @@ import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing } from "./hooks/useFeatureEditing"
 import { useMapCRUD } from "./hooks/useMapCRUD"
 import { useAppSession } from "./hooks/useAppSession"
-// 레벨/XP 시스템 폐기 (2026-05). useGamification 훅은 호출하지 않으며,
-// recordMapAction 호출은 useMapCRUD / useFeatureEditing 에서 stub 함수로 처리.
 import { useGeolocation } from "./hooks/useGeolocation"
 import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
@@ -465,12 +463,6 @@ export default function App() {
     setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
   }, [needsAuthForPersonalArea, requestLoginBanner])
 
-  // --- Gamification ---
-
-  // 레벨/XP 위젯 제거 (2026-05). useMapCRUD / useFeatureEditing 이 받는
-  // refreshGameProfile 콜백은 stub 으로 유지 (서비스 호출은 살아있어도 위젯이 없어 가시 효과 없음).
-  const refreshGameProfile = () => {}
-
   // --- Geolocation ---
 
   const { myLocation, locateMe } = useGeolocation({ setFocusPoint, showToast })
@@ -731,7 +723,6 @@ export default function App() {
     setEditorMode, setDraftPoints, setFitTrigger, setFocusPoint,
     showToast, sharedMapData, setSharedMapData,
     publishSheet, setPublishSheet, setSelectedPostRef,
-    refreshGameProfile,
     communityMapId,
   })
 
@@ -759,7 +750,7 @@ export default function App() {
     setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
     touchMap, showToast, setMaps,
-    maps, features, refreshGameProfile, myLocation, setFocusPoint,
+    maps, features, myLocation, setFocusPoint,
     currentUserId: viewerProfile.id,
     currentUserName: viewerProfile.name,
     onCommunityRequestSubmitted: refreshCommunityPendingRequests,

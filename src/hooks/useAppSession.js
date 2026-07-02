@@ -9,7 +9,6 @@ import {
   getProfile as getProfileRecord,
   publishMap as publishMapRecord,
 } from "../lib/mapService"
-// 레벨/XP 시스템 폐기 (2026-05) — updateStreak / gamificationService 호출 제거.
 import {
   featuresSeed,
   followedSeed,

@@ -852,46 +852,6 @@ export async function getFollowingIds(userId) {
   return (data || []).map((row) => row.following_id)
 }
 
-export async function getGameProfile(userId = null) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("get_game_profile", {
-    p_user_id: userId,
-  })
-  if (error) throw error
-  return data
-}
-
-/** @deprecated gamificationService.getGameProfile() 사용 */
-export async function getUserStats() {
-  const supabase = requireSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data, error } = await supabase
-    .from("user_stats")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (error) throw error
-  return data
-}
-
-export async function getUserBadges() {
-  const supabase = requireSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data, error } = await supabase
-    .from("user_badges")
-    .select("badge_id, earned_at")
-    .eq("user_id", user.id)
-    .order("earned_at", { ascending: false })
-
-  if (error) throw error
-  return data || []
-}
-
 export async function searchUsersForInvite(query) {
   if (!query || query.trim().length < 2) return []
   const supabase = requireSupabase()

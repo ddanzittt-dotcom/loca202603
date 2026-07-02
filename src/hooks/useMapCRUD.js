@@ -14,7 +14,6 @@ import {
   addMapToProfile as addMapToProfileRecord,
   removeMapFromProfile as removeMapFromProfileRecord,
 } from "../lib/mapService"
-import { recordMapAction } from "../lib/gamificationService"
 import { toEditableFeature } from "./useFeatureEditing"
 import { syncFeatureListLocalMediaToCloud } from "../lib/mediaCloudSync"
 
@@ -45,7 +44,6 @@ export function useMapCRUD({
   publishSheet,
   setPublishSheet,
   setSelectedPostRef,
-  refreshGameProfile,
   communityMapId = "community-map",
 }) {
   const touchMap = useCallback((mapId) => {
@@ -107,7 +105,6 @@ export function useMapCRUD({
 
           setMapSheet(null)
           openMapEditor(nextMap.id)
-          recordMapAction({ actionType: "map_create", eventKey: `map:${nextMap.id}`, mapId: nextMap.id }).then(() => refreshGameProfile?.()).catch(() => {})
           return showToast("지도를 만들었어요.")
         }
 
@@ -156,7 +153,7 @@ export function useMapCRUD({
       console.error("Failed to save map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, showToast, refreshGameProfile])
+  }, [cloudMode, mapSheet, openMapEditor, setMapSheet, setMaps, showToast])
 
   const deleteMap = useCallback(async (directMapId) => {
     const targetId = directMapId || mapSheet?.id
@@ -276,7 +273,6 @@ export function useMapCRUD({
       }
 
       logEvent("map_import", { map_id: sourceMap.id, meta: { feature_count: sourceFeatures.length || 0 } })
-      if (cloudMode) recordMapAction({ actionType: "map_import", eventKey: `import:${sourceMap.id}`, mapId: sourceMap.id }).then(() => refreshGameProfile?.()).catch(() => {})
       setSharedMapData(null)
       setActiveTab("maps")
       setActiveMapSource("local")
@@ -292,7 +288,7 @@ export function useMapCRUD({
       console.error("Failed to import shared map", error)
       showToast(friendlySupabaseError(error))
     }
-    }, [cloudMode, setFeatures, setMaps, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger, refreshGameProfile])
+    }, [cloudMode, setFeatures, setMaps, showToast, setSharedMapData, setActiveTab, setActiveMapSource, setMapsView, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setFitTrigger])
 
   const importSharedMapToLocal = useCallback(async () => {
     if (!sharedMapData) return
@@ -333,7 +329,6 @@ export function useMapCRUD({
         )))
       }
       logEvent("map_publish", { map_id: effectiveMapId })
-      if (cloudMode) recordMapAction({ actionType: "map_publish", eventKey: `publish:${effectiveMapId}`, mapId: effectiveMapId }).then(() => refreshGameProfile?.()).catch(() => {})
       setPublishSheet(null)
       showToast("링크 공유를 켰어요.")
       return effectiveMapId
@@ -342,7 +337,7 @@ export function useMapCRUD({
       showToast(friendlySupabaseError(error))
       return null
     }
-  }, [cloudMode, features, maps, publishSheet, setFeatures, setMaps, setPublishSheet, showToast, refreshGameProfile])
+  }, [cloudMode, features, maps, publishSheet, setFeatures, setMaps, setPublishSheet, showToast])
 
   // 발행 중단 = is_published=false + publication row 삭제(프로필에서도 내려감).
   // 인자: mapId 또는 postId(shares 항목의 id). 두 경로 모두 지원한다.

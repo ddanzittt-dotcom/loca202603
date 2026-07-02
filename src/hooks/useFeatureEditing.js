@@ -11,8 +11,6 @@ import {
   deleteFeature as deleteFeatureRecord,
 } from "../lib/mapService"
 import { createFeatureChangeRequest } from "../lib/mapService.write"
-import { recordMapAction } from "../lib/gamificationService"
-import { getMapCompletionSnapshot } from "../lib/mapCompletion"
 import { me } from "../data/sampleData"
 import { uploadMediaToCloud } from "../lib/mediaStore"
 import { getDefaultFeatureStyle, normalizeFeatureStyle } from "../lib/featureStyle"
@@ -147,7 +145,6 @@ export function useFeatureEditing({
   setMaps,
   maps,
   features,
-  refreshGameProfile,
   myLocation,
   setFocusPoint,
   currentUserId = me.id,
@@ -215,20 +212,6 @@ export function useFeatureEditing({
     setSelectedFeatureSummaryId(featureId)
     setFeatureSheet(toEditableFeature(feature))
   }, [activeFeaturePool, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
-
-  // 지도 완성도 마일스톤 체크 (cloud mode only)
-  const checkCompletionMilestone = useCallback((mapId) => {
-    if (!cloudMode || !mapId) return
-    const map = maps?.find((m) => m.id === mapId)
-    const mapFeatures = features?.filter((f) => f.mapId === mapId) || []
-    if (!map || mapFeatures.length === 0) return
-    const { score } = getMapCompletionSnapshot(map, mapFeatures)
-    if (score >= 90) {
-      recordMapAction({ actionType: "map_completion_90", eventKey: `comp90:${mapId}`, mapId }).catch(() => {})
-    } else if (score >= 70) {
-      recordMapAction({ actionType: "map_completion_70", eventKey: `comp70:${mapId}`, mapId }).catch(() => {})
-    }
-  }, [cloudMode, maps, features])
 
   const buildCommunityRequestPayload = useCallback((sourceFeature, requestMessage = "") => {
     if (!sourceFeature?.id) return null
@@ -423,16 +406,6 @@ export function useFeatureEditing({
               ? { ...mapItem, updatedAt: new Date().toISOString() }
               : mapItem
           )))
-          // feature_enrich: note/photo/voice가 있으면 보상
-          if (nextFeature.note?.trim() || nextFeature.photos?.length > 0 || nextFeature.voices?.length > 0) {
-            recordMapAction({
-              actionType: "feature_enrich",
-              eventKey: `enrich:${nextFeature.id}`,
-              mapId: nextFeature.mapId,
-              featureId: nextFeature.id,
-            }).catch(() => {})
-          }
-          checkCompletionMilestone(nextFeature.mapId)
           showToast("정보를 저장했어요.")
           return
         } catch (error) {
@@ -465,7 +438,6 @@ export function useFeatureEditing({
     setMaps,
     showToast,
     touchMap,
-    checkCompletionMilestone,
   ])
 
   const deleteFeature = useCallback(async () => {
@@ -960,14 +932,8 @@ export function useFeatureEditing({
             setPool: setCommunityMapFeatures,
             successToast: "장소를 추가했어요.",
             failureToast: "장소를 추가하지 못했어요.",
-            onCreated: (createdFeature) => {
+            onCreated: () => {
               logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
-              recordMapAction({
-                actionType: "feature_create_pin",
-                eventKey: `pin:${createdFeature.id}`,
-                mapId: activeMapId,
-                featureId: createdFeature.id,
-              }).then(() => refreshGameProfile?.()).catch(() => {})
             },
           })
           return
@@ -979,14 +945,6 @@ export function useFeatureEditing({
             setPool: setFeatures,
             successToast: "핀을 추가했어요.",
             failureToast: "핀을 추가하지 못했어요.",
-            onCreated: (createdFeature) => {
-              recordMapAction({
-                actionType: "feature_create_pin",
-                eventKey: `pin:${createdFeature.id}`,
-                mapId: activeMapId,
-                featureId: createdFeature.id,
-              }).then(() => refreshGameProfile?.()).catch(() => {})
-            },
           })
           logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
           return
@@ -996,14 +954,6 @@ export function useFeatureEditing({
       }
 
       logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "pin" } })
-      if (canPersistLocalInCloud) {
-        recordMapAction({
-          actionType: "feature_create_pin",
-          eventKey: `pin:${nextFeature.id}`,
-          mapId: activeMapId,
-          featureId: nextFeature.id,
-        }).then(() => refreshGameProfile?.()).catch(() => {})
-      }
 
       setEditorMode("browse")
       setSelectedFeatureId(nextFeature.id)
@@ -1046,14 +996,8 @@ export function useFeatureEditing({
           successToast: "길을 저장했어요.",
           failureToast: "길을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
-          onCreated: (createdFeature) => {
+          onCreated: () => {
             logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
-            recordMapAction({
-              actionType: "feature_create_route",
-              eventKey: `route:${createdFeature.id}`,
-              mapId: activeMapId,
-              featureId: createdFeature.id,
-            }).then(() => refreshGameProfile?.()).catch(() => {})
           },
         })
         return
@@ -1066,14 +1010,6 @@ export function useFeatureEditing({
           successToast: "길을 저장했어요.",
           failureToast: "길을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
-          onCreated: (createdFeature) => {
-            recordMapAction({
-              actionType: "feature_create_route",
-              eventKey: `route:${createdFeature.id}`,
-              mapId: activeMapId,
-              featureId: createdFeature.id,
-            }).then(() => refreshGameProfile?.()).catch(() => {})
-          },
         })
         logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
         return
@@ -1083,14 +1019,6 @@ export function useFeatureEditing({
     }
 
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "route", point_count: draftPoints.length } })
-    if (canPersistLocalInCloud) {
-      recordMapAction({
-        actionType: "feature_create_route",
-        eventKey: `route:${nextFeature.id}`,
-        mapId: activeMapId,
-        featureId: nextFeature.id,
-      }).then(() => refreshGameProfile?.()).catch(() => {})
-    }
     setDraftPoints([])
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
@@ -1124,14 +1052,8 @@ export function useFeatureEditing({
           successToast: "영역을 저장했어요.",
           failureToast: "영역을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
-          onCreated: (createdFeature) => {
+          onCreated: () => {
             logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
-            recordMapAction({
-              actionType: "feature_create_area",
-              eventKey: `area:${createdFeature.id}`,
-              mapId: activeMapId,
-              featureId: createdFeature.id,
-            }).then(() => refreshGameProfile?.()).catch(() => {})
           },
         })
         return
@@ -1144,14 +1066,6 @@ export function useFeatureEditing({
           successToast: "영역을 저장했어요.",
           failureToast: "영역을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
-          onCreated: (createdFeature) => {
-            recordMapAction({
-              actionType: "feature_create_area",
-              eventKey: `area:${createdFeature.id}`,
-              mapId: activeMapId,
-              featureId: createdFeature.id,
-            }).then(() => refreshGameProfile?.()).catch(() => {})
-          },
         })
         logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
         return
@@ -1161,14 +1075,6 @@ export function useFeatureEditing({
     }
 
     logEvent("feature_create", { map_id: activeMapId, meta: { feature_type: "area", point_count: draftPoints.length } })
-    if (canPersistLocalInCloud) {
-      recordMapAction({
-        actionType: "feature_create_area",
-        eventKey: `area:${nextFeature.id}`,
-        mapId: activeMapId,
-        featureId: nextFeature.id,
-      }).then(() => refreshGameProfile?.()).catch(() => {})
-    }
     setDraftPoints([])
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)

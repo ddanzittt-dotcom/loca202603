@@ -2294,20 +2294,6 @@
   padding: 3px 8px;
   border-radius: 8px;
 }
-.profile-souvenirs {
-  margin-bottom: 12px;
-}
-.profile-souvenirs__title {
-  font-size: 0.78rem;
-  display: block;
-  margin-bottom: 8px;
-}
-.profile-souvenirs__list {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
 /* ── 지도 완성도 게이지 (에디터) ── */
 .map-completion-bar {
   display: flex;
@@ -2441,35 +2427,6 @@
   color: rgba(255,255,255,0.5);
   text-align: right;
   margin-top: 2px;
-}
-
-/* ── 기념 뱃지 (프로필 탭) — 내부 클래스명 souvenir-* 는 유지 ── */
-.home-souvenir-row {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
-}
-.souvenir-chip {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  background: var(--surface, #fff);
-  border-radius: 999px;
-  border: 1px solid var(--line, #f3f4f6);
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.12s;
-}
-.souvenir-chip__emoji {
-  font-size: 1.1rem;
-}
-.souvenir-chip__title {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-secondary, #374151);
 }
 
 /* ── 지도 카드 리디자인 ── */
@@ -3198,16 +3155,6 @@
   border-radius: 8px;
 }
 
-/* ── 운영자 설정 UI ── */
-.souvenir-config {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 10px;
-  background: #f9fafb;
-  border-radius: 10px;
-}
 .field--inline {
   display: flex;
   align-items: center;
@@ -6210,77 +6157,6 @@ img.collab-item__avatar {
 .profile-v4 .pf__link span:last-child {
   overflow: hidden;
   max-width: 280px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pf__souvenir-wrap {
-  position: relative;
-  align-self: center;
-}
-
-.pf__souvenir-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border: 1px solid var(--pf-line);
-  border-radius: 999px;
-  background: #FAEEDA;
-  color: #633806;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.pf__souvenir-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  width: 220px;
-  padding: 10px;
-  border: 1px solid var(--pf-line);
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
-}
-
-.pf__souvenir-popover p {
-  margin: 0 0 8px;
-  color: var(--pf-ink-mute);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.pf__souvenir-popover ul {
-  display: flex;
-  max-height: 240px;
-  flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pf__souvenir-popover li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 4px 6px;
-}
-
-.pf__souvenir-popover li > span {
-  flex: 0 0 auto;
-  font-size: 18px;
-}
-
-.pf__souvenir-popover li > strong {
-  overflow: hidden;
-  color: var(--pf-ink);
-  font-size: 12px;
-  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

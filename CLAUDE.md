@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 LOCA는 **B2C 로컬 큐레이션 지도 웹서비스**(도메인 loca.im)다. 사용자가 자신만의 지도를 만들고, 핀/경로/영역을 기록하며, 발행·공유·커뮤니티로 나누는 모바일 퍼스트 플랫폼이다.
 프로덕션 번들에서 복원(recovery)된 소스코드로, 현재 편집 가능한 React/Vite 구조로 재구성되어 있다.
 
-> **⚠️ 2026-07 B2C 전환:** 행사지도(event map)/B2B/운영자(manager) 기능은 앱 코드에서 전면 제거됨. 아래 문서에 남아 있는 이벤트/체크인/설문/공지/대시보드/초대코드/B2B 서술은 **과거 이력**이며 현재 코드에는 없다. **유지된 것:** 지도 제작·편집, 발행·공유, 커뮤니티(모두의 지도), 공동편집 협업(`map_collaborators`), 게이미피케이션(레벨/XP/배지), 알림, 소셜 프로필.
+> **⚠️ 2026-07 B2C 전환:** 행사지도(event map)/B2B/운영자(manager) 기능은 앱 코드에서 전면 제거됨. 아래 문서에 남아 있는 이벤트/체크인/설문/공지/대시보드/초대코드/B2B 서술은 **과거 이력**이며 현재 코드에는 없다. **유지된 것:** 지도 제작·편집, 발행·공유, 커뮤니티(모두의 지도), 공동편집 협업(`map_collaborators`), 알림, 소셜 프로필. 게이미피케이션(레벨/XP/뱃지)은 2026-07 전면 제거.
 
 ## Tech Stack
 - **Frontend**: React 19 + Vite 8, JavaScript (JSX), ES2020+, React.lazy 코드 스플리팅
@@ -116,12 +116,13 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 ### DB Tables (Supabase) — 앱이 쓰는 것
 **핵심:** profiles, maps, map_publications, map_features, feature_memos, follows, view_logs
 **협업/커뮤니티:** map_collaborators, community_records(모두의 지도)
-**게이미피케이션:** user_stats, user_badges, user_souvenirs
+
+> 게이미피케이션(레벨/XP/뱃지/souvenir)은 2026-07 전면 제거됨 — 관련 테이블·RPC는 049 teardown migration 으로 정리.
 
 > 과거 이벤트/B2B 테이블(announcements, survey_responses, event_checkins, invitation_codes 등)은 migrations 이력에 남아 있으나 **앱 코드에서 미사용**.
 
 > **Migration 번호 주의 (2026-07):**
-> - 라이브 DB에는 웹 MVP 실험분 **046**(spots·place_records·map_items·user_saves)·**047**(map_invite_links)이 적용된 뒤 파일만 레포에서 제거됨. **신규 migration은 048부터** 번호를 쓰고, 046·047은 재사용 금지.
+> - 웹 MVP 실험분 046·047은 라이브 DB에 적용 후 파일만 제거됨 → **048_web_mvp_teardown** 으로 정리. 게이미피케이션은 **049_gamification_teardown** 으로 정리. **신규 migration은 050부터.**
 > - 중복 번호 존재: 005·013·020·022·030. 이 중 B2B 전용(`005_organizations`, `013_rate_limit_comments_features`, `022_dashboard_tenant_rbac`, `022_event_collab_roles_and_approval`)은 신규 환경 구축 시 실행하지 않는다.
 
 ### Sharing & OG 메타
