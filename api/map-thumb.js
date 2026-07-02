@@ -44,7 +44,8 @@ export default async function handler(req, res) {
     return
   }
 
-  const keyId = process.env.NCP_MAPS_KEY_ID || process.env.VITE_NAVER_MAP_KEY
+  // Key ID는 클라이언트(index.html)에도 노출되는 공개 값 — index.html의 폴백과 동일하게 유지
+  const keyId = process.env.NCP_MAPS_KEY_ID || process.env.VITE_NAVER_MAP_KEY || "x5bkbkzlrw"
   const key = process.env.NCP_MAPS_KEY
   const supabaseUrl = process.env.VITE_SUPABASE_URL
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
