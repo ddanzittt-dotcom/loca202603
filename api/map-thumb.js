@@ -15,33 +15,45 @@ const IMG_WIDTH = 400
 const IMG_HEIGHT = 276
 const MAX_MARKERS = 20
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
-}
+// 표지 일관성: 지도 카드는 모두 동일 축척(고정 줌), 핀들의 중심을 기준으로 렌더
+const MAP_COVER_LEVEL = 14
+// 장소 카드: 해당 위치가 중앙에 오는 근접 줌
+const PLACE_LEVEL = 16
 
-// 웹 메르카토르 기준 bounds가 들어가는 줌 레벨 계산
-function computeZoom(minLat, maxLat, minLng, maxLng, width, height) {
-  const latFraction = (lat) => {
-    const sin = Math.sin((lat * Math.PI) / 180)
-    return Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)
+async function sendStaticMap(res, notFound, keyId, key, { centerLng, centerLat, level, markers }) {
+  const params = new URLSearchParams({
+    w: String(IMG_WIDTH),
+    h: String(IMG_HEIGHT),
+    scale: "2",
+    center: `${centerLng.toFixed(5)},${centerLat.toFixed(5)}`,
+    level: String(level),
+    format: "png",
+    markers,
+  })
+
+  const upstream = await fetch(`${STATIC_MAP_ENDPOINT}?${params.toString()}`, {
+    headers: {
+      "x-ncp-apigw-api-key-id": keyId,
+      "x-ncp-apigw-api-key": key,
+    },
+  })
+
+  if (!upstream.ok) {
+    console.error("Static map upstream failed:", upstream.status, await upstream.text().catch(() => ""))
+    notFound(`upstream-${upstream.status}`)
+    return
   }
-  const latFrac = Math.abs(latFraction(maxLat) - latFraction(minLat))
-  const lngFrac = Math.abs(maxLng - minLng) / 360
-  const zoomW = Math.log2(width / 256 / Math.max(lngFrac, 1e-9))
-  const zoomH = Math.log2(height / 256 / Math.max(latFrac, 1e-9))
-  return clamp(Math.floor(Math.min(zoomW, zoomH)) - 1, 6, 16)
+
+  const buffer = Buffer.from(await upstream.arrayBuffer())
+  res.setHeader("Content-Type", upstream.headers.get("content-type") || "image/png")
+  res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800")
+  res.status(200).send(buffer)
 }
 
 export default async function handler(req, res) {
   const notFound = (reason) => {
     res.setHeader("x-thumb-reason", reason)
     res.status(404).end()
-  }
-
-  const mapId = req.query.id || req.query.mapId
-  if (!mapId || !/^[0-9a-fA-F-]{16,64}$/u.test(mapId)) {
-    notFound("bad-id")
-    return
   }
 
   // Key ID는 클라이언트(index.html)에도 노출되는 공개 값 — index.html의 폴백과 동일하게 유지
@@ -52,6 +64,35 @@ export default async function handler(req, res) {
 
   if (!keyId || !key || !supabaseUrl || !supabaseKey) {
     notFound(`env:${keyId ? "" : "keyId "}${key ? "" : "key "}${supabaseUrl ? "" : "sburl "}${supabaseKey ? "" : "sbkey"}`.trim())
+    return
+  }
+
+  // ── 장소 모드: ?lat=&lng= — 좌표가 중앙에 오는 근접 지도 (장소 카드용) ──
+  const latParam = Number(req.query.lat)
+  const lngParam = Number(req.query.lng)
+  if (Number.isFinite(latParam) && Number.isFinite(lngParam)) {
+    // 남용 방지: 서비스 대상 범위(한국 근방) 밖 좌표는 거절
+    if (latParam < 32 || latParam > 40 || lngParam < 123 || lngParam > 133) {
+      notFound("out-of-range")
+      return
+    }
+    try {
+      await sendStaticMap(res, notFound, keyId, key, {
+        centerLat: latParam,
+        centerLng: lngParam,
+        level: PLACE_LEVEL,
+        markers: `size:small|color:0xFF6B35|pos:${lngParam.toFixed(5)} ${latParam.toFixed(5)}`,
+      })
+    } catch (error) {
+      console.error("place-thumb failed:", error?.message)
+      notFound("exception")
+    }
+    return
+  }
+
+  const mapId = req.query.id || req.query.mapId
+  if (!mapId || !/^[0-9a-fA-F-]{16,64}$/u.test(mapId)) {
+    notFound("bad-id")
     return
   }
 
@@ -93,42 +134,17 @@ export default async function handler(req, res) {
     const centerLat = (minLat + maxLat) / 2
     const centerLng = (minLng + maxLng) / 2
 
-    const zoom = pins.length === 1
-      ? 15
-      : computeZoom(minLat, maxLat, minLng, maxLng, IMG_WIDTH, IMG_HEIGHT)
-
     const markerPos = pins.slice(0, MAX_MARKERS)
       .map((p) => `pos:${p.lng.toFixed(6)} ${p.lat.toFixed(6)}`)
       .join("|")
     const markers = `size:small|color:0xFF6B35|${markerPos}`
 
-    const params = new URLSearchParams({
-      w: String(IMG_WIDTH),
-      h: String(IMG_HEIGHT),
-      scale: "2",
-      center: `${centerLng.toFixed(6)},${centerLat.toFixed(6)}`,
-      level: String(zoom),
-      format: "png",
+    await sendStaticMap(res, notFound, keyId, key, {
+      centerLat,
+      centerLng,
+      level: MAP_COVER_LEVEL,
       markers,
     })
-
-    const upstream = await fetch(`${STATIC_MAP_ENDPOINT}?${params.toString()}`, {
-      headers: {
-        "x-ncp-apigw-api-key-id": keyId,
-        "x-ncp-apigw-api-key": key,
-      },
-    })
-
-    if (!upstream.ok) {
-      console.error("Static map upstream failed:", upstream.status, await upstream.text().catch(() => ""))
-      notFound(`upstream-${upstream.status}`)
-      return
-    }
-
-    const buffer = Buffer.from(await upstream.arrayBuffer())
-    res.setHeader("Content-Type", upstream.headers.get("content-type") || "image/png")
-    res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800")
-    res.status(200).send(buffer)
   } catch (error) {
     console.error("map-thumb failed:", error?.message)
     notFound("exception")

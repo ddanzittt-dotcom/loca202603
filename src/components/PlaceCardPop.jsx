@@ -1,7 +1,28 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MapPin, X } from "lucide-react"
 import { FeatureEmoji } from "./FeatureEmoji"
 import { buildFeatureRecordGroups } from "../lib/featureRecordGroups"
+
+// 카드 상단 지도의 중심 좌표 (핀: 자기 좌표, 길/영역: 점들의 평균)
+function getFeatureCenterPoint(feature) {
+  const lat = Number(feature?.lat)
+  const lng = Number(feature?.lng)
+  if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
+    return { lat, lng }
+  }
+  const points = Array.isArray(feature?.points) ? feature.points : []
+  const coords = points
+    .map((point) => {
+      if (Array.isArray(point)) return { lat: Number(point[1]), lng: Number(point[0]) }
+      return { lat: Number(point?.lat ?? point?.y), lng: Number(point?.lng ?? point?.x) }
+    })
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+  if (!coords.length) return null
+  return {
+    lat: coords.reduce((sum, p) => sum + p.lat, 0) / coords.length,
+    lng: coords.reduce((sum, p) => sum + p.lng, 0) / coords.length,
+  }
+}
 
 const TYPE_LABELS = { pin: "장소", route: "길", area: "영역" }
 
@@ -20,6 +41,10 @@ function formatDate(value) {
  * 사진·메모 등 그 장소에 남긴 기록을 카드 한 장으로 모아 보여준다.
  */
 export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
+  // 지도 이미지 로드 실패 기록 (feature 별로 추적 — 다른 장소를 열면 자동 초기화)
+  const [mapFailedFor, setMapFailedFor] = useState(null)
+  const mapFailed = mapFailedFor === (feature?.id || feature?.feature_id)
+
   useEffect(() => {
     const handleKey = (event) => {
       if (event.key === "Escape") onClose?.()
@@ -76,8 +101,11 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
   const tags = Array.isArray(feature.tags) ? feature.tags.filter(Boolean).slice(0, 4) : []
   const note = (feature.note || "").trim()
   const savedLabel = formatDate(feature.updatedAt)
-  const heroPhoto = photos[0] || null
-  const restPhotos = photos.slice(1, 7)
+  const restPhotos = photos.slice(0, 7)
+  const center = getFeatureCenterPoint(feature)
+  const mapSrc = center && !mapFailed
+    ? `/api/map-thumb?lat=${center.lat.toFixed(5)}&lng=${center.lng.toFixed(5)}`
+    : null
 
   return (
     <div className="pcp-backdrop" onClick={onClose} role="presentation">
@@ -92,9 +120,13 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
           <X size={16} strokeWidth={2.2} />
         </button>
 
-        {heroPhoto ? (
+        {mapSrc ? (
           <div className="pcp-card__hero">
-            <img src={heroPhoto.src} alt={`${title} 사진`} />
+            <img
+              src={mapSrc}
+              alt={`${title} 위치 지도`}
+              onError={() => setMapFailedFor(feature?.id || feature?.feature_id)}
+            />
             <span className="pcp-card__hero-emoji" aria-hidden="true">
               <FeatureEmoji feature={feature} size={34} unicodeFontSize={20} />
             </span>
