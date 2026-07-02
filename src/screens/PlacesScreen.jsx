@@ -194,10 +194,13 @@ export function PlacesScreen({
 
   return (
     <Wrapper className={embedded ? "pl-screen pl-screen--embedded" : "screen screen--scroll pl-screen"}>
-      <div className="pl-header">
-        <h1 className="pl-header__title">{title === "장소" ? `PLACES / ${recordFeatures.length}` : title}</h1>
-        <p className="pl-header__sub">{subtitle}</p>
-      </div>
+      {/* embedded(웹 프레임 안)일 때는 프레임 헤더와 중복되므로 자체 헤더를 숨긴다 */}
+      {embedded ? null : (
+        <div className="pl-header">
+          <h1 className="pl-header__title">{title === "장소" ? `PLACES / ${recordFeatures.length}` : title}</h1>
+          <p className="pl-header__sub">{subtitle}</p>
+        </div>
+      )}
 
       <div className="pl-search">
         <SearchIcon size={13} color="#aaa" />

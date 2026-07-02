@@ -200,8 +200,8 @@ function WebAuthLayout({ children }) {
         <aside className="web-auth-workspace__intro" aria-label="LOCA 웹 소개">
           <span className="web-section__eyebrow">SOFT SOCIAL PLACES</span>
           <h1>같이 가고 싶은 곳을 지도에 모아요.</h1>
-          <p>친구와 저장한 장소, 내가 만든 코스, 공개할 지도를 한 화면에서 가볍게 이어갑니다.</p>
-          <WebSocialCue label="지금 모으는 지도" items={["주말 산책", "카페 후보", "같이 갈 곳"]} />
+          <p>친구와 저장한 장소와 내가 만든 지도를 한 화면에서 가볍게 이어갑니다.</p>
+          <WebSocialCue label="이런 지도를 만들 수 있어요" items={["주말 산책", "카페 후보", "같이 갈 곳"]} />
           <div className="web-auth-workspace__flow" aria-label="주요 작업 흐름">
             <span><PenLine size={15} aria-hidden="true" />장소 저장</span>
             <span><MapIcon size={15} aria-hidden="true" />지도 공유</span>
@@ -1522,20 +1522,35 @@ export default function App() {
     ` app-shell--tab-${bottomNavTab}`,
   ].join("")
   const webMapStats = [
-    { label: "내 지도", value: b2cMaps.length, caption: "같이 저장" },
-    { label: "공개 지도", value: b2cShares.length, caption: "프로필에 표시" },
-    { label: "저장 장소", value: b2cFeatures.length, caption: "모아둔 곳" },
+    { label: "내 지도", value: b2cMaps.length },
+    { label: "공개 지도", value: b2cShares.length },
+    { label: "저장 장소", value: b2cFeatures.length },
   ]
   const webPlaceStats = [
-    { label: "장소", value: b2cFeatures.length, caption: "저장함" },
-    { label: "지도", value: new Set(b2cFeatures.map((feature) => feature.mapId)).size, caption: "연결됨" },
-    { label: "공개", value: b2cShares.length, caption: "함께 보기" },
+    { label: "장소", value: b2cFeatures.length },
+    { label: "담긴 지도", value: new Set(b2cFeatures.map((feature) => feature.mapId)).size },
   ]
   const webProfileStats = [
-    { label: "공개 지도", value: b2cShares.length, caption: "프로필" },
-    { label: "내 지도", value: b2cMaps.length, caption: "저장함" },
-    { label: "장소", value: b2cFeatures.length, caption: "모음" },
+    { label: "공개 지도", value: b2cShares.length },
+    { label: "내 지도", value: b2cMaps.length },
+    { label: "장소", value: b2cFeatures.length },
   ]
+
+  // 상단 색점 위젯(WebSocialCue)은 실데이터만 보여준다 — 데이터가 없으면 숨김
+  const recentMapTitles = [...b2cMaps]
+    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+    .slice(0, 3)
+    .map((mapItem) => mapItem.title)
+    .filter(Boolean)
+  const recentPlaceTitles = [...b2cFeatures]
+    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
+    .slice(0, 3)
+    .map((feature) => feature.title)
+    .filter(Boolean)
+  const publishedMapTitles = b2cShares
+    .map((share) => b2cMaps.find((mapItem) => mapItem.id === share.mapId)?.title)
+    .filter(Boolean)
+    .slice(0, 3)
 
   return (
     <div className={shellClassName}>
@@ -1602,11 +1617,11 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "maps" && mapsView === "list" ? (
           <WebPageFrame
             className="web-section--maps maps-library-screen--v2"
-            eyebrow="SHARED MAPS"
+            eyebrow="MY MAPS"
             title="지도 목록"
-            description="내가 만든 지도와 같이 저장 중인 코스를 한곳에 모아봅니다."
+            description="내가 만든 지도와 함께 만드는 지도를 한곳에서 관리해요."
             stats={webMapStats}
-            socialCue={{ label: "함께 모으는 지도", items: ["주말 산책", "카페 후보", "공개 준비"] }}
+            socialCue={recentMapTitles.length ? { label: "최근 작업한 지도", items: recentMapTitles } : null}
             action={(
               <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
                 <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1654,9 +1669,9 @@ export default function App() {
             className="web-section--places maps-library-screen--v2"
             eyebrow="SAVED PLACES"
             title="장소 목록"
-            description="최근 저장한 장소와 친구에게 보여줄 코스 재료를 빠르게 찾습니다."
+            description="지도에 저장한 장소를 검색하고 다시 열어봐요."
             stats={webPlaceStats}
-            socialCue={{ label: "최근 저장함", items: ["플랫바이트", "온유나흘", "여의도 한강공원"] }}
+            socialCue={recentPlaceTitles.length ? { label: "최근 저장한 장소", items: recentPlaceTitles } : null}
             action={(
               <button className="web-section__action" type="button" onClick={openRecordFlow}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1671,8 +1686,6 @@ export default function App() {
               onOpenFeature={openFeatureFromPlaces}
               onCreateRecord={openRecordFlow}
               embedded
-              title="장소 목록"
-              subtitle="내 지도에 모은 장소를 검색하고 다시 열어보세요"
             />
           </WebPageFrame>
         ) : null}
@@ -1798,9 +1811,9 @@ export default function App() {
             className="web-section--profile"
             eyebrow="PROFILE"
             title="프로필"
-            description="친구에게 보여줄 지도와 내 소개를 가볍게 정리합니다."
+            description="친구에게 보여줄 공개 지도와 내 소개를 정리해요."
             stats={webProfileStats}
-            socialCue={{ label: "공개 준비", items: ["커버", "소개글", "첫 지도"] }}
+            socialCue={publishedMapTitles.length ? { label: "공개 중인 지도", items: publishedMapTitles } : null}
             action={(
               <button
                 className="web-section__action"
@@ -1859,6 +1872,7 @@ export default function App() {
       <BottomNavV2
         tab={bottomNavTab}
         onTabChange={handleBottomNavChange}
+        authed={Boolean(authUser)}
       />
       )}
 
