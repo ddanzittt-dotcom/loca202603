@@ -3,9 +3,9 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/s/[^/]+",
+      "source": "/s/:slug",
       "has": [
         {
           "type": "header",
@@ -13,13 +13,11 @@
           "value": "(?i).*(kakaotalk|facebookexternalhit|facebot|twitterbot|slackbot|linkedinbot|discordbot|telegrambot|whatsapp|line/).*"
         }
       ],
-      "dest": "/api/og/$0"
+      "destination": "/api/og/:slug"
     },
-    { "src": "/terms/?", "dest": "/legal/terms.html" },
-    { "src": "/privacy/?", "dest": "/legal/privacy.html" },
-    { "handle": "filesystem" },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "source": "/terms", "destination": "/legal/terms.html" },
+    { "source": "/privacy", "destination": "/legal/privacy.html" },
+    { "source": "/:path((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
