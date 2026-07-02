@@ -27,6 +27,7 @@ export {
   getProfile,
   getProfileBySlug,
   getFollowingIds,
+  listPublicMapFeatureSummaries,
   searchUsersForInvite,
   listCollaborationInvites,
   checkCollaboratorAccess,

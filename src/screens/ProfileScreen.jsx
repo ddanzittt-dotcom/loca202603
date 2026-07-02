@@ -6,52 +6,13 @@ import { BrandLogo } from "../components/BrandLogo"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { getProfilePlacementState } from "../lib/mapPlacement"
+import { generateMiniMapSvg } from "../lib/miniMapPreview"
 import { hasSupabaseEnv } from "../lib/supabase"
 
 const PROFILE_ALIAS_SUGGESTIONS = ["성수 카페 탐험가", "동네 산책러", "주말 미식가", "서울 골목 탐험가"]
 const PROFILE_ALIAS_MAX = 15
 const PROFILE_BIO_MAX = 80
 const CURATION_NOTICE_KEY = "loca.profile_curation_notice_seen"
-
-function renderMiniMapGrid() {
-  const vertical = [40, 80, 120, 160].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="138"/>`).join("")
-  const horizontal = [34, 69, 103].map((y) => `<line x1="0" y1="${y}" x2="200" y2="${y}"/>`).join("")
-  return `<g stroke="#DDD0B3" stroke-width="0.6">${vertical}${horizontal}</g>`
-}
-
-function generateLocalMiniMapSvg(features = []) {
-  const pins = features.filter((item) => item.type === "pin" && Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng)))
-  const bg = '<rect width="200" height="138" fill="#EFE7D4"/>'
-  const grid = renderMiniMapGrid()
-
-  if (pins.length === 0) {
-    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<text x="100" y="73" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="10" font-weight="700" fill="#8B847A">장소 없음</text></svg>`
-  }
-
-  const coords = pins.map((pin) => ({ lat: Number(pin.lat), lng: Number(pin.lng) }))
-  const minLat = Math.min(...coords.map((p) => p.lat))
-  const maxLat = Math.max(...coords.map((p) => p.lat))
-  const minLng = Math.min(...coords.map((p) => p.lng))
-  const maxLng = Math.max(...coords.map((p) => p.lng))
-  const latRange = Math.max(maxLat - minLat, 0.0005)
-  const lngRange = Math.max(maxLng - minLng, 0.0005)
-  const padding = 18
-  const drawableW = 200 - padding * 2
-  const drawableH = 138 - padding * 2
-  const scale = Math.min(drawableW / lngRange, drawableH / latRange)
-  const usedW = lngRange * scale
-  const usedH = latRange * scale
-  const offsetX = padding + (drawableW - usedW) / 2
-  const offsetY = padding + (drawableH - usedH) / 2
-  const radius = pins.length > 20 ? 3 : pins.length > 10 ? 3.5 : 4.5
-  const dots = coords.map((point) => {
-    const x = offsetX + (point.lng - minLng) * scale
-    const y = offsetY + (maxLat - point.lat) * scale
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${radius}" fill="white" stroke="#C44518" stroke-width="0.8"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(radius * 0.62).toFixed(1)}" fill="#FF6B35"/>`
-  }).join("")
-
-  return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${bg}${grid}<g>${dots}</g></svg>`
-}
 
 function groupFeaturesByMapId(features = []) {
   return features.reduce((acc, feature) => {
@@ -95,7 +56,7 @@ function getMapPrivacyLabel(map) {
 
 function ProfileMiniCard({ map, features, onClick }) {
   const pins = features.filter((item) => item.type === "pin")
-  const previewSvg = map.previewSvg || map.preview_svg || generateLocalMiniMapSvg(features)
+  const previewSvg = map.previewSvg || map.preview_svg || generateMiniMapSvg(features, { theme: map.theme })
   const privacyLabel = getMapPrivacyLabel(map)
   const savedCount = map.savedCount || map.saved_count || map.bookmarkCount || map.bookmark_count
 

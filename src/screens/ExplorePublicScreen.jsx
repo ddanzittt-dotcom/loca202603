@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react"
 import { MapPin, Search } from "lucide-react"
-import { getPublishedMaps } from "../lib/mapService"
+import { getPublishedMaps, listPublicMapFeatureSummaries } from "../lib/mapService"
 import { hasSupabaseEnv } from "../lib/supabase"
-import { mapThemeGradient } from "../lib/appUtils"
+import { generateMiniMapSvg } from "../lib/miniMapPreview"
+import { FeatureEmoji } from "../components/FeatureEmoji"
 
 // 탐색 — 발행된 공개 지도를 로그인 없이 검색·열람하는 화면.
+// 카드는 지도 목록과 같은 미니맵 프리뷰 + 핀 이모지 스티커로 지도의 분위기를 보여준다.
 // visibility가 'public'인 지도만 노출한다 ('링크 공개'는 링크로만 접근).
 
 function formatDate(value) {
@@ -15,6 +17,7 @@ function formatDate(value) {
 
 export function ExplorePublicScreen({ onOpenMap }) {
   const [publishedMaps, setPublishedMaps] = useState([])
+  const [featuresByMapId, setFeaturesByMapId] = useState(() => new Map())
   const [loading, setLoading] = useState(hasSupabaseEnv)
   const [error, setError] = useState("")
   const [query, setQuery] = useState("")
@@ -23,15 +26,31 @@ export function ExplorePublicScreen({ onOpenMap }) {
     if (!hasSupabaseEnv) return undefined
     let cancelled = false
     getPublishedMaps(60)
-      .then((rows) => {
+      .then(async (rows) => {
         if (cancelled) return
-        setPublishedMaps((rows || []).filter((mapItem) => mapItem.visibility === "public" && mapItem.slug))
+        const visible = (rows || []).filter((mapItem) => mapItem.visibility === "public" && mapItem.slug)
+        setPublishedMaps(visible)
+        setLoading(false)
+
+        // 카드 미니맵/스티커용 피처 요약은 뒤이어 로드 (없어도 카드는 뜬다)
+        try {
+          const summaries = await listPublicMapFeatureSummaries(visible.map((mapItem) => mapItem.id))
+          if (cancelled) return
+          const grouped = new Map()
+          for (const row of summaries) {
+            const list = grouped.get(row.map_id)
+            if (list) list.push(row)
+            else grouped.set(row.map_id, [row])
+          }
+          setFeaturesByMapId(grouped)
+        } catch {
+          // 미니맵 없이 기본 커버로 노출
+        }
       })
       .catch(() => {
-        if (!cancelled) setError("공개 지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.")
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (cancelled) return
+        setError("공개 지도를 불러오지 못했어요. 잠시 후 다시 시도해주세요.")
+        setLoading(false)
       })
     return () => { cancelled = true }
   }, [])
@@ -48,6 +67,26 @@ export function ExplorePublicScreen({ onOpenMap }) {
       return haystack.includes(keyword)
     })
   }, [publishedMaps, query])
+
+  const cards = useMemo(() => (
+    filteredMaps.map((mapItem) => {
+      const features = featuresByMapId.get(mapItem.id) || []
+      const pins = features.filter((feature) => feature.type === "pin")
+      const stickerEmojis = pins
+        .map((feature) => feature.emoji)
+        .filter(Boolean)
+        .filter((emoji, index, list) => list.indexOf(emoji) === index)
+        .slice(0, 3)
+      return {
+        map: mapItem,
+        placeCount: pins.length,
+        stickerEmojis,
+        previewSvg: generateMiniMapSvg(features, { theme: mapItem.theme, emptyLabel: "구경하러 가기" }),
+        dateLabel: formatDate(mapItem.publishedAt || mapItem.updatedAt),
+        tags: (Array.isArray(mapItem.tags) ? mapItem.tags : []).filter(Boolean).slice(0, 3),
+      }
+    })
+  ), [filteredMaps, featuresByMapId])
 
   return (
     <div className="explore-public">
@@ -68,37 +107,44 @@ export function ExplorePublicScreen({ onOpenMap }) {
 
       {!loading && !error ? (
         <div className="explore-public__grid">
-          {filteredMaps.map((mapItem) => {
-            const dateLabel = formatDate(mapItem.publishedAt || mapItem.updatedAt)
-            const tags = (Array.isArray(mapItem.tags) ? mapItem.tags : []).filter(Boolean).slice(0, 3)
-            return (
-              <button
-                key={mapItem.slug}
-                type="button"
-                className="explore-public__card"
-                onClick={() => onOpenMap?.(mapItem.slug)}
-              >
-                <span
-                  className="explore-public__cover"
-                  style={{ background: mapThemeGradient(mapItem.theme) }}
-                  aria-hidden="true"
-                >
-                  <MapPin size={22} strokeWidth={2} />
-                </span>
-                <span className="explore-public__body">
-                  <strong>{mapItem.title || "이름 없는 지도"}</strong>
-                  {mapItem.description ? <small>{mapItem.description}</small> : null}
-                  {tags.length ? (
-                    <span className="explore-public__tags">
-                      {tags.map((tag) => <em key={tag}>#{tag}</em>)}
-                    </span>
-                  ) : null}
-                  {dateLabel ? <time>{dateLabel}</time> : null}
-                </span>
-              </button>
-            )
-          })}
-          {!filteredMaps.length ? (
+          {cards.map(({ map: mapItem, placeCount, stickerEmojis, previewSvg, dateLabel, tags }) => (
+            <button
+              key={mapItem.slug}
+              type="button"
+              className="explore-public__card"
+              onClick={() => onOpenMap?.(mapItem.slug)}
+            >
+              <span className="explore-public__cover">
+                <span className="explore-public__minimap" dangerouslySetInnerHTML={{ __html: previewSvg }} aria-hidden="true" />
+                {stickerEmojis.length ? (
+                  <span className="explore-public__stickers" aria-hidden="true">
+                    {stickerEmojis.map((emoji, index) => (
+                      <span key={`${emoji}-${index}`} className="explore-public__sticker">
+                        <FeatureEmoji emoji={emoji} size={24} unicodeFontSize={15} />
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+                {placeCount > 0 ? (
+                  <span className="explore-public__count">
+                    <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
+                    {placeCount}곳
+                  </span>
+                ) : null}
+              </span>
+              <span className="explore-public__body">
+                <strong>{mapItem.title || "이름 없는 지도"}</strong>
+                {mapItem.description ? <small>{mapItem.description}</small> : null}
+                {tags.length ? (
+                  <span className="explore-public__tags">
+                    {tags.map((tag) => <em key={tag}>#{tag}</em>)}
+                  </span>
+                ) : null}
+                {dateLabel ? <time>{dateLabel}</time> : null}
+              </span>
+            </button>
+          ))}
+          {!cards.length ? (
             <p className="explore-public__status">
               {query.trim() ? "검색 결과가 없어요. 다른 키워드로 찾아보세요." : "아직 공개된 지도가 없어요."}
             </p>

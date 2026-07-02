@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Check, ChevronDown, GripVertical, Lock, MoreHorizontal, MoveVertical, Pencil, Search as SearchIcon, Trash2, Users, X } from "lucide-react"
 import { EmptyState, SkeletonCard } from "../components/ui"
 import { getProfilePlacementState } from "../lib/mapPlacement"
+import { generateMiniMapSvg } from "../lib/miniMapPreview"
 
 const MAP_FILTERS = [
   { id: "all", label: "전체" },
@@ -9,59 +10,6 @@ const MAP_FILTERS = [
   { id: "draft", label: "작성 중" },
 ]
 
-function renderMiniMapGrid() {
-  const vertical = [40, 80, 120, 160].map((x) => `<line x1="${x}" y1="0" x2="${x}" y2="138"/>`).join("")
-  const horizontal = [34, 69, 103].map((y) => `<line x1="0" y1="${y}" x2="200" y2="${y}"/>`).join("")
-  return `<g stroke="#DDD0B3" stroke-width="0.6">${vertical}${horizontal}</g>`
-}
-
-function generateLocalMiniMapSvg(features) {
-  const pins = features.filter((item) => (
-    item.type === "pin"
-    && Number.isFinite(Number(item.lat))
-    && Number.isFinite(Number(item.lng))
-  ))
-  const bg = '<rect width="200" height="138" fill="#EFE7D4"/>'
-  const grid = renderMiniMapGrid()
-
-  if (pins.length === 0) {
-    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<text x="100" y="73" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="10" font-weight="700" fill="#8B847A">장소 없음</text></svg>`
-  }
-
-  const coords = pins.map((pin) => ({ lat: Number(pin.lat), lng: Number(pin.lng) }))
-  const minLat = Math.min(...coords.map((p) => p.lat))
-  const maxLat = Math.max(...coords.map((p) => p.lat))
-  const minLng = Math.min(...coords.map((p) => p.lng))
-  const maxLng = Math.max(...coords.map((p) => p.lng))
-  const latRange = maxLat - minLat
-  const lngRange = maxLng - minLng
-
-  if (latRange < 0.0005 && lngRange < 0.0005) {
-    const countLabel = pins.length > 1 ? `<text x="100" y="102" text-anchor="middle" font-family="Pretendard, sans-serif" font-size="9" font-weight="700" fill="#4A453E">${pins.length}곳 한 지점</text>` : ""
-    return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg">${bg}${grid}<circle cx="100" cy="69" r="14" fill="#FF6B35" opacity="0.15"/><circle cx="100" cy="69" r="8" fill="#FF6B35" opacity="0.3"/><circle cx="100" cy="69" r="6" fill="white" stroke="#C44518" stroke-width="1"/><circle cx="100" cy="69" r="3.5" fill="#FF6B35"/>${countLabel}</svg>`
-  }
-
-  const padding = 18
-  const drawableW = 200 - padding * 2
-  const drawableH = 138 - padding * 2
-  const scale = Math.min(drawableW / lngRange, drawableH / latRange)
-  const usedW = lngRange * scale
-  const usedH = latRange * scale
-  const offsetX = padding + (drawableW - usedW) / 2
-  const offsetY = padding + (drawableH - usedH) / 2
-  const points = coords.map((p) => ({
-    x: offsetX + (p.lng - minLng) * scale,
-    y: offsetY + (maxLat - p.lat) * scale,
-  }))
-  const radius = pins.length > 20 ? 3 : pins.length > 10 ? 3.5 : 4.5
-  const dots = points.map((point) => {
-    const x = point.x.toFixed(1)
-    const y = point.y.toFixed(1)
-    return `<circle cx="${x}" cy="${y}" r="${radius}" fill="white" stroke="#C44518" stroke-width="0.8"/><circle cx="${x}" cy="${y}" r="${(radius * 0.62).toFixed(1)}" fill="#FF6B35"/>`
-  }).join("")
-
-  return `<svg viewBox="0 0 200 138" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">${bg}${grid}<g>${dots}</g></svg>`
-}
 
 function formatRelativeDate(dateStr) {
   if (!dateStr) return "최근 수정"
@@ -320,7 +268,7 @@ export function MapsListScreen({
         collabCount: getCollabCount(map),
         placeCount: mapFeatures.length,
         updatedLabel: formatRelativeDate(map.updatedAt || map.updated_at || map.modifiedAt || map.modified_at),
-        previewSvg: map.previewSvg || map.preview_svg || generateLocalMiniMapSvg(mapFeatures),
+        previewSvg: map.previewSvg || map.preview_svg || generateMiniMapSvg(mapFeatures, { theme: map.theme }),
         searchable: [
           map.title,
           map.description,

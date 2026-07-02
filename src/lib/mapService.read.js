@@ -852,6 +852,19 @@ export async function getFollowingIds(userId) {
   return (data || []).map((row) => row.following_id)
 }
 
+// 탐색 카드 미니맵용 — 공개 지도의 피처 좌표/이모지 요약 (RLS가 공개 지도만 반환)
+export async function listPublicMapFeatureSummaries(mapIds = []) {
+  if (!mapIds.length) return []
+  const supabase = requireSupabase()
+  const { data, error } = await supabase
+    .from("map_features")
+    .select("map_id, type, lat, lng, points, emoji")
+    .in("map_id", mapIds)
+    .limit(800)
+  if (error) throw error
+  return data || []
+}
+
 export async function searchUsersForInvite(query) {
   if (!query || query.trim().length < 2) return []
   const supabase = requireSupabase()
