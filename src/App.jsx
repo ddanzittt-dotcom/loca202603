@@ -217,6 +217,56 @@ function WebAuthLayout({ children }) {
   )
 }
 
+// 우상단 내 계정 버튼 — 로그인 후 계정 탭 대신 사용 (로그아웃 등 간단한 동작)
+function AccountMenu({ email, onOpenAccount, onSignOut }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="account-menu">
+      <button
+        type="button"
+        className="account-menu__trigger"
+        onClick={() => setOpen((current) => !current)}
+        aria-label="내 계정"
+        aria-expanded={open}
+      >
+        <User size={17} strokeWidth={2.1} aria-hidden="true" />
+      </button>
+      {open ? (
+        <>
+          <div className="account-menu__backdrop" onClick={() => setOpen(false)} role="presentation" />
+          <div className="account-menu__pop" role="menu" aria-label="계정 메뉴">
+            <p className="account-menu__email">{email || "내 계정"}</p>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onOpenAccount?.()
+              }}
+            >
+              계정 화면
+            </button>
+            {onSignOut ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="account-menu__signout"
+                onClick={() => {
+                  setOpen(false)
+                  onSignOut()
+                }}
+              >
+                로그아웃
+              </button>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 function SignedInScreen({ user, onOpenMaps, onOpenProfile, onSignOut }) {
   return (
     <WebAuthLayout>
@@ -1492,21 +1542,6 @@ export default function App() {
     { label: "장소", value: b2cFeatures.length },
   ]
 
-  // 상단 색점 위젯(WebSocialCue)은 실데이터만 보여준다 — 데이터가 없으면 숨김
-  const recentMapTitles = [...b2cMaps]
-    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
-    .slice(0, 3)
-    .map((mapItem) => mapItem.title)
-    .filter(Boolean)
-  const recentPlaceTitles = [...b2cFeatures]
-    .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
-    .slice(0, 3)
-    .map((feature) => feature.title)
-    .filter(Boolean)
-  const publishedMapTitles = b2cShares
-    .map((share) => b2cMaps.find((mapItem) => mapItem.id === share.mapId)?.title)
-    .filter(Boolean)
-    .slice(0, 3)
 
   return (
     <div className={shellClassName}>
@@ -1577,7 +1612,6 @@ export default function App() {
             title="지도 목록"
             description="내가 만든 지도와 함께 만드는 지도를 한곳에서 관리해요."
             stats={webMapStats}
-            socialCue={recentMapTitles.length ? { label: "최근 작업한 지도", items: recentMapTitles } : null}
             action={(
               <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
                 <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1627,7 +1661,6 @@ export default function App() {
             title="장소 목록"
             description="지도에 저장한 장소를 검색하고 다시 열어봐요."
             stats={webPlaceStats}
-            socialCue={recentPlaceTitles.length ? { label: "최근 저장한 장소", items: recentPlaceTitles } : null}
             action={(
               <button className="web-section__action" type="button" onClick={openRecordFlow}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1772,7 +1805,6 @@ export default function App() {
             title="프로필"
             description="친구에게 보여줄 공개 지도와 내 소개를 정리해요."
             stats={webProfileStats}
-            socialCue={publishedMapTitles.length ? { label: "공개 중인 지도", items: publishedMapTitles } : null}
             action={(
               <button
                 className="web-section__action"
@@ -1825,6 +1857,15 @@ export default function App() {
       </Suspense>
       </AppErrorBoundary>
       </main>
+
+      {/* 로그인 후 우상단 내 계정 버튼 (지도 편집 중에는 숨김) */}
+      {authUser && !isMapEditorLayout ? (
+        <AccountMenu
+          email={authUser.email}
+          onOpenAccount={() => handleBottomNavChange("login")}
+          onSignOut={cloudMode ? handleSignOut : null}
+        />
+      ) : null}
 
       {/* 공유 지도 viewer / feature 편집 시트 / 키보드 표시 중에는 BottomNav 숨김 */}
       {shouldHideBottomNav ? null : (

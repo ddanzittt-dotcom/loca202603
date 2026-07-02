@@ -1,19 +1,19 @@
-import { LogIn, Map, MapPin, User, UserCheck } from "lucide-react"
+import { LogIn, Map, MapPin, User } from "lucide-react"
 
 /**
- * BottomNav v2 — 웹용 4칸 (로그인·계정 / 지도 목록 / 장소 목록 / 프로필)
- * 지도 제작은 지도 목록 안의 "새 지도" 버튼으로 진입한다 (탭 중복 제거).
+ * BottomNav v2 — 웹용 하단 내비.
+ * 비로그인: 로그인 / 지도 목록 / 장소 목록 / 프로필 (4칸)
+ * 로그인 후: 지도 목록 / 장소 목록 / 프로필 (3칸 — 계정은 우상단 계정 버튼으로)
+ * 지도 제작은 지도 목록 안의 "새 지도" 버튼으로 진입한다.
  *
  * Props:
  *   tab        — 'login' | 'maps' | 'places' | 'profile'
  *   onTabChange(nextTab)
- *   authed     — 로그인 여부 (로그인 탭 라벨/아이콘 전환)
+ *   authed     — 로그인 여부
  */
 export function BottomNavV2({ tab, onTabChange, authed = false }) {
   const items = [
-    authed
-      ? { id: "login", label: "계정", Icon: UserCheck }
-      : { id: "login", label: "로그인", Icon: LogIn },
+    ...(authed ? [] : [{ id: "login", label: "로그인", Icon: LogIn }]),
     { id: "maps", label: "지도 목록", Icon: Map },
     { id: "places", label: "장소 목록", Icon: MapPin },
     { id: "profile", label: "프로필", Icon: User },
