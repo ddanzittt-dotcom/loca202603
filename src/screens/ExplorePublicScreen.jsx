@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { MapPin, Search } from "lucide-react"
 import { getPublishedMaps, listPublicMapFeatureSummaries } from "../lib/mapService"
 import { hasSupabaseEnv } from "../lib/supabase"
-import { MapCoverArt } from "../components/MapCoverArt"
+import { generateMiniMapSvg } from "../lib/miniMapPreview"
+import { FeatureEmoji } from "../components/FeatureEmoji"
+import { MapCoverThumb } from "../components/MapCoverThumb"
 
 // 탐색 — 발행된 공개 지도를 로그인 없이 검색·열람하는 화면.
-// 커버는 콘텐츠가 만든다 (MapCoverArt: 테마색 + 그 지도의 대표 이모지).
+// 카드는 지도 목록과 같은 미니맵 프리뷰 + 핀 이모지 스티커로 지도의 분위기를 보여준다.
 // visibility가 'public'인 지도만 노출한다 ('링크 공개'는 링크로만 접근).
 
 function formatDate(value) {
@@ -71,10 +73,16 @@ export function ExplorePublicScreen({ onOpenMap }) {
     filteredMaps.map((mapItem) => {
       const features = featuresByMapId.get(mapItem.id) || []
       const pins = features.filter((feature) => feature.type === "pin")
+      const stickerEmojis = pins
+        .map((feature) => feature.emoji)
+        .filter(Boolean)
+        .filter((emoji, index, list) => list.indexOf(emoji) === index)
+        .slice(0, 3)
       return {
         map: mapItem,
-        features,
         placeCount: pins.length,
+        stickerEmojis,
+        previewSvg: generateMiniMapSvg(features, { theme: mapItem.theme, emptyLabel: "구경하러 가기" }),
         dateLabel: formatDate(mapItem.publishedAt || mapItem.updatedAt),
         tags: (Array.isArray(mapItem.tags) ? mapItem.tags : []).filter(Boolean).slice(0, 3),
       }
@@ -100,7 +108,7 @@ export function ExplorePublicScreen({ onOpenMap }) {
 
       {!loading && !error ? (
         <div className="explore-public__grid">
-          {cards.map(({ map: mapItem, features, placeCount, dateLabel, tags }) => (
+          {cards.map(({ map: mapItem, placeCount, stickerEmojis, previewSvg, dateLabel, tags }) => (
             <button
               key={mapItem.slug}
               type="button"
@@ -108,21 +116,37 @@ export function ExplorePublicScreen({ onOpenMap }) {
               onClick={() => onOpenMap?.(mapItem.slug)}
             >
               <span className="explore-public__cover">
-                <MapCoverArt map={mapItem} features={features} />
+                <MapCoverThumb
+                  mapId={mapItem.id}
+                  version={mapItem.publishedAt || mapItem.updatedAt}
+                  fallbackSvg={previewSvg}
+                  className="explore-public__minimap"
+                />
+                {stickerEmojis.length ? (
+                  <span className="explore-public__stickers" aria-hidden="true">
+                    {stickerEmojis.map((emoji, index) => (
+                      <span key={`${emoji}-${index}`} className="explore-public__sticker">
+                        <FeatureEmoji emoji={emoji} size={24} unicodeFontSize={15} />
+                      </span>
+                    ))}
+                  </span>
+                ) : null}
+                {placeCount > 0 ? (
+                  <span className="explore-public__count">
+                    <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
+                    {placeCount}곳
+                  </span>
+                ) : null}
               </span>
               <span className="explore-public__body">
                 <strong>{mapItem.title || "이름 없는 지도"}</strong>
                 {mapItem.description ? <small>{mapItem.description}</small> : null}
-                <span className="explore-public__meta">
-                  {placeCount > 0 ? `${placeCount}곳` : null}
-                  {placeCount > 0 && dateLabel ? " · " : null}
-                  {dateLabel}
-                </span>
                 {tags.length ? (
                   <span className="explore-public__tags">
                     {tags.map((tag) => <em key={tag}>#{tag}</em>)}
                   </span>
                 ) : null}
+                {dateLabel ? <time>{dateLabel}</time> : null}
               </span>
             </button>
           ))}

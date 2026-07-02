@@ -6,7 +6,8 @@ import { BrandLogo } from "../components/BrandLogo"
 import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { getProfilePlacementState } from "../lib/mapPlacement"
-import { MapCoverArt } from "../components/MapCoverArt"
+import { generateMiniMapSvg } from "../lib/miniMapPreview"
+import { MapCoverThumb } from "../components/MapCoverThumb"
 import { hasSupabaseEnv } from "../lib/supabase"
 
 const PROFILE_ALIAS_SUGGESTIONS = ["성수 카페 탐험가", "동네 산책러", "주말 미식가", "서울 골목 탐험가"]
@@ -56,13 +57,18 @@ function getMapPrivacyLabel(map) {
 
 function ProfileMiniCard({ map, features, onClick }) {
   const pins = features.filter((item) => item.type === "pin")
+  const previewSvg = map.previewSvg || map.preview_svg || generateMiniMapSvg(features, { theme: map.theme })
   const privacyLabel = getMapPrivacyLabel(map)
   const savedCount = map.savedCount || map.saved_count || map.bookmarkCount || map.bookmark_count
 
   return (
     <button className="pf__mini-card" type="button" onClick={onClick}>
       <span className="pf__mini-map">
-        <MapCoverArt map={map} features={features} />
+        <MapCoverThumb
+          mapId={map.id}
+          version={map.updatedAt || map.updated_at}
+          fallbackSvg={previewSvg}
+        />
       </span>
       <span className="pf__mini-body">
         <p className="pf__mini-title">{map.title}</p>

@@ -15,8 +15,8 @@ export function BottomNavV2({ tab, onTabChange, authed = false }) {
   const items = authed
     ? [
       { id: "explore", label: "탐색", Icon: Compass },
-      { id: "maps", label: "내 지도", Icon: Map },
-      { id: "places", label: "내 장소", Icon: MapPin },
+      { id: "maps", label: "지도 목록", Icon: Map },
+      { id: "places", label: "장소 목록", Icon: MapPin },
       { id: "profile", label: "프로필", Icon: User },
     ]
     : [
