@@ -11,7 +11,7 @@ export function MapCoverThumb({ mapId, version, fallbackSvg, className = "", alt
 
   const canTryThumb = Boolean(mapId) && /^[0-9a-fA-F-]{16,64}$/u.test(String(mapId))
   const src = canTryThumb
-    ? `/api/map-thumb?id=${mapId}${version ? `&v=${encodeURIComponent(version)}` : ""}`
+    ? `/api/map-thumb?id=${mapId}&r=z14${version ? `&v=${encodeURIComponent(version)}` : ""}`
     : null
 
   return (
