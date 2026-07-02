@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LOCA 웹 UI 컨셉 4종 — 10~20대</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" crossorigin />
+<style>
+  :root {
+    --page: #f3f2ee;
+    --ink: #141414;
+    --muted: #75716a;
+    font-family: "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--page); color: var(--ink); }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    background: rgba(243, 242, 238, 0.92); backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(20, 20, 20, 0.1);
+  }
+  .topbar__inner {
+    width: min(100% - 48px, 1480px); margin: 0 auto; min-height: 64px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+  .topbar strong { font-size: 20px; font-weight: 800; }
+  .topbar nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  .topbar nav a {
+    text-decoration: none; color: var(--ink); font-size: 13px; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(20,20,20,0.16);
+  }
+  .topbar nav a:hover { background: #fff; }
+
+  .lede { width: min(100% - 48px, 1480px); margin: 34px auto 10px; }
+  .lede h1 { margin: 0 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .lede p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .concept { width: min(100% - 48px, 1480px); margin: 44px auto 0; }
+  .concept__head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+  .concept__head h2 { margin: 0; font-size: 20px; font-weight: 800; }
+  .concept__head span { color: var(--muted); font-size: 13px; }
+
+  .browser {
+    border: 1px solid rgba(20,20,20,0.14); border-radius: 14px; overflow: hidden;
+    background: #fff; box-shadow: 0 24px 60px rgba(20,20,20,0.10);
+  }
+  .browser__bar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: #ECEAE4; border-bottom: 1px solid rgba(20,20,20,0.10);
+  }
+  .browser__dots { display: flex; gap: 5px; }
+  .browser__dots i { width: 10px; height: 10px; border-radius: 999px; background: #CFCCC3; }
+  .browser__url {
+    flex: 1; max-width: 380px; margin: 0 auto; background: #F7F6F2;
+    border-radius: 8px; font-size: 11.5px; color: #8B877E; padding: 5px 12px; text-align: center;
+  }
+  .screen { min-height: 640px; }
+
+  /* ============ 1. 스티커 팝 ============ */
+  .c1 { background: #FFFFFF; color: #111; }
+  .c1 .gnb {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 36px; border-bottom: 2.5px solid #111;
+  }
+  .c1 .gnb strong { font-size: 24px; font-weight: 900; letter-spacing: -0.03em; }
+  .c1 .gnb strong em { font-style: normal; color: #FF7AC3; }
+  .c1 .gnb menu { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .c1 .gnb menu span {
+    font-size: 13px; font-weight: 700; padding: 8px 16px; border: 2px solid #111;
+    border-radius: 999px; background: #fff;
+  }
+  .c1 .gnb menu span.on { background: #FFD338; }
+  .c1 .gnb .login { background: #111; color: #fff; font-size: 13px; font-weight: 700; padding: 9px 18px; border-radius: 999px; }
+  .c1 .hero { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; padding: 26px 36px 34px; }
+  .c1 .map {
+    position: relative; border: 2.5px solid #111; border-radius: 22px; background: #FFF8E1; min-height: 430px;
+    background-image: linear-gradient(rgba(17,17,17,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(17,17,17,0.06) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .c1 .map .pin {
+    position: absolute; width: 34px; height: 34px; border-radius: 999px; border: 2.5px solid #111;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px;
+    box-shadow: 3px 3px 0 #111;
+  }
+  .c1 .map .tagchip {
+    position: absolute; border: 2px solid #111; background: #fff; border-radius: 999px;
+    font-size: 12px; font-weight: 700; padding: 4px 12px; box-shadow: 2px 2px 0 #111;
+  }
+  .c1 .side h1 { margin: 4px 0 8px; font-size: 30px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.2; }
+  .c1 .side .by { font-size: 13px; color: #6b6b6b; margin: 0 0 16px; }
+  .c1 .cardlist { display: flex; flex-direction: column; gap: 12px; }
+  .c1 .placecard {
+    display: flex; gap: 12px; align-items: center; border: 2.5px solid #111; border-radius: 18px; padding: 12px;
+    background: #fff; transform: rotate(-0.4deg);
+  }
+  .c1 .placecard:nth-child(2n) { transform: rotate(0.5deg); }
+  .c1 .placecard .ph { width: 66px; height: 66px; border-radius: 12px; border: 2px solid #111; flex: 0 0 auto; }
+  .c1 .placecard b { display: block; font-size: 15px; }
+  .c1 .placecard small { color: #6b6b6b; font-size: 12.5px; }
+  .c1 .placecard .num { margin-left: auto; width: 28px; height: 28px; border-radius: 999px; border: 2px solid #111; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; background: #B7F34D; }
+  .c1 .ctas { display: flex; gap: 10px; margin-top: 18px; }
+  .c1 .ctas .main { flex: 1; text-align: center; background: #FF7AC3; border: 2.5px solid #111; border-radius: 999px; font-weight: 800; font-size: 15px; padding: 13px 0; box-shadow: 3px 3px 0 #111; }
+  .c1 .ctas .sub { text-align: center; background: #fff; border: 2.5px solid #111; border-radius: 999px; font-weight: 800; font-size: 15px; padding: 13px 22px; }
+
+  /* ============ 2. 필름 로그 ============ */
+  .c2 { background: #FAF7F0; color: #2A2723; }
+  .c2 .gnb { display: flex; align-items: baseline; justify-content: space-between; padding: 22px 44px 18px; border-bottom: 1px solid #E5E0D5; }
+  .c2 .gnb strong { font-family: Georgia, "Noto Serif KR", serif; font-size: 23px; font-weight: 500; }
+  .c2 .gnb menu { display: flex; gap: 26px; margin: 0; padding: 0; list-style: none; }
+  .c2 .gnb menu span { font-size: 13.5px; color: #8B857B; }
+  .c2 .gnb menu span.on { color: #2A2723; border-bottom: 1px solid #2A2723; padding-bottom: 3px; }
+  .c2 .hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 48px; padding: 34px 44px 46px; }
+  .c2 .map { position: relative; background: #EFEAE0; min-height: 470px; border-radius: 4px; }
+  .c2 .map .pin { position: absolute; width: 24px; height: 24px; border-radius: 999px; background: #2A2723; color: #FAF7F0; font-size: 11.5px; display: flex; align-items: center; justify-content: center; }
+  .c2 .map .coords { position: absolute; left: 16px; bottom: 13px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 11px; color: #8B857B; letter-spacing: 0.08em; }
+  .c2 .side .date { font-family: Consolas, monospace; font-size: 11.5px; color: #B0A99C; letter-spacing: 0.1em; margin: 0 0 8px; }
+  .c2 .side h1 { font-family: Georgia, serif; font-weight: 500; font-size: 34px; margin: 0 0 8px; line-height: 1.25; }
+  .c2 .side .by { font-size: 13.5px; color: #8B857B; margin: 0 0 26px; }
+  .c2 .polas { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .c2 .pola { background: #fff; border: 1px solid #E5E0D5; padding: 10px 10px 13px; }
+  .c2 .pola .ph { height: 128px; }
+  .c2 .pola b { display: block; font-family: Georgia, serif; font-weight: 500; font-size: 15px; margin-top: 10px; }
+  .c2 .pola small { color: #8B857B; font-size: 12px; }
+  .c2 .pola .stamp { float: right; font-family: Consolas, monospace; font-size: 10px; color: #C4BDAE; margin-top: 4px; }
+  .c2 .ctas { display: flex; gap: 10px; margin-top: 26px; }
+  .c2 .ctas .main { flex: 1; text-align: center; background: #2A2723; color: #FAF7F0; border-radius: 2px; font-size: 14px; padding: 14px 0; letter-spacing: 0.02em; }
+  .c2 .ctas .sub { text-align: center; border: 1px solid #2A2723; border-radius: 2px; font-size: 14px; padding: 14px 24px; }
+
+  /* ============ 3. 나이트 런 ============ */
+  .c3 { background: #16181A; color: #ECF1EE; }
+  .c3 .gnb { display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; border-bottom: 1px solid #24282C; }
+  .c3 .gnb strong { font-size: 20px; font-weight: 700; letter-spacing: 0.14em; }
+  .c3 .gnb menu { display: flex; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .c3 .gnb menu span { font-size: 12.5px; font-weight: 600; color: #8A9490; padding: 8px 15px; border-radius: 8px; }
+  .c3 .gnb menu span.on { color: #C6F432; background: #1F2226; }
+  .c3 .gnb .login { border: 1px solid #C6F432; color: #C6F432; font-size: 12.5px; font-weight: 700; padding: 8px 16px; border-radius: 8px; }
+  .c3 .hero { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 0; }
+  .c3 .map { position: relative; min-height: 560px; background: #1B1E21; background-image: linear-gradient(rgba(198,244,50,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(198,244,50,0.05) 1px, transparent 1px); background-size: 52px 52px; }
+  .c3 .map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .c3 .map .pin { position: absolute; width: 30px; height: 30px; border-radius: 999px; background: #C6F432; color: #1A2000; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .c3 .map .pin.ghost { background: #24282C; border: 1px solid #C6F432; color: #C6F432; }
+  .c3 .map .stats { position: absolute; left: 22px; bottom: 18px; font-family: Consolas, monospace; font-size: 12px; color: #8A9490; letter-spacing: 0.1em; }
+  .c3 .side { border-left: 1px solid #24282C; padding: 30px 30px 36px; display: flex; flex-direction: column; }
+  .c3 .side .tag { font-family: Consolas, monospace; font-size: 11px; color: #C6F432; letter-spacing: 0.16em; margin: 0 0 10px; }
+  .c3 .side h1 { font-size: 29px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .c3 .side .by { font-size: 13px; color: #8A9490; margin: 0 0 22px; }
+  .c3 .row { display: flex; align-items: center; gap: 14px; background: #1F2226; border-radius: 12px; padding: 13px 15px; margin-bottom: 10px; }
+  .c3 .row .num { font-family: Consolas, monospace; color: #C6F432; font-size: 13px; }
+  .c3 .row b { display: block; font-size: 14.5px; font-weight: 600; }
+  .c3 .row small { color: #8A9490; font-size: 12px; }
+  .c3 .ctas { margin-top: auto; display: flex; gap: 10px; }
+  .c3 .ctas .main { flex: 1; text-align: center; background: #C6F432; color: #1A2000; border-radius: 10px; font-weight: 800; font-size: 14.5px; padding: 14px 0; }
+  .c3 .ctas .sub { text-align: center; border: 1px solid #3A4045; color: #ECF1EE; border-radius: 10px; font-size: 14.5px; font-weight: 600; padding: 14px 22px; }
+
+  /* ============ 4. 소프트 버블 ============ */
+  .c4 { background: #F4F1FB; color: #4A4560; }
+  .c4 .gnb { display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; }
+  .c4 .gnb strong { font-size: 22px; font-weight: 800; color: #4A4560; }
+  .c4 .gnb menu { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; background: #fff; border-radius: 999px; padding: 5px; }
+  .c4 .gnb menu span { font-size: 13px; font-weight: 600; color: #9A93B3; padding: 8px 18px; border-radius: 999px; }
+  .c4 .gnb menu span.on { background: #B9A8F5; color: #302A4D; }
+  .c4 .gnb .login { background: #4A4560; color: #fff; font-size: 13px; font-weight: 700; padding: 10px 18px; border-radius: 999px; }
+  .c4 .hero { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 26px; padding: 12px 40px 40px; }
+  .c4 .map { position: relative; background: #E9E3F8; border-radius: 28px; min-height: 480px; }
+  .c4 .map .pin { position: absolute; width: 34px; height: 34px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; box-shadow: 0 6px 14px rgba(74,69,96,0.18); }
+  .c4 .map .friends { position: absolute; right: 18px; top: 16px; background: #fff; border-radius: 999px; padding: 7px 14px 7px 8px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: #7A6FB0; }
+  .c4 .map .friends i { width: 22px; height: 22px; border-radius: 999px; display: inline-block; }
+  .c4 .side h1 { font-size: 29px; font-weight: 800; margin: 6px 0 6px; letter-spacing: -0.02em; }
+  .c4 .side .by { font-size: 13.5px; color: #9A93B3; margin: 0 0 18px; }
+  .c4 .bubble { background: #fff; border-radius: 20px; padding: 15px 17px; margin-bottom: 12px; }
+  .c4 .bubble .chip { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 10px; margin-bottom: 8px; }
+  .c4 .bubble b { display: block; font-size: 15px; }
+  .c4 .bubble small { color: #9A93B3; font-size: 12.5px; }
+  .c4 .ctas { display: flex; gap: 10px; margin-top: 18px; }
+  .c4 .ctas .main { flex: 1; text-align: center; background: #B9A8F5; color: #302A4D; border-radius: 999px; font-weight: 800; font-size: 15px; padding: 14px 0; }
+  .c4 .ctas .sub { text-align: center; background: #fff; color: #4A4560; border-radius: 999px; font-weight: 700; font-size: 15px; padding: 14px 24px; }
+
+  .footer { width: min(100% - 48px, 1480px); margin: 50px auto 60px; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 900px) {
+    .c1 .hero, .c2 .hero, .c3 .hero, .c4 .hero { grid-template-columns: 1fr; }
+    .c3 .side { border-left: none; border-top: 1px solid #24282C; }
+    .gnb menu { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <strong>LOCA 웹 UI 컨셉</strong>
+    <nav>
+      <a href="#c1">1 스티커 팝</a>
+      <a href="#c2">2 필름 로그</a>
+      <a href="#c3">3 나이트 런</a>
+      <a href="#c4">4 소프트 버블</a>
+    </nav>
+  </div>
+</header>
+
+<div class="lede">
+  <h1>10~20대 감도 웹 컨셉 4종</h1>
+  <p>같은 화면(공개 지도 상세)을 네 가지 결로 입혔습니다. 데스크톱 웹 기준.</p>
+</div>
+
+<!-- ================= 1. 스티커 팝 ================= -->
+<section class="concept" id="c1">
+  <div class="concept__head"><h2>1 · 스티커 팝</h2><span>Y2K · 폰꾸 · 하이텐션 — 아웃라인 + 비비드 팝 + 스티커 배지</span></div>
+  <div class="browser">
+    <div class="browser__bar"><span class="browser__dots"><i></i><i></i><i></i></span><span class="browser__url">loca.im/w/seongsu-tteok-tour</span></div>
+    <div class="screen c1">
+      <div class="gnb">
+        <strong>LOCA<em>!</em></strong>
+        <menu><span class="on">탐색</span><span>내 컬렉션</span><span>지도 만들기</span></menu>
+        <span class="login">시작하기</span>
+      </div>
+      <div class="hero">
+        <div class="map">
+          <span class="pin" style="left:18%;top:30%;background:#FF7AC3;">1</span>
+          <span class="pin" style="left:42%;top:56%;background:#59C1FF;">2</span>
+          <span class="pin" style="left:63%;top:34%;background:#FFD338;">3</span>
+          <span class="pin" style="left:78%;top:62%;background:#B7F34D;">4</span>
+          <span class="tagchip" style="left:16%;top:16%;background:#FFD338;">떡볶이 성지</span>
+          <span class="tagchip" style="right:22px;top:20px;">성수동</span>
+          <span class="tagchip" style="left:40%;bottom:24px;background:#FF7AC3;color:#fff;">지금 4명이 보는 중</span>
+        </div>
+        <div class="side">
+          <p class="by">지우 JIWOO 의 지도 · 장소 4곳</p>
+          <h1>성수 떡볶이<br/>전격 비교 투어</h1>
+          <div class="cardlist">
+            <div class="placecard"><span class="ph" style="background:#FFD9EC;"></span><span><b>수야네 분식</b><small>국물떡볶이 인생집. 진심임</small></span><span class="num">1</span></div>
+            <div class="placecard"><span class="ph" style="background:#D9EFFF;"></span><span><b>서울숲 벤치존</b><small>포장해서 여기서 먹기</small></span><span class="num">2</span></div>
+            <div class="placecard"><span class="ph" style="background:#FFF3C4;"></span><span><b>못난이 호떡</b><small>디저트는 못 참지</small></span><span class="num">3</span></div>
+          </div>
+          <div class="ctas"><span class="main">이 지도 담기</span><span class="sub">내 장소 추가</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2. 필름 로그 ================= -->
+<section class="concept" id="c2">
+  <div class="concept__head"><h2>2 · 필름 로그</h2><span>포토덤프 · 아카이브 · 매거진 — 세리프 + 크림 + 폴라로이드 카드</span></div>
+  <div class="browser">
+    <div class="browser__bar"><span class="browser__dots"><i></i><i></i><i></i></span><span class="browser__url">loca.im/w/mangwon-film-walk</span></div>
+    <div class="screen c2">
+      <div class="gnb">
+        <strong>Loca</strong>
+        <menu><span class="on">탐색</span><span>내 컬렉션</span><span>지도 만들기</span><span>로그인</span></menu>
+      </div>
+      <div class="hero">
+        <div class="map">
+          <span class="pin" style="left:26%;top:34%;">1</span>
+          <span class="pin" style="left:48%;top:58%;">2</span>
+          <span class="pin" style="left:68%;top:30%;">3</span>
+          <span class="coords">37.5559°N 126.9019°E · MANGWON</span>
+        </div>
+        <div class="side">
+          <p class="date">2026 . 07 . 02 — FILM NO.03</p>
+          <h1>망원동, 걷다가<br/>멈춘 순간들</h1>
+          <p class="by">수민의 기록 · 장소 3곳 · 필름 12장</p>
+          <div class="polas">
+            <div class="pola"><div class="ph" style="background:#DDD6C7;"></div><b>망원한강공원</b><span class="stamp">18:42</span><br/><small>돗자리 필수, 해질녘에</small></div>
+            <div class="pola"><div class="ph" style="background:#D8CFC0;"></div><b>소소책방</b><span class="stamp">15:10</span><br/><small>주인분 취향이 좋다</small></div>
+            <div class="pola"><div class="ph" style="background:#E3DCCB;"></div><b>골목 끝 찻집</b><span class="stamp">16:55</span><br/><small>조용해서 두 시간 앉아 있었음</small></div>
+            <div class="pola"><div class="ph" style="background:#D2C9B8;"></div><b>동네 사진관</b><span class="stamp">17:30</span><br/><small>흑백 셀프 필름 현상</small></div>
+          </div>
+          <div class="ctas"><span class="main">이 지도 담기</span><span class="sub">내 경험 남기기</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 3. 나이트 런 ================= -->
+<section class="concept" id="c3">
+  <div class="concept__head"><h2>3 · 나이트 런</h2><span>다크 · 네온 · 스트릿 — 다크맵 + 네온 라임 + 모노 스탯</span></div>
+  <div class="browser">
+    <div class="browser__bar"><span class="browser__dots"><i></i><i></i><i></i></span><span class="browser__url">loca.im/w/han-river-night-run</span></div>
+    <div class="screen c3">
+      <div class="gnb">
+        <strong>LOCA</strong>
+        <menu><span class="on">탐색</span><span>내 컬렉션</span><span>지도 만들기</span></menu>
+        <span class="login">시작하기</span>
+      </div>
+      <div class="hero">
+        <div class="map">
+          <svg viewBox="0 0 800 560" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 150 200 C 260 150, 340 320, 460 300 S 640 380, 700 330" fill="none" stroke="#C6F432" stroke-width="3" stroke-dasharray="8 7" opacity="0.85"/>
+          </svg>
+          <span class="pin" style="left:16%;top:32%;">1</span>
+          <span class="pin" style="left:55%;top:51%;">2</span>
+          <span class="pin ghost" style="left:84%;top:56%;">3</span>
+          <span class="stats">DIST 2.4KM · 34MIN · 3 SPOTS</span>
+        </div>
+        <div class="side">
+          <p class="tag">NIGHT COURSE / SEONGSU</p>
+          <h1>한강 야간 러닝,<br/>불빛 좋은 코스</h1>
+          <p class="by">준호 RUN CREW 의 지도</p>
+          <div class="row"><span class="num">01</span><span><b>출발 — 성수대교 북단</b><small>밤 10시 이후 추천, 사람 적음</small></span></div>
+          <div class="row"><span class="num">02</span><span><b>불빛 스팟</b><small>다리 조명 반사 미쳤음. 사진각</small></span></div>
+          <div class="row"><span class="num">03</span><span><b>마무리 편의점</b><small>라면 국물이 예술. 완주 보상</small></span></div>
+          <div class="ctas"><span class="main">이 코스 담기</span><span class="sub">내 스팟 추가</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 4. 소프트 버블 ================= -->
+<section class="concept" id="c4">
+  <div class="concept__head"><h2>4 · 소프트 버블</h2><span>파스텔 · 말랑 · 소셜 — 라운드 패널 + 친구 신호 + 저채도 파스텔</span></div>
+  <div class="browser">
+    <div class="browser__bar"><span class="browser__dots"><i></i><i></i><i></i></span><span class="browser__url">loca.im/w/yeonnam-sopum-tour</span></div>
+    <div class="screen c4">
+      <div class="gnb">
+        <strong>loca</strong>
+        <menu><span class="on">탐색</span><span>내 컬렉션</span><span>지도 만들기</span></menu>
+        <span class="login">시작하기</span>
+      </div>
+      <div class="hero">
+        <div class="map">
+          <span class="pin" style="left:24%;top:32%;background:#B9A8F5;color:#302A4D;">1</span>
+          <span class="pin" style="left:50%;top:56%;background:#A8E8CE;color:#1D4A38;">2</span>
+          <span class="pin" style="left:72%;top:30%;background:#FFD3BF;color:#6B3A22;">3</span>
+          <span class="friends"><i style="background:#B9A8F5;"></i><i style="background:#A8E8CE;margin-left:-12px;"></i>지우, 하린 함께 만드는 중</span>
+        </div>
+        <div class="side">
+          <h1>연남 소품샵<br/>다 털어보기</h1>
+          <p class="by">민지와 친구들 · 장소 3곳 · 함께 만드는 지도</p>
+          <div class="bubble"><span class="chip" style="background:#EDE7FC;color:#7A6FB0;">1 · 민지의 기록</span><b>오브젝트 연남</b><small>3층까지 꼭 올라가기. 지갑 조심</small></div>
+          <div class="bubble"><span class="chip" style="background:#E2F6EC;color:#3E8A69;">2 · 지우의 기록</span><b>포근상점</b><small>키링 맛집. 선물 사기 좋음</small></div>
+          <div class="bubble"><span class="chip" style="background:#FFEDE3;color:#B05C33;">3 · 하린의 기록</span><b>동진시장 입구 카페</b><small>쉬어가는 코스. 아이스크림 필수</small></div>
+          <div class="ctas"><span class="main">이 지도 담기</span><span class="sub">내 장소 추가</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<p class="footer">LOCA youth web concepts · 2026-07-02 · 이 페이지는 디자인 검토용 정적 프로토타입입니다.</p>
+
+</body>
+</html>

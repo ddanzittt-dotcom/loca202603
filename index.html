@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#2D4A3E" />
+    <meta name="theme-color" content="#FAF8F2" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" crossorigin />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -14,15 +14,14 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LOCA - 로컬 큐레이션 지도" />
-    <meta property="og:description" content="나만의 장소를 기록하고 공유하세요." />
+    <meta property="og:title" content="LOCA - 웹 지도 작업 공간" />
+    <meta property="og:description" content="지도 제작, 장소 기록, 프로필 공개를 한 화면에서 관리하세요." />
     <meta property="og:site_name" content="LOCA" />
     <meta property="og:locale" content="ko_KR" />
-    <title>LOCA Mobile</title>
+    <title>LOCA | 웹 지도 작업 공간</title>
     <script>
-      // Suppress Naver Maps SDK cross-origin errors from crashing React
-      // window.onerror returning true prevents the error before React sees it
-      window.onerror = function(message, source, lineno, colno, error) {
+      // Suppress Naver Maps SDK cross-origin errors from crashing React.
+      window.onerror = function(message, source) {
         if (!source || source === '' || message === 'Script error.') {
           return true;
         }
@@ -47,10 +46,9 @@
         var naverKey = window.__NAVER_MAP_KEY || 'x5bkbkzlrw';
         s.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=' + naverKey + '&submodules=geocoder,gl';
         s.onload = function() {
-          // Poll for auth completion (SDK nullifies naver.maps on auth failure)
           var attempts = 0;
-          var maxAttempts = 20; // 20 x 200ms = 4 seconds max wait
-          var minAttempts = 12; // Wait at least 2.4 seconds before confirming success
+          var maxAttempts = 20;
+          var minAttempts = 12;
           var poll = setInterval(function() {
             attempts++;
             var authFailed = typeof naver !== 'undefined' && naver.maps == null;
@@ -63,7 +61,6 @@
             }
             if (attempts >= maxAttempts) {
               clearInterval(poll);
-              // Final check
               var ok = typeof naver !== 'undefined' && naver.maps != null && typeof naver.maps.Map === 'function';
               window.__naverMapReady = ok;
               window.__naverMapCallbacks.forEach(function(fn) { fn(ok); });

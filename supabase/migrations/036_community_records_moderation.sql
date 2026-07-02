@@ -88,6 +88,10 @@ DECLARE
   v_status text := CASE WHEN p_status IN ('pending', 'reported', 'rejected', 'hidden', 'approved') THEN p_status ELSE 'pending' END;
   v_rows jsonb;
 BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_platform_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'admin_required' USING ERRCODE = '42501';
+  END IF;
+
   SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY r.created_at DESC), '[]'::jsonb)
   INTO v_rows
   FROM (
@@ -117,6 +121,10 @@ AS $$
 DECLARE
   v_row public.community_records%ROWTYPE;
 BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_platform_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'admin_required' USING ERRCODE = '42501';
+  END IF;
+
   IF p_status NOT IN ('approved', 'rejected', 'hidden') THEN
     RAISE EXCEPTION 'invalid_status';
   END IF;
@@ -137,7 +145,9 @@ END;
 $$;
 
 GRANT SELECT, INSERT ON public.community_records TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.list_community_moderation_records(text, integer) TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.update_community_moderation_status(uuid, text) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.list_community_moderation_records(text, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.update_community_moderation_status(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.list_community_moderation_records(text, integer) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.update_community_moderation_status(uuid, text) TO authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';

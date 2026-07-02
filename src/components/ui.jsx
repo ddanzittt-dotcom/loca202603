@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
-import { formatFeedDate, mapThemeGradient } from "../lib/appUtils"
-import { Compass, Home, Map, MapPin, PlusCircle, User, X, AlertTriangle, RefreshCw, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import { mapThemeGradient } from "../lib/appUtils"
+import { MapPin, X, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 
 // v2: `fullscreen` 옵션 — true 면 시트 대신 풀스크린 페이지 오버레이로 렌더 (B5-B7 상세 화면용).
@@ -30,42 +30,6 @@ export function BottomSheet({ open, title, subtitle, onClose, children, fullscre
         {children}
       </section>
     </>
-  )
-}
-
-const NAV_ICONS = { home: Home, maps: Map, "add-record": PlusCircle, explore: Compass, profile: User }
-const NAV_LABELS = { home: "홈", maps: "지도", "add-record": "＋", explore: "탐색", profile: "프로필" }
-
-export function BottomNav({ activeTab, onChange, pulseAdd = false }) {
-  const items = ["home", "maps", "add-record", "explore", "profile"]
-
-  return (
-    <nav className="bottom-nav" role="tablist" aria-label="주요 메뉴">
-      {items.map((id) => {
-        const Icon = NAV_ICONS[id]
-        const label = NAV_LABELS[id] || id
-        const isActive = activeTab === id
-        const isAddAction = id === "add-record"
-        const ariaLabel = isAddAction ? "기록 추가" : label
-        const addPulse = isAddAction && pulseAdd
-        return (
-          <button
-            key={id}
-            className={`bottom-nav__item${isActive ? " is-active" : ""}${isAddAction ? " bottom-nav__item--add" : ""}${addPulse ? " bottom-nav__item--pulse" : ""}`}
-            type="button"
-            role="tab"
-            onClick={() => onChange(id)}
-            aria-label={ariaLabel}
-            aria-current={isActive && !isAddAction ? "page" : undefined}
-          >
-            <span className="bottom-nav__icon">
-              <Icon size={20} strokeWidth={isActive ? 2.4 : 1.75} fill={isActive ? "currentColor" : "none"} aria-hidden="true" />
-            </span>
-            <span className="bottom-nav__label">{label}</span>
-          </button>
-        )
-      })}
-    </nav>
   )
 }
 
@@ -372,64 +336,6 @@ function MenuItem({ onClick, variant = "default", children }) {
   )
 }
 
-export function CreatorCard({ user, onSelect }) {
-  return (
-    <article className="creator-card">
-      <button className="creator-card__tap" type="button" onClick={() => onSelect(user.id)}>
-        <Avatar user={user} size="lg" ring={user.verified} />
-        <strong>{user.name}</strong>
-        <span>{user.handle}</span>
-      </button>
-    </article>
-  )
-}
-
-export function UserRowCard({ user, onSelect }) {
-  return (
-    <article className="user-row-card">
-      <button className="user-row-card__tap" type="button" onClick={() => onSelect(user.id)}>
-        <Avatar user={user} size="md" ring={user.verified} />
-        <span className="user-row-card__meta">
-          <strong>{user.name}</strong>
-          <small>{user.bio}</small>
-        </span>
-      </button>
-    </article>
-  )
-}
-
-export function FeedCard({ post, onSelectUser, onSelectPost, onLike, onOpenMap }) {
-  return (
-    <article className="feed-card">
-      <div className="feed-card__header">
-        <button className="feed-card__author" type="button" onClick={() => onSelectUser(post.user.id)}>
-          <Avatar user={post.user} size="md" ring={post.user.verified} />
-          <span className="feed-card__author-meta">
-            <strong>
-              {post.user.name}
-              {post.user.verified ? <span className="verified-badge">✓</span> : null}
-            </strong>
-            <small>{post.user.handle} · {formatFeedDate(post.date)}</small>
-          </span>
-        </button>
-      </div>
-      <button className="feed-card__preview" type="button" onClick={() => (onOpenMap && post.mapId ? onOpenMap(post.mapId, post.source) : onSelectPost(post.source, post.id))}>
-        <MapPreview title={post.title} emojis={post.emojis} placeCount={post.placeCount} gradient={post.gradient} theme={post.theme} variant="card" caption={post.description} />
-      </button>
-      <div className="feed-card__body">
-        <div className="feed-card__actions">
-          <button className="icon-link" type="button" onClick={() => onLike(post.source, post.id)}>좋아요 {post.likes}</button>
-          <span className="icon-link icon-link--static">저장 {post.saves}</span>
-          <span className="icon-link icon-link--static">장소 {post.placeCount}</span>
-        </div>
-        <p className="feed-card__caption">
-          <strong>{post.title}</strong> {post.caption}
-        </p>
-      </div>
-    </article>
-  )
-}
-
 export function Toast({ message }) {
   return message ? <div className="toast">{message}</div> : null
 }
@@ -484,19 +390,6 @@ export function EmptyState({
         <button className="empty-state-card__secondary" type="button" onClick={onSecondaryAction}>{secondaryAction}</button>
       ) : null}
       {hint ? <span className="empty-state-card__hint">{hint}</span> : null}
-    </article>
-  )
-}
-
-export function ErrorCard({ message, onRetry }) {
-  return (
-    <article className="error-card">
-      <span className="error-card__icon"><AlertTriangle size={20} /></span>
-      <strong>문제가 발생했어요</strong>
-      <p>{message || "네트워크 연결을 확인해주세요."}</p>
-      {onRetry ? (
-        <button className="button button--secondary" type="button" onClick={onRetry}><RefreshCw size={14} /> 다시 시도</button>
-      ) : null}
     </article>
   )
 }

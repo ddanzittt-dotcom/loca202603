@@ -29,9 +29,6 @@
   opacity: 0.6;
   cursor: default;
 }
-.lw-save-btn--event {
-  background: rgba(255,107,53,.2);
-}
 .lw-save-btn__text {
   font-size: 9px;
   font-weight: 500;

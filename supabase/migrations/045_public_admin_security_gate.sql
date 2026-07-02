@@ -1,27 +1,73 @@
--- 037: Optional no-moderation mode for public community submissions.
--- Default remains moderation-first. Toggle with:
--- UPDATE public.community_operating_settings SET auto_approve_records = true, updated_at = now() WHERE id = true;
-
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE TABLE IF NOT EXISTS public.community_operating_settings (
-  id boolean PRIMARY KEY DEFAULT true CHECK (id = true),
-  auto_approve_records boolean NOT NULL DEFAULT false,
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
+CREATE OR REPLACE FUNCTION public.list_community_moderation_records(
+  p_status text DEFAULT 'pending',
+  p_limit integer DEFAULT 80
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_status text := CASE WHEN p_status IN ('pending', 'reported', 'rejected', 'hidden', 'approved') THEN p_status ELSE 'pending' END;
+  v_rows jsonb;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_platform_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'admin_required' USING ERRCODE = '42501';
+  END IF;
 
-INSERT INTO public.community_operating_settings (id, auto_approve_records)
-VALUES (true, false)
-ON CONFLICT (id) DO NOTHING;
+  SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY r.created_at DESC), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT
+      id, type, title, description, reason, keywords, representative_keyword,
+      pixel_icon_key, lat, lng, route_summary_text, author_name, status,
+      created_at, updated_at, approved_at
+    FROM public.community_records
+    WHERE status = v_status
+    ORDER BY created_at DESC
+    LIMIT least(greatest(coalesce(p_limit, 80), 1), 200)
+  ) r;
 
-ALTER TABLE public.community_operating_settings ENABLE ROW LEVEL SECURITY;
+  RETURN jsonb_build_object('records', v_rows);
+END;
+$$;
 
-DROP POLICY IF EXISTS "community_operating_settings_no_public_select" ON public.community_operating_settings;
-CREATE POLICY "community_operating_settings_no_public_select"
-  ON public.community_operating_settings
-  FOR SELECT
-  TO anon, authenticated
-  USING (false);
+CREATE OR REPLACE FUNCTION public.update_community_moderation_status(
+  p_record_id uuid,
+  p_status text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_row public.community_records%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.is_platform_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'admin_required' USING ERRCODE = '42501';
+  END IF;
+
+  IF p_status NOT IN ('approved', 'rejected', 'hidden') THEN
+    RAISE EXCEPTION 'invalid_status';
+  END IF;
+
+  UPDATE public.community_records
+  SET status = p_status,
+      approved_at = CASE WHEN p_status = 'approved' THEN now() ELSE NULL END,
+      updated_at = now()
+  WHERE id = p_record_id
+  RETURNING * INTO v_row;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'record_not_found';
+  END IF;
+
+  RETURN to_jsonb(v_row);
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.create_community_record_public(p_record jsonb)
 RETURNS jsonb
@@ -159,6 +205,12 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.create_community_record_public(jsonb) TO anon, authenticated;
+REVOKE ALL ON FUNCTION public.list_community_moderation_records(text, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.update_community_moderation_status(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.list_community_moderation_records(text, integer) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.update_community_moderation_status(uuid, text) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.create_community_record_public(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_community_record_public(jsonb) TO anon, authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';

@@ -30,20 +30,21 @@ src/
   App.jsx              # 중앙 상태 허브 + 라우팅 + lazy 로딩
   main.jsx             # React 엔트리, SW 등록
   screens/             # 전체 페이지 컴포넌트 (전부 React.lazy)
-    HomeScreen.jsx     # 추천 지도, 커뮤니티 미리보기
     MapsListScreen.jsx # 내 지도 목록 + 검색 + 스켈레톤/빈상태
-    MapEditorScreen.jsx# 지도 편집, 피처 그리기, 공유, 공지 관리
+    MapEditorScreen.jsx# 지도 편집, 피처 그리기, 공유
     MapShareEditor.jsx # 지도 공유 이미지 생성 (프레임/스티커/QR)
     SharedMapViewer.jsx# 발행/공유 지도 읽기 전용 뷰어 + 라이브러리 저장 + 공유
     PlacesScreen.jsx   # 전체 피처 검색 + EmptyState
-    SearchScreen.jsx   # 사용자 검색/팔로우 + EmptyState
-    ProfileScreen.jsx  # 프로필, 발행 지도, 캐릭터 선택, 초대코드 입력
+    ProfileScreen.jsx  # 프로필, 발행 지도
     AuthScreen.jsx     # 로그인/회원가입 + 한국어 에러 메시지
+    PublicCommunityPage.jsx # 모두의 지도 public 웹 (/community-web, main.jsx에서 분기)
+                       # 구 홈/탐색/검색 스크린은 웹 워크스페이스 개편(2026-06)으로 삭제됨
+                       # 현재 탭: 로그인 / 지도 제작 / 지도 목록 / 장소 목록 / 프로필 (BottomNav.v2)
   components/
-    ui.jsx             # 재사용 UI (BottomNav, BottomSheet, MapCard, Spinner, SkeletonCard, EmptyState, ErrorCard, Toast)
-    NaverMap.jsx       # 네이버 지도 통합, 피처 렌더링, 캐릭터 마커
+    ui.jsx             # 재사용 UI (BottomSheet, MapCard, Spinner, SkeletonCard, EmptyState, Toast)
+    BottomNav.v2.jsx   # 하단 내비게이션 v2
+    NaverMap.jsx       # 네이버 지도 통합, 피처 렌더링
     MapErrorBoundary.jsx
-    MediaWidgets.jsx   # 사진/음성 녹음 위젯
     sheets/            # 바텀시트 컴포넌트
       FeatureDetailSheet.jsx
       MapFormSheet.jsx       # 지도 생성/수정
@@ -118,6 +119,10 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 **게이미피케이션:** user_stats, user_badges, user_souvenirs
 
 > 과거 이벤트/B2B 테이블(announcements, survey_responses, event_checkins, invitation_codes 등)은 migrations 이력에 남아 있으나 **앱 코드에서 미사용**.
+
+> **Migration 번호 주의 (2026-07):**
+> - 라이브 DB에는 웹 MVP 실험분 **046**(spots·place_records·map_items·user_saves)·**047**(map_invite_links)이 적용된 뒤 파일만 레포에서 제거됨. **신규 migration은 048부터** 번호를 쓰고, 046·047은 재사용 금지.
+> - 중복 번호 존재: 005·013·020·022·030. 이 중 B2B 전용(`005_organizations`, `013_rate_limit_comments_features`, `022_dashboard_tenant_rbac`, `022_event_collab_roles_and_approval`)은 신규 환경 구축 시 실행하지 않는다.
 
 ### Sharing & OG 메타
 - **미발행 지도**: gzip 압축 → `/shared?data=v2:...` (자체 포함)

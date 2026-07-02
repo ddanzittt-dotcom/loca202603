@@ -44,3 +44,8 @@ test-results/
 # Supabase CLI cache
 supabase/.temp/
 supabase/.branches/
+
+# AI 세션 상태
+.claude/
+.agents/
+.vite/

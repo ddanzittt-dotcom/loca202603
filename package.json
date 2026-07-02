@@ -14,10 +14,6 @@
     "qa:community-collab": "node scripts/community-collab-qa.mjs",
     "qa:feature-style": "node scripts/qa-feature-style.mjs",
     "qa:feature-style-ui": "node scripts/qa-feature-style-ui.mjs",
-    "qa:event-collab-preflight": "node scripts/qa-event-collab-preflight.mjs",
-    "qa:event-collab-roles": "node scripts/event-collab-roles-qa.mjs",
-    "qa:event-collab-roles:ready": "npm run qa:event-collab-preflight && npm run qa:event-collab-roles",
-    "qa:event-collab-assert-latest": "node scripts/qa-event-collab-assert-latest.mjs",
     "sample:community:status": "node scripts/community-sample-data.mjs status",
     "sample:community:generate": "node scripts/generate-community-sample-features.mjs",
     "sample:community:seed": "node scripts/community-sample-data.mjs seed",
@@ -26,7 +22,8 @@
     "cap:copy": "npm run build && npx cap copy",
     "cap:sync": "npm run build && npx cap sync",
     "cap:android": "npx cap open android",
-    "cap:ios": "npx cap open ios"
+    "cap:ios": "npx cap open ios",
+    "doctor": "npx react-doctor@latest"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -45,7 +42,6 @@
     "fflate": "^0.8.2",
     "html2canvas": "^1.4.1",
     "jsqr": "^1.4.0",
-    "leaflet": "^1.9.4",
     "lucide-react": "^1.7.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.4",
@@ -57,10 +53,13 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",
     "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-hooks": "7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "playwright": "^1.59.0",
+    "react-doctor": "^0.5.8",
+    "react-grab": "^0.1.47",
+    "react-scan": "^0.5.7",
     "rollup-plugin-visualizer": "^7.0.1",
     "vite": "^8.0.0",
     "vitest": "^4.1.2"

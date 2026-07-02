@@ -116,6 +116,9 @@ function toFriendlySubmitError(error) {
   if (message.includes("permission") || message.includes("row-level security")) {
     return "기록을 접수할 권한을 확인하지 못했어요. 잠시 후 다시 시도해주세요."
   }
+  if (message.includes("rate_limited")) {
+    return "기록 접수가 너무 빠릅니다. 잠시 후 다시 시도해주세요."
+  }
   if (message.includes("network") || message.includes("fetch")) {
     return "네트워크 연결을 확인한 뒤 다시 시도해주세요."
   }

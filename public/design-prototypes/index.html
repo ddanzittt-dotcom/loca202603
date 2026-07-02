@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>LOCA youth web prototypes</title>
+    <meta name="description" content="10대부터 30대까지의 감성에 맞춘 LOCA 웹 UI 대표 디자인 4가지 프로토타입" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" crossorigin />
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f6f4ee;
+        --ink: #101010;
+        --muted: #6d675f;
+        --line: rgba(16, 16, 16, 0.1);
+        --panel: #ffffff;
+        --radius: 8px;
+        --shadow: 0 20px 60px rgba(22, 20, 16, 0.12);
+        font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(16, 16, 16, 0.035) 1px, transparent 1px) 0 0 / 48px 48px,
+          linear-gradient(0deg, rgba(16, 16, 16, 0.03) 1px, transparent 1px) 0 0 / 48px 48px,
+          var(--page);
+        color: var(--ink);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid var(--line);
+        background: rgba(246, 244, 238, 0.88);
+        backdrop-filter: blur(18px);
+      }
+
+      .topbar__inner {
+        width: min(100% - 40px, 1440px);
+        min-height: 76px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 10px;
+        min-width: 220px;
+      }
+
+      .brand strong {
+        font-size: 28px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .brand i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ff4d1a;
+      }
+
+      .brand span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .anchor-nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .anchor-nav a {
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.7);
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .hero {
+        width: min(100% - 40px, 1440px);
+        margin: 42px auto 28px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 28px;
+        align-items: end;
+      }
+
+      .hero h1 {
+        max-width: 780px;
+        margin: 0;
+        font-size: 56px;
+        line-height: 1.02;
+        font-weight: 950;
+      }
+
+      .hero p {
+        margin: 18px 0 0;
+        max-width: 680px;
+        color: var(--muted);
+        font-size: 16px;
+        font-weight: 650;
+        line-height: 1.7;
+      }
+
+      .decision {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 18px;
+      }
+
+      .decision b,
+      .decision span {
+        display: block;
+      }
+
+      .decision b {
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .decision span {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(100% - 40px, 1440px);
+        margin: 0 auto 80px;
+        display: grid;
+        gap: 44px;
+      }
+
+      .version {
+        scroll-margin-top: 96px;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .version__meta {
+        position: sticky;
+        top: 104px;
+        min-height: 260px;
+        padding: 20px 0;
+      }
+
+      .version__kicker {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        padding: 0 8px;
+        border-radius: 4px;
+        background: #101010;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .version__meta h2 {
+        margin: 16px 0 0;
+        font-size: 30px;
+        line-height: 1.08;
+        font-weight: 950;
+      }
+
+      .version__meta p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+        line-height: 1.65;
+      }
+
+      .tagline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 16px;
+      }
+
+      .tagline span {
+        min-height: 28px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        display: inline-flex;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .prototype {
+        min-width: 0;
+        border: 1px solid rgba(16, 16, 16, 0.12);
+        border-radius: var(--radius);
+        background: #fff;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .chrome {
+        height: 34px;
+        padding: 0 12px;
+        border-bottom: 1px solid rgba(16, 16, 16, 0.08);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #d2d0c8;
+      }
+
+      .window {
+        min-height: 660px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .mock-map {
+        position: relative;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(40, 40, 40, 0.08) 1px, transparent 1px) 0 0 / 56px 56px,
+          linear-gradient(0deg, rgba(40, 40, 40, 0.08) 1px, transparent 1px) 0 0 / 56px 56px,
+          #ece4cf;
+      }
+
+      .pin {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border: 3px solid currentColor;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7);
+      }
+
+      .route-line {
+        position: absolute;
+        height: 4px;
+        border-radius: 999px;
+        background: currentColor;
+        transform-origin: left center;
+      }
+
+      .icon-plus::before {
+        content: "+";
+        display: inline-block;
+        margin-right: 6px;
+        font-weight: 950;
+      }
+
+      .pop-window {
+        background: #fcfbf4;
+        color: #080808;
+      }
+
+      .pop-nav {
+        min-height: 68px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid #080808;
+        background: #fffdf2;
+      }
+
+      .pop-logo {
+        font-size: 30px;
+        font-weight: 950;
+      }
+
+      .pop-tabs {
+        display: flex;
+        gap: 8px;
+      }
+
+      .pop-tabs span {
+        min-height: 34px;
+        padding: 0 12px;
+        border: 2px solid #080808;
+        border-radius: 999px;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .pop-tabs .active {
+        background: #c8ff1e;
+      }
+
+      .pop-layout {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 18px;
+        padding: 22px;
+      }
+
+      .pop-hero {
+        border: 2px solid #080808;
+        border-radius: 8px;
+        background: #ff5b34;
+        min-height: 218px;
+        padding: 22px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 18px;
+      }
+
+      .pop-hero h3 {
+        margin: 0;
+        max-width: 460px;
+        font-size: 50px;
+        line-height: 0.96;
+        font-weight: 950;
+      }
+
+      .pop-hero p {
+        margin: 16px 0 0;
+        max-width: 420px;
+        color: rgba(8, 8, 8, 0.78);
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.55;
+      }
+
+      .pop-map-card {
+        border: 2px solid #080808;
+        border-radius: 8px;
+        min-height: 170px;
+        color: #ff5b34;
+      }
+
+      .pop-feed {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .pop-card {
+        min-height: 170px;
+        border: 2px solid #080808;
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .pop-card:nth-child(2) {
+        background: #c8ff1e;
+      }
+
+      .pop-card:nth-child(3) {
+        background: #93d8ff;
+      }
+
+      .pop-card strong {
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .pop-card small {
+        color: rgba(8, 8, 8, 0.72);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .pop-side {
+        border: 2px solid #080808;
+        border-radius: 8px;
+        background: #fff;
+        padding: 14px;
+      }
+
+      .pop-side h4 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 950;
+      }
+
+      .pop-row {
+        margin-top: 12px;
+        padding: 11px;
+        border: 2px solid #080808;
+        border-radius: 8px;
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pop-thumb {
+        width: 44px;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, rgba(8, 8, 8, 0.12) 1px, transparent 1px) 0 0 / 16px 16px,
+          #ffd62e;
+      }
+
+      .pop-row b,
+      .pop-row span {
+        display: block;
+      }
+
+      .pop-row b {
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .pop-row span {
+        margin-top: 3px;
+        font-size: 11px;
+        font-weight: 800;
+        color: rgba(8, 8, 8, 0.6);
+      }
+
+      .zine-window {
+        background: #f8f0df;
+        color: #12100e;
+      }
+
+      .zine-top {
+        min-height: 76px;
+        padding: 0 28px;
+        border-bottom: 1px solid #12100e;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .zine-top strong {
+        font-size: 28px;
+        font-weight: 950;
+      }
+
+      .zine-date {
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .zine-layout {
+        padding: 26px 28px 30px;
+      }
+
+      .zine-headline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 22px;
+        border-bottom: 1px solid #12100e;
+        padding-bottom: 24px;
+      }
+
+      .zine-headline h3 {
+        margin: 0;
+        max-width: 760px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 72px;
+        line-height: 0.92;
+        font-weight: 900;
+      }
+
+      .zine-copy {
+        display: grid;
+        align-content: space-between;
+        gap: 18px;
+      }
+
+      .zine-copy p {
+        margin: 0;
+        color: #494234;
+        font-size: 14px;
+        font-weight: 650;
+        line-height: 1.65;
+      }
+
+      .zine-button {
+        width: max-content;
+        min-height: 38px;
+        padding: 0 13px;
+        border: 1px solid #12100e;
+        border-radius: 4px;
+        background: #e8ff65;
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .zine-grid {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr 0.72fr;
+        gap: 14px;
+      }
+
+      .zine-map {
+        min-height: 310px;
+        border: 1px solid #12100e;
+        border-radius: 4px;
+        color: #ff5234;
+      }
+
+      .zine-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .zine-article {
+        min-height: 148px;
+        border-top: 4px solid #12100e;
+        background: #fffaf0;
+        padding: 12px;
+      }
+
+      .zine-article.accent {
+        background: #8edbff;
+      }
+
+      .zine-article b {
+        display: block;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 24px;
+        line-height: 1.02;
+      }
+
+      .zine-article span {
+        display: block;
+        margin-top: 10px;
+        color: #5f584f;
+        font-size: 12px;
+        font-weight: 750;
+        line-height: 1.5;
+      }
+
+      .studio-window {
+        background: #111318;
+        color: #eef2ee;
+      }
+
+      .studio-top {
+        min-height: 58px;
+        padding: 0 18px;
+        display: grid;
+        grid-template-columns: 220px 1fr 230px;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid rgba(238, 242, 238, 0.1);
+      }
+
+      .studio-brand {
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .studio-search {
+        height: 34px;
+        border: 1px solid rgba(238, 242, 238, 0.14);
+        border-radius: 6px;
+        background: #181b22;
+        color: #9da8a5;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .studio-action {
+        justify-self: end;
+        min-height: 34px;
+        padding: 0 12px;
+        border: 1px solid #69f0bc;
+        border-radius: 6px;
+        background: #69f0bc;
+        color: #08120e;
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .studio-body {
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr) 280px;
+        min-height: 602px;
+      }
+
+      .studio-panel {
+        padding: 16px;
+        border-right: 1px solid rgba(238, 242, 238, 0.1);
+        background: #151820;
+      }
+
+      .studio-panel.right {
+        border-right: 0;
+        border-left: 1px solid rgba(238, 242, 238, 0.1);
+      }
+
+      .studio-panel h4 {
+        margin: 0 0 12px;
+        color: #9da8a5;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .studio-layer {
+        min-height: 54px;
+        margin-top: 8px;
+        padding: 10px;
+        border: 1px solid rgba(238, 242, 238, 0.1);
+        border-radius: 6px;
+        background: #1d222b;
+      }
+
+      .studio-layer b,
+      .studio-layer span {
+        display: block;
+      }
+
+      .studio-layer b {
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .studio-layer span {
+        margin-top: 4px;
+        color: #9da8a5;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .studio-canvas {
+        position: relative;
+        padding: 18px;
+        background:
+          linear-gradient(90deg, rgba(238, 242, 238, 0.05) 1px, transparent 1px) 0 0 / 44px 44px,
+          linear-gradient(0deg, rgba(238, 242, 238, 0.04) 1px, transparent 1px) 0 0 / 44px 44px,
+          #0f1116;
+      }
+
+      .studio-map {
+        width: 100%;
+        height: 420px;
+        border: 1px solid rgba(238, 242, 238, 0.14);
+        border-radius: 8px;
+        color: #69f0bc;
+        background:
+          linear-gradient(90deg, rgba(238, 242, 238, 0.08) 1px, transparent 1px) 0 0 / 64px 64px,
+          linear-gradient(0deg, rgba(238, 242, 238, 0.06) 1px, transparent 1px) 0 0 / 64px 64px,
+          #202632;
+      }
+
+      .studio-timeline {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .studio-step {
+        min-height: 74px;
+        border: 1px solid rgba(238, 242, 238, 0.1);
+        border-radius: 6px;
+        background: #181d25;
+        padding: 10px;
+      }
+
+      .studio-step b,
+      .studio-step span {
+        display: block;
+      }
+
+      .studio-step b {
+        color: #69f0bc;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .studio-step span {
+        margin-top: 8px;
+        color: #dce4df;
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .social-window {
+        background: #f8fbf7;
+        color: #171817;
+      }
+
+      .social-shell {
+        min-height: 660px;
+        display: grid;
+        grid-template-columns: 246px minmax(0, 1fr);
+      }
+
+      .social-rail {
+        padding: 22px;
+        background: #ffffff;
+        border-right: 1px solid rgba(23, 24, 23, 0.08);
+      }
+
+      .social-rail strong {
+        display: block;
+        font-size: 28px;
+        font-weight: 950;
+      }
+
+      .social-menu {
+        margin-top: 32px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .social-menu span {
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 850;
+        color: #5d625c;
+      }
+
+      .social-menu .active {
+        background: #ffe0d0;
+        color: #171817;
+      }
+
+      .social-main {
+        padding: 24px;
+      }
+
+      .social-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .social-head h3 {
+        margin: 0;
+        font-size: 42px;
+        line-height: 1.04;
+        font-weight: 950;
+      }
+
+      .social-head button {
+        min-height: 42px;
+        padding: 0 14px;
+        border: 0;
+        border-radius: 999px;
+        background: #22261f;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .social-grid {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 330px;
+        gap: 16px;
+      }
+
+      .social-map {
+        min-height: 390px;
+        border-radius: 8px;
+        color: #ff6b3a;
+        background:
+          linear-gradient(90deg, rgba(23, 24, 23, 0.08) 1px, transparent 1px) 0 0 / 54px 54px,
+          linear-gradient(0deg, rgba(23, 24, 23, 0.06) 1px, transparent 1px) 0 0 / 54px 54px,
+          #e9f4df;
+      }
+
+      .social-card {
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid rgba(23, 24, 23, 0.08);
+        padding: 14px;
+      }
+
+      .social-card + .social-card {
+        margin-top: 12px;
+      }
+
+      .social-card b {
+        display: block;
+        font-size: 17px;
+        font-weight: 950;
+      }
+
+      .social-card p {
+        margin: 8px 0 0;
+        color: #636862;
+        font-size: 12px;
+        font-weight: 650;
+        line-height: 1.5;
+      }
+
+      .friend-strip {
+        margin-top: 22px;
+        display: flex;
+        gap: 10px;
+      }
+
+      .friend {
+        width: 48px;
+        aspect-ratio: 1;
+        border-radius: 8px;
+        background: #f8d85e;
+        border: 2px solid #fff;
+      }
+
+      .friend:nth-child(2) {
+        background: #8ee5c3;
+      }
+
+      .friend:nth-child(3) {
+        background: #ffb29a;
+      }
+
+      .friend:nth-child(4) {
+        background: #a7ceff;
+      }
+
+      .mobile-peek {
+        position: absolute;
+        right: 22px;
+        bottom: 22px;
+        width: 166px;
+        height: 300px;
+        border: 6px solid #101010;
+        border-radius: 28px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+      }
+
+      .mobile-peek__top {
+        height: 38px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+        font-weight: 900;
+      }
+
+      .mobile-peek__map {
+        height: 128px;
+        position: relative;
+        color: #ff5b34;
+      }
+
+      .mobile-peek__list {
+        padding: 10px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .mobile-peek__item {
+        height: 42px;
+        border-radius: 8px;
+        background: #f3f1ea;
+      }
+
+      .mobile-peek .pin {
+        width: 12px;
+        height: 12px;
+        border-width: 2px;
+      }
+
+      @media (max-width: 1100px) {
+        .hero,
+        .version {
+          grid-template-columns: 1fr;
+        }
+
+        .version__meta {
+          position: static;
+          min-height: auto;
+          padding-bottom: 0;
+        }
+
+        .pop-layout,
+        .social-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .pop-hero,
+        .zine-headline,
+        .social-grid,
+        .studio-body {
+          grid-template-columns: 1fr;
+        }
+
+        .studio-top {
+          grid-template-columns: 1fr;
+        }
+
+        .studio-action {
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .topbar__inner,
+        .hero,
+        main {
+          width: min(100% - 28px, 1440px);
+        }
+
+        .topbar__inner {
+          min-height: auto;
+          padding: 14px 0;
+          display: grid;
+        }
+
+        .anchor-nav {
+          justify-content: flex-start;
+        }
+
+        .hero h1 {
+          font-size: 34px;
+        }
+
+        .window {
+          min-height: 620px;
+        }
+
+        .pop-nav,
+        .zine-top {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 12px;
+          padding: 16px;
+        }
+
+        .pop-layout,
+        .zine-layout,
+        .social-main {
+          padding: 16px;
+        }
+
+        .pop-hero h3,
+        .zine-headline h3,
+        .social-head h3 {
+          font-size: 34px;
+        }
+
+        .pop-feed,
+        .zine-grid,
+        .studio-timeline {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-peek {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand" aria-label="LOCA design prototypes">
+          <strong>loca</strong>
+          <i></i>
+          <span>youth web prototypes</span>
+        </div>
+        <nav class="anchor-nav" aria-label="프로토타입 바로가기">
+          <a href="#z-pop">Z-Pop Feed</a>
+          <a href="#city-zine">City Zine</a>
+          <a href="#creator-studio">Creator Studio</a>
+          <a href="#soft-social">Soft Social</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <h1>10대부터 30대까지, LOCA가 가질 수 있는 네 가지 표정.</h1>
+        <p>현재 운영툴 느낌을 벗기고, 지도 제작과 장소 기록을 더 젊고 공유 가능한 웹 경험으로 보이게 만든 대표 디자인 프로토타입입니다.</p>
+      </div>
+      <aside class="decision">
+        <b>추천 기준</b>
+        <span>실서비스에는 City Zine을 기본 톤으로 잡고, Z-Pop Feed의 카드 에너지와 Soft Social의 친근한 공유 흐름을 섞는 방향이 가장 균형적입니다.</span>
+      </aside>
+    </section>
+
+    <main>
+      <section class="version" id="z-pop">
+        <aside class="version__meta">
+          <span class="version__kicker">VERSION 01</span>
+          <h2>Z-Pop Map Feed</h2>
+          <p>장소 저장을 피드 콘텐츠처럼 보이게 하는 밝고 빠른 방향. 10대 후반부터 20대 초반까지 가장 즉각적으로 반응할 톤입니다.</p>
+          <div class="tagline">
+            <span>소셜 피드</span>
+            <span>스티커 카드</span>
+            <span>밝은 대비</span>
+          </div>
+        </aside>
+        <article class="prototype">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="window pop-window">
+            <nav class="pop-nav">
+              <div class="pop-logo">loca.</div>
+              <div class="pop-tabs">
+                <span>지도 제작</span>
+                <span class="active">지도 목록</span>
+                <span>장소 목록</span>
+                <span>프로필</span>
+              </div>
+            </nav>
+            <div class="pop-layout">
+              <div>
+                <section class="pop-hero">
+                  <div>
+                    <h3>오늘 갈 곳, 지도째로 공유.</h3>
+                    <p>친구가 저장한 코스와 내가 만든 지도를 한 피드에서 빠르게 고릅니다.</p>
+                  </div>
+                  <div class="mock-map pop-map-card">
+                    <span class="pin" style="left: 24%; top: 34%;"></span>
+                    <span class="pin" style="left: 66%; top: 22%;"></span>
+                    <span class="pin" style="left: 72%; top: 64%;"></span>
+                  </div>
+                </section>
+                <section class="pop-feed">
+                  <div class="pop-card">
+                    <strong>성수 반나절 코스</strong>
+                    <small>5 장소 · 저장 214</small>
+                  </div>
+                  <div class="pop-card">
+                    <strong>합정 소품샵 루트</strong>
+                    <small>8 장소 · 오늘 인기</small>
+                  </div>
+                  <div class="pop-card">
+                    <strong>을지로 밤 산책</strong>
+                    <small>6 장소 · 친구 3명 저장</small>
+                  </div>
+                </section>
+              </div>
+              <aside class="pop-side">
+                <h4>친구들이 찍은 장소</h4>
+                <div class="pop-row">
+                  <span class="pop-thumb"></span>
+                  <span><b>플랫바이트</b><span>디저트 · 12분 전</span></span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-thumb"></span>
+                  <span><b>서교 레코즈</b><span>음악 · 저장 47</span></span>
+                </div>
+                <div class="pop-row">
+                  <span class="pop-thumb"></span>
+                  <span><b>고요문구</b><span>소품 · 친구 추천</span></span>
+                </div>
+              </aside>
+            </div>
+            <div class="mobile-peek" aria-hidden="true">
+              <div class="mobile-peek__top"><span>loca.</span><span>지도</span></div>
+              <div class="mock-map mobile-peek__map">
+                <span class="pin" style="left: 28%; top: 42%;"></span>
+                <span class="pin" style="left: 63%; top: 28%;"></span>
+              </div>
+              <div class="mobile-peek__list">
+                <span class="mobile-peek__item"></span>
+                <span class="mobile-peek__item"></span>
+                <span class="mobile-peek__item"></span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="version" id="city-zine">
+        <aside class="version__meta">
+          <span class="version__kicker">VERSION 02</span>
+          <h2>City Zine</h2>
+          <p>로컬 매거진처럼 지도와 장소를 큐레이션하는 방향. 20대부터 30대 초반까지 유치하지 않으면서도 감도가 살아납니다.</p>
+          <div class="tagline">
+            <span>로컬 매거진</span>
+            <span>큰 타이포</span>
+            <span>취향 큐레이션</span>
+          </div>
+        </aside>
+        <article class="prototype">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="window zine-window">
+            <nav class="zine-top">
+              <strong>LOCA Local Index</strong>
+              <span class="zine-date">SEOUL WEEKEND EDITION · 06.28</span>
+            </nav>
+            <div class="zine-layout">
+              <section class="zine-headline">
+                <h3>성수에서 시작하는 느린 토요일 지도</h3>
+                <div class="zine-copy">
+                  <p>카페, 전시, 작은 숍을 한 장의 지도에 엮어 이번 주말의 동선을 만듭니다.</p>
+                  <span class="zine-button icon-plus">새 지도 만들기</span>
+                </div>
+              </section>
+              <section class="zine-grid">
+                <div class="mock-map zine-map">
+                  <span class="pin" style="left: 20%; top: 24%;"></span>
+                  <span class="pin" style="left: 56%; top: 38%;"></span>
+                  <span class="pin" style="left: 74%; top: 62%;"></span>
+                  <span class="route-line" style="left: 23%; top: 31%; width: 230px; transform: rotate(17deg);"></span>
+                </div>
+                <div class="zine-stack">
+                  <article class="zine-article accent">
+                    <b>이번 주 저장이 늘어난 지도</b>
+                    <span>종로 한옥마을 투어 · 6 장소 · 공개 준비 중</span>
+                  </article>
+                  <article class="zine-article">
+                    <b>내 장소 목록</b>
+                    <span>25개의 장소가 지도 5개에 연결되어 있습니다.</span>
+                  </article>
+                </div>
+                <div class="zine-stack">
+                  <article class="zine-article">
+                    <b>프로필 공개</b>
+                    <span>아직 공개 지도는 없습니다. 첫 지도를 올려보세요.</span>
+                  </article>
+                  <article class="zine-article accent">
+                    <b>오늘의 편집</b>
+                    <span>합정, 연남, 망원 코스를 한 번에 정리했습니다.</span>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="version" id="creator-studio">
+        <aside class="version__meta">
+          <span class="version__kicker">VERSION 03</span>
+          <h2>Creator Map Studio</h2>
+          <p>지도 제작을 가장 강하게 보여주는 크리에이터 도구형 방향. 커뮤니티 운영자, 소상공인, 취향 계정 운영자에게 잘 맞습니다.</p>
+          <div class="tagline">
+            <span>제작 도구</span>
+            <span>다크 스튜디오</span>
+            <span>협업 중심</span>
+          </div>
+        </aside>
+        <article class="prototype">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="window studio-window">
+            <nav class="studio-top">
+              <div class="studio-brand">loca studio</div>
+              <div class="studio-search">지도, 장소, 태그 검색</div>
+              <div class="studio-action icon-plus">공개하기</div>
+            </nav>
+            <div class="studio-body">
+              <aside class="studio-panel">
+                <h4>MAP LAYERS</h4>
+                <div class="studio-layer"><b>성수 반나절 코스</b><span>5 pins · draft</span></div>
+                <div class="studio-layer"><b>카페 후보</b><span>8 pins · hidden</span></div>
+                <div class="studio-layer"><b>산책 경로</b><span>1 route · visible</span></div>
+              </aside>
+              <section class="studio-canvas">
+                <div class="mock-map studio-map">
+                  <span class="pin" style="left: 22%; top: 26%;"></span>
+                  <span class="pin" style="left: 48%; top: 52%;"></span>
+                  <span class="pin" style="left: 71%; top: 34%;"></span>
+                  <span class="route-line" style="left: 24%; top: 32%; width: 420px; transform: rotate(16deg);"></span>
+                </div>
+                <div class="studio-timeline">
+                  <div class="studio-step"><b>01</b><span>장소 수집</span></div>
+                  <div class="studio-step"><b>02</b><span>경로 편집</span></div>
+                  <div class="studio-step"><b>03</b><span>커버 설정</span></div>
+                  <div class="studio-step"><b>04</b><span>프로필 공개</span></div>
+                </div>
+              </section>
+              <aside class="studio-panel right">
+                <h4>PLACE DETAIL</h4>
+                <div class="studio-layer"><b>오르빗커피</b><span>카페 · 메모 2 · 사진 4</span></div>
+                <div class="studio-layer"><b>공개 상태</b><span>프로필에는 아직 숨김</span></div>
+                <div class="studio-layer"><b>초대</b><span>팀원 3명이 편집 가능</span></div>
+              </aside>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="version" id="soft-social">
+        <aside class="version__meta">
+          <span class="version__kicker">VERSION 04</span>
+          <h2>Soft Social Places</h2>
+          <p>가장 대중적이고 부드러운 공유형 방향. 나이대 폭이 넓고, 친구와 저장함을 같이 쓰는 서비스처럼 보입니다.</p>
+          <div class="tagline">
+            <span>친구 저장함</span>
+            <span>소프트 컬러</span>
+            <span>낮은 진입장벽</span>
+          </div>
+        </aside>
+        <article class="prototype">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="window social-window">
+            <div class="social-shell">
+              <aside class="social-rail">
+                <strong>loca.</strong>
+                <div class="social-menu">
+                  <span>로그인</span>
+                  <span>지도 제작</span>
+                  <span class="active">지도 목록</span>
+                  <span>장소 목록</span>
+                  <span>프로필</span>
+                </div>
+              </aside>
+              <section class="social-main">
+                <header class="social-head">
+                  <h3>같이 가고 싶은 곳을 지도에 모아요.</h3>
+                  <button class="icon-plus">새 지도</button>
+                </header>
+                <div class="friend-strip" aria-label="공유 중인 친구">
+                  <span class="friend"></span>
+                  <span class="friend"></span>
+                  <span class="friend"></span>
+                  <span class="friend"></span>
+                </div>
+                <div class="social-grid">
+                  <div class="mock-map social-map">
+                    <span class="pin" style="left: 22%; top: 28%;"></span>
+                    <span class="pin" style="left: 58%; top: 42%;"></span>
+                    <span class="pin" style="left: 72%; top: 66%;"></span>
+                  </div>
+                  <aside>
+                    <article class="social-card">
+                      <b>주말 산책 지도</b>
+                      <p>친구 4명이 같이 저장 중입니다. 아직 공개하지 않았어요.</p>
+                    </article>
+                    <article class="social-card">
+                      <b>최근 저장한 장소</b>
+                      <p>플랫바이트, 온유나흘, 여의도 한강공원이 추가됐습니다.</p>
+                    </article>
+                    <article class="social-card">
+                      <b>프로필 공개 준비</b>
+                      <p>커버와 소개글을 채우면 첫 지도를 공개할 수 있습니다.</p>
+                    </article>
+                  </aside>
+                </div>
+              </section>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

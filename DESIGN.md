@@ -4,7 +4,13 @@
 > 모든 화면과 컴포넌트는 이 가이드라인을 따릅니다.
 
 > **🟧 v2 리디자인 (2026-05) — Phase 1·2 적용 완료**:
-> Cream & Ember 톤 전면 개편. 메인 4탭(홈/지도/탐색/프로필) + 지도 상세(MapEditor·SharedMapViewer·FeatureDetailSheet·FeatureEditSheet·MemoComposeSheet) 모두 `--v2` modifier 스코프로 v2 룩 적용됨.
+> Cream & Ember 톤 전면 개편. 모바일 앱 4탭(홈/지도/탐색/프로필) + 지도 상세(MapEditor·SharedMapViewer·FeatureDetailSheet·FeatureEditSheet·MemoComposeSheet) 모두 `--v2` modifier 스코프로 v2 룩 적용됨.
+>
+> **Web Workspace 리디자인 (2026-06)**:
+> 운영 웹은 `로그인 / 지도 제작 / 지도 목록 / 장소 목록 / 프로필` 5개 목적 화면만 사용합니다. 데스크톱은 좌측 고정 워크스페이스 내비게이션과 넓은 콘텐츠 캔버스를 기본으로 하며, 모바일에서만 하단 탭 내비게이션을 유지합니다.
+>
+> **Soft Social Places 선택 (2026-06-28)**:
+> 10~30대 웹 톤은 운영툴보다 "친구와 같이 장소를 모으는 저장함"에 가깝게 잡습니다. 메인 웹 쉘은 화이트, 소프트 민트, 코랄, 옐로 포인트를 쓰고 카피는 `관리`보다 `모으기`, `저장함`, `같이 보기`, `공개 준비`를 우선합니다.
 >
 > 새 화면·컴포넌트는 **[0. v2 Design Tokens](#0-v2-design-tokens-cream--ember)** 섹션의 토큰을 사용합니다.
 > 아래 1~7 섹션의 v1 토큰은 **deprecated** — 신규 작업에서는 절대 채택하지 마세요. 마이그레이션 매핑은 `src/styles/tokens.css` 헤더 주석 참조.
@@ -114,6 +120,49 @@ CSS 변수 정의: `src/styles/tokens-v2.css`.
 | `--duration-sheet` | 0.25s | 바텀 시트 진입 |
 
 키프레임: `loca-pin-pulse` (2.4s ease-out infinite, 펄스 확대+페이드), `loca-pin-bob` (2.6s ease-in-out infinite, 1.5px 떠오름). 정의 위치: `src/styles/animations.css` (Step 13 정리 단계에서 추가 예정).
+
+---
+
+## 0A. Web Workspace Direction
+
+### 0A.1 Product IA
+
+- 운영 웹의 1차 내비게이션은 `로그인`, `지도 제작`, `지도 목록`, `장소 목록`, `프로필`만 둡니다.
+- `지도 제작`은 가장 최근 작업 지도 또는 새 지도 생성 흐름으로 진입하는 작업 목적지입니다.
+- `지도 목록`은 지도 관리 허브입니다. 검색, 상태 필터, 협업 초대, 정렬, 편집 진입이 한 화면에서 보여야 합니다.
+- `장소 목록`은 기록 데이터베이스입니다. 검색, 필터, 유형별 탐색이 웹의 표/리스트 밀도로 보여야 합니다.
+- `프로필`은 공개 노출과 계정 설정을 분리해 보여주는 관리 화면이어야 합니다.
+
+### 0A.2 Desktop Shell
+
+- 960px 이상에서는 좌측 고정 레일을 사용합니다. 레일 폭은 248px 내외, 콘텐츠 좌측 여백은 280px 내외입니다.
+- 상단 pill 내비게이션은 사용하지 않습니다. 웹에서는 좌측 레일이 현재 위치, 주요 행동, 계정 상태를 동시에 보여줍니다.
+- 콘텐츠는 `max-width: 1440px` 안에서 헤더, 요약 지표, 작업 영역 순서로 구성합니다.
+- 각 화면의 첫 화면에는 작업 맥락이 보여야 합니다. 단순 제목만 두지 말고 지도 수, 장소 수, 공개 상태, 최근 작업 같은 요약을 둡니다.
+- 카드 radius는 `--radius` 또는 `--radius-big`만 사용합니다. 큰 섹션을 카드 안에 다시 넣지 않습니다.
+
+### 0A.3 Mobile Shell
+
+- 959px 이하에서는 하단 5탭을 유지합니다.
+- 모바일에서는 기존 앱 조작 밀도를 유지하되, 웹 헤더와 요약 지표는 한 줄 또는 가로 스크롤 가능한 블록으로 축약합니다.
+- 지도 제작 화면은 지도 조작을 우선합니다. 지도 편집 중에는 내비게이션을 숨깁니다.
+
+### 0A.4 Web Density
+
+- 데스크톱 지도 목록은 3열 이상 반응형 그리드를 목표로 합니다.
+- 데스크톱 장소 목록은 필터와 결과가 같은 작업 영역 안에 붙어 있어야 하며, 리스트 행은 스캔 가능한 높이를 유지합니다.
+- 로그인 화면은 단일 모바일 폼이 아니라 제품 설명 패널과 로그인 폼이 나뉜 2열 구성을 사용합니다.
+- 빈 상태와 로딩 상태는 화면 중앙의 앱식 안내가 아니라 해당 작업 영역 안의 안내 패널로 보입니다.
+
+### 0A.5 Soft Social Places Tokens
+
+- Web background: `#F8FBF7`, map surface `#E9F4DF`, card `#FFFFFF`.
+- Primary text: `#171817`, body text `#22261F`, muted text `#7C847B`.
+- Accent: coral `#FF6B3A`, faint coral `#FFE0D0`, soft coral `#FFB29A`.
+- Social accents: mint `#49B88E`, mint soft `#DDF5E8`, yellow `#F8D85E`, sky `#A7CEFF`.
+- Desktop rail active item uses coral-faint surface with dark text, not black active blocks.
+- CTA uses dark ink pill for broad social actions, coral stays as pins, saved-state, and warmth cue.
+- Radius stays restrained: 8px for web cards and panels, `999px` only for chips, search, avatars, and CTAs.
 
 ---
 

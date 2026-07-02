@@ -1,5 +1,7 @@
 # Event Collaboration QA Runbook
 
+> **🗑️ DEPRECATED (2026-07):** 행사지도/이벤트 협업 기능과 해당 QA 스크립트(qa:event-collab-*)는 B2C 전환으로 제거됨. 과거 이력 참고용으로만 보존한다.
+
 목적:
 
 - 운영 반영 전 이벤트 협업 권한/승인 플로우를 자동 점검

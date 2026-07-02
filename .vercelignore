@@ -1,5 +1,7 @@
 .git
 .vercel
+.agents
+.claude
 .tmp
 .qa-artifacts
 test-results
