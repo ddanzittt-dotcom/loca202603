@@ -4,6 +4,7 @@ import { getPublishedMaps, listPublicMapFeatureSummaries } from "../lib/mapServi
 import { hasSupabaseEnv } from "../lib/supabase"
 import { generateMiniMapSvg } from "../lib/miniMapPreview"
 import { FeatureEmoji } from "../components/FeatureEmoji"
+import { MapCoverThumb } from "../components/MapCoverThumb"
 
 // 탐색 — 발행된 공개 지도를 로그인 없이 검색·열람하는 화면.
 // 카드는 지도 목록과 같은 미니맵 프리뷰 + 핀 이모지 스티커로 지도의 분위기를 보여준다.
@@ -115,7 +116,12 @@ export function ExplorePublicScreen({ onOpenMap }) {
               onClick={() => onOpenMap?.(mapItem.slug)}
             >
               <span className="explore-public__cover">
-                <span className="explore-public__minimap" dangerouslySetInnerHTML={{ __html: previewSvg }} aria-hidden="true" />
+                <MapCoverThumb
+                  mapId={mapItem.id}
+                  version={mapItem.publishedAt || mapItem.updatedAt}
+                  fallbackSvg={previewSvg}
+                  className="explore-public__minimap"
+                />
                 {stickerEmojis.length ? (
                   <span className="explore-public__stickers" aria-hidden="true">
                     {stickerEmojis.map((emoji, index) => (

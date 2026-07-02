@@ -3,6 +3,7 @@ import { Check, ChevronDown, GripVertical, Lock, MoreHorizontal, MoveVertical, P
 import { EmptyState, SkeletonCard } from "../components/ui"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { generateMiniMapSvg } from "../lib/miniMapPreview"
+import { MapCoverThumb } from "../components/MapCoverThumb"
 
 const MAP_FILTERS = [
   { id: "all", label: "전체" },
@@ -143,7 +144,13 @@ function MapsV3Card({
         }
       }}
     >
-      <span className="maps-v3-card__preview" dangerouslySetInnerHTML={{ __html: item.previewSvg }} />
+      <span className="maps-v3-card__preview">
+        <MapCoverThumb
+          mapId={item.map.id}
+          version={item.map.updatedAt || item.map.updated_at}
+          fallbackSvg={item.previewSvg}
+        />
+      </span>
       <StatusBadge status={item.status} collabCount={item.collabCount} />
       <span className="maps-v3-card__info">
         <span className="maps-v3-card__title-row">
