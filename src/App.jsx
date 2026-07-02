@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, use
 import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
+import { PlaceCardPop } from "./components/PlaceCardPop"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -1002,44 +1003,8 @@ export default function App() {
     setMapSheet(null)
   }, [mapSheet, pendingRecordAfterMapCreate])
 
-  const openMapCreationWorkspace = useCallback(() => {
-    if (needsAuthForPersonalArea) {
-      requestLoginBanner()
-      return
-    }
-    if (activeTab === "maps" && mapsView === "editor") return
-    if (!confirmDiscardEditorDraft()) return
-
-    const currentLocalMapId = activeMapSource === "local" && activeMapId && b2cMapIds.has(activeMapId)
-      ? activeMapId
-      : null
-    const targetMapId = currentLocalMapId || personalRecordMaps[0]?.id || null
-
-    if (targetMapId) {
-      openMapEditor(targetMapId)
-      return
-    }
-
-    setActiveTab("maps")
-    setMapsView("list")
-    setActiveMapSource("local")
-    setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
-  }, [
-    activeMapId,
-    activeMapSource,
-    activeTab,
-    b2cMapIds,
-    confirmDiscardEditorDraft,
-    mapsView,
-    needsAuthForPersonalArea,
-    openMapEditor,
-    personalRecordMaps,
-    requestLoginBanner,
-    setActiveMapSource,
-    setActiveTab,
-    setMapSheet,
-    setMapsView,
-  ])
+  // 장소 목록에서 장소를 누르면 지도 이동 대신 카드로 먼저 보여준다
+  const [placeCardFeature, setPlaceCardFeature] = useState(null)
 
   const handleBottomNavChange = useCallback((nextTab) => {
     if (nextTab === "login") {
@@ -1047,12 +1012,8 @@ export default function App() {
       handleTabChange("login")
       return
     }
-    if (needsAuthForPersonalArea && (nextTab === "create" || nextTab === "maps" || nextTab === "places" || nextTab === "profile")) {
+    if (needsAuthForPersonalArea && (nextTab === "maps" || nextTab === "places" || nextTab === "profile")) {
       requestLoginBanner()
-      return
-    }
-    if (nextTab === "create") {
-      openMapCreationWorkspace()
       return
     }
     if (nextTab !== activeTab && !confirmDiscardEditorDraft()) return
@@ -1073,7 +1034,6 @@ export default function App() {
     handleTabChange,
     maps,
     needsAuthForPersonalArea,
-    openMapCreationWorkspace,
     requestLoginBanner,
     setActiveMapSource,
     setMapsView,
@@ -1509,11 +1469,7 @@ export default function App() {
     && activeTab === "maps"
     && mapsView === "editor"
     && !activeMap
-  const bottomNavTab = showPersonalGate
-    ? "login"
-    : activeTab === "maps" && mapsView === "editor"
-      ? "create"
-      : activeTab
+  const bottomNavTab = showPersonalGate ? "login" : activeTab
   const shouldHideBottomNav = keyboardVisible || Boolean(featureSheet)
   const shellClassName = [
     "app-shell",
@@ -1683,7 +1639,10 @@ export default function App() {
               maps={b2cMaps}
               features={b2cFeatures}
               characterImage="/characters/cloud_lv1.svg"
-              onOpenFeature={openFeatureFromPlaces}
+              onOpenFeature={(featureId) => {
+                const feature = b2cFeatures.find((item) => (item.id || item.feature_id) === featureId)
+                if (feature) setPlaceCardFeature(feature)
+              }}
               onCreateRecord={openRecordFlow}
               embedded
             />
@@ -1875,6 +1834,19 @@ export default function App() {
         authed={Boolean(authUser)}
       />
       )}
+
+      {placeCardFeature ? (
+        <PlaceCardPop
+          feature={placeCardFeature}
+          mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
+          onClose={() => setPlaceCardFeature(null)}
+          onOpenOnMap={() => {
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            setPlaceCardFeature(null)
+            openFeatureFromPlaces(featureId)
+          }}
+        />
+      ) : null}
 
       {/* Sheets */}
       <AddRecordSheet
