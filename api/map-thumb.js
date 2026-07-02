@@ -33,9 +33,14 @@ function computeZoom(minLat, maxLat, minLng, maxLng, width, height) {
 }
 
 export default async function handler(req, res) {
+  const notFound = (reason) => {
+    res.setHeader("x-thumb-reason", reason)
+    res.status(404).end()
+  }
+
   const mapId = req.query.id || req.query.mapId
   if (!mapId || !/^[0-9a-fA-F-]{16,64}$/u.test(mapId)) {
-    res.status(404).end()
+    notFound("bad-id")
     return
   }
 
@@ -45,7 +50,7 @@ export default async function handler(req, res) {
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
 
   if (!keyId || !key || !supabaseUrl || !supabaseKey) {
-    res.status(404).end()
+    notFound(`env:${keyId ? "" : "keyId "}${key ? "" : "key "}${supabaseUrl ? "" : "sburl "}${supabaseKey ? "" : "sbkey"}`.trim())
     return
   }
 
@@ -59,7 +64,7 @@ export default async function handler(req, res) {
       .maybeSingle()
 
     if (!mapRow || !["public", "unlisted"].includes(mapRow.visibility)) {
-      res.status(404).end()
+      notFound(mapRow ? "not-public" : "no-map")
       return
     }
 
@@ -76,7 +81,7 @@ export default async function handler(req, res) {
     )).map((row) => ({ lat: Number(row.lat), lng: Number(row.lng) }))
 
     if (!pins.length) {
-      res.status(404).end()
+      notFound("no-pins")
       return
     }
 
@@ -115,7 +120,7 @@ export default async function handler(req, res) {
 
     if (!upstream.ok) {
       console.error("Static map upstream failed:", upstream.status, await upstream.text().catch(() => ""))
-      res.status(404).end()
+      notFound(`upstream-${upstream.status}`)
       return
     }
 
@@ -125,6 +130,6 @@ export default async function handler(req, res) {
     res.status(200).send(buffer)
   } catch (error) {
     console.error("map-thumb failed:", error?.message)
-    res.status(404).end()
+    notFound("exception")
   }
 }
