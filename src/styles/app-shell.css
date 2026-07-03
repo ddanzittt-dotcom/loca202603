@@ -2436,3 +2436,123 @@
   border-bottom: 2px solid #1F1A12;
   border-radius: 0;
 }
+
+/* ============================================================
+   게임 외피 — 지도 편집 화면 (헤더 / 검색 / FAB / 하단 기록 패널)
+   ============================================================ */
+
+/* 상단 바 */
+.app-shell--soft-social .me-bar__card {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .me-bar__name {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
+
+.app-shell--soft-social .me-bar__counter-label,
+.app-shell--soft-social .me-bar__counter {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+}
+
+.app-shell--soft-social .me-bar__back {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+}
+
+.app-shell--soft-social .me-bar__share {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+/* 지도 위 검색 */
+.app-shell--soft-social .map-search-box__bar {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .map-search-box__bar input {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+}
+
+.app-shell--soft-social .map-search-box__results {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+}
+
+/* FAB (+, 장소/길/영역) */
+.app-shell--soft-social .me-fab {
+  border: 2px solid #1F1A12 !important;
+  box-shadow: 3px 3px 0 #1F1A12 !important;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+}
+
+.app-shell--soft-social .me-fab:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12 !important;
+}
+
+/* 하단 기록 패널 */
+.app-shell--soft-social .map-list-bar {
+  background: #F6EFDB;
+  border-top: 2px solid #1F1A12;
+}
+
+.app-shell--soft-social .map-filter-chip {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFFDF4;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .map-filter-chip.is-active,
+.app-shell--soft-social .map-filter-chip[aria-pressed="true"] {
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .map-list-bar__count {
+  font-family: "DungGeunMo", monospace;
+  color: #E5493A;
+}
+
+.app-shell--soft-social .map-place-card {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.85);
+}
+
+.app-shell--soft-social .map-place-card.is-active {
+  background: #FFD338;
+}
+
+.app-shell--soft-social .map-place-card .me-strip-info strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
+
+.app-shell--soft-social .me-strip-icon {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+}
+
+.app-shell--soft-social .map-list-empty strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
