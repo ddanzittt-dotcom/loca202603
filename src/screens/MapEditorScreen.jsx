@@ -179,7 +179,6 @@ export function MapEditorScreen({
   const [summaryRecordDraft, setSummaryRecordDraft] = useState(null)
   const [mapCenter, setMapCenter] = useState(() => focusPoint || myLocation || DEFAULT_MAP_CENTER)
   // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
-  const [fabExpanded, setFabExpanded] = useState(false)
   const [capturing, setCapturing] = useState(false)
   const naverMapRef = useRef(null)
   const voicePlayback = useVoicePlayback()
@@ -686,18 +685,15 @@ export function MapEditorScreen({
           </div>
         ) : null}
 
-        {/* v2 펼침형 FAB — 백드롭 */}
-        <div className={`me-fabs me-fabs--v2${fabExpanded ? " is-expanded" : ""}`}>
-
-          {/* 펼침형 도구 (장소/길/영역) — fabExpanded 일 때만 보임 */}
-          {!readOnly && fabExpanded ? (
+        {/* 입력 도구 (장소/길/영역) — 상시 노출 */}
+        <div className="me-fabs me-fabs--v2 is-expanded">
+          {!readOnly ? (
             <>
               <button
                 className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "pin" ? "browse" : "pin"); setFabExpanded(true) }}
+                onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")}
                 aria-label="장소 남기기 모드"
-                style={{ animationDelay: "0s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
                 <span>장소</span>
@@ -705,9 +701,8 @@ export function MapEditorScreen({
               <button
                 className={`me-fab me-fab--route me-fab--tool${editorMode === "route" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "route" ? "browse" : "route"); setFabExpanded(true) }}
+                onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")}
                 aria-label="길 그리기 모드"
-                style={{ animationDelay: "0.04s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
                 <span>길</span>
@@ -715,27 +710,13 @@ export function MapEditorScreen({
               <button
                 className={`me-fab me-fab--area me-fab--tool${editorMode === "area" ? " is-active" : ""}`}
                 type="button"
-                onClick={() => { onModeChange(editorMode === "area" ? "browse" : "area"); setFabExpanded(true) }}
+                onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")}
                 aria-label="영역 그리기 모드"
-                style={{ animationDelay: "0.08s" }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
                 <span>영역</span>
               </button>
             </>
-          ) : null}
-
-          {/* 메인 + FAB — 탭하면 펼침/접힘 토글, ✕로 회전 */}
-          {!readOnly ? (
-            <button
-              className={`me-fab me-fab--main${fabExpanded ? " is-expanded" : ""}`}
-              type="button"
-              onClick={() => setFabExpanded((v) => !v)}
-              aria-label={fabExpanded ? "도구 메뉴 닫기" : "도구 메뉴 열기"}
-              aria-expanded={fabExpanded}
-            >
-              <Plus size={20} strokeWidth={2.4} />
-            </button>
           ) : null}
         </div>
 
