@@ -2,15 +2,13 @@ import { useMemo, useState } from "react"
 import {
   Search as SearchIcon,
   ChevronDown,
-  ChevronRight,
-  FileText,
   Camera,
-  Mic,
-  MapPin,
   SlidersHorizontal,
   X,
 } from "lucide-react"
 import { featureSort } from "../lib/appUtils"
+import { FeatureEmoji } from "../components/FeatureEmoji"
+import { PLACE_CATEGORIES, getPlaceCategory } from "../lib/placeCategories"
 
 const TYPE_FILTERS = [
   { id: "all", label: "전체", dot: null },
@@ -46,27 +44,6 @@ function isPersonalRecordType(feature) {
   return ["pin", "route", "area"].includes(feature?.type)
 }
 
-function getTypeLabel(type) {
-  if (type === "route") return "경로"
-  if (type === "area") return "영역"
-  return "장소"
-}
-
-function getFeatureDescription(feature) {
-  const note = feature.note?.trim()
-  if (note) return note
-  const tags = Array.isArray(feature.tags) ? feature.tags.filter(Boolean).slice(0, 3) : []
-  return tags.length > 0 ? tags.map((tag) => `#${tag}`).join(" ") : ""
-}
-
-function formatFeatureDate(feature) {
-  const value = feature.updatedAt || feature.updated_at || feature.createdAt || feature.created_at
-  if (!value) return ""
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ""
-  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }).replace(/\.$/u, "")
-}
-
 const RouteIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M4 19L10 7L16 14L20 5" />
@@ -92,6 +69,7 @@ export function PlacesScreen({
   const [query, setQuery] = useState("")
   const [mapFilter, setMapFilter] = useState("all")
   const [typeFilter, setTypeFilter] = useState("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
   const [contentFilters, setContentFilters] = useState([])
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [sortMode, setSortMode] = useState("latest")
@@ -128,6 +106,28 @@ export function PlacesScreen({
     voice: recordFeatures.filter(hasFeatureVoice).length,
   }), [recordFeatures])
 
+  // 도감 번호(N.001…): 오래된 기록부터 순번 부여 — 필터와 무관하게 고정
+  const dexInfoByFeatureId = useMemo(() => {
+    const ordered = [...recordFeatures].sort((a, b) => featureSort(b, a))
+    const info = new Map()
+    ordered.forEach((feature, index) => {
+      info.set(feature.id, {
+        no: String(index + 1).padStart(3, "0"),
+        category: getPlaceCategory(feature),
+      })
+    })
+    return info
+  }, [recordFeatures])
+
+  const categoryCounts = useMemo(() => {
+    const counts = { all: recordFeatures.length }
+    for (const feature of recordFeatures) {
+      const category = dexInfoByFeatureId.get(feature.id)?.category
+      if (category) counts[category.id] = (counts[category.id] || 0) + 1
+    }
+    return counts
+  }, [recordFeatures, dexInfoByFeatureId])
+
   const filteredFeatures = useMemo(() => {
     const normalized = query.trim().toLowerCase()
     return [...recordFeatures].sort((a, b) => (
@@ -135,14 +135,16 @@ export function PlacesScreen({
     )).filter((feature) => {
       const matchesMap = mapFilter === "all" || feature.mapId === mapFilter
       const matchesType = typeFilter === "all" || feature.type === typeFilter
+      const matchesCategory = categoryFilter === "all"
+        || dexInfoByFeatureId.get(feature.id)?.category?.id === categoryFilter
       const matchesPhoto = !contentFilters.includes("photo") || getFeaturePhotos(feature).length > 0
       const matchesMemory = !contentFilters.includes("memory") || hasFeatureMemo(feature)
       const matchesVoice = !contentFilters.includes("voice") || hasFeatureVoice(feature)
       const memoTexts = (feature.memos || []).map((memo) => memo.text || "")
       const haystack = [feature.title, feature.note, ...(feature.tags || []), ...memoTexts].join(" ").toLowerCase()
-      return matchesMap && matchesType && matchesPhoto && matchesMemory && matchesVoice && (!normalized || haystack.includes(normalized))
+      return matchesMap && matchesType && matchesCategory && matchesPhoto && matchesMemory && matchesVoice && (!normalized || haystack.includes(normalized))
     })
-  }, [contentFilters, mapFilter, query, recordFeatures, sortMode, typeFilter])
+  }, [categoryFilter, contentFilters, dexInfoByFeatureId, mapFilter, query, recordFeatures, sortMode, typeFilter])
 
   const activeFilterChips = useMemo(() => {
     const chips = []
@@ -207,6 +209,28 @@ export function PlacesScreen({
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="이름, 메모로 검색" />
       </div>
 
+      {/* 도감 카테고리 필터 — 모은 장소의 분포가 곧 컬렉션의 개성 */}
+      <div className="pl-dex-cats" role="radiogroup" aria-label="카테고리 필터">
+        <button
+          type="button"
+          className={`pl-dex-cat${categoryFilter === "all" ? " is-active" : ""}`}
+          onClick={() => setCategoryFilter("all")}
+        >
+          전체 <b>{categoryCounts.all || 0}</b>
+        </button>
+        {PLACE_CATEGORIES.filter((category) => categoryCounts[category.id]).map((category) => (
+          <button
+            key={category.id}
+            type="button"
+            className={`pl-dex-cat${categoryFilter === category.id ? " is-active" : ""}`}
+            style={{ "--cat-color": category.color }}
+            onClick={() => setCategoryFilter(categoryFilter === category.id ? "all" : category.id)}
+          >
+            {category.label} <b>{categoryCounts[category.id]}</b>
+          </button>
+        ))}
+      </div>
+
       <div className={`pl-filter-bar${activeFilterCount > 0 ? " has-active" : ""}`}>
         <div className="pl-filter-main">
           <button
@@ -269,74 +293,45 @@ export function PlacesScreen({
           <p className="pl-empty__desc">다른 단어로 다시 찾아보세요</p>
         </div>
       ) : (
-        <div className="pl-list">
+        <div className="pl-dex-grid">
           {filteredFeatures.map((feature) => {
             const map = personalMaps.find((item) => item.id === feature.mapId)
             const photoCount = getFeaturePhotos(feature).length
             const memoCount = (feature.note?.trim() ? 1 : 0) + (feature.memos || []).filter((memo) => memo.text?.trim()).length
-            const voiceCount = (feature.voices || []).length
             const trimmedName = (feature.title || "").trim()
             const isEmptyName = !trimmedName
-            const displayName = isEmptyName ? "이름 없는 장소 · 직접 입력하기" : trimmedName
-            const typeLabel = getTypeLabel(feature.type)
-            const description = getFeatureDescription(feature)
-            const dateLabel = formatFeatureDate(feature)
-            const metaItems = []
-            if (dateLabel) metaItems.push({ key: "date", content: <span>{dateLabel}</span> })
-            if (photoCount > 0) {
-              metaItems.push({
-                key: "photo",
-                content: <span className="pl-item__media"><Camera size={9} strokeWidth={1.8} aria-hidden="true" /> 사진 {photoCount}</span>,
-              })
-            }
-            if (memoCount > 0) {
-              metaItems.push({
-                key: "memo",
-                content: <span className="pl-item__media"><FileText size={9} strokeWidth={1.8} aria-hidden="true" /> 메모 {memoCount}</span>,
-              })
-            }
-            if (voiceCount > 0) {
-              metaItems.push({
-                key: "voice",
-                content: <span className="pl-item__media"><Mic size={9} strokeWidth={1.8} aria-hidden="true" /> 음성 {voiceCount}</span>,
-              })
-            }
+            const displayName = isEmptyName ? "이름 없는 장소" : trimmedName
+            const dex = dexInfoByFeatureId.get(feature.id)
+            const category = dex?.category
 
             return (
               <button
                 key={feature.id}
-                className="pl-item"
+                className="pl-dex-card"
                 type="button"
+                style={category ? { "--cat-color": category.color } : undefined}
                 onClick={() => onOpenFeature(feature.id, isEmptyName ? { focusName: true } : undefined)}
               >
-                <span className={`pl-item__bar pl-item__bar--${feature.type || "pin"}`} aria-hidden="true" />
-                <div className={`pl-item__icon pl-item__icon--${feature.type || "pin"}`}>
+                <span className="pl-dex-card__top" aria-hidden="true">
+                  <em>N.{dex?.no || "000"}</em>
+                  {category ? <i>{category.label}</i> : null}
+                </span>
+                <span className="pl-dex-card__stage" aria-hidden="true">
                   {feature.type === "route" ? (
                     <RouteIcon />
                   ) : feature.type === "area" ? (
                     <AreaIcon />
                   ) : (
-                    <MapPin size={17} fill="currentColor" stroke="none" aria-hidden="true" />
+                    <FeatureEmoji feature={feature} size={44} unicodeFontSize={30} />
                   )}
-                </div>
-                <div className="pl-item__info">
-                  <div className="pl-item__kicker">
-                    <span className={`pl-item__type pl-item__type--${feature.type || "pin"}`}>{typeLabel}</span>
-                    {map ? <span className="pl-item__map-name">{map.title}</span> : null}
-                  </div>
-                  <p className={`pl-item__name${isEmptyName ? " pl-item__name--empty" : ""}`}>{displayName}</p>
-                  {description ? <p className="pl-item__desc">{description}</p> : null}
-                  <div className="pl-item__meta">
-                    {metaItems.length > 0 ? metaItems.map((item, index) => (
-                      <span className="pl-item__meta-part" key={item.key}>
-                        {index > 0 ? <span className="pl-item__sep" aria-hidden="true" /> : null}
-                        {item.content}
-                      </span>
-                    )) : <span>기록</span>}
-                  </div>
-                </div>
-                <span className="pl-item__arrow" aria-hidden="true">
-                  <ChevronRight size={12} strokeWidth={2} />
+                  {photoCount > 0 ? (
+                    <span className="pl-dex-card__badge"><Camera size={9} strokeWidth={2.2} aria-hidden="true" /> {photoCount}</span>
+                  ) : null}
+                </span>
+                <span className="pl-dex-card__name">{displayName}</span>
+                <span className="pl-dex-card__sub">
+                  {map ? map.title : "지도 없음"}
+                  {memoCount > 0 ? ` · 메모 ${memoCount}` : ""}
                 </span>
               </button>
             )

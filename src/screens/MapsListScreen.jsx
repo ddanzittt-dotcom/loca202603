@@ -111,6 +111,7 @@ function CollaborationInviteBanner({ invites = [], onAccept, onReject }) {
 
 function MapsV3Card({
   item,
+  displayNo = null,
   onOpen,
   onEdit,
   onCollaborate,
@@ -144,6 +145,9 @@ function MapsV3Card({
         }
       }}
     >
+      {displayNo ? (
+        <span className="maps-v3-card__no" aria-hidden="true">No.{displayNo}</span>
+      ) : null}
       <span className="maps-v3-card__preview">
         <MapCoverThumb
           mapId={item.map.id}
@@ -433,10 +437,11 @@ export function MapsListScreen({
             description="다른 검색어나 필터로 다시 찾아보세요"
           />
         ) : (
-          visibleEntries.map((item) => (
+          visibleEntries.map((item, cardIndex) => (
             <MapsV3Card
               key={item.map.id}
               item={item}
+              displayNo={String(cardIndex + 1).padStart(3, "0")}
               onOpen={onOpen}
               onEdit={onEdit}
               onCollaborate={onCollaborate}

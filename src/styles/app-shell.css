@@ -1650,8 +1650,14 @@
 
 @font-face {
   font-family: "DungGeunMo";
-  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.woff") format("woff");
+  src: url("https://cdn.jsdelivr.net/npm/galmuri@latest/dist/Galmuri11.woff2") format("woff2");
   font-weight: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DungGeunMo";
+  src: url("https://cdn.jsdelivr.net/npm/galmuri@latest/dist/Galmuri11-Bold.woff2") format("woff2");
+  font-weight: 700;
   font-display: swap;
 }
 
@@ -1784,4 +1790,315 @@
 .web-section--explore .explore-public__status {
   font-family: "DungGeunMo", Pretendard, sans-serif;
   color: #8B7F63;
+}
+
+/* ============================================================
+   게임 외피 2·3단계 — 내 지도 / 내 장소(도감) / 좌레일
+   ============================================================ */
+
+/* ── 공통: 두 탭에도 종이 바탕 + 픽셀 타이틀 ── */
+
+.app-shell--soft-social .web-section--maps,
+.app-shell--soft-social .web-section--places {
+  --px-ink: #1F1A12;
+  --px-paper: #F6EFDB;
+  --px-card: #FFFDF4;
+  --px-red: #E5493A;
+  --px-yellow: #FFD338;
+  background: var(--px-paper);
+}
+
+.app-shell--soft-social .web-section--maps .web-section__title,
+.app-shell--soft-social .web-section--places .web-section__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--px-ink);
+}
+
+.app-shell--soft-social .web-section--maps .web-section__description,
+.app-shell--soft-social .web-section--places .web-section__description {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .web-section--maps .web-section__action,
+.app-shell--soft-social .web-section--places .web-section__action {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid var(--px-ink);
+  border-radius: 8px;
+  background: var(--px-red);
+  color: #FFF6E8;
+  box-shadow: 3px 3px 0 var(--px-ink);
+}
+
+/* ── 내 지도: 카트리지 카드 ── */
+
+.app-shell--soft-social .web-section--maps .maps-v3-card {
+  position: relative;
+  background: var(--px-card);
+  border: 2px solid var(--px-ink);
+  border-radius: 10px;
+  box-shadow: 5px 5px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
+}
+
+.maps-v3-card__no {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #1F1A12;
+  padding: 7px 10px 5px;
+  border-bottom: 2px solid #1F1A12;
+  background: #FFD338;
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-card__preview {
+  border-radius: 0;
+  border-bottom: 2px solid var(--px-ink);
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-card__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-status {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid var(--px-ink);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.85);
+  top: 40px;
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-search,
+.app-shell--soft-social .web-section--places .pl-search {
+  border: 2px solid var(--px-ink);
+  border-radius: 8px;
+  background: var(--px-card);
+  box-shadow: 3px 3px 0 var(--px-ink);
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-chip {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid var(--px-ink);
+  border-radius: 6px;
+  background: var(--px-card);
+  color: var(--px-ink);
+}
+
+.app-shell--soft-social .web-section--maps .maps-v3-chip.is-active {
+  background: var(--px-red);
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 var(--px-ink);
+}
+
+/* ── 내 장소: 도감 카테고리 칩 ── */
+
+.pl-dex-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.pl-dex-cat {
+  --cat-color: #8B7F63;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12.5px;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pl-dex-cat b {
+  font-weight: 400;
+  color: var(--cat-color);
+}
+
+.pl-dex-cat.is-active {
+  background: var(--cat-color);
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.pl-dex-cat.is-active b {
+  color: #FFF6E8;
+}
+
+/* ── 내 장소: 도감 카드 그리드 ── */
+
+.pl-dex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 14px;
+  padding: 14px 0 24px;
+}
+
+.pl-dex-card {
+  --cat-color: #8B7F63;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.pl-dex-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(31, 26, 18, 0.9);
+}
+
+.pl-dex-card:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+}
+
+.pl-dex-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 5px 8px 4px;
+  border-bottom: 2px solid #1F1A12;
+  background: var(--px-yellow, #FFD338);
+  color: #1F1A12;
+}
+
+.pl-dex-card__top em {
+  font-style: normal;
+}
+
+.pl-dex-card__top i {
+  font-style: normal;
+  background: var(--cat-color);
+  color: #FFF6E8;
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.pl-dex-card__stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84px;
+  background: color-mix(in srgb, var(--cat-color) 14%, #FFFDF4);
+  border-bottom: 2px solid #1F1A12;
+  color: var(--cat-color);
+}
+
+.pl-dex-card__badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 9px;
+  background: #FFFDF4;
+  border: 1.5px solid #1F1A12;
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: #1F1A12;
+}
+
+.pl-dex-card__name {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 13px;
+  color: #1F1A12;
+  padding: 8px 9px 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pl-dex-card__sub {
+  font-size: 10.5px;
+  color: #8B7F63;
+  padding: 0 9px 9px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── 좌레일 픽셀 스킨 (데스크톱) ── */
+
+@media (min-width: 960px) {
+  .app-shell--soft-social .loca-v2-bottomnav {
+    background: #F6EFDB;
+    border-right: 2px solid #1F1A12;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__brand strong {
+    font-family: "DungGeunMo", Pretendard, sans-serif;
+    font-weight: 400;
+    letter-spacing: 2px;
+    color: #1F1A12;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__brand strong span {
+    color: #E5493A;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__items {
+    counter-reset: navno;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab {
+    counter-increment: navno;
+    font-family: "DungGeunMo", Pretendard, sans-serif;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    color: #1F1A12;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab strong {
+    font-weight: 400;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab::after {
+    content: "0" counter(navno);
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #B7AA8B;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab.is-active {
+    background: #E5493A;
+    border-color: #1F1A12;
+    color: #FFF6E8;
+    box-shadow: 3px 3px 0 #1F1A12;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab.is-active::after {
+    color: #FFD9C9;
+  }
 }

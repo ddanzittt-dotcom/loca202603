@@ -1529,15 +1529,6 @@ export default function App() {
     isMapEditorLayout ? " app-shell--map-editor" : "",
     ` app-shell--tab-${bottomNavTab}`,
   ].join("")
-  const webMapStats = [
-    { label: "내 지도", value: b2cMaps.length },
-    { label: "공개 지도", value: b2cShares.length },
-    { label: "저장 장소", value: b2cFeatures.length },
-  ]
-  const webPlaceStats = [
-    { label: "장소", value: b2cFeatures.length },
-    { label: "담긴 지도", value: new Set(b2cFeatures.map((feature) => feature.mapId)).size },
-  ]
   const webProfileStats = [
     { label: "공개 지도", value: b2cShares.length },
     { label: "내 지도", value: b2cMaps.length },
@@ -1627,9 +1618,8 @@ export default function App() {
           <WebPageFrame
             className="web-section--maps maps-library-screen--v2"
             eyebrow="MY MAPS"
-            title="지도 목록"
-            description="내가 만든 지도와 함께 만드는 지도를 한곳에서 관리해요."
-            stats={webMapStats}
+            title="내 지도"
+            description={`모은 지도 ${b2cMaps.length}개`}
             action={(
               <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
                 <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
@@ -1675,10 +1665,9 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "places" ? (
           <WebPageFrame
             className="web-section--places maps-library-screen--v2"
-            eyebrow="SAVED PLACES"
-            title="장소 목록"
-            description="지도에 저장한 장소를 검색하고 다시 열어봐요."
-            stats={webPlaceStats}
+            eyebrow="MY PLACES"
+            title="내 장소"
+            description={`모은 장소 ${b2cFeatures.length}개`}
             action={(
               <button className="web-section__action" type="button" onClick={openRecordFlow}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
