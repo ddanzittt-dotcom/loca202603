@@ -108,13 +108,14 @@ export function ExplorePublicScreen({ onOpenMap }) {
 
       {!loading && !error ? (
         <div className="explore-public__grid">
-          {cards.map(({ map: mapItem, placeCount, stickerEmojis, previewSvg, dateLabel, tags }) => (
+          {cards.map(({ map: mapItem, placeCount, stickerEmojis, previewSvg, dateLabel, tags }, cardIndex) => (
             <button
               key={mapItem.slug}
               type="button"
               className="explore-public__card"
               onClick={() => onOpenMap?.(mapItem.slug)}
             >
+              <span className="explore-public__no" aria-hidden="true">No.{String(cardIndex + 1).padStart(3, "0")}</span>
               <span className="explore-public__cover">
                 <MapCoverThumb
                   mapId={mapItem.id}

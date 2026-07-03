@@ -1642,3 +1642,146 @@
 .map-cover-thumb__img.is-loaded {
   opacity: 1;
 }
+
+/* ============================================================
+   게임 외피 1단계 — 탐색 탭 파일럿
+   픽셀 타이포(둥근모꼴) + 잉크 프레임 + 하드 섀도 + 카드 넘버링
+   ============================================================ */
+
+@font-face {
+  font-family: "DungGeunMo";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.woff") format("woff");
+  font-weight: normal;
+  font-display: swap;
+}
+
+.app-shell--soft-social .web-section--explore {
+  --px-ink: #1F1A12;
+  --px-paper: #F6EFDB;
+  --px-card: #FFFDF4;
+  --px-red: #E5493A;
+  --px-yellow: #FFD338;
+  background: var(--px-paper);
+}
+
+/* 헤더: 픽셀 타이틀 */
+.app-shell--soft-social .web-section--explore .web-section__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--px-ink);
+}
+
+/* 검색바: 잉크 프레임 */
+.web-section--explore .explore-public__search {
+  border: 2px solid var(--px-ink);
+  border-radius: 8px;
+  background: var(--px-card);
+  box-shadow: 3px 3px 0 var(--px-ink);
+  color: var(--px-ink);
+}
+
+.web-section--explore .explore-public__search input {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 14px;
+}
+
+/* 카드: 카트리지 프레임 */
+.web-section--explore .explore-public__card {
+  position: relative;
+  background: var(--px-card);
+  border: 2px solid var(--px-ink);
+  border-radius: 10px;
+  box-shadow: 5px 5px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+  padding-bottom: 4px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.web-section--explore .explore-public__card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
+}
+
+.web-section--explore .explore-public__card:active {
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.9);
+}
+
+/* 카드 번호 라벨 */
+.explore-public__no {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--px-ink, #1F1A12);
+  padding: 7px 10px 5px;
+  border-bottom: 2px solid var(--px-ink, #1F1A12);
+  background: var(--px-yellow, #FFD338);
+}
+
+/* 커버: 프레임 안 실제 지도 */
+.web-section--explore .explore-public__cover {
+  border-radius: 0;
+  border: none;
+  border-bottom: 2px solid var(--px-ink);
+}
+
+.web-section--explore .explore-public__count {
+  font-family: "DungGeunMo", monospace;
+  border-radius: 4px;
+  border: 2px solid var(--px-ink);
+  background: var(--px-red);
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.85);
+}
+
+.web-section--explore .explore-public__sticker {
+  border: 2px solid var(--px-ink);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.85);
+  transform: rotate(0deg);
+}
+
+/* 본문 */
+.web-section--explore .explore-public__body {
+  padding: 9px 12px 10px;
+}
+
+.web-section--explore .explore-public__body strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--px-ink);
+}
+
+.web-section--explore .explore-public__body small {
+  color: #6E6552;
+}
+
+.web-section--explore .explore-public__body time {
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  color: #8B7F63;
+}
+
+/* 태그: 픽셀 칩 */
+.web-section--explore .explore-public__tags em {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11px;
+  border: 1.5px solid var(--px-ink);
+  border-radius: 4px;
+  background: #FFF;
+  color: var(--px-ink);
+  padding: 2px 7px;
+}
+
+.web-section--explore .explore-public__grid {
+  gap: 20px 16px;
+}
+
+.web-section--explore .explore-public__status {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
