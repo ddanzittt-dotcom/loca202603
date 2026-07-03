@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { MapPin, X } from "lucide-react"
 import { FeatureEmoji } from "./FeatureEmoji"
 import { buildFeatureRecordGroups } from "../lib/featureRecordGroups"
+import { getPlaceCategory } from "../lib/placeCategories"
 
 // 카드 상단 지도의 중심 좌표 (핀: 자기 좌표, 길/영역: 점들의 평균)
 function getFeatureCenterPoint(feature) {
@@ -40,10 +41,13 @@ function formatDate(value) {
  * PlaceCardPop — 장소 목록에서 장소를 누르면 뿅 하고 뜨는 장소 카드.
  * 사진·메모 등 그 장소에 남긴 기록을 카드 한 장으로 모아 보여준다.
  */
-export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
-  // 지도 이미지 로드 실패 기록 (feature 별로 추적 — 다른 장소를 열면 자동 초기화)
+export function PlaceCardPop({ feature, dexNo = null, mapTitle, onClose, onOpenOnMap }) {
+  // 지도 이미지 로드 상태 (feature 별로 추적 — 다른 장소를 열면 자동 초기화)
+  const featureKey = feature?.id || feature?.feature_id
   const [mapFailedFor, setMapFailedFor] = useState(null)
-  const mapFailed = mapFailedFor === (feature?.id || feature?.feature_id)
+  const [mapLoadedFor, setMapLoadedFor] = useState(null)
+  const mapFailed = mapFailedFor === featureKey
+  const mapLoaded = mapLoadedFor === featureKey
 
   useEffect(() => {
     const handleKey = (event) => {
@@ -98,6 +102,7 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
 
   const title = (feature.title || "").trim() || "이름 없는 장소"
   const typeLabel = TYPE_LABELS[feature.type] || "장소"
+  const category = getPlaceCategory(feature)
   const tags = Array.isArray(feature.tags) ? feature.tags.filter(Boolean).slice(0, 4) : []
   const note = (feature.note || "").trim()
   const savedLabel = formatDate(feature.updatedAt)
@@ -120,13 +125,23 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
           <X size={16} strokeWidth={2.2} />
         </button>
 
+        {/* 상단 밴드: 도감 번호 + 카테고리 (포켓몬 카드의 넘버·타입 자리) */}
+        <div className="pcp-card__band" style={{ "--cat-color": category?.color }}>
+          <em>N.{dexNo || "—"}</em>
+          <i>{category?.label || typeLabel}</i>
+        </div>
+
         {mapSrc ? (
-          <div className="pcp-card__hero">
+          <div className={`pcp-card__hero${mapLoaded ? " is-loaded" : ""}`}>
             <img
               src={mapSrc}
               alt={`${title} 위치 지도`}
-              onError={() => setMapFailedFor(feature?.id || feature?.feature_id)}
+              onLoad={() => setMapLoadedFor(featureKey)}
+              onError={() => setMapFailedFor(featureKey)}
             />
+            <span className="pcp-card__hero-fallback" aria-hidden="true">
+              <FeatureEmoji feature={feature} size={52} unicodeFontSize={34} />
+            </span>
             <span className="pcp-card__hero-emoji" aria-hidden="true">
               <FeatureEmoji feature={feature} size={34} unicodeFontSize={20} />
             </span>
@@ -138,8 +153,7 @@ export function PlaceCardPop({ feature, mapTitle, onClose, onOpenOnMap }) {
         )}
 
         <div className="pcp-card__meta">
-          <span className="pcp-card__type">{typeLabel}</span>
-          {savedLabel ? <span className="pcp-card__date">{savedLabel}</span> : null}
+          {savedLabel ? <span className="pcp-card__date">{savedLabel} 수집</span> : <span />}
         </div>
 
         <h2 className="pcp-card__title">{title}</h2>

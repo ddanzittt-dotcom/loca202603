@@ -24,6 +24,7 @@ import {
   buildMapShareUrl,
   buildOwnPosts,
   buildSlugShareUrl,
+  featureSort,
   parseAppLocation,
   placeEmojis,
   themePalette,
@@ -1058,6 +1059,15 @@ export default function App() {
   // 장소 목록에서 장소를 누르면 지도 이동 대신 카드로 먼저 보여준다
   const [placeCardFeature, setPlaceCardFeature] = useState(null)
 
+  // 도감 번호(N.###) — 내 장소 도감과 동일한 규칙(오래된 기록부터 고정 순번)
+  const placeCardDexNo = useMemo(() => {
+    if (!placeCardFeature) return null
+    const targetId = placeCardFeature.id || placeCardFeature.feature_id
+    const ordered = [...b2cFeatures].sort((a, b) => featureSort(b, a))
+    const index = ordered.findIndex((feature) => (feature.id || feature.feature_id) === targetId)
+    return index >= 0 ? String(index + 1).padStart(3, "0") : null
+  }, [placeCardFeature, b2cFeatures])
+
   const handleBottomNavChange = useCallback((nextTab) => {
     if (nextTab === "login") {
       if (activeTab !== "login" && !confirmDiscardEditorDraft()) return
@@ -1886,6 +1896,7 @@ export default function App() {
       {placeCardFeature ? (
         <PlaceCardPop
           feature={placeCardFeature}
+          dexNo={placeCardDexNo}
           mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
           onClose={() => setPlaceCardFeature(null)}
           onOpenOnMap={() => {

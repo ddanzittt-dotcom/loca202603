@@ -2102,3 +2102,337 @@
     color: #FFD9C9;
   }
 }
+
+/* ============================================================
+   게임 외피 전역화 — 배경 / 헤더 / 프로필 / 장소 카드 / 계정 버튼
+   ============================================================ */
+
+/* ── 앱 전체 배경: 소프트 그라데이션 → 종이 + 잉크 격자 ── */
+
+.app-shell--soft-social {
+  background:
+    linear-gradient(rgba(31, 26, 18, 0.05) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(90deg, rgba(31, 26, 18, 0.05) 1px, transparent 1px) 0 0 / 36px 36px,
+    #F6EFDB;
+}
+
+.app-shell--soft-social .web-section {
+  background: transparent;
+}
+
+/* ── 모든 섹션 헤더 픽셀화 ── */
+
+.app-shell--soft-social .web-section__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .web-section__eyebrow {
+  font-family: "DungGeunMo", monospace;
+  color: #E5493A;
+  letter-spacing: 2px;
+}
+
+.app-shell--soft-social .web-section__description {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .web-section__action {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+/* ── 프로필: 통계 카드 / 신분증 카드 / 미니 지도 카드 ── */
+
+.app-shell--soft-social .web-stat {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .web-stat span {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .web-stat strong {
+  font-family: "DungGeunMo", monospace;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .pf-v2-card {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 5px 5px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .pf-v2-card__name {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
+
+.app-shell--soft-social .pf-v2-card__edit,
+.app-shell--soft-social .pf__map-upload {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .pf__section-head h2 {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+}
+
+.app-shell--soft-social .pf__mini-card {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+}
+
+.app-shell--soft-social .pf__mini-map {
+  border-bottom: 2px solid #1F1A12;
+}
+
+/* ── 계정 버튼 ── */
+
+.app-shell--soft-social .account-menu__trigger {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+.app-shell--soft-social .account-menu__pop {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 5px 5px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .account-menu__pop button {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+}
+
+/* ── 모바일 하단탭 ── */
+
+@media (max-width: 959px) {
+  .app-shell--soft-social .loca-v2-bottomnav {
+    background: #F6EFDB;
+    border-top: 2px solid #1F1A12;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab {
+    font-family: "DungGeunMo", Pretendard, sans-serif;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab strong {
+    font-weight: 400;
+  }
+
+  .app-shell--soft-social .loca-v2-bottomnav__tab.is-active {
+    color: #E5493A;
+  }
+}
+
+/* ── 장소 카드 팝 = 포켓몬 카드 ── */
+
+.pcp-backdrop {
+  background: rgba(31, 26, 18, 0.5);
+}
+
+.pcp-card {
+  border: 3px solid #1F1A12;
+  border-radius: 14px;
+  background: #FFFDF4;
+  box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
+  padding: 12px 14px 14px;
+}
+
+.pcp-card__band {
+  --cat-color: #8B7F63;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #1F1A12;
+  background: #FFD338;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 24px 0 10px;
+}
+
+.pcp-card__band em {
+  font-style: normal;
+}
+
+.pcp-card__band i {
+  font-style: normal;
+  font-size: 11px;
+  background: var(--cat-color);
+  color: #FFF6E8;
+  border: 1.5px solid #1F1A12;
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+
+.pcp-close {
+  z-index: 3;
+  border: 2px solid #1F1A12 !important;
+  border-radius: 8px !important;
+  background: #FFFDF4 !important;
+  box-shadow: 2px 2px 0 #1F1A12 !important;
+}
+
+.pcp-card__hero {
+  position: relative;
+  height: 168px;
+  margin-bottom: 12px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #EFE7CF;
+}
+
+.pcp-card__hero img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.pcp-card__hero.is-loaded img {
+  opacity: 1;
+}
+
+.pcp-card__hero-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pcp-card__hero.is-loaded .pcp-card__hero-fallback {
+  display: none;
+}
+
+.pcp-card__hero-emoji {
+  display: none;
+}
+
+.pcp-card__hero.is-loaded .pcp-card__hero-emoji {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  padding: 3px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+}
+
+.pcp-card__stage {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #EFE7CF;
+  margin-bottom: 12px;
+}
+
+.pcp-card__meta {
+  margin-bottom: 4px;
+}
+
+.pcp-card__date {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+
+.pcp-card__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 22px;
+}
+
+.pcp-card__tags span {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 1.5px solid #1F1A12;
+  border-radius: 4px;
+  background: #FFFDF4;
+  color: #1F1A12;
+}
+
+.pcp-card__records {
+  border-top: 2px dashed rgba(31, 26, 18, 0.35);
+}
+
+.pcp-card__records h3 {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #8B7F63;
+}
+
+.pcp-card__records li {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.75);
+}
+
+.pcp-card__record-head time,
+.pcp-card__record-head em {
+  font-family: "DungGeunMo", monospace;
+}
+
+.pcp-card__foot {
+  border-top: 2px dashed rgba(31, 26, 18, 0.35);
+}
+
+.pcp-card__mapname {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.pcp-card__open {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+/* 프로필 미니 카드 — 기존 .profile-v4 셀렉터 특이도 대응 */
+.app-shell--soft-social .profile-v4 .pf__mini-card,
+.app-shell--soft-social .profile-v4--v2 .pf__mini-card {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+}
+
+.app-shell--soft-social .profile-v4 .pf__mini-map,
+.app-shell--soft-social .profile-v4--v2 .pf__mini-map {
+  border-bottom: 2px solid #1F1A12;
+  border-radius: 0;
+}
