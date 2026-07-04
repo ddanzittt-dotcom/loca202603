@@ -48,6 +48,7 @@ export {
   updateMap,
   deleteMap,
   createFeature,
+  placeFeatureInMap,
   updateFeature,
   deleteFeature,
   addFeatureMemo,

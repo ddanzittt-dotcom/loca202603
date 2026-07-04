@@ -3285,3 +3285,244 @@
   transform: translate(2px, 2px);
   box-shadow: 2px 2px 0 #1F1A12;
 }
+
+
+/* ============================================================
+   지도 만들기 빌더 (MapBuilderSheet) — 채집 카드 선택형 (C단계)
+   ============================================================ */
+
+.mbld-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 76;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 26, 18, 0.5);
+}
+
+.mbld-sheet {
+  width: min(100%, 460px);
+  max-height: 88dvh;
+  overflow-y: auto;
+  background: #FFFDF4;
+  border: 3px solid #1F1A12;
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
+  padding: 14px 16px 16px;
+}
+
+.mbld-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mbld-eyebrow {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  letter-spacing: 2px;
+  color: #C0442B;
+  margin-bottom: 2px;
+}
+
+.mbld-head strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 17px;
+  color: #1F1A12;
+}
+
+.mbld-close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  cursor: pointer;
+  color: #1F1A12;
+}
+
+.mbld-name {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.mbld-name > span {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #8B7F63;
+  margin-bottom: 5px;
+}
+
+.mbld-name input {
+  width: 100%;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 15px;
+  color: #1F1A12;
+  padding: 11px 12px;
+  outline: none;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.12);
+}
+
+.mbld-name input:focus {
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+.mbld-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.mbld-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.85);
+  padding: 10px 6px 9px;
+  cursor: pointer;
+  font: inherit;
+  transition: transform 0.05s ease;
+}
+
+.mbld-card__no {
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--cat-color, #8B7F63);
+}
+
+.mbld-card__stage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 2px solid #1F1A12;
+  border-radius: 9px;
+  background: #FBF6E6;
+}
+
+.mbld-card__name {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11px;
+  line-height: 1.25;
+  color: #1F1A12;
+  text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mbld-card.is-on {
+  background: #FFD338;
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.mbld-card__check {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1F1A12;
+  border-radius: 50%;
+  background: #E5493A;
+  color: #FFF6E8;
+}
+
+.mbld-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mbld-primary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 14px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 3px 3px 0 #1F1A12;
+  padding: 11px 0;
+  cursor: pointer;
+}
+
+.mbld-primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+
+.mbld-primary:not(:disabled):active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+.mbld-ghost {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12.5px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  box-shadow: 3px 3px 0 #1F1A12;
+  padding: 11px 14px;
+  cursor: pointer;
+}
+
+.mbld-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  border: 2px dashed rgba(31, 26, 18, 0.4);
+  border-radius: 12px;
+  background: #FBF6E6;
+  padding: 26px 18px;
+  color: #8B7F63;
+}
+
+.mbld-empty strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #1F1A12;
+}
+
+.mbld-empty p {
+  margin: 0 0 6px;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}

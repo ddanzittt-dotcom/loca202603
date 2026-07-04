@@ -34,7 +34,7 @@ import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord } from "./lib/mapService"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createMap as createMapRecord } from "./lib/mapService.write"
+import { createMap as createMapRecord, placeFeatureInMap } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
@@ -57,6 +57,7 @@ import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { FeatureEditSheet } from "./components/sheets/FeatureEditSheet"
 import { ImportTargetMapSheet } from "./components/sheets/ImportTargetMapSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
+import { MapBuilderSheet } from "./components/sheets/MapBuilderSheet"
 import { AddRecordSheet } from "./components/sheets/AddRecordSheet"
 import { PublishSheet } from "./components/sheets/PublishSheet"
 import { UserProfileSheet } from "./components/sheets/UserProfileSheet"
@@ -518,6 +519,15 @@ export default function App() {
     setMapSheet({ mode: "create", id: null, title: "", description: "", theme: themePalette[0] })
   }, [needsAuthForPersonalArea, requestLoginBanner])
 
+  // 새 지도 = 채집한 카드를 골라 묶는 빌더로 진입 (C단계)
+  const openMapBuilder = useCallback(() => {
+    if (needsAuthForPersonalArea) {
+      requestLoginBanner()
+      return
+    }
+    setMapBuilderOpen(true)
+  }, [needsAuthForPersonalArea, requestLoginBanner])
+
   // --- Geolocation ---
 
   const { myLocation, locateMe } = useGeolocation({ setFocusPoint, showToast })
@@ -910,6 +920,54 @@ export default function App() {
     }
   }, [cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
 
+  // C단계 빌더: 채집한 카드를 골라 새 지도로 묶는다
+  const handleBuilderCreate = useCallback(async (title, featureIds) => {
+    const trimmed = `${title || ""}`.trim()
+    const ids = Array.isArray(featureIds) ? featureIds.filter(Boolean) : []
+    if (!trimmed || ids.length === 0) return
+    setMapBuilderBusy(true)
+    try {
+      let nextMap
+      if (cloudMode) {
+        nextMap = await createMapRecord({
+          title: trimmed,
+          description: "",
+          theme: "pastel",
+          category: "personal",
+          config: {},
+        })
+        // 고른 카드를 순서대로 새 지도에 담기 (050 배치 테이블 기준)
+        for (let index = 0; index < ids.length; index += 1) {
+          await placeFeatureInMap(nextMap.id, ids[index], index)
+        }
+      } else {
+        nextMap = {
+          id: createId("map"),
+          title: trimmed,
+          description: "",
+          theme: "pastel",
+          category: "personal",
+          config: {},
+          updatedAt: new Date().toISOString(),
+        }
+      }
+      setMaps((current) => [nextMap, ...current])
+      // 로컬/클라우드 공통: 고른 채집 카드를 새 지도 소속으로 반영
+      const idSet = new Set(ids)
+      setFeatures((current) => current.map((feature) => (
+        idSet.has(feature.id) ? { ...feature, mapId: nextMap.id } : feature
+      )))
+      setMapBuilderOpen(false)
+      showToast(`'${trimmed}' 지도에 ${ids.length}장을 담았어요.`)
+      openMapEditor(nextMap.id)
+    } catch (error) {
+      console.error("Failed to build map", error)
+      showToast("지도를 만들지 못했어요.")
+    } finally {
+      setMapBuilderBusy(false)
+    }
+  }, [cloudMode, setMaps, setFeatures, openMapEditor, showToast])
+
   // --- Social / Profile ---
 
   const {
@@ -1052,6 +1110,16 @@ export default function App() {
 
   // 채집 시트 (B단계) — 지도 없이 장소를 먼저 등록
   const [collectSheetOpen, setCollectSheetOpen] = useState(false)
+
+  // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
+  const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
+  const [mapBuilderBusy, setMapBuilderBusy] = useState(false)
+
+  // 빌더 후보: 아직 어떤 지도에도 안 담긴 채집 카드(mapless)
+  const maplessFeatures = useMemo(
+    () => features.filter((feature) => !feature.mapId && !feature.map_id),
+    [features],
+  )
 
   // 도감 번호(N.###) — 내 장소 도감과 동일한 규칙(오래된 기록부터 고정 순번)
   const placeCardDexNo = useMemo(() => {
@@ -1625,7 +1693,7 @@ export default function App() {
             title="내 지도"
             description={`모은 지도 ${b2cMaps.length}개`}
             action={(
-              <button className="web-section__action" type="button" onClick={openCreateMapSheet}>
+              <button className="web-section__action" type="button" onClick={openMapBuilder}>
                 <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
                 새 지도
               </button>
@@ -1637,7 +1705,7 @@ export default function App() {
               shares={b2cShares}
               loading={cloudLoading}
               characterImage="/characters/cloud_lv1.svg"
-              onCreate={openCreateMapSheet}
+              onCreate={openMapBuilder}
               onEdit={(mapId) => {
                 const mapItem = maps.find((item) => item.id === mapId)
                 if (mapItem) {
@@ -1913,6 +1981,19 @@ export default function App() {
           setCollectSheetOpen(false)
           setPlaceCardFeature(collected)
           showToast(isNewFind ? "새 발견! 도감에 담았어요" : "도감에 담았어요")
+        }}
+      />
+
+      <MapBuilderSheet
+        key={mapBuilderOpen ? "builder-open" : "builder-closed"}
+        open={mapBuilderOpen}
+        features={maplessFeatures}
+        busy={mapBuilderBusy}
+        onClose={() => setMapBuilderOpen(false)}
+        onCreate={handleBuilderCreate}
+        onStartBlank={() => {
+          setMapBuilderOpen(false)
+          openCreateMapSheet()
         }}
       />
 

@@ -283,6 +283,44 @@ export async function createFeature(mapId, featureData) {
   return normalizeFeature(data)
 }
 
+// 채집한 기록(대개 지도 없이 도감에 쌓인 것)을 지도에 담는다 — C단계 빌더용.
+// 050 적용 후: M:N 배치(map_feature_placements)로 기록. 한 카드가 여러 지도에 담길 수 있다.
+// 050 미적용/하위호환: 아직 소속 지도가 없는 기록이면 map_id 도 채워 기존 조회에 노출.
+export async function placeFeatureInMap(mapId, featureId, sortOrder = 0) {
+  const user = await requireUser()
+  const supabase = requireSupabase()
+  if (!mapId || !featureId) return
+
+  try {
+    const { error } = await supabase
+      .from("map_feature_placements")
+      .insert({
+        map_id: mapId,
+        feature_id: featureId,
+        sort_order: sortOrder,
+        added_by: user?.id || null,
+      })
+    // 23505 = 이미 담긴 카드(UNIQUE 충돌) → 정상으로 취급
+    if (error && error.code !== "23505") {
+      console.warn("placement insert skipped:", error.message)
+    }
+  } catch {
+    // 배치 테이블(050) 미적용 환경 — 조용히 건너뜀
+  }
+
+  try {
+    await supabase
+      .from("map_features")
+      .update({ map_id: mapId })
+      .eq("id", featureId)
+      .is("map_id", null)
+  } catch {
+    // ignore — 하위호환 보정 실패는 무시
+  }
+
+  await touchMapRecord(mapId)
+}
+
 export async function updateFeature(featureId, updates) {
   await requireUser()
   const supabase = requireSupabase()
