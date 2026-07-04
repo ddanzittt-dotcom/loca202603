@@ -80,7 +80,8 @@ export function PlacesScreen({
   )
 
   const recordFeatures = useMemo(
-    () => features.filter((feature) => isPersonalRecordType(feature) && personalMapIds.has(feature.mapId)),
+    // 지도에 안 묶인 기록(채집만 된 카드)도 도감에 포함
+    () => features.filter((feature) => isPersonalRecordType(feature) && (!feature.mapId || personalMapIds.has(feature.mapId))),
     [features, personalMapIds],
   )
 

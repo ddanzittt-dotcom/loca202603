@@ -551,11 +551,19 @@ export async function getMyAppData() {
   })
 
   const mapIds = mapRows.map((row) => row.id)
-  const [featureRows, publicationRows, collaboratorCounts, collaborationInvites] = await Promise.all([
+  const [mappedFeatureRows, maplessFeatureRows, publicationRows, collaboratorCounts, collaborationInvites] = await Promise.all([
     listFeaturesForMapIds(mapIds).catch((error) => {
       console.error("Failed to load personal map features", error)
       return []
     }),
+    // 채집-우선 구조(050): 지도에 아직 안 묶인 내 기록도 도감에 포함
+    supabase
+      .from("map_features")
+      .select("*")
+      .is("map_id", null)
+      .eq("created_by", user.id)
+      .then((res) => (res.error ? [] : res.data || []))
+      .catch(() => []),
     listPublicationsForMapIds(mapIds),
     listCollaboratorCountsForMapIds(mapIds),
     listCollaborationInvites().catch((error) => {
@@ -564,6 +572,7 @@ export async function getMyAppData() {
     }),
   ])
 
+  const featureRows = [...mappedFeatureRows, ...maplessFeatureRows]
   const featureIds = featureRows.map((row) => row.id)
   const [memoRows, mediaRows] = await Promise.all([
     listMemosForFeatureIds(featureIds).catch((error) => {

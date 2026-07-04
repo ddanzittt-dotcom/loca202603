@@ -122,7 +122,7 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 > 과거 이벤트/B2B 테이블(announcements, survey_responses, event_checkins, invitation_codes 등)은 migrations 이력에 남아 있으나 **앱 코드에서 미사용**.
 
 > **Migration 번호 주의 (2026-07):**
-> - 웹 MVP 실험분 046·047은 라이브 DB에 적용 후 파일만 제거됨 → **048_web_mvp_teardown** 으로 정리. 게이미피케이션은 **049_gamification_teardown** 으로 정리. **신규 migration은 050부터.**
+> - 웹 MVP 실험분 046·047은 라이브 DB에 적용 후 파일만 제거됨 → **048_web_mvp_teardown** 으로 정리. 게이미피케이션은 **049_gamification_teardown**, 채집-우선 구조는 **050_collect_first_structure** (map_id nullable + map_feature_placements M:N). **신규 migration은 051부터.**
 > - 중복 번호 존재: 005·013·020·022·030. 이 중 B2B 전용(`005_organizations`, `013_rate_limit_comments_features`, `022_dashboard_tenant_rbac`, `022_event_collab_roles_and_approval`)은 신규 환경 구축 시 실행하지 않는다.
 
 ### Sharing & OG 메타

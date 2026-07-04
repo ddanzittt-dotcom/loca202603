@@ -236,7 +236,7 @@ export async function deleteMap(mapId) {
 // ─── Feature CRUD ───
 
 export async function createFeature(mapId, featureData) {
-  await requireUser()
+  const user = await requireUser()
   const supabase = requireSupabase()
   let featurePayload = {
     map_id: mapId,
@@ -260,6 +260,25 @@ export async function createFeature(mapId, featureData) {
   }
 
   if (error) throw error
+
+  // 채집-우선 구조(050): 지도-기록 배치를 M:N 테이블에 이중 기록
+  // (050 미적용 환경에서는 조용히 건너뜀 — C단계에서 조회 기준이 placements 로 전환됨)
+  if (mapId && data?.id) {
+    try {
+      const { error: placementError } = await supabase
+        .from("map_feature_placements")
+        .insert({
+          map_id: mapId,
+          feature_id: data.id,
+          sort_order: data.sort_order || 0,
+          added_by: user?.id || null,
+        })
+      if (placementError) console.warn("placement dual-write skipped:", placementError.message)
+    } catch {
+      // 배치 테이블이 없어도 기록 생성은 성공으로 처리
+    }
+  }
+
   await touchMapRecord(mapId)
   return normalizeFeature(data)
 }
