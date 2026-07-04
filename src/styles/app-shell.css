@@ -2833,3 +2833,455 @@
 .clt-actions .clt-primary {
   flex: 1;
 }
+
+/* ============================================================
+   디테일 시트 픽셀 스킨 — 장소 상세 / 기록 작성 / 공유 / 공용 바텀시트
+   (.app-shell--soft-social 스코프. 게임 외피와 같은 톤: 크림 종이,
+    잉크 2~3px 테두리, 블러 없는 오프셋 그림자, DungGeunMo, 빨강 카트리지)
+   ============================================================ */
+
+/* --- 공용 바텀시트 크롬 (FeatureDetail·AddRecord·SharePlace 공통) --- */
+.app-shell--soft-social .sheet-backdrop {
+  background: rgba(31, 26, 18, 0.5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.app-shell--soft-social .sheet {
+  background: #FFFDF4;
+  border: 3px solid #1F1A12;
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 26px rgba(31, 26, 18, 0.2);
+}
+
+.app-shell--soft-social .sheet--fullscreen {
+  background: #F6EFDB;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app-shell--soft-social .sheet__handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #1F1A12;
+}
+
+.app-shell--soft-social .sheet__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  color: #1F1A12;
+  letter-spacing: -0.2px;
+}
+
+.app-shell--soft-social .sheet__subtitle {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .sheet__close,
+.app-shell--soft-social .sheet__back {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .sheet__close:active,
+.app-shell--soft-social .sheet__back:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+/* --- 장소/길/영역 상세 (fd-detail) --- */
+.app-shell--soft-social .fd-detail__hero {
+  background: #FFFDF4;
+  border: 2px solid #1F1A12;
+  border-radius: 14px;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+  padding: 14px 15px 15px;
+}
+
+.app-shell--soft-social .fd-detail__type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .fd-detail__type > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 2px solid #1F1A12;
+  border-radius: 7px;
+  background: #FFD338;
+  color: #1F1A12;
+  padding: 3px 8px;
+  letter-spacing: 1px;
+}
+
+.app-shell--soft-social .fd-detail__icon {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__title-block h3 {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__title-block p {
+  color: #5F665F;
+}
+
+.app-shell--soft-social .fd-detail__tags span {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11.5px;
+  border: 1.5px solid #1F1A12;
+  border-radius: 999px;
+  background: #F6EFDB;
+  color: #5F4A2E;
+  padding: 2px 9px;
+}
+
+.app-shell--soft-social .fd-detail__action {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 9px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__action--primary {
+  background: #E5493A;
+  color: #FFF6E8;
+}
+
+.app-shell--soft-social .fd-detail__action:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__section-head span {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .fd-detail__section-head strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__section-head button {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFD338;
+  color: #1F1A12;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__empty {
+  border: 2px dashed rgba(31, 26, 18, 0.4);
+  border-radius: 12px;
+  background: #FBF6E6;
+}
+
+.app-shell--soft-social .fd-detail__empty strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__diary-label {
+  display: inline-block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFD338;
+  color: #1F1A12;
+  padding: 2px 8px;
+}
+
+.app-shell--soft-social .fd-detail__record-edit {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 7px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__request textarea {
+  border: 2px solid #1F1A12;
+  border-radius: 9px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__request button {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .fd-detail__request button:last-child {
+  background: #E5493A;
+  color: #FFF6E8;
+}
+
+/* --- 기록 작성 (RecordEntrySheet, res-) — 자체 크롬 --- */
+.app-shell--soft-social .res-backdrop {
+  background: rgba(31, 26, 18, 0.5);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.app-shell--soft-social .res-sheet {
+  background: #FFFDF4;
+  border: 3px solid #1F1A12;
+  border-bottom: none;
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -4px 26px rgba(31, 26, 18, 0.2);
+}
+
+.app-shell--soft-social .res-handle {
+  width: 44px;
+  height: 5px;
+  border-radius: 3px;
+  background: #1F1A12;
+}
+
+.app-shell--soft-social .res-today {
+  display: inline-block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFD338;
+  color: #1F1A12;
+  padding: 2px 8px;
+}
+
+.app-shell--soft-social .res-title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .res-title__rest {
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .res-sub {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .res-close {
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .res-section-label > span:first-child {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .res-char-count,
+.app-shell--soft-social .res-count {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .res-textarea {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #1F1A12;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.12);
+}
+
+.app-shell--soft-social .res-textarea:focus {
+  outline: none;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+.app-shell--soft-social .res-photo-add {
+  border: 2px dashed rgba(31, 26, 18, 0.45);
+  border-radius: 10px;
+  background: #FBF6E6;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .res-voice-card {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FBF6E6;
+}
+
+.app-shell--soft-social .res-voice-mic {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .res-voice-mic.is-recording {
+  background: #C0442B;
+}
+
+.app-shell--soft-social .res-voice-hint,
+.app-shell--soft-social .res-voice-time {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .res-voice-chip {
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .res-save {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 4px 4px 0 #1F1A12;
+}
+
+.app-shell--soft-social .res-save:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
+
+.app-shell--soft-social .res-save:not(:disabled):active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+/* --- 기록 추가 진입 (AddRecordSheet) --- */
+.app-shell--soft-social .add-record-option {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+
+.app-shell--soft-social .add-record-option--primary {
+  background: #FFD338;
+}
+
+.app-shell--soft-social .add-record-option:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+.app-shell--soft-social .add-record-option__icon {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+}
+
+.app-shell--soft-social .add-record-option__copy strong,
+.app-shell--soft-social .record-action-row__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .add-record-panel__head {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #1F1A12;
+}
+
+.app-shell--soft-social .add-record-recent__chip {
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #1F1A12;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.app-shell--soft-social .settings-link-row {
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+}
+
+.app-shell--soft-social .add-record-empty {
+  border: 2px dashed rgba(31, 26, 18, 0.4);
+  border-radius: 12px;
+  background: #FBF6E6;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+/* --- 공유 (SharePlaceSheet) --- */
+.app-shell--soft-social .map-publish-row {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.9);
+}
+
+.app-shell--soft-social .empty-card {
+  border: 2px dashed rgba(31, 26, 18, 0.4);
+  border-radius: 12px;
+  background: #FBF6E6;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .sheet-actions .button--primary {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 4px 4px 0 #1F1A12;
+}
+
+.app-shell--soft-social .sheet-actions .button--ghost {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  border: 2px solid #1F1A12;
+  border-radius: 10px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  box-shadow: 4px 4px 0 #1F1A12;
+}
+
+.app-shell--soft-social .sheet-actions .button--primary:active,
+.app-shell--soft-social .sheet-actions .button--ghost:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #1F1A12;
+}
