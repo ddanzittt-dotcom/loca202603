@@ -200,10 +200,14 @@ export function PlaceCardPop({ feature, dexNo = null, mapTitle, onClose, onOpenO
               <MapPin size={13} strokeWidth={2.2} aria-hidden="true" />
               {mapTitle}
             </span>
-          ) : <span />}
-          <button type="button" className="pcp-card__open" onClick={onOpenOnMap}>
-            지도에서 보기
-          </button>
+          ) : (
+            <span className="pcp-card__mapname">아직 지도에 안 담김</span>
+          )}
+          {onOpenOnMap ? (
+            <button type="button" className="pcp-card__open" onClick={onOpenOnMap}>
+              지도에서 보기
+            </button>
+          ) : null}
         </footer>
       </article>
     </div>

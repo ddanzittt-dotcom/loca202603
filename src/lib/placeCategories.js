@@ -42,6 +42,20 @@ function matchCategoryId(kind, value) {
   return null
 }
 
+// 채집 시 카테고리별 기본 픽셀 이모지
+const DEFAULT_PIXEL_BY_CATEGORY = {
+  food: "px-restaurant",
+  cafe: "px-cafe",
+  nature: "px-park",
+  culture: "px-book",
+  shop: "px-market",
+  etc: "px-pin",
+}
+
+export function getDefaultPixelIdForCategory(categoryId) {
+  return DEFAULT_PIXEL_BY_CATEGORY[categoryId] || "px-pin"
+}
+
 export function getPlaceCategory(feature) {
   if (feature?.type === "route") return CATEGORY_BY_ID.get("route")
   if (feature?.type === "area") return CATEGORY_BY_ID.get("area")

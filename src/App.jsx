@@ -3,6 +3,7 @@ import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } f
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
 import { PlaceCardPop } from "./components/PlaceCardPop"
+import { CollectSheet } from "./components/sheets/CollectSheet"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -1009,16 +1010,6 @@ export default function App() {
     setSharedMapData, showToast,
   ])
 
-  const openRecordFlow = useCallback(() => {
-    if (needsAuthForPersonalArea) {
-      requestLoginBanner()
-      return
-    }
-    setRecordSheetInitialView("target")
-    setRecordTargetMapId(null)
-    setRecordSheetOpen(true)
-  }, [needsAuthForPersonalArea, requestLoginBanner])
-
   const openRecordMapCreateFlow = useCallback(() => {
     setPendingRecordAfterMapCreate(true)
     setRecordSheetOpen(false)
@@ -1058,6 +1049,9 @@ export default function App() {
 
   // 장소 목록에서 장소를 누르면 지도 이동 대신 카드로 먼저 보여준다
   const [placeCardFeature, setPlaceCardFeature] = useState(null)
+
+  // 채집 시트 (B단계) — 지도 없이 장소를 먼저 등록
+  const [collectSheetOpen, setCollectSheetOpen] = useState(false)
 
   // 도감 번호(N.###) — 내 장소 도감과 동일한 규칙(오래된 기록부터 고정 순번)
   const placeCardDexNo = useMemo(() => {
@@ -1679,9 +1673,9 @@ export default function App() {
             title="내 장소"
             description={`모은 장소 ${b2cFeatures.length}개`}
             action={(
-              <button className="web-section__action" type="button" onClick={openRecordFlow}>
+              <button className="web-section__action" type="button" onClick={() => setCollectSheetOpen(true)}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
-                기록 추가
+                채집하기
               </button>
             )}
           >
@@ -1693,7 +1687,7 @@ export default function App() {
                 const feature = b2cFeatures.find((item) => (item.id || item.feature_id) === featureId)
                 if (feature) setPlaceCardFeature(feature)
               }}
-              onCreateRecord={openRecordFlow}
+              onCreateRecord={() => setCollectSheetOpen(true)}
               embedded
             />
           </WebPageFrame>
@@ -1899,13 +1893,28 @@ export default function App() {
           dexNo={placeCardDexNo}
           mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
           onClose={() => setPlaceCardFeature(null)}
-          onOpenOnMap={() => {
+          onOpenOnMap={(placeCardFeature.mapId || placeCardFeature.map_id) ? () => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             setPlaceCardFeature(null)
             openFeatureFromPlaces(featureId)
-          }}
+          } : null}
         />
       ) : null}
+
+      <CollectSheet
+        open={collectSheetOpen}
+        onClose={() => setCollectSheetOpen(false)}
+        cloudMode={cloudMode}
+        currentUserId={authUser?.id || viewerProfile.id}
+        myLocation={myLocation}
+        showToast={showToast}
+        onCollected={(collected, { isNewFind } = {}) => {
+          setFeatures((current) => [collected, ...current])
+          setCollectSheetOpen(false)
+          setPlaceCardFeature(collected)
+          showToast(isNewFind ? "새 발견! 도감에 담았어요" : "도감에 담았어요")
+        }}
+      />
 
       {/* Sheets */}
       <AddRecordSheet
