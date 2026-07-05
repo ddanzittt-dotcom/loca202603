@@ -1,5 +1,5 @@
 import { forwardRef, useMemo } from "react"
-import { NaverMap } from "./NaverMap"
+import { KoreaMap } from "./koreaMap"
 import { GoogleMap } from "./GoogleMap"
 
 // 한국 좌표 범위
@@ -37,5 +37,5 @@ export const MapRenderer = forwardRef(function MapRenderer(props, ref) {
   if (region === "global") {
     return <GoogleMap ref={ref} {...props} />
   }
-  return <NaverMap ref={ref} {...props} />
+  return <KoreaMap ref={ref} {...props} />
 })

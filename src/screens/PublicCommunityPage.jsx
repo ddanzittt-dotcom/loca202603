@@ -41,7 +41,7 @@ import {
 } from "../lib/publicSavedItems"
 import { BrandLogo } from "../components/BrandLogo"
 import { CommunityRecordComments } from "../components/CommunityRecordComments"
-import { NaverMap } from "../components/NaverMap"
+import { KoreaMap } from "../components/koreaMap"
 import { FeatureEmoji } from "../components/FeatureEmoji"
 import {
   getPixelIdFromPublicEmojiValue,
@@ -457,7 +457,7 @@ function PublicMapCanvas({ features, myLocation, selectedFeatureId, onFeatureTap
 
   return (
     <div className="public-map__canvas">
-      <NaverMap
+      <KoreaMap
         features={features}
         selectedFeatureId={selectedFeatureId}
         draftPoints={draftPoints}

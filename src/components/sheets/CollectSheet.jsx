@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Search as SearchIcon, X } from "lucide-react"
-import { NaverMap } from "../NaverMap"
+import { KoreaMap } from "../koreaMap"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { createFeature } from "../../lib/mapService"
 import { createId } from "../../lib/appUtils"
@@ -215,7 +215,7 @@ export function CollectSheet({
             {searching ? <p className="clt-hint">찾는 중…</p> : null}
 
             <div className="clt-map">
-              <NaverMap
+              <KoreaMap
                 features={[]}
                 selectedFeatureId={null}
                 draftPoints={point ? [[point.lng, point.lat]] : []}

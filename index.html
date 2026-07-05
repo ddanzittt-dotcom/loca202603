@@ -85,6 +85,44 @@
         };
         document.head.appendChild(s);
       };
+
+      // ── 카카오맵 SDK 로더 (autoload=false → onload 후 kakao.maps.load) ──
+      window.__kakaoMapReady = false;
+      window.__kakaoMapLoading = false;
+      window.__kakaoMapCallbacks = [];
+      window.loadKakaoMap = function(cb) {
+        if (window.__kakaoMapReady) { if (cb) cb(true); return; }
+        if (cb) window.__kakaoMapCallbacks.push(cb);
+        if (window.__kakaoMapLoading) return;
+        window.__kakaoMapLoading = true;
+        var key = window.__KAKAO_JS_KEY;
+        if (!key) {
+          window.__kakaoMapCallbacks.forEach(function(fn) { fn(false); });
+          window.__kakaoMapCallbacks = [];
+          window.__kakaoMapLoading = false;
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + key + '&autoload=false&libraries=services';
+        s.onload = function() {
+          try {
+            window.kakao.maps.load(function() {
+              window.__kakaoMapReady = true;
+              window.__kakaoMapCallbacks.forEach(function(fn) { fn(true); });
+              window.__kakaoMapCallbacks = [];
+            });
+          } catch (e) {
+            window.__kakaoMapCallbacks.forEach(function(fn) { fn(false); });
+            window.__kakaoMapCallbacks = [];
+          }
+        };
+        s.onerror = function() {
+          window.__kakaoMapCallbacks.forEach(function(fn) { fn(false); });
+          window.__kakaoMapCallbacks = [];
+          window.__kakaoMapLoading = false;
+        };
+        document.head.appendChild(s);
+      };
     </script>
   </head>
   <body>
