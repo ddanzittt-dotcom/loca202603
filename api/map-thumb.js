@@ -63,7 +63,9 @@ export default async function handler(req, res) {
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
 
   if (!keyId || !key || !supabaseUrl || !supabaseKey) {
-    notFound(`env:${keyId ? "" : "keyId "}${key ? "" : "key "}${supabaseUrl ? "" : "sburl "}${supabaseKey ? "" : "sbkey"}`.trim())
+    // 어떤 키가 비었는지는 서버 로그로만 — 클라이언트엔 일반 사유
+    console.error("map-thumb env missing:", { keyId: !!keyId, key: !!key, supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey })
+    notFound("env")
     return
   }
 

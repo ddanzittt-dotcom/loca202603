@@ -6,6 +6,8 @@
 //
 // 필요한 Vercel 환경변수: KAKAO_REST_KEY (카카오 developers REST API 키)
 
+import { isAppRequest } from "./_lib/appRequest.js"
+
 const KAKAO_LOCAL_BASE = "https://dapi.kakao.com/v2/local/search"
 
 // 카테고리 그룹 코드 → 우리 도감 카테고리
@@ -52,6 +54,12 @@ export default async function handler(req, res) {
   const fail = (status, reason) => {
     res.setHeader("x-match-reason", reason)
     res.status(status).json({ candidates: [], error: reason })
+  }
+
+  // 남용 방지: 우리 앱(loca.im/프리뷰/로컬)에서 온 요청만 허용 (익명 스크립트 차단)
+  if (!isAppRequest(req)) {
+    fail(403, "forbidden")
+    return
   }
 
   const key = process.env.KAKAO_REST_KEY

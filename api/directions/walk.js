@@ -1,3 +1,5 @@
+import { isAppRequest } from "../_lib/appRequest.js"
+
 const TMAP_PEDESTRIAN_URL = "https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1"
 
 function parseLngLat(value) {
@@ -6,6 +8,11 @@ function parseLngLat(value) {
   const lat = Number(latRaw)
   if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null
   return { lng, lat }
+}
+
+// 서비스 대상(한국 근방) 좌표만 허용 — 범위 밖은 거절
+function inKorea(point) {
+  return point.lat >= 32 && point.lat <= 40 && point.lng >= 123 && point.lng <= 133
 }
 
 function mask(value) {
@@ -128,7 +135,10 @@ async function tryTmap({ start, goal }) {
   return { ok: false, errors }
 }
 
-async function tryNaver({ startRaw, goalRaw }) {
+async function tryNaver({ start, goal }) {
+  // 주입 방지: 검증된 숫자 좌표로만 URL 구성 (원시 쿼리 문자열 재사용 금지)
+  const startParam = `${start.lng},${start.lat}`
+  const goalParam = `${goal.lng},${goal.lat}`
   const credentialSets = [
     {
       id: process.env.NCP_CLIENT_ID,
@@ -148,8 +158,8 @@ async function tryNaver({ startRaw, goalRaw }) {
   }
 
   const endpoints = [
-    `https://naveropenapi.apigw.ntruss.com/map-direction/v1/walking?start=${startRaw}&goal=${goalRaw}`,
-    `https://naveropenapi.apigw.ntruss.com/map-direction-15/v1/walking?start=${startRaw}&goal=${goalRaw}`,
+    `https://naveropenapi.apigw.ntruss.com/map-direction/v1/walking?start=${startParam}&goal=${goalParam}`,
+    `https://naveropenapi.apigw.ntruss.com/map-direction-15/v1/walking?start=${startParam}&goal=${goalParam}`,
   ]
 
   const errors = []
@@ -202,9 +212,12 @@ async function tryNaver({ startRaw, goalRaw }) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET")
   if (req.method === "OPTIONS") return res.status(200).end()
+
+  // 남용 방지: 우리 앱에서 온 요청만 허용 (유료 길찾기 API 익명 남용 차단)
+  if (!isAppRequest(req)) {
+    return res.status(403).json({ error: "허용되지 않은 요청입니다." })
+  }
 
   const { start: startRaw, goal: goalRaw } = req.query
   if (!startRaw || !goalRaw) {
@@ -215,6 +228,9 @@ export default async function handler(req, res) {
   const goal = parseLngLat(goalRaw)
   if (!start || !goal) {
     return res.status(400).json({ error: "좌표 형식이 올바르지 않아요. (lng,lat)" })
+  }
+  if (!inKorea(start) || !inKorea(goal)) {
+    return res.status(400).json({ error: "서비스 지역(한국) 밖 좌표입니다." })
   }
 
   const tmapResult = await tryTmap({ start, goal })
@@ -229,7 +245,7 @@ export default async function handler(req, res) {
   }
 
   // TMAP 장애 대비: 기존 Naver 보행 API를 백업 fallback으로 유지
-  const naverResult = await tryNaver({ startRaw, goalRaw })
+  const naverResult = await tryNaver({ start, goal })
   if (naverResult.ok) {
     res.setHeader("Cache-Control", "public, max-age=300")
     return res.status(200).json({
@@ -240,8 +256,7 @@ export default async function handler(req, res) {
     })
   }
 
-  return res.status(502).json({
-    error: "도보 경로를 찾을 수 없어요. TMAP_APP_KEY 설정을 먼저 확인해주세요.",
-    attempts: [...(tmapResult.errors || []), ...(naverResult.errors || [])],
-  })
+  // 업스트림 상세(키·상태·내부 메시지)는 서버 로그로만 — 클라이언트엔 노출하지 않음
+  console.error("directions failed:", JSON.stringify([...(tmapResult.errors || []), ...(naverResult.errors || [])]))
+  return res.status(502).json({ error: "도보 경로를 찾을 수 없어요." })
 }

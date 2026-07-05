@@ -241,6 +241,8 @@ export async function createFeature(mapId, featureData) {
   let featurePayload = {
     map_id: mapId,
     ...toFeatureInsert(featureData, featureData.type || "pin"),
+    // 보안: 작성자는 서버에서 인증된 사용자로 강제 (클라이언트가 보낸 createdBy 위조 차단)
+    created_by: user.id,
   }
   let data = null
   let error = null

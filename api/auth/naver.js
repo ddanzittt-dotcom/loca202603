@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { safeRedirectTarget } from "../_lib/appRequest.js"
 
 /**
  * 네이버 OAuth 시작 — 사용자를 네이버 로그인 페이지로 리다이렉트
@@ -13,7 +14,8 @@ export default function handler(req, res) {
     return res.status(500).json({ error: "NAVER_CLIENT_ID not configured" })
   }
 
-  const redirectTo = req.query.redirect_to || process.env.SITE_URL || "https://loca.im"
+  // 오픈 리다이렉트 방지: 허용된 호스트로만 복귀
+  const redirectTo = safeRedirectTarget(req.query.redirect_to, process.env.SITE_URL || "https://loca.im")
   const callbackUrl = `${new URL(req.url, `https://${req.headers.host}`).origin}/api/auth/naver-callback`
 
   // CSRF 토큰 생성

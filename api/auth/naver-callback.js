@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { safeRedirectTarget } from "../_lib/appRequest.js"
 
 /**
  * 네이버 OAuth 콜백
@@ -20,29 +21,36 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "server env not configured" })
   }
 
-  // CSRF 검증: state 내 csrf 토큰과 쿠키의 csrf 토큰 비교
-  let redirectTo = "https://loca.im"
-  try {
-    const parsed = JSON.parse(Buffer.from(state, "base64url").toString())
-    if (parsed.redirect_to) redirectTo = parsed.redirect_to
+  // CSRF 검증: state 내 csrf 토큰과 쿠키의 csrf 토큰 비교 (fail-closed)
+  const clearCsrfCookie = "naver_csrf=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Max-Age=0"
 
-    // 쿠키에서 csrf 토큰 추출
-    const cookies = Object.fromEntries(
-      (req.headers.cookie || "").split(";").map((c) => {
-        const [k, ...v] = c.trim().split("=")
-        return [k, v.join("=")]
-      }),
-    )
-    const cookieCsrf = cookies.naver_csrf
-    if (!parsed.csrf || !cookieCsrf || parsed.csrf !== cookieCsrf) {
-      // csrf 쿠키 삭제
-      res.setHeader("Set-Cookie", "naver_csrf=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Max-Age=0")
-      return res.status(403).json({ error: "CSRF 검증 실패 — 다시 로그인해주세요." })
-    }
-  } catch { /* state 파싱 실패 시 기본값 사용 */ }
+  // state 파싱 실패 시에도 검증을 건너뛰지 않고 거절한다 (CSRF 우회 차단)
+  let parsed
+  try {
+    parsed = JSON.parse(Buffer.from(String(state || ""), "base64url").toString())
+  } catch {
+    res.setHeader("Set-Cookie", clearCsrfCookie)
+    return res.status(403).json({ error: "잘못된 요청입니다 — 다시 로그인해주세요." })
+  }
+
+  // 쿠키에서 csrf 토큰 추출
+  const cookies = Object.fromEntries(
+    (req.headers.cookie || "").split(";").map((c) => {
+      const [k, ...v] = c.trim().split("=")
+      return [k, v.join("=")]
+    }),
+  )
+  const cookieCsrf = cookies.naver_csrf
+  if (!parsed.csrf || !cookieCsrf || parsed.csrf !== cookieCsrf) {
+    res.setHeader("Set-Cookie", clearCsrfCookie)
+    return res.status(403).json({ error: "CSRF 검증 실패 — 다시 로그인해주세요." })
+  }
 
   // csrf 쿠키 소비 (일회용)
-  res.setHeader("Set-Cookie", "naver_csrf=; HttpOnly; Secure; SameSite=Lax; Path=/api/auth; Max-Age=0")
+  res.setHeader("Set-Cookie", clearCsrfCookie)
+
+  // 오픈 리다이렉트 방지: 허용된 호스트로만 복귀 (세션 토큰 유출 차단)
+  const redirectTo = safeRedirectTarget(parsed.redirect_to, "https://loca.im")
 
   const origin = new URL(req.url, `https://${req.headers.host}`).origin
   const callbackUrl = `${origin}/api/auth/naver-callback`
@@ -130,10 +138,11 @@ export default async function handler(req, res) {
 
     res.redirect(302, verifyUrl.toString())
   } catch (err) {
+    // 업스트림/내부 에러 상세는 서버 로그로만 — 클라이언트엔 일반 메시지
     console.error("Naver OAuth error:", err)
     const errorUrl = new URL(redirectTo)
     errorUrl.searchParams.set("error", "naver_auth_failed")
-    errorUrl.searchParams.set("error_description", err.message || "네이버 로그인에 실패했어요.")
+    errorUrl.searchParams.set("error_description", "네이버 로그인에 실패했어요. 다시 시도해주세요.")
     res.redirect(302, errorUrl.toString())
   }
 }
