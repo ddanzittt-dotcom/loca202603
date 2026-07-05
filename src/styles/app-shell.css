@@ -3856,3 +3856,12 @@
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0 #1F1A12;
 }
+
+/* ============================================================
+   카카오 베이스 지도 라벨 완화 — 상호명이 많아 마커 가독성이 떨어지는 문제 보완.
+   카카오 JS SDK 는 POI 라벨 토글 API 가 없어, 타일(daumcdn)만 탈색/밝기 조정해
+   베이스를 뒤로 물리고 우리 마커(CustomOverlay·SVG, 별도 도메인)는 그대로 둔다.
+   ============================================================ */
+.map-canvas img[src*="daumcdn"] {
+  filter: saturate(0.62) brightness(1.07) contrast(0.93);
+}
