@@ -1,7 +1,5 @@
-import { NaverMap } from "./NaverMap"
 import { KakaoMap } from "./KakaoMap"
 
-// 한국 지도 렌더러 단일 선택 지점.
-// 기본 네이버, VITE_MAP_PROVIDER=kakao 일 때 카카오맵으로 전환.
-// (카카오 JS 키 세팅 + 시각 테스트 완료 후 env 로 스위치)
-export const KoreaMap = import.meta.env.VITE_MAP_PROVIDER === "kakao" ? KakaoMap : NaverMap
+// 한국 지도 렌더러: 카카오맵으로 고정 (2026-07 네이버→카카오 전환).
+// NaverMap.jsx 는 롤백 대비로 아직 남겨둠(미참조). 편집기 검증 후 제거 예정.
+export const KoreaMap = KakaoMap
