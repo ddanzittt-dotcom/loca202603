@@ -56,6 +56,7 @@
     "eslint-plugin-react-hooks": "7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "pg": "^8.22.0",
     "playwright": "^1.59.0",
     "react-doctor": "^0.5.8",
     "react-grab": "^0.1.47",
