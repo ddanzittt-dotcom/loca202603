@@ -2107,13 +2107,10 @@
    게임 외피 전역화 — 배경 / 헤더 / 프로필 / 장소 카드 / 계정 버튼
    ============================================================ */
 
-/* ── 앱 전체 배경: 소프트 그라데이션 → 종이 + 잉크 격자 ── */
+/* ── 앱 전체 배경: 깔끔한 웜 오프화이트 (격자 제거 — 촌스러움 개선) ── */
 
 .app-shell--soft-social {
-  background:
-    linear-gradient(rgba(31, 26, 18, 0.05) 1px, transparent 1px) 0 0 / 36px 36px,
-    linear-gradient(90deg, rgba(31, 26, 18, 0.05) 1px, transparent 1px) 0 0 / 36px 36px,
-    #F6EFDB;
+  background: #FAF6EC;
 }
 
 .app-shell--soft-social .web-section {
@@ -3534,11 +3531,7 @@
    ============================================================ */
 
 .lw-viewer.lw-viewer--v2 {
-  background:
-    linear-gradient(rgba(31, 26, 18, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 26, 18, 0.05) 1px, transparent 1px),
-    #F6EFDB;
-  background-size: 22px 22px, 22px 22px, auto;
+  background: #FAF6EC;
 }
 
 .lw-viewer--v2 .lw-hero {
@@ -3880,11 +3873,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background:
-    linear-gradient(rgba(31, 26, 18, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(31, 26, 18, 0.05) 1px, transparent 1px),
-    #F6EFDB;
-  background-size: 22px 22px, 22px 22px, auto;
+  background: #FAF6EC;
 }
 .loca-intro__card {
   width: 100%;
