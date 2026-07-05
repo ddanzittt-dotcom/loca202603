@@ -14,94 +14,81 @@ export function IntroScreen({ onEnter, onLogin }) {
           <p className="loca-intro__tagline">내 동네를 기록하는 지도</p>
 
           <div className="loca-intro__scene" aria-hidden="true">
-            {/* 픽셀 동네 지도 — 4px 그리드, crispEdges 로 도트 느낌 유지.
-                채워진 지붕 집·매끈한 도로 띠·나무 공원·강으로 정돈. */}
-            <svg viewBox="0 0 200 128" width="230" height="147" shapeRendering="crispEdges">
-              {/* 지도 판 */}
-              <rect x="3" y="3" width="194" height="122" fill="#E9DFC4" stroke="#1F1A12" strokeWidth="4" />
-
-              {/* 잔디 결(옅은 체크) */}
-              <rect x="7" y="7" width="186" height="114" fill="#EDE4CB" />
-
-              {/* 강 (좌하단 모서리, 계단형) */}
-              <rect x="7" y="92" width="46" height="29" fill="#8FBCE0" />
-              <rect x="7" y="80" width="30" height="12" fill="#8FBCE0" />
-              <rect x="7" y="72" width="16" height="8" fill="#8FBCE0" />
-              <rect x="41" y="96" width="10" height="6" fill="#AAD0EE" />
-              <rect x="15" y="84" width="8" height="4" fill="#AAD0EE" />
-
-              {/* 도로: 매끈한 대각선 띠 (16px 폭, 완만한 계단) */}
-              <g fill="#FBF6E7">
-                <rect x="18" y="96" width="40" height="16" />
-                <rect x="50" y="84" width="36" height="16" />
-                <rect x="80" y="72" width="36" height="16" />
-                <rect x="110" y="58" width="36" height="16" />
-                <rect x="140" y="44" width="36" height="16" />
-                <rect x="166" y="30" width="28" height="16" />
+            {/* 대한민국 픽셀 지도 실루엣 — 잉크 외곽선(확장 rect) 뒤, 초록 셀 위.
+                서울·부산 자리에 핀이 떨어진다. crispEdges 로 도트 유지. */}
+            <svg viewBox="0 0 112 182" width="150" height="244" shapeRendering="crispEdges">
+              {/* 외곽선: 각 행을 ±3 확장한 잉크 rect (union → 실루엣 테두리) */}
+              <g fill="#1F1A12">
+                <rect x="50" y="3" width="33" height="15" />
+                <rect x="41" y="12" width="51" height="15" />
+                <rect x="41" y="21" width="51" height="15" />
+                <rect x="32" y="30" width="60" height="15" />
+                <rect x="23" y="39" width="78" height="15" />
+                <rect x="32" y="48" width="69" height="15" />
+                <rect x="23" y="57" width="78" height="15" />
+                <rect x="32" y="66" width="69" height="15" />
+                <rect x="32" y="75" width="60" height="15" />
+                <rect x="23" y="84" width="69" height="15" />
+                <rect x="32" y="93" width="69" height="15" />
+                <rect x="32" y="102" width="60" height="15" />
+                <rect x="41" y="111" width="51" height="15" />
+                <rect x="41" y="120" width="42" height="15" />
+                <rect x="50" y="129" width="33" height="15" />
+                <rect x="50" y="138" width="24" height="15" />
+                <rect x="32" y="156" width="24" height="15" />
               </g>
-              {/* 도로 테두리(위·아래 얇은 선) */}
-              <g fill="#D8C9A0">
-                <rect x="18" y="96" width="40" height="2" />
-                <rect x="50" y="84" width="36" height="2" />
-                <rect x="80" y="72" width="36" height="2" />
-                <rect x="110" y="58" width="36" height="2" />
-                <rect x="140" y="44" width="36" height="2" />
-                <rect x="166" y="30" width="28" height="2" />
+              {/* 초록 국토 (행별 정확히 타일) */}
+              <g fill="#7FB542">
+                <rect x="53" y="6" width="27" height="9" />
+                <rect x="44" y="15" width="45" height="9" />
+                <rect x="44" y="24" width="45" height="9" />
+                <rect x="35" y="33" width="54" height="9" />
+                <rect x="26" y="42" width="72" height="9" />
+                <rect x="35" y="51" width="63" height="9" />
+                <rect x="26" y="60" width="72" height="9" />
+                <rect x="35" y="69" width="63" height="9" />
+                <rect x="35" y="78" width="54" height="9" />
+                <rect x="26" y="87" width="63" height="9" />
+                <rect x="35" y="96" width="63" height="9" />
+                <rect x="35" y="105" width="54" height="9" />
+                <rect x="44" y="114" width="45" height="9" />
+                <rect x="44" y="123" width="36" height="9" />
+                <rect x="53" y="132" width="27" height="9" />
+                <rect x="53" y="141" width="18" height="9" />
+                <rect x="35" y="159" width="18" height="9" />
               </g>
-              {/* 도로 중앙 점선 */}
-              <g fill="#C9B885">
-                <rect x="34" y="103" width="8" height="3" />
-                <rect x="64" y="91" width="8" height="3" />
-                <rect x="94" y="79" width="8" height="3" />
-                <rect x="122" y="65" width="8" height="3" />
-                <rect x="152" y="51" width="8" height="3" />
+              {/* 명암 셀 (밝은/어두운 초록으로 도트 질감) */}
+              <g fill="#A6D06A">
+                <rect x="53" y="42" width="9" height="9" />
+                <rect x="62" y="60" width="9" height="9" />
+                <rect x="44" y="87" width="9" height="9" />
+                <rect x="62" y="96" width="9" height="9" />
+              </g>
+              <g fill="#5E9A2E">
+                <rect x="80" y="51" width="9" height="9" />
+                <rect x="44" y="114" width="9" height="9" />
+                <rect x="71" y="69" width="9" height="9" />
               </g>
 
-              {/* 공원 (우하단): 잔디 + 나무 도트 + 연못 */}
-              <rect x="118" y="86" width="72" height="35" fill="#9DBE6E" />
-              <rect x="122" y="90" width="64" height="27" fill="#B7D28C" />
-              <g fill="#6E9046">
-                <rect x="128" y="96" width="8" height="8" />
-                <rect x="144" y="104" width="8" height="8" />
-                <rect x="160" y="94" width="8" height="8" />
-                <rect x="174" y="106" width="8" height="8" />
-              </g>
-              <rect x="150" y="96" width="14" height="8" fill="#8FBCE0" />
+              {/* 착지 파문 */}
+              <rect className="loca-intro__ripple loca-intro__ripple--a" x="38" y="44" width="20" height="12" fill="none" stroke="#E5493A" strokeWidth="3" />
+              <rect className="loca-intro__ripple loca-intro__ripple--b" x="76" y="86" width="20" height="12" fill="none" stroke="#2D6FD0" strokeWidth="3" />
 
-              {/* 건물: 채워진 지붕 블록(따뜻한 색 + 잉크 테두리 + 창문 도트) */}
-              {/* 테라코타 */}
-              <rect x="60" y="18" width="22" height="18" fill="#E0A96D" stroke="#1F1A12" strokeWidth="2" />
-              <rect x="64" y="22" width="5" height="5" fill="#FBF6E7" />
-              <rect x="73" y="22" width="5" height="5" fill="#FBF6E7" />
-              {/* 청록 */}
-              <rect x="30" y="34" width="20" height="16" fill="#6FB0A6" stroke="#1F1A12" strokeWidth="2" />
-              <rect x="34" y="38" width="5" height="5" fill="#FBF6E7" />
-              {/* 머스터드 */}
-              <rect x="98" y="20" width="18" height="16" fill="#E8C15A" stroke="#1F1A12" strokeWidth="2" />
-              <rect x="102" y="24" width="5" height="5" fill="#FBF6E7" />
-              {/* 자주 */}
-              <rect x="150" y="14" width="20" height="16" fill="#C98BB0" stroke="#1F1A12" strokeWidth="2" />
-              <rect x="154" y="18" width="5" height="5" fill="#FBF6E7" />
-
-              {/* 착지 파문 (픽셀 사각 파문) */}
-              <rect className="loca-intro__ripple loca-intro__ripple--a" x="72" y="66" width="22" height="13" fill="none" stroke="#E5493A" strokeWidth="3" />
-              <rect className="loca-intro__ripple loca-intro__ripple--b" x="147" y="38" width="22" height="13" fill="none" stroke="#2D6FD0" strokeWidth="3" />
-
-              {/* 핀 A (빨강, 팁 = 83,72 도로 위) */}
+              {/* 핀 A (빨강, 서울 자리 팁≈48,50) */}
               <g className="loca-intro__drop loca-intro__drop--a">
-                <rect x="74" y="48" width="18" height="14" fill="#1F1A12" />
-                <rect x="76" y="50" width="14" height="10" fill="#E5493A" />
-                <rect x="78" y="52" width="4" height="4" fill="#FFF6E8" />
-                <rect x="78" y="62" width="10" height="4" fill="#1F1A12" />
-                <rect x="81" y="66" width="4" height="6" fill="#1F1A12" />
+                <rect x="39" y="26" width="18" height="14" fill="#1F1A12" />
+                <rect x="41" y="28" width="14" height="10" fill="#E5493A" />
+                <rect x="43" y="30" width="4" height="4" fill="#FFF6E8" />
+                <rect x="43" y="40" width="10" height="4" fill="#1F1A12" />
+                <rect x="46" y="44" width="4" height="6" fill="#1F1A12" />
               </g>
-              {/* 핀 B (파랑, 팁 = 158,44 도로 위) */}
+              {/* 핀 B (파랑, 부산 자리 팁≈86,92) */}
               <g className="loca-intro__drop loca-intro__drop--b">
-                <rect x="149" y="20" width="18" height="14" fill="#1F1A12" />
-                <rect x="151" y="22" width="14" height="10" fill="#2D6FD0" />
-                <rect x="153" y="24" width="4" height="4" fill="#FFF6E8" />
-                <rect x="153" y="34" width="10" height="4" fill="#1F1A12" />
-                <rect x="156" y="38" width="4" height="6" fill="#1F1A12" />
+                <rect x="77" y="68" width="18" height="14" fill="#1F1A12" />
+                <rect x="79" y="70" width="14" height="10" fill="#2D6FD0" />
+                <rect x="81" y="72" width="4" height="4" fill="#FFF6E8" />
+                <rect x="81" y="82" width="10" height="4" fill="#1F1A12" />
+                <rect x="84" y="86" width="4" height="6" fill="#1F1A12" />
               </g>
             </svg>
           </div>
