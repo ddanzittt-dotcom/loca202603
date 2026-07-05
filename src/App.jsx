@@ -45,6 +45,7 @@ const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) =>
 const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
 const ProfileScreen = lazy(() => import("./screens/ProfileScreen").then((m) => ({ default: m.ProfileScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
+import { IntroScreen } from "./screens/IntroScreen"
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing } from "./hooks/useFeatureEditing"
@@ -336,6 +337,10 @@ export default function App() {
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
   // 첫 진입은 로그인 없이 구경할 수 있는 탐색 탭으로
   const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "explore")
+  // 첫 방문 타이틀(입장) 화면 — 공유/딥링크 진입이 아니고, 아직 입장 안 했을 때만
+  const [showIntro, setShowIntro] = useState(() => (
+    !initialSharedMapData && !initialStoredTarget && !localStorage.getItem("loca.intro_seen")
+  ))
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -1607,6 +1612,21 @@ export default function App() {
     { label: "장소", value: b2cFeatures.length },
   ]
 
+
+  if (showIntro && !authUser) {
+    const dismissIntro = () => {
+      try { localStorage.setItem("loca.intro_seen", "1") } catch { /* ignore */ }
+      setShowIntro(false)
+    }
+    return (
+      <div className="app-shell app-shell--soft-social app-shell--intro">
+        <IntroScreen
+          onEnter={() => { dismissIntro(); setActiveTab("explore") }}
+          onLogin={() => { dismissIntro(); setActiveTab("login") }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className={shellClassName}>
