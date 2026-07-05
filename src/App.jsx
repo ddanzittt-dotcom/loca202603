@@ -203,16 +203,25 @@ function WebAuthLayout({ children }) {
   return (
     <section className="screen screen--scroll web-auth-screen">
       <div className="web-auth-workspace">
-        <aside className="web-auth-workspace__intro" aria-label="LOCA 웹 소개">
-          <span className="web-section__eyebrow">SOFT SOCIAL PLACES</span>
-          <h1>같이 가고 싶은 곳을 지도에 모아요.</h1>
-          <p>친구와 저장한 장소와 내가 만든 지도를 한 화면에서 가볍게 이어갑니다.</p>
-          <WebSocialCue label="이런 지도를 만들 수 있어요" items={["주말 산책", "카페 후보", "같이 갈 곳"]} />
-          <div className="web-auth-workspace__flow" aria-label="주요 작업 흐름">
-            <span><PenLine size={15} aria-hidden="true" />장소 저장</span>
-            <span><MapIcon size={15} aria-hidden="true" />지도 공유</span>
-            <span><MapPin size={15} aria-hidden="true" />프로필 공개</span>
-          </div>
+        <aside className="web-auth-workspace__intro loca-authintro" aria-label="LOCA 소개">
+          <span className="loca-authintro__eyebrow">LOCAL DEX · No.000</span>
+          <h1 className="loca-authintro__logo" aria-label="LOCA">LOCA</h1>
+          <p className="loca-authintro__tagline">내 동네를 기록하는 지도</p>
+          <p className="loca-authintro__desc">가 본 곳, 가고 싶은 곳을 핀으로 채집해 나만의 동네 도감을 만들어요.</p>
+          <ul className="loca-authintro__feats">
+            <li>
+              <span className="loca-authintro__ic"><PenLine size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+              <div><strong>채집</strong><em>가 본 곳을 핀으로 기록</em></div>
+            </li>
+            <li>
+              <span className="loca-authintro__ic"><MapIcon size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+              <div><strong>도감</strong><em>모은 장소로 나만의 지도</em></div>
+            </li>
+            <li>
+              <span className="loca-authintro__ic"><MapPin size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+              <div><strong>발견</strong><em>새로운 동네를 찾아 담기</em></div>
+            </li>
+          </ul>
         </aside>
         <div className="web-auth-workspace__panel">
           {children}
