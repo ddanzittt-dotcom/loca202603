@@ -974,7 +974,7 @@ export default function App() {
         idSet.has(feature.id) ? { ...feature, mapId: nextMap.id } : feature
       )))
       setMapBuilderOpen(false)
-      showToast(`'${trimmed}' 지도에 ${ids.length}장을 담았어요.`)
+      showToast(`지도 완성 · '${trimmed}' · ${ids.length}곳`)
       openMapEditor(nextMap.id)
     } catch (error) {
       console.error("Failed to build map", error)

@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react"
-import { Check, MapPlus, Sparkles, X } from "lucide-react"
+import { Check, MapPlus, Search as SearchIcon, Sparkles, X } from "lucide-react"
 import { FeatureEmoji } from "../FeatureEmoji"
-import { getPlaceCategory } from "../../lib/placeCategories"
+import { getPlaceType } from "../../lib/placeTypes"
+import { cardArtFeature } from "../../lib/binderCardData"
 import { featureSort } from "../../lib/appUtils"
 
-// 지도 만들기 = 채집한 도감 카드를 골라 묶는다 (채집-우선 구조 C단계).
-// 후보: 아직 어떤 지도에도 안 담긴 채집 카드(mapless).
-// 고른 카드들로 새 지도를 만들고 한 번에 담는다.
+// 지도 만들기 = 등록한 카드를 골라 묶는다.
+// 후보: 아직 어떤 지도에도 안 담긴 카드(mapless). 고른 카드들로 새 지도를 만든다.
 
 export function MapBuilderSheet({
   open,
@@ -18,9 +18,10 @@ export function MapBuilderSheet({
 }) {
   // 열 때마다 부모가 key 로 리마운트하므로 상태는 자연히 초기화된다
   const [title, setTitle] = useState("")
+  const [query, setQuery] = useState("")
   const [selected, setSelected] = useState(() => new Set())
 
-  // 도감 순번(N.###)은 오래된 채집부터 고정 — 내 장소 도감과 같은 규칙
+  // 카드 번호(N.###)는 오래된 등록부터 고정 — 내 장소 바인더와 같은 규칙
   const cards = useMemo(() => {
     const ordered = [...features].sort((a, b) => featureSort(b, a))
     return ordered.map((feature, index) => ({
@@ -29,6 +30,16 @@ export function MapBuilderSheet({
       dexNo: String(index + 1).padStart(3, "0"),
     }))
   }, [features])
+
+  const visibleCards = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    if (!normalized) return cards
+    return cards.filter(({ feature }) => {
+      const typeLabel = getPlaceType(feature)?.label || ""
+      return [feature.title, feature.note, typeLabel, ...(feature.tags || [])]
+        .join(" ").toLowerCase().includes(normalized)
+    })
+  }, [cards, query])
 
   if (!open) return null
 
@@ -81,33 +92,48 @@ export function MapBuilderSheet({
 
         {cards.length > 0 ? (
           <>
-            <div className="mbld-grid" role="group" aria-label="채집한 카드">
-              {cards.map(({ feature, key, dexNo }) => {
-                const category = getPlaceCategory(feature)
-                const isOn = selected.has(key)
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={`mbld-card${isOn ? " is-on" : ""}`}
-                    style={{ "--cat-color": category?.color }}
-                    onClick={() => toggle(key)}
-                    aria-pressed={isOn}
-                  >
-                    <span className="mbld-card__no">N.{dexNo}</span>
-                    <span className="mbld-card__stage" aria-hidden="true">
-                      <FeatureEmoji feature={feature} size={34} unicodeFontSize={22} />
-                    </span>
-                    <span className="mbld-card__name">{(feature.title || "이름 없는 장소").trim()}</span>
-                    {isOn ? (
-                      <span className="mbld-card__check" aria-hidden="true">
-                        <Check size={13} strokeWidth={3} />
+            <label className="mbld-search">
+              <SearchIcon size={14} strokeWidth={2.2} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="카드 검색 (이름·타입)"
+                aria-label="카드 검색"
+              />
+            </label>
+
+            {visibleCards.length > 0 ? (
+              <div className="mbld-grid" role="group" aria-label="등록한 카드">
+                {visibleCards.map(({ feature, key, dexNo }) => {
+                  const type = getPlaceType(feature)
+                  const isOn = selected.has(key)
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`mbld-card${isOn ? " is-on" : ""}`}
+                      style={{ "--cat-color": type?.color }}
+                      onClick={() => toggle(key)}
+                      aria-pressed={isOn}
+                    >
+                      <span className="mbld-card__no">N.{dexNo}</span>
+                      <span className="mbld-card__stage" aria-hidden="true">
+                        <FeatureEmoji feature={cardArtFeature(feature)} size={34} unicodeFontSize={22} />
                       </span>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
+                      <span className="mbld-card__name">{(feature.title || "이름 없는 장소").trim()}</span>
+                      {isOn ? (
+                        <span className="mbld-card__check" aria-hidden="true">
+                          <Check size={13} strokeWidth={3} />
+                        </span>
+                      ) : null}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="mbld-noresult">{`"${query.trim()}" 결과가 없어요`}</p>
+            )}
 
             <div className="mbld-actions">
               <button type="button" className="mbld-ghost" onClick={onStartBlank}>
@@ -115,7 +141,7 @@ export function MapBuilderSheet({
               </button>
               <button type="button" className="mbld-primary" disabled={!canCreate} onClick={handleCreate}>
                 <MapPlus size={15} strokeWidth={2.2} aria-hidden="true" />
-                {busy ? "만드는 중…" : count > 0 ? `${count}장으로 지도 만들기` : "카드를 골라주세요"}
+                {busy ? "만드는 중…" : count > 0 ? `${count}곳으로 지도 만들기` : "카드를 골라주세요"}
               </button>
             </div>
           </>
@@ -123,7 +149,7 @@ export function MapBuilderSheet({
           <div className="mbld-empty">
             <Sparkles size={26} strokeWidth={1.8} aria-hidden="true" />
             <strong>아직 담을 카드가 없어요</strong>
-            <p>먼저 장소를 채집하면 여기서 골라 지도로 묶을 수 있어요.</p>
+            <p>먼저 장소를 등록하면 여기서 골라 지도로 묶을 수 있어요.</p>
             <button type="button" className="mbld-ghost" onClick={onStartBlank}>
               빈 지도로 시작
             </button>

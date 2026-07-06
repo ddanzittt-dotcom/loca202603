@@ -3352,6 +3352,34 @@
   margin-bottom: 14px;
 }
 
+/* 빌더 카드 검색 */
+.mbld-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  color: #8B7F63;
+}
+.mbld-search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+  flex: 1;
+  color: #1F1A12;
+  font-family: Pretendard, sans-serif;
+}
+.mbld-noresult {
+  text-align: center;
+  color: #8B7F63;
+  font-size: 13px;
+  padding: 24px 0;
+}
+
 .mbld-name > span {
   display: block;
   font-family: "DungGeunMo", monospace;
