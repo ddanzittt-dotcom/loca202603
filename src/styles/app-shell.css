@@ -4826,3 +4826,212 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 탐색 큐레이션 — 카드 상세 시트 (행사/공간 공용) */
+
+.xc-card--tappable {
+  cursor: pointer;
+}
+
+.xdt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 26, 18, 0.5);
+}
+
+.xdt-sheet {
+  position: relative;
+  width: min(100%, 460px);
+  max-height: 86dvh;
+  overflow-y: auto;
+  background: #FFFDF4;
+  border: 3px solid #1F1A12;
+  border-radius: 14px;
+  box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
+}
+
+.xdt-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  cursor: pointer;
+  color: #1F1A12;
+}
+
+.xdt-hero {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-bottom: 2px solid #1F1A12;
+  background: #F6EFDB;
+}
+
+.xdt-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.xdt-hero .xc-card__dday {
+  top: 10px;
+  left: 10px;
+}
+
+.xdt-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.xdt-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 30px;
+}
+
+.xdt-kind {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #E5493A;
+}
+
+.xdt-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1F1A12;
+  line-height: 1.3;
+}
+
+.xdt-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.xdt-sub em {
+  font-style: normal;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  color: #1F1A12;
+}
+
+.xdt-dist {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11.5px;
+  color: #8B7F63;
+}
+
+.xdt-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 2px solid rgba(31, 26, 18, 0.15);
+  border-radius: 10px;
+  background: rgba(246, 239, 219, 0.55);
+}
+
+.xdt-row {
+  display: flex;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.xdt-row__label {
+  flex: 0 0 34px;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11.5px;
+  color: #8B7F63;
+  padding-top: 1px;
+}
+
+.xdt-row__value {
+  color: #1F1A12;
+  min-width: 0;
+  white-space: pre-line;
+  word-break: break-all;
+}
+
+.xdt-overview {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #3F3A33;
+  white-space: pre-line;
+}
+
+.xdt-overview--loading {
+  color: #8B7F63;
+  font-size: 12.5px;
+}
+
+.xdt-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  background: #FFFDF4;
+  border-top: 2px dashed rgba(31, 26, 18, 0.25);
+}
+
+.xdt-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  color: #1F1A12;
+  text-decoration: none;
+}
+
+.xdt-register {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 36px;
+  padding: 0 16px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 3px 3px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.xdt-register:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}

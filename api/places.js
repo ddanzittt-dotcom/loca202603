@@ -20,7 +20,8 @@ const TOUR_TYPES = [
   { id: 38, kind: "shopping", group: "place", label: "쇼핑" },
 ]
 
-const PLACE_LIMIT = 220
+const PLACE_LIMIT = 72
+const KIND_CAP = 18 // 종류별 상한 — 한 종류(예: 카페)가 목록을 독점하지 않게
 const KAKAO_PAGE_SIZE = 15
 const KAKAO_PAGE_COUNT = 3
 const TOUR_ROWS_PER_PAGE = 80
@@ -30,6 +31,9 @@ const MIN_LOCATION_RADIUS_M = 1000
 const MAX_LOCATION_RADIUS_M = 20000
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 }
+
+// "기록할만한 공간" 큐레이션에서 제외할 대형 프랜차이즈 — 어디에나 있는 곳은 추천 가치가 낮다
+const FRANCHISE_PATTERN = /(스타벅스|투썸|이디야|메가\s?(MGC)?\s?커피|컴포즈\s?커피|빽다방|할리스|커피빈|파스쿠찌|엔제리너스|폴바셋|공차|배스킨라빈스|던킨|크리스피크림|파리바게뜨|뚜레쥬르|성심당\s?DX|CGV|롯데시네마|메가박스|다이소|올리브영|스타필드|이마트|홈플러스|롯데마트)/i
 
 function toNumber(value) {
   const next = Number(value)
@@ -63,10 +67,12 @@ function scoreItem(item) {
   const distanceScore = Number.isFinite(item.distKm) ? Math.max(0, 45 - item.distKm * 4) : 16
   const imageScore = item.image ? 8 : 0
   const sourceScore = item.source === "kakao" ? 8 : 4
-  return Math.round(30 + distanceScore + imageScore + sourceScore)
+  // 카카오 정확도(인기) 순위 보너스 — 상위 결과일수록 "기록할만한" 곳
+  const rankScore = Number.isFinite(item.accuracyRank) ? Math.max(0, 24 - item.accuracyRank * 1.5) : 0
+  return Math.round(30 + distanceScore + imageScore + sourceScore + rankScore)
 }
 
-function normalizeKakaoPlace(raw, category, location) {
+function normalizeKakaoPlace(raw, category, location, accuracyRank = null) {
   const lat = toNumber(raw.y)
   const lng = toNumber(raw.x)
   const distKm = raw.distance ? Math.round((Number(raw.distance) / 1000) * 10) / 10 : distanceKmFrom(location, { lat, lng })
@@ -86,6 +92,7 @@ function normalizeKakaoPlace(raw, category, location) {
     image: "",
     sourceUrl: raw.place_url || "",
     distKm,
+    accuracyRank,
   }
   return { ...item, score: scoreItem(item) }
 }
@@ -132,6 +139,23 @@ function isFoodPlace(item) {
     || String(item?.category || "").includes("음식점")
 }
 
+function isFranchisePlace(item) {
+  return FRANCHISE_PATTERN.test(String(item?.title || ""))
+}
+
+// 점수순을 유지하면서 종류(kind)별 개수를 상한으로 잘라 균형을 맞춘다
+function capPerKind(items, cap) {
+  const counts = new Map()
+  const result = []
+  for (const item of items) {
+    const count = counts.get(item.kind) || 0
+    if (count >= cap) continue
+    counts.set(item.kind, count + 1)
+    result.push(item)
+  }
+  return result
+}
+
 async function fetchKakaoPlaces({ location, radius }) {
   const apiKey = (process.env.KAKAO_REST_API_KEY || process.env.KAKAO_REST_KEY || "").trim()
   if (!apiKey || !location) return []
@@ -143,7 +167,7 @@ async function fetchKakaoPlaces({ location, radius }) {
       x: String(location.lng),
       y: String(location.lat),
       radius: String(radius),
-      sort: "distance",
+      sort: "accuracy", // 카카오 정확도(인기/품질) 랭킹 — 거리순보다 "기록할만한" 곳이 위로
       size: String(KAKAO_PAGE_SIZE),
       page: String(page),
     })
@@ -153,7 +177,7 @@ async function fetchKakaoPlaces({ location, radius }) {
     if (!resp.ok) return []
     const data = await resp.json().catch(() => ({}))
     return (Array.isArray(data.documents) ? data.documents : [])
-      .map((item) => normalizeKakaoPlace(item, category, location))
+      .map((item, index) => normalizeKakaoPlace(item, category, location, (page - 1) * KAKAO_PAGE_SIZE + index))
   }))
 
   const settled = await Promise.allSettled(requests)
@@ -238,11 +262,12 @@ export default async function handler(req, res) {
       fetchKakaoPlaces({ location, radius }),
       fetchTourPlaces({ location, radius }),
     ])
-    const items = dedupePlaces([...kakaoItems, ...tourItems])
+    const ranked = dedupePlaces([...kakaoItems, ...tourItems])
       .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
       .filter((item) => !isFoodPlace(item))
+      .filter((item) => !isFranchisePlace(item))
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .slice(0, PLACE_LIMIT)
+    const items = capPerKind(ranked, KIND_CAP).slice(0, PLACE_LIMIT)
 
     return res.status(200).json({
       items,

@@ -12,6 +12,7 @@ import {
   formatEventPeriod,
   placeToPrefill,
 } from "../lib/exploreCuration"
+import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 
 // 탐색 — 내 위치 주변에서 기록할만한 행사/축제 + 공간 큐레이션.
 // 공개 지도 검색(ExplorePublicScreen)은 데이터가 쌓일 때까지 진입점을 숨긴다.
@@ -29,14 +30,25 @@ function readStoredLocation() {
   }
 }
 
-function EventCard({ event, onRegister }) {
+function EventCard({ event, onRegister, onOpen }) {
   const badge = eventDdayBadge(event)
   const period = formatEventPeriod(event)
   const distance = formatDistanceKm(event.distKm)
   const shortAddr = (event.addr || "").split(" ").slice(0, 3).join(" ")
 
   return (
-    <article className="xc-card">
+    <article
+      className="xc-card xc-card--tappable"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen?.(event)}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+          keyEvent.preventDefault()
+          onOpen?.(event)
+        }
+      }}
+    >
       <div className="xc-card__art" aria-hidden="true">
         {event.image ? (
           <img src={event.image} alt="" loading="lazy" />
@@ -63,7 +75,14 @@ function EventCard({ event, onRegister }) {
             {distance}
           </span>
         ) : <span />}
-        <button type="button" className="xc-card__register" onClick={() => onRegister?.(eventToPrefill(event))}>
+        <button
+          type="button"
+          className="xc-card__register"
+          onClick={(clickEvent) => {
+            clickEvent.stopPropagation()
+            onRegister?.(eventToPrefill(event))
+          }}
+        >
           <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
           카드로 등록
         </button>
@@ -72,12 +91,23 @@ function EventCard({ event, onRegister }) {
   )
 }
 
-function PlaceSpotCard({ place, onRegister }) {
+function PlaceSpotCard({ place, onRegister, onOpen }) {
   const distance = formatDistanceKm(place.distKm)
   const shortAddr = (place.addr || "").split(" ").slice(0, 3).join(" ")
 
   return (
-    <article className="xc-card">
+    <article
+      className="xc-card xc-card--tappable"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen?.(place)}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+          keyEvent.preventDefault()
+          onOpen?.(place)
+        }
+      }}
+    >
       <div className="xc-card__art xc-card__art--place" aria-hidden="true">
         {place.image ? (
           <img src={place.image} alt="" loading="lazy" />
@@ -103,7 +133,14 @@ function PlaceSpotCard({ place, onRegister }) {
             {distance}
           </span>
         ) : <span />}
-        <button type="button" className="xc-card__register" onClick={() => onRegister?.(placeToPrefill(place))}>
+        <button
+          type="button"
+          className="xc-card__register"
+          onClick={(clickEvent) => {
+            clickEvent.stopPropagation()
+            onRegister?.(placeToPrefill(place))
+          }}
+        >
           <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
           카드로 등록
         </button>
@@ -117,6 +154,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [placeKind, setPlaceKind] = useState("all")
+  const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place", data}
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
@@ -245,7 +283,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         ) : (
           <div className="xc-grid">
             {ongoing.slice(0, 24).map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard key={event.id} event={event} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
           </div>
         )}
@@ -259,7 +297,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </header>
           <div className="xc-grid">
             {upcoming.slice(0, 12).map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} />
+              <EventCard key={event.id} event={event} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
           </div>
         </section>
@@ -307,11 +345,22 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         ) : (
           <div className="xc-grid">
             {visiblePlaces.slice(0, 18).map((place) => (
-              <PlaceSpotCard key={place.id} place={place} onRegister={onRegister} />
+              <PlaceSpotCard key={place.id} place={place} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
             ))}
           </div>
         )}
       </section>
+
+      {detailItem ? (
+        <CurationDetailSheet
+          item={detailItem}
+          onClose={() => setDetailItem(null)}
+          onRegister={(prefillCandidate) => {
+            setDetailItem(null)
+            onRegister?.(prefillCandidate)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

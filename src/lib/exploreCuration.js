@@ -59,6 +59,38 @@ export function fetchNearbyPlaces(location) {
   return fetchCurationItems("places", PLACES_CACHE_PREFIX, location)
 }
 
+// TourAPI 상세 (행사 + tour 소스 공간) — contentId 단위 sessionStorage 캐시
+const DETAIL_CACHE_PREFIX = "loca.explore.detail."
+
+export async function fetchCurationDetail({ contentId, contentTypeId }) {
+  if (!contentId) return null
+  const cacheKey = `${DETAIL_CACHE_PREFIX}${contentId}`
+  try {
+    const raw = sessionStorage.getItem(cacheKey)
+    if (raw) return JSON.parse(raw)
+  } catch { /* 무시 */ }
+
+  const params = new URLSearchParams({ contentId: String(contentId) })
+  if (contentTypeId) params.set("contentTypeId", String(contentTypeId))
+  const response = await fetch(`/api/event-detail?${params.toString()}`)
+  if (!response.ok) throw new Error(`detail ${response.status}`)
+  const data = await response.json()
+  const detail = data?.detail || null
+  if (detail) {
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(detail)) } catch { /* 무시 */ }
+  }
+  return detail
+}
+
+// 큐레이션 아이템에서 TourAPI contentId 추출 (행사=원본 id, 공간=`tour-<id>`)
+export function curationContentRef(item) {
+  if (!item) return null
+  if (item.source === "kakao") return null
+  const providerId = item.providerId || (String(item.id || "").startsWith("tour-") ? String(item.id).slice(5) : item.id)
+  if (!providerId) return null
+  return { contentId: providerId, contentTypeId: item.contentTypeId || 15 }
+}
+
 // ── 날짜 헬퍼 (TourAPI YYYYMMDD 문자열) ──
 
 function parseYYYYMMDD(value) {
