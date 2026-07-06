@@ -241,8 +241,9 @@ export function PlaceFlipCard({
                     <textarea
                       value={recText}
                       onChange={(event) => setRecText(event.target.value)}
-                      placeholder="오늘 이곳은 어땠나요?"
-                      rows={3}
+                      placeholder="오늘 이곳은 어땠나요? 느낀 점, 다음에 올 이유, 뭐든 편하게 적어보세요."
+                      rows={5}
+                      autoFocus
                     />
                     <div className="bd-recform__row">
                       <button type="button" className="bd-mini" onClick={() => { setRecFormOpen(false); setRecText("") }}>취소</button>
