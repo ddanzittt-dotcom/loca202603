@@ -997,7 +997,11 @@ export function MapEditorScreen({
                         </div>
                         <div className="me-strip-info">
                           <strong>{feature.title}</strong>
-                          <span>{feature.note || (feature.tags || []).join(" · ") || ""}</span>
+                          <span>
+                            {feature.type === "pin"
+                              ? `기록 ${buildFeatureRecordGroups(feature).length}`
+                              : (feature.note || (feature.tags || []).join(" · ") || (feature.type === "route" ? "길" : "영역"))}
+                          </span>
                         </div>
                       </div>
                     ))}
