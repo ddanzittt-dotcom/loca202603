@@ -1,0 +1,78 @@
+// 도트형(픽셀 아트) 지도 썸네일 — 실제 지도 이미지 대신 카드 표지에 쓴다.
+// 지도 id 로 시드된 결정적 픽셀 지형 + 실제 핀 좌표(있으면)로 빨간 핀을 찍는다.
+// 프로토타입 habitat2/mapThumb 이식.
+
+const W = 280
+const H = 132
+const CELL = 8
+
+function hashSeed(input) {
+  const str = String(input || "seed")
+  let h = 2166136261
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return (Math.abs(h) % 2147483647) || 7
+}
+
+export function generatePixelMapSvg(seedInput, points = []) {
+  const seed = hashSeed(seedInput)
+  let s = seed
+  const rand = () => { s = (s * 16807 + 11) % 2147483647; return s / 2147483647 }
+
+  const cols = Math.ceil(W / CELL)
+  const rows = Math.ceil(H / CELL)
+  let out = `<rect width="${W}" height="${H}" fill="#E7E0CA"/>`
+  for (let y = 0; y < rows; y += 1) {
+    for (let x = 0; x < cols; x += 1) {
+      const v = rand()
+      let fill = null
+      if (v < 0.12) fill = "#D6CFAF"        // 흙 블록
+      else if (v < 0.19) fill = "#C6D6B4"   // 초록
+      else if (v < 0.235) fill = "#F4EEDA"  // 밝은 땅
+      else if (v < 0.255) fill = "#AFC9E0"  // 물
+      if (fill) out += `<rect x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" fill="${fill}"/>`
+    }
+  }
+
+  // 핀 위치: 실제 좌표가 있으면 정규화 배치, 없으면 시드 랜덤
+  const coords = (Array.isArray(points) ? points : [])
+    .map((p) => ({ lat: Number(p?.lat), lng: Number(p?.lng) }))
+    .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng) && !(p.lat === 0 && p.lng === 0))
+
+  const pins = []
+  if (coords.length >= 1) {
+    const lats = coords.map((c) => c.lat)
+    const lngs = coords.map((c) => c.lng)
+    const minLat = Math.min(...lats)
+    const maxLat = Math.max(...lats)
+    const minLng = Math.min(...lngs)
+    const maxLng = Math.max(...lngs)
+    const spanLat = (maxLat - minLat) || 1
+    const spanLng = (maxLng - minLng) || 1
+    coords.slice(0, 12).forEach((c) => {
+      const nx = coords.length === 1 ? 0.5 : (c.lng - minLng) / spanLng
+      const ny = coords.length === 1 ? 0.5 : (maxLat - c.lat) / spanLat
+      const gx = 2 + Math.round(nx * (cols - 5))
+      const gy = 1 + Math.round(ny * (rows - 3))
+      pins.push({ x: gx * CELL + CELL / 2, y: gy * CELL + CELL / 2 })
+    })
+  } else {
+    const count = Math.max(1, Math.min(6, Number(points) || 3))
+    let ps = seed + 5
+    const prand = () => { ps = (ps * 16807 + 11) % 2147483647; return ps / 2147483647 }
+    for (let i = 0; i < count; i += 1) {
+      const gx = 2 + Math.floor(prand() * (cols - 4))
+      const gy = 1 + Math.floor(prand() * (rows - 2))
+      pins.push({ x: gx * CELL + CELL / 2, y: gy * CELL + CELL / 2 })
+    }
+  }
+
+  for (const p of pins) {
+    out += `<rect x="${p.x - 4}" y="${p.y - 4}" width="8" height="8" fill="#E8442E" stroke="#1B1B18" stroke-width="1.6"/>`
+    out += `<rect x="${p.x - 1.5}" y="${p.y - 1.5}" width="3" height="3" fill="#FFFDF4"/>`
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" role="img" aria-label="지도 미리보기" style="width:100%;height:100%;display:block">${out}</svg>`
+}

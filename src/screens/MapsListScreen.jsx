@@ -3,7 +3,7 @@ import { Check, ChevronDown, GripVertical, Lock, MoreHorizontal, MoveVertical, P
 import { EmptyState, SkeletonCard } from "../components/ui"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { generateMiniMapSvg } from "../lib/miniMapPreview"
-import { MapCoverThumb } from "../components/MapCoverThumb"
+import { generatePixelMapSvg } from "../lib/pixelMapThumb"
 
 const MAP_FILTERS = [
   { id: "all", label: "전체" },
@@ -148,13 +148,11 @@ function MapsV3Card({
       {displayNo ? (
         <span className="maps-v3-card__no" aria-hidden="true">No.{displayNo}</span>
       ) : null}
-      <span className="maps-v3-card__preview">
-        <MapCoverThumb
-          mapId={item.map.id}
-          version={item.map.updatedAt || item.map.updated_at}
-          fallbackSvg={item.previewSvg}
-        />
-      </span>
+      <span
+        className="maps-v3-card__preview maps-v3-card__preview--dot"
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: generatePixelMapSvg(item.map.id, item.pinPoints) }}
+      />
       <StatusBadge status={item.status} collabCount={item.collabCount} />
       <span className="maps-v3-card__info">
         <span className="maps-v3-card__title-row">
@@ -279,6 +277,9 @@ export function MapsListScreen({
         collabCount: getCollabCount(map),
         placeCount: mapFeatures.length,
         updatedLabel: formatRelativeDate(map.updatedAt || map.updated_at || map.modifiedAt || map.modified_at),
+        pinPoints: mapFeatures
+          .filter((feature) => feature.type === "pin" && Number.isFinite(Number(feature.lat)) && Number.isFinite(Number(feature.lng)))
+          .map((feature) => ({ lat: Number(feature.lat), lng: Number(feature.lng) })),
         previewSvg: map.previewSvg || map.preview_svg || generateMiniMapSvg(mapFeatures, { theme: map.theme }),
         searchable: [
           map.title,
