@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { CalendarRange, Landmark, LocateFixed, MapPin, Plus, RotateCw } from "lucide-react"
+import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
@@ -12,6 +12,18 @@ import {
   placeToPrefill,
 } from "../lib/exploreCuration"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
+import { PixelRadar } from "../components/explore/PixelRadar"
+
+// 레이더 도트 → 카드 앵커 id (스크롤·선택용)
+function cardAnchorId(type, id) {
+  return `xc-card-${type}-${id}`
+}
+
+function prefersReduced() {
+  return typeof window !== "undefined"
+    && window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
 
 // 탐색 — 내 위치 주변에서 기록할만한 행사/축제 + 공간 큐레이션.
 // 공개 지도 검색(ExplorePublicScreen)은 데이터가 쌓일 때까지 진입점을 숨긴다.
@@ -29,7 +41,7 @@ function readStoredLocation() {
   }
 }
 
-function EventCard({ event, onRegister, onOpen }) {
+function EventCard({ event, onRegister, onOpen, anchorId }) {
   const badge = eventDdayBadge(event)
   const period = formatEventPeriod(event)
   const distance = formatDistanceKm(event.distKm)
@@ -37,6 +49,7 @@ function EventCard({ event, onRegister, onOpen }) {
 
   return (
     <article
+      id={anchorId}
       className="xc-card xc-card--tappable"
       role="button"
       tabIndex={0}
@@ -90,12 +103,13 @@ function EventCard({ event, onRegister, onOpen }) {
   )
 }
 
-function PlaceSpotCard({ place, onRegister, onOpen }) {
+function PlaceSpotCard({ place, onRegister, onOpen, anchorId }) {
   const distance = formatDistanceKm(place.distKm)
   const shortAddr = (place.addr || "").split(" ").slice(0, 3).join(" ")
 
   return (
     <article
+      id={anchorId}
       className="xc-card xc-card--tappable"
       role="button"
       tabIndex={0}
@@ -229,28 +243,42 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   // 추천순 단일 리스트 — 칩 없이 서버 추천 점수 순서 그대로
   const visiblePlaces = placesLoading ? [] : placesResult.items
 
+  // 레이더 도트 = 행사 + 공간(실좌표 있는 것). 행사 먼저, 이어서 상위 공간.
+  const radarItems = useMemo(() => {
+    const toDot = (raw, type) => ({
+      id: raw.id, type, title: raw.title,
+      lat: Number(raw.lat), lng: Number(raw.lng),
+      distKm: raw.distKm, category: raw.category, data: raw,
+    })
+    const evts = (Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))
+    const plcs = (placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))
+    return [...evts, ...plcs].filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+  }, [events, placesLoading, placesResult.items])
+
+  // 도트 [카드 보기] → 해당 카드로 스크롤 + 펄스 + 상세 시트 오픈
+  const handleRadarSelect = useCallback((item) => {
+    const el = typeof document !== "undefined" && document.getElementById(cardAnchorId(item.type, item.id))
+    if (el) {
+      el.scrollIntoView({ behavior: prefersReduced() ? "auto" : "smooth", block: "center" })
+      el.classList.remove("xc-card--pulse")
+      void el.offsetWidth
+      el.classList.add("xc-card--pulse")
+    }
+    setDetailItem({ type: item.type, data: item.data })
+  }, [])
+
   return (
     <div className="xc-view">
-      <div className="xc-locbar">
-        <button
-          type="button"
-          className={`xc-locchip${location ? " is-set" : ""}`}
-          onClick={locateMe}
-          disabled={locating}
-        >
-          <LocateFixed size={13} strokeWidth={2.4} aria-hidden="true" />
-          {locating ? "위치 찾는 중…" : effectiveLocation.label}
-        </button>
-        <button
-          type="button"
-          className="xc-reload"
-          onClick={() => setReloadKey((value) => value + 1)}
-          aria-label="새로고침"
-          disabled={loading}
-        >
-          <RotateCw size={13} strokeWidth={2.4} />
-        </button>
-      </div>
+      <PixelRadar
+        items={radarItems}
+        location={effectiveLocation}
+        label={effectiveLocation.label}
+        hasLocation={Boolean(location)}
+        locating={locating}
+        onLocate={locateMe}
+        onReload={() => setReloadKey((value) => value + 1)}
+        onSelect={handleRadarSelect}
+      />
 
       <section className="xc-section" aria-label="지금 열린 행사">
         <header className="xc-section__head">
@@ -278,7 +306,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         ) : (
           <div className="xc-grid">
             {ongoing.slice(0, 24).map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
+              <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
           </div>
         )}
@@ -292,7 +320,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </header>
           <div className="xc-grid">
             {upcoming.slice(0, 12).map((event) => (
-              <EventCard key={event.id} event={event} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
+              <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
           </div>
         </section>
@@ -324,7 +352,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         ) : (
           <div className="xc-grid">
             {visiblePlaces.slice(0, 24).map((place) => (
-              <PlaceSpotCard key={place.id} place={place} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
+              <PlaceSpotCard key={place.id} place={place} anchorId={cardAnchorId("place", place.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
             ))}
           </div>
         )}
