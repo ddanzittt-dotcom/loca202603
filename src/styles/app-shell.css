@@ -4787,3 +4787,42 @@
   color: #1F1A12;
   cursor: pointer;
 }
+
+/* 탐색 큐레이션 — 공간 필터 칩 + 공간 카드 배지 */
+
+.xc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.xc-chip {
+  height: 30px;
+  padding: 0 12px;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFFDF4;
+  color: #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.xc-chip.is-active {
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.xc-card__art--place {
+  aspect-ratio: 4 / 2.1;
+}
+
+.xc-card__dday--place {
+  background: #FFFDF4;
+  color: #1F1A12;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

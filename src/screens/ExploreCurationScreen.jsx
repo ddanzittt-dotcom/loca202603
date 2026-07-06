@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { CalendarRange, LocateFixed, MapPin, Plus, RotateCw } from "lucide-react"
+import { CalendarRange, Landmark, LocateFixed, MapPin, Plus, RotateCw } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
+  PLACE_KIND_FILTERS,
   eventDdayBadge,
   eventToPrefill,
   fetchNearbyEvents,
+  fetchNearbyPlaces,
   formatDistanceKm,
   formatEventPeriod,
+  placeToPrefill,
 } from "../lib/exploreCuration"
 
-// 탐색 — 내 위치 주변에서 기록할만한 행사/축제 큐레이션.
+// 탐색 — 내 위치 주변에서 기록할만한 행사/축제 + 공간 큐레이션.
 // 공개 지도 검색(ExplorePublicScreen)은 데이터가 쌓일 때까지 진입점을 숨긴다.
 // 카드 CTA [+ 카드로 등록] → CollectSheet 프리필 → 바인더에 꽂힌다.
 
@@ -69,12 +72,54 @@ function EventCard({ event, onRegister }) {
   )
 }
 
+function PlaceSpotCard({ place, onRegister }) {
+  const distance = formatDistanceKm(place.distKm)
+  const shortAddr = (place.addr || "").split(" ").slice(0, 3).join(" ")
+
+  return (
+    <article className="xc-card">
+      <div className="xc-card__art xc-card__art--place" aria-hidden="true">
+        {place.image ? (
+          <img src={place.image} alt="" loading="lazy" />
+        ) : (
+          <span className="xc-card__art-fallback">
+            <Landmark size={26} strokeWidth={1.6} />
+          </span>
+        )}
+        {place.category ? (
+          <span className="xc-card__dday xc-card__dday--place">{place.category}</span>
+        ) : null}
+      </div>
+      <div className="xc-card__body">
+        <strong className="xc-card__title">{place.title}</strong>
+        <span className="xc-card__meta">
+          {shortAddr ? <span>{shortAddr}</span> : null}
+        </span>
+      </div>
+      <div className="xc-card__foot">
+        {distance ? (
+          <span className="xc-card__dist">
+            <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
+            {distance}
+          </span>
+        ) : <span />}
+        <button type="button" className="xc-card__register" onClick={() => onRegister?.(placeToPrefill(place))}>
+          <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
+          카드로 등록
+        </button>
+      </div>
+    </article>
+  )
+}
+
 export function ExploreCurationScreen({ onRegister, showToast }) {
   const [location, setLocation] = useState(() => readStoredLocation())
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [placeKind, setPlaceKind] = useState("all")
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
+  const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
@@ -90,9 +135,23 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return () => { cancelled = true }
   }, [effectiveLocation, requestKey])
 
+  useEffect(() => {
+    let cancelled = false
+    fetchNearbyPlaces(effectiveLocation)
+      .then((items) => { if (!cancelled) setPlacesResult({ key: requestKey, items, error: "" }) })
+      .catch(() => {
+        if (cancelled) return
+        setPlacesResult({ key: requestKey, items: [], error: "주변 공간을 불러오지 못했어요." })
+      })
+    return () => { cancelled = true }
+  }, [effectiveLocation, requestKey])
+
   const loading = result.key !== requestKey
   const events = loading ? null : result.items
   const error = loading ? "" : result.error
+
+  const placesLoading = placesResult.key !== requestKey
+  const placesError = placesLoading ? "" : placesResult.error
 
   const locateMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -130,6 +189,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     }
     return result
   }, [events])
+
+  const visiblePlaces = useMemo(() => {
+    const list = placesLoading ? [] : placesResult.items
+    if (placeKind === "all") return list
+    return list.filter((place) => place.kind === placeKind)
+  }, [placeKind, placesLoading, placesResult.items])
 
   return (
     <div className="xc-view">
@@ -199,6 +264,54 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </div>
         </section>
       ) : null}
+
+      <section className="xc-section" aria-label="기록할만한 공간">
+        <header className="xc-section__head">
+          <strong>기록할만한 공간</strong>
+          {!placesLoading && visiblePlaces.length > 0 ? (
+            <span className="xc-section__count">{visiblePlaces.length}</span>
+          ) : null}
+        </header>
+
+        <div className="xc-chips" role="radiogroup" aria-label="공간 종류 필터">
+          {PLACE_KIND_FILTERS.map((filterItem) => (
+            <button
+              key={filterItem.id}
+              type="button"
+              className={`xc-chip${placeKind === filterItem.id ? " is-active" : ""}`}
+              aria-pressed={placeKind === filterItem.id}
+              onClick={() => setPlaceKind(filterItem.id)}
+            >
+              {filterItem.label}
+            </button>
+          ))}
+        </div>
+
+        {placesLoading ? (
+          <div className="xc-grid" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div className="xc-card xc-card--skeleton" key={index} />
+            ))}
+          </div>
+        ) : placesError ? (
+          <div className="xc-empty">
+            <strong>공간 정보를 불러오지 못했어요</strong>
+            <span>{placesError}</span>
+            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
+          </div>
+        ) : visiblePlaces.length === 0 ? (
+          <div className="xc-empty">
+            <strong>조건에 맞는 공간이 없어요</strong>
+            <span>다른 종류를 골라보거나 위치를 바꿔보세요.</span>
+          </div>
+        ) : (
+          <div className="xc-grid">
+            {visiblePlaces.slice(0, 18).map((place) => (
+              <PlaceSpotCard key={place.id} place={place} onRegister={onRegister} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

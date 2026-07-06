@@ -3,6 +3,7 @@
 // 엣지 캐시를 공유하고, 클라이언트 sessionStorage 캐시(30분)로 재방문 요청을 줄인다.
 
 const EVENTS_CACHE_PREFIX = "loca.explore.events."
+const PLACES_CACHE_PREFIX = "loca.explore.places."
 const EVENTS_CACHE_TTL_MS = 30 * 60 * 1000
 
 export const EXPLORE_LOCATION_KEY = "loca.explore.location"
@@ -33,21 +34,29 @@ function writeCache(key, items) {
   }
 }
 
-export async function fetchNearbyEvents(location) {
+async function fetchCurationItems(endpoint, cachePrefix, location) {
   const lat = gridCoord(location?.lat ?? DEFAULT_EXPLORE_LOCATION.lat)
   const lng = gridCoord(location?.lng ?? DEFAULT_EXPLORE_LOCATION.lng)
-  const cacheKey = `${EVENTS_CACHE_PREFIX}${lat},${lng}`
+  const cacheKey = `${cachePrefix}${lat},${lng}`
 
   const cached = readCache(cacheKey)
   if (cached) return cached
 
-  const response = await fetch(`/api/events?lat=${lat}&lng=${lng}`)
-  if (!response.ok) throw new Error(`events ${response.status}`)
+  const response = await fetch(`/api/${endpoint}?lat=${lat}&lng=${lng}`)
+  if (!response.ok) throw new Error(`${endpoint} ${response.status}`)
   const data = await response.json()
   if (data?.error) throw new Error(data.error)
   const items = Array.isArray(data.items) ? data.items : []
   writeCache(cacheKey, items)
   return items
+}
+
+export function fetchNearbyEvents(location) {
+  return fetchCurationItems("events", EVENTS_CACHE_PREFIX, location)
+}
+
+export function fetchNearbyPlaces(location) {
+  return fetchCurationItems("places", PLACES_CACHE_PREFIX, location)
 }
 
 // ── 날짜 헬퍼 (TourAPI YYYYMMDD 문자열) ──
@@ -108,5 +117,34 @@ export function eventToPrefill(event) {
     address: event.addr || "",
     lat: event.lat,
     lng: event.lng,
+  }
+}
+
+// 공간 kind(api/places.js) → 도감 카테고리 id (placeCategories.js)
+const PLACE_KIND_TO_CATEGORY = {
+  cafe: "cafe",
+  culture: "culture",
+  attraction: "nature",
+  leisure: "etc",
+  shopping: "shop",
+}
+
+// 공간 필터 칩 (kind 기준)
+export const PLACE_KIND_FILTERS = [
+  { id: "all", label: "전체" },
+  { id: "cafe", label: "카페" },
+  { id: "culture", label: "문화" },
+  { id: "attraction", label: "명소" },
+]
+
+export function placeToPrefill(place) {
+  return {
+    name: place.title,
+    category: PLACE_KIND_TO_CATEGORY[place.kind] || "etc",
+    categoryName: place.category || "",
+    tagLabel: null,
+    address: place.addr || "",
+    lat: place.lat,
+    lng: place.lng,
   }
 }
