@@ -32,7 +32,8 @@ import {
 } from "./lib/appUtils"
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
-import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord } from "./lib/mapService"
+import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
+import { uploadMediaToCloud } from "./lib/mediaStore"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
 import { createMap as createMapRecord, placeFeatureInMap } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
@@ -2000,6 +2001,29 @@ export default function App() {
             const attach = (feature) => ({ ...feature, memos: [...(feature.memos || []), newMemo] })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? attach(feature) : feature)))
             setPlaceCardFeature((current) => (current ? attach(current) : current))
+          }}
+          onSetPhoto={async (file) => {
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            let url = null
+            if (cloudMode) {
+              const meta = await uploadMediaToCloud(createId("photo"), file, "photos").catch(() => null)
+              if (meta?.publicUrl) {
+                url = meta.publicUrl
+                await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url }).catch(() => {})
+              }
+            }
+            if (!url) {
+              // 로컬 모드 또는 업로드 실패 — data URL 로 즉시 반영(로컬 저장에 유지)
+              url = await new Promise((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve(reader.result)
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+              })
+            }
+            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url })
+            setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
+            setPlaceCardFeature((current) => (current ? patch(current) : current))
           }}
           onOpenOnMap={(placeCardFeature.mapId || placeCardFeature.map_id) ? () => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id

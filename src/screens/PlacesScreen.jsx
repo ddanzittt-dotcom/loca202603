@@ -4,10 +4,16 @@ import { featureSort } from "../lib/appUtils"
 import { getPlaceType } from "../lib/placeTypes"
 import { PlaceCardFront } from "../components/binder/PlaceFlipCard"
 
-// 카드 바인더 — 내 장소. 장소 하나 = 카드 한 장, 페이지당 9장.
-// 필터 칩 없이 검색만 제공한다 (리디자인 §1).
+// 카드 바인더 — 내 장소. 장소 하나 = 카드 한 장.
+// 필터 칩 없이 검색만 제공한다 (리디자인 §1). 페이지당 장수는 조정 가능.
 
-const PAGE_SIZE = 9
+const PAGE_SIZE_OPTIONS = [6, 9, 12, 20, 40]
+const PAGE_SIZE_KEY = "loca.binder_page_size"
+
+function initialPageSize() {
+  const stored = Number(localStorage.getItem(PAGE_SIZE_KEY))
+  return PAGE_SIZE_OPTIONS.includes(stored) ? stored : 9
+}
 
 function isPersonalRecordType(feature) {
   return ["pin", "route", "area"].includes(feature?.type)
@@ -25,6 +31,7 @@ export function PlacesScreen({
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
   const [pageAnim, setPageAnim] = useState(0)
+  const [pageSize, setPageSize] = useState(initialPageSize)
 
   const personalMaps = maps
   const personalMapIds = useMemo(
@@ -63,10 +70,16 @@ export function PlacesScreen({
     })
   }, [query, recordFeatures])
 
-  const pageCount = Math.max(1, Math.ceil(filteredFeatures.length / PAGE_SIZE))
+  const pageCount = Math.max(1, Math.ceil(filteredFeatures.length / pageSize))
   const safePage = Math.min(page, pageCount - 1)
-  const pageFeatures = filteredFeatures.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
-  const sleeveCount = Math.max(0, PAGE_SIZE - pageFeatures.length)
+  const pageFeatures = filteredFeatures.slice(safePage * pageSize, safePage * pageSize + pageSize)
+  const sleeveCount = Math.max(0, pageSize - pageFeatures.length)
+
+  const changePageSize = (next) => {
+    setPageSize(next)
+    setPage(0)
+    try { localStorage.setItem(PAGE_SIZE_KEY, String(next)) } catch { /* ignore */ }
+  }
 
   const goPage = (next) => {
     const clamped = Math.max(0, Math.min(pageCount - 1, next))
@@ -129,6 +142,14 @@ export function PlacesScreen({
             <span className="bd-bindertt">
               {searching ? `검색 "${query.trim()}" ${filteredFeatures.length}장` : `카드 ${recordFeatures.length}장`}
             </span>
+            <label className="bd-pagesize">
+              <span>페이지당</span>
+              <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))} aria-label="페이지당 카드 수">
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}장</option>
+                ))}
+              </select>
+            </label>
             <div className="bd-pager" aria-label="바인더 페이지">
               <button type="button" onClick={() => goPage(safePage - 1)} disabled={safePage === 0} aria-label="이전 페이지">◀</button>
               <span className="bd-pg">{safePage + 1} / {pageCount}</span>

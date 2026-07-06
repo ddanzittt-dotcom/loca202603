@@ -4647,3 +4647,58 @@
   .bd-grid--flip { animation: none; }
   .bd-card:hover .bd-shine { animation: none; }
 }
+
+/* 바인더 세부 다듬기 (2026-07-06) */
+.bd-backbody {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.bd-backbody::-webkit-scrollbar { display: none; }
+
+/* 히어로 사진 등록/변경 버튼 */
+.bd-heroupload {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  border: 2px solid #1B1B18;
+  border-radius: 6px;
+  background: #FFFDF4;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  box-shadow: 2px 2px 0 #1B1B18;
+  cursor: pointer;
+  color: #1B1B18;
+  font-family: Pretendard, sans-serif;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.bd-heroupload:not(:disabled):active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1B1B18;
+}
+.bd-heroupload:disabled { opacity: 0.6; cursor: default; }
+
+/* 페이지당 카드 수 셀렉터 */
+.bd-pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #8A8574;
+  margin-left: auto;
+}
+.bd-pagesize select {
+  border: 2px solid #1B1B18;
+  border-radius: 7px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  padding: 4px 6px;
+  color: #1B1B18;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #1B1B18;
+}
+.bd-pagesize + .bd-pager { margin-left: 12px; }

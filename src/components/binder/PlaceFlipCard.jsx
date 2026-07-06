@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
 import { getPlaceType } from "../../lib/placeTypes"
-import { getCardPhotos, cardRecordCount, formatDotDate, looksLikeAddress, neighborhoodWord } from "../../lib/binderCardData"
+import { cardRecordCount, formatDotDate, looksLikeAddress, neighborhoodWord, representativePhoto, cardArtFeature } from "../../lib/binderCardData"
 
 // 카드 바인더 리디자인 — 장소 카드 앞면 + 플립 상세(뒷면).
 // 시각·인터랙션 레퍼런스: loca-binder-prototype.html
@@ -10,7 +10,7 @@ import { getCardPhotos, cardRecordCount, formatDotDate, looksLikeAddress, neighb
 // ── 앞면 (바인더 그리드 + 오버레이 앞면 공용) ──
 export function PlaceCardFront({ feature, dexNo, mapTitle, big = false }) {
   const type = getPlaceType(feature)
-  const photos = getCardPhotos(feature)
+  const photo = representativePhoto(feature)
   const recCount = cardRecordCount(feature)
   const name = (feature.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature.createdAt || feature.updatedAt)
@@ -25,10 +25,10 @@ export function PlaceCardFront({ feature, dexNo, mapTitle, big = false }) {
         <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
       </div>
       <div className="bd-cart" style={{ backgroundColor: `${type.color}22` }}>
-        {photos[0] ? (
-          <img src={photos[0]} alt="" loading="lazy" />
+        {photo ? (
+          <img src={photo} alt="" loading="lazy" />
         ) : (
-          <FeatureEmoji feature={feature} size={big ? 84 : 56} unicodeFontSize={big ? 56 : 36} />
+          <FeatureEmoji feature={cardArtFeature(feature)} size={big ? 84 : 56} unicodeFontSize={big ? 56 : 36} />
         )}
         {recCount > 0 ? <span className="bd-recchip">기록 {recCount}</span> : null}
       </div>
@@ -99,12 +99,15 @@ export function PlaceFlipCard({
   onClose,
   onOpenOnMap,
   onAddRecord,
+  onSetPhoto,
   showToast,
 }) {
   const [flipped, setFlipped] = useState(false)
   const [recFormOpen, setRecFormOpen] = useState(false)
   const [recText, setRecText] = useState("")
   const [saving, setSaving] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const fileInputRef = useRef(null)
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
@@ -131,9 +134,24 @@ export function PlaceFlipCard({
 
   if (!feature) return null
 
-  const photos = getCardPhotos(feature)
+  const heroPhoto = representativePhoto(feature)
   const name = (feature.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature.createdAt || feature.updatedAt)
+
+  const handlePhotoFile = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file || !onSetPhoto) return
+    setPhotoBusy(true)
+    try {
+      await onSetPhoto(file)
+      showToast?.("사진을 바꿨어요")
+    } catch {
+      showToast?.("사진 등록에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
 
   const handleSaveRecord = async () => {
     const text = recText.trim()
@@ -175,14 +193,33 @@ export function PlaceFlipCard({
             </div>
 
             <div className="bd-backhero" style={{ backgroundColor: `${type.color}22` }}>
-              {photos[0]
-                ? <img src={photos[0]} alt={`${name} 사진`} />
-                : <FeatureEmoji feature={feature} size={72} unicodeFontSize={48} />}
+              {heroPhoto
+                ? <img src={heroPhoto} alt={`${name} 사진`} />
+                : <FeatureEmoji feature={cardArtFeature(feature)} size={72} unicodeFontSize={48} />}
+              {onSetPhoto ? (
+                <>
+                  <button
+                    type="button"
+                    className="bd-heroupload"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={photoBusy}
+                  >
+                    📷 사진 {heroPhoto ? "변경" : "등록"}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={handlePhotoFile}
+                  />
+                </>
+              ) : null}
             </div>
 
             <div className="bd-backbody">
               <div className="bd-textbox" onClick={completeTyping} role="presentation">
-                <span className="bd-tblabel">장소 설명</span>
+                <span className="bd-tblabel">설명</span>
                 <span>{typedDesc}</span>
               </div>
 
