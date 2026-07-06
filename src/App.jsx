@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, use
 import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
-import { PlaceCardPop } from "./components/PlaceCardPop"
+import { PlaceFlipCard } from "./components/binder/PlaceFlipCard"
 import { CollectSheet } from "./components/sheets/CollectSheet"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
@@ -32,7 +32,7 @@ import {
 } from "./lib/appUtils"
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
-import { ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord } from "./lib/mapService"
+import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord } from "./lib/mapService"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
 import { createMap as createMapRecord, placeFeatureInMap } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
@@ -1985,11 +1985,22 @@ export default function App() {
       )}
 
       {placeCardFeature ? (
-        <PlaceCardPop
+        <PlaceFlipCard
           feature={placeCardFeature}
           dexNo={placeCardDexNo}
           mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
           onClose={() => setPlaceCardFeature(null)}
+          showToast={showToast}
+          onAddRecord={async (text) => {
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            if (cloudMode) {
+              await addFeatureMemo(featureId, text)
+            }
+            const newMemo = { id: createId("memo"), text, createdAt: new Date().toISOString(), photos: [] }
+            const attach = (feature) => ({ ...feature, memos: [...(feature.memos || []), newMemo] })
+            setFeatures((current) => current.map((feature) => (feature.id === featureId ? attach(feature) : feature)))
+            setPlaceCardFeature((current) => (current ? attach(current) : current))
+          }}
           onOpenOnMap={(placeCardFeature.mapId || placeCardFeature.map_id) ? () => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             setPlaceCardFeature(null)

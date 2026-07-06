@@ -4127,3 +4127,523 @@
   color: #8A7C5F;
   margin-top: 2px;
 }
+
+
+/* ============================================================
+   카드 바인더 리디자인 (2026-07) — 내 장소.
+   토큰(지시서 §3): ink #1B1B18 / paper #FFFDF4 / yellow #F5C41B /
+   red #E8442E / khaki #8A8574 / binder #EFE7CE. 픽셀 폰트는 번호·라벨만.
+   ============================================================ */
+
+.bd-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFFDF4;
+  border: 2px solid #1B1B18;
+  border-radius: 10px;
+  box-shadow: 4px 4px 0 #1B1B18;
+  padding: 12px 16px;
+  margin: 18px 0 0;
+  max-width: 620px;
+  color: #8A8574;
+}
+.bd-search input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 15px;
+  flex: 1;
+  color: #1B1B18;
+  font-family: Pretendard, sans-serif;
+}
+
+/* 바인더 판 + 링 제본 */
+.bd-binder {
+  margin-top: 20px;
+  background: #EFE7CE;
+  border: 3px solid #1B1B18;
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 #1B1B18;
+  padding: 20px 20px 16px;
+  position: relative;
+}
+.bd-binder::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 14px;
+  background: repeating-linear-gradient(to bottom, transparent 0 16px, #1B1B18 16px 22px, transparent 22px 38px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+.bd-binderhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-left: 12px;
+}
+.bd-bindertt {
+  font-family: "DungGeunMo", monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #1B1B18;
+}
+.bd-pager {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bd-pg {
+  font-family: "DungGeunMo", monospace;
+  font-size: 13px;
+  min-width: 64px;
+  text-align: center;
+  color: #1B1B18;
+}
+.bd-pager button {
+  width: 34px;
+  height: 34px;
+  border: 2px solid #1B1B18;
+  border-radius: 8px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  font-size: 14px;
+  box-shadow: 2px 2px 0 #1B1B18;
+  cursor: pointer;
+  color: #1B1B18;
+}
+.bd-pager button:not(:disabled):active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #1B1B18;
+}
+.bd-pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.bd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  gap: 18px;
+  padding-left: 12px;
+}
+.bd-grid--flip {
+  animation: bd-pageflip 0.28s ease both;
+}
+@keyframes bd-pageflip {
+  0% { opacity: 0; transform: perspective(900px) rotateY(-7deg); }
+  100% { opacity: 1; transform: none; }
+}
+@media (max-width: 640px) {
+  .bd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+}
+
+.bd-sleeve {
+  border: 2.5px dashed rgba(27, 27, 24, 0.3);
+  border-radius: 12px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(27, 27, 24, 0.35);
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  background: rgba(255, 253, 244, 0.4);
+}
+.bd-sleeve--wide {
+  grid-column: 1 / -1;
+  min-height: 180px;
+}
+
+/* 장소 카드 (앞면 공통) */
+.bd-card {
+  position: relative;
+  border: 2.5px solid #1B1B18;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 #1B1B18;
+  overflow: hidden;
+  text-align: left;
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 250px;
+  transition: box-shadow 0.18s ease;
+  cursor: pointer;
+}
+.bd-card:hover { box-shadow: 7px 7px 0 #1B1B18; }
+.bd-shine {
+  position: absolute;
+  inset: -40%;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.5) 50%, transparent 58%);
+  transition: opacity 0.2s;
+}
+.bd-card:hover .bd-shine {
+  opacity: 1;
+  animation: bd-shinesweep 0.9s ease both;
+}
+@keyframes bd-shinesweep {
+  from { transform: translateX(-38%); }
+  to { transform: translateX(38%); }
+}
+.bd-chead {
+  background: #F5C41B;
+  border-bottom: 2.5px solid #1B1B18;
+  padding: 6px 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+.bd-cno {
+  font-family: "DungGeunMo", monospace;
+  font-size: 12.5px;
+  color: #5C4102;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bd-newfind {
+  color: #E8442E;
+  font-size: 12px;
+}
+.bd-cbadge {
+  margin-left: auto;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  color: #fff;
+  border: 1.5px solid #1B1B18;
+  border-radius: 4px;
+  padding: 2px 6px;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.bd-cart {
+  height: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-bottom: 2.5px solid #1B1B18;
+  position: relative;
+  background-image: radial-gradient(rgba(27, 27, 24, 0.07) 1.4px, transparent 1.4px);
+  background-size: 12px 12px;
+}
+.bd-cart img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bd-recchip {
+  position: absolute;
+  right: 8px;
+  bottom: 7px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  background: #1B1B18;
+  color: #FFFDF4;
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+.bd-cname { padding: 10px 12px 4px; }
+.bd-nm {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #1B1B18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: Pretendard, sans-serif;
+}
+.bd-sp {
+  font-size: 11.5px;
+  color: #8A8574;
+  margin-top: 2px;
+}
+.bd-cstat {
+  margin-top: auto;
+  padding: 8px 12px 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #55523F;
+}
+
+/* 플립 오버레이 */
+.bd-flipov {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 27, 24, 0.5);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.bd-stage {
+  perspective: 1400px;
+  width: min(400px, 94vw);
+  position: relative;
+}
+.bd-3d {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.62s cubic-bezier(0.35, 0.1, 0.25, 1);
+}
+.bd-3d.is-flipped { transform: rotateY(180deg); }
+.bd-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 3px solid #1B1B18;
+  border-radius: 14px;
+  background: #FFFDF4;
+  box-shadow: 8px 10px 0 rgba(27, 27, 24, 0.4);
+  overflow: hidden;
+}
+.bd-face--front {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 430px;
+  width: 100%;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.bd-face--front .bd-cart { height: 190px; }
+.bd-face--back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+}
+.bd-fronthint {
+  margin-top: auto;
+  text-align: center;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8A8574;
+  padding: 12px;
+}
+.bd-backhero {
+  position: relative;
+  height: 172px;
+  flex-shrink: 0;
+  border-bottom: 2.5px solid #1B1B18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: radial-gradient(rgba(27, 27, 24, 0.07) 1.4px, transparent 1.4px);
+  background-size: 12px 12px;
+}
+.bd-backhero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bd-backbody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+.bd-textbox {
+  background: #FFFDF4;
+  border: 2.5px solid #1B1B18;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px #FFFDF4, inset 0 0 0 4px rgba(27, 27, 24, 0.22);
+  padding: 11px 14px;
+  min-height: 66px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #1B1B18;
+}
+.bd-tblabel {
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  color: #8A8574;
+  display: block;
+  margin-bottom: 4px;
+}
+.bd-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12.5px;
+}
+.bd-spec div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px dotted rgba(27, 27, 24, 0.3);
+  padding-bottom: 3px;
+  min-width: 0;
+}
+.bd-spec span { color: #8A8574; flex-shrink: 0; }
+.bd-spec b {
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1B1B18;
+}
+.bd-tl {
+  border-top: 2px dashed rgba(27, 27, 24, 0.3);
+  padding-top: 10px;
+}
+.bd-tlhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bd-tlt {
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  color: #1B1B18;
+}
+.bd-tlempty { font-size: 12.5px; color: #8A8574; }
+.bd-rec {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bd-rec__dot {
+  width: 9px;
+  height: 9px;
+  border: 2px solid #1B1B18;
+  background: #F5C41B;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.bd-rec__body { min-width: 0; flex: 1; }
+.bd-rec__body time {
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  color: #8A8574;
+  display: block;
+}
+.bd-rec__body p { margin: 0; white-space: pre-wrap; color: #1B1B18; }
+.bd-rec__only { color: #8A8574; }
+.bd-rec__photo {
+  width: 46px;
+  height: 46px;
+  border: 2px solid #1B1B18;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.bd-recform {
+  border: 2px dashed rgba(27, 27, 24, 0.35);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #FBF0C8;
+  margin-bottom: 10px;
+}
+.bd-recform textarea {
+  border: 2px solid #1B1B18;
+  border-radius: 6px;
+  font-family: Pretendard, sans-serif;
+  font-size: 13px;
+  padding: 8px;
+  resize: vertical;
+  min-height: 52px;
+  background: #FFFDF4;
+  color: #1B1B18;
+}
+.bd-recform__row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.bd-mini {
+  border: 2px solid #1B1B18;
+  border-radius: 6px;
+  background: #FFFDF4;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  box-shadow: 2px 2px 0 #1B1B18;
+  cursor: pointer;
+  color: #1B1B18;
+  font-family: Pretendard, sans-serif;
+}
+.bd-mini:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1B1B18;
+}
+.bd-mini--red {
+  background: #E8442E;
+  color: #fff;
+}
+.bd-backfoot {
+  flex-shrink: 0;
+  display: flex;
+  gap: 9px;
+  padding: 12px 16px;
+  border-top: 2.5px solid #1B1B18;
+  background: #FBF0C8;
+}
+.bd-btn {
+  flex: 1;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid #1B1B18;
+  border-radius: 8px;
+  box-shadow: 2.5px 2.5px 0 #1B1B18;
+  cursor: pointer;
+  font-family: Pretendard, sans-serif;
+}
+.bd-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #1B1B18;
+}
+.bd-btn--red { background: #E8442E; color: #fff; }
+.bd-flipclose {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid #1B1B18;
+  background: #E8442E;
+  color: #fff;
+  font-family: "DungGeunMo", monospace;
+  font-size: 15px;
+  z-index: 130;
+  box-shadow: 3px 3px 0 rgba(27, 27, 24, 0.5);
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bd-3d { transition: none; }
+  .bd-grid--flip { animation: none; }
+  .bd-card:hover .bd-shine { animation: none; }
+}

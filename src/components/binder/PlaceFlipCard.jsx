@@ -1,0 +1,244 @@
+import { useEffect, useMemo, useState } from "react"
+import { FeatureEmoji } from "../FeatureEmoji"
+import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
+import { getPlaceType } from "../../lib/placeTypes"
+import { getCardPhotos, cardRecordCount, formatDotDate, looksLikeAddress, neighborhoodWord } from "../../lib/binderCardData"
+
+// 카드 바인더 리디자인 — 장소 카드 앞면 + 플립 상세(뒷면).
+// 시각·인터랙션 레퍼런스: loca-binder-prototype.html
+
+// ── 앞면 (바인더 그리드 + 오버레이 앞면 공용) ──
+export function PlaceCardFront({ feature, dexNo, mapTitle, big = false }) {
+  const type = getPlaceType(feature)
+  const photos = getCardPhotos(feature)
+  const recCount = cardRecordCount(feature)
+  const name = (feature.title || "").trim() || "이름 없는 장소"
+  const registered = formatDotDate(feature.createdAt || feature.updatedAt)
+  const hood = neighborhoodWord(feature, mapTitle)
+  const isNewFind = (feature.tags || []).includes("새발견")
+
+  return (
+    <>
+      <div className="bd-chead">
+        <span className="bd-cno">N.{dexNo || "000"}</span>
+        {isNewFind ? <span className="bd-newfind" aria-label="새발견">★</span> : null}
+        <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
+      </div>
+      <div className="bd-cart" style={{ backgroundColor: `${type.color}22` }}>
+        {photos[0] ? (
+          <img src={photos[0]} alt="" loading="lazy" />
+        ) : (
+          <FeatureEmoji feature={feature} size={big ? 84 : 56} unicodeFontSize={big ? 56 : 36} />
+        )}
+        {recCount > 0 ? <span className="bd-recchip">기록 {recCount}</span> : null}
+      </div>
+      <div className="bd-cname">
+        <div className="bd-nm">{name}</div>
+        <div className="bd-sp">{type.label}{hood ? ` · ${hood}` : ""}</div>
+      </div>
+      <div className="bd-cstat">
+        <span>{registered ? `등록 ${registered}` : ""}</span>
+        <span>기록 {recCount}개</span>
+      </div>
+    </>
+  )
+}
+
+// ── 뒷면 기록 아이템 ──
+function RecordItem({ group }) {
+  const text = (group.memos || [])
+    .map((memo) => `${memo?.text || memo?.memo || memo?.content || ""}`.trim())
+    .filter(Boolean)
+    .join("\n")
+  const photo = (group.photos || [])[0]
+  const photoSrc = photo ? (typeof photo === "string" ? photo : photo.url || photo.src || photo.cloudUrl || "") : ""
+  return (
+    <div className="bd-rec">
+      <span className="bd-rec__dot" aria-hidden="true" />
+      <div className="bd-rec__body">
+        <time>{formatRecordDate(group.dateValue)}</time>
+        {text ? <p>{text}</p> : <p className="bd-rec__only">사진 기록</p>}
+      </div>
+      {photoSrc ? <img className="bd-rec__photo" src={photoSrc} alt="기록 사진" /> : null}
+    </div>
+  )
+}
+
+// 타자기 효과 (reduced-motion 이면 즉시, 클릭하면 즉시 완료)
+// 키(=현재 텍스트) 기반 진행 상태 — effect 안 동기 setState 금지 규칙 대응
+function useTypewriter(text, active) {
+  const key = active ? `${text || ""}` : ""
+  const [progress, setProgress] = useState({ key: "", count: 0 })
+  const count = progress.key === key ? progress.count : 0
+
+  useEffect(() => {
+    if (!key) return undefined
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    const timer = window.setInterval(() => {
+      setProgress((current) => {
+        const base = current.key === key ? current.count : 0
+        if (base >= key.length) return current
+        return { key, count: reduced ? key.length : base + 1 }
+      })
+    }, 24)
+    return () => window.clearInterval(timer)
+  }, [key])
+
+  const complete = () => setProgress({ key, count: key.length })
+  return [key.slice(0, count), complete]
+}
+
+/**
+ * 플립 오버레이 — 카드를 누르면 뒤집혀서 뒷면이 상세가 된다.
+ * onAddRecord(text) => Promise — 기록(메모) 추가. 없으면 추가 버튼 숨김.
+ */
+export function PlaceFlipCard({
+  feature,
+  dexNo,
+  mapTitle,
+  onClose,
+  onOpenOnMap,
+  onAddRecord,
+  showToast,
+}) {
+  const [flipped, setFlipped] = useState(false)
+  const [recFormOpen, setRecFormOpen] = useState(false)
+  const [recText, setRecText] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  const type = getPlaceType(feature || {})
+  const note = `${feature?.note || ""}`.trim()
+  const noteIsAddress = looksLikeAddress(note)
+  const descText = noteIsAddress ? "" : note
+  const [typedDesc, completeTyping] = useTypewriter(
+    descText || "아직 설명이 없어요. 기록을 남겨보세요.",
+    flipped,
+  )
+
+  const recordGroups = useMemo(() => {
+    if (!feature) return []
+    return [...buildFeatureRecordGroups(feature)]
+      .sort((a, b) => new Date(b.dateValue || 0) - new Date(a.dateValue || 0))
+  }, [feature])
+
+  useEffect(() => {
+    const handleKey = (event) => {
+      if (event.key === "Escape") onClose?.()
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [onClose])
+
+  if (!feature) return null
+
+  const photos = getCardPhotos(feature)
+  const name = (feature.title || "").trim() || "이름 없는 장소"
+  const registered = formatDotDate(feature.createdAt || feature.updatedAt)
+
+  const handleSaveRecord = async () => {
+    const text = recText.trim()
+    if (!text) { showToast?.("메모를 적어주세요."); return }
+    setSaving(true)
+    try {
+      await onAddRecord?.(text)
+      setRecText("")
+      setRecFormOpen(false)
+      showToast?.("기록을 남겼어요")
+    } catch {
+      showToast?.("기록 저장에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bd-flipov" onClick={onClose} role="presentation">
+      <div className="bd-stage" onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="bd-flipclose" onClick={onClose} aria-label="닫기">✕</button>
+        <div className={`bd-3d${flipped ? " is-flipped" : ""}`}>
+          {/* 앞면 */}
+          <button
+            type="button"
+            className="bd-face bd-face--front bd-card"
+            onClick={() => setFlipped(true)}
+            aria-label={`${name} 카드 — 눌러서 상세 보기`}
+          >
+            <PlaceCardFront feature={feature} dexNo={dexNo} mapTitle={mapTitle} big />
+            <span className="bd-fronthint" aria-hidden="true">카드를 누르면 뒤집혀요</span>
+          </button>
+
+          {/* 뒷면 */}
+          <div className="bd-face bd-face--back" role="dialog" aria-modal="true" aria-label={`${name} 상세`}>
+            <div className="bd-chead">
+              <span className="bd-cno">N.{dexNo || "000"} · {name}</span>
+              <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
+            </div>
+
+            <div className="bd-backhero" style={{ backgroundColor: `${type.color}22` }}>
+              {photos[0]
+                ? <img src={photos[0]} alt={`${name} 사진`} />
+                : <FeatureEmoji feature={feature} size={72} unicodeFontSize={48} />}
+            </div>
+
+            <div className="bd-backbody">
+              <div className="bd-textbox" onClick={completeTyping} role="presentation">
+                <span className="bd-tblabel">장소 설명</span>
+                <span>{typedDesc}</span>
+              </div>
+
+              <div className="bd-spec">
+                <div><span>등록일</span><b>{registered || "—"}</b></div>
+                <div><span>주소</span><b>{noteIsAddress ? note : "주소 미입력"}</b></div>
+              </div>
+
+              <div className="bd-tl">
+                <div className="bd-tlhead">
+                  <span className="bd-tlt">기록 {recordGroups.length}</span>
+                  {onAddRecord && !recFormOpen ? (
+                    <button type="button" className="bd-mini" onClick={() => setRecFormOpen(true)}>+ 기록 추가</button>
+                  ) : null}
+                </div>
+
+                {recFormOpen ? (
+                  <div className="bd-recform">
+                    <textarea
+                      value={recText}
+                      onChange={(event) => setRecText(event.target.value)}
+                      placeholder="오늘 이곳은 어땠나요?"
+                      rows={3}
+                    />
+                    <div className="bd-recform__row">
+                      <button type="button" className="bd-mini" onClick={() => { setRecFormOpen(false); setRecText("") }}>취소</button>
+                      <button type="button" className="bd-mini bd-mini--red" disabled={saving} onClick={handleSaveRecord}>
+                        {saving ? "저장 중…" : "저장"}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {recordGroups.length > 0 ? (
+                  recordGroups.slice(0, 8).map((group) => <RecordItem key={group.id} group={group} />)
+                ) : (
+                  <p className="bd-tlempty">아직 기록이 없어요. 첫 기록을 남겨보세요.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bd-backfoot">
+              <button
+                type="button"
+                className="bd-btn bd-btn--red"
+                onClick={() => {
+                  if (onOpenOnMap) onOpenOnMap()
+                  else showToast?.("아직 지도에 안 담겼어요. '지도 만들기'로 담아보세요.")
+                }}
+              >
+                지도에서 보기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
