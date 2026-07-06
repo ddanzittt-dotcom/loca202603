@@ -7,8 +7,8 @@ import { generatePixelMapSvg } from "../lib/pixelMapThumb"
 
 const MAP_FILTERS = [
   { id: "all", label: "전체" },
-  { id: "published", label: "발행" },
-  { id: "draft", label: "작성 중" },
+  { id: "public", label: "공개" },
+  { id: "private", label: "비공개" },
 ]
 
 
@@ -294,8 +294,8 @@ export function MapsListScreen({
 
   const counts = useMemo(() => ({
     all: mapEntries.length,
-    published: mapEntries.filter((entry) => entry.status === "published" || entry.status === "collab").length,
-    draft: mapEntries.filter((entry) => entry.status === "draft").length,
+    public: mapEntries.filter((entry) => entry.status === "published" || entry.status === "collab").length,
+    private: mapEntries.filter((entry) => entry.status === "draft" || entry.status === "private").length,
   }), [mapEntries])
 
   const orderedEntries = useMemo(() => [...mapEntries].sort(sortMapEntries), [mapEntries])
@@ -304,8 +304,8 @@ export function MapsListScreen({
     const normalized = debouncedQuery.trim().toLowerCase()
     return mapEntries
       .filter((entry) => {
-        if (filter === "published" && !(entry.status === "published" || entry.status === "collab")) return false
-        if (filter === "draft" && entry.status !== "draft") return false
+        if (filter === "public" && !(entry.status === "published" || entry.status === "collab")) return false
+        if (filter === "private" && !(entry.status === "draft" || entry.status === "private")) return false
         return normalized ? entry.searchable.includes(normalized) : true
       })
       .sort(sortMapEntries)

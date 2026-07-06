@@ -1,4 +1,4 @@
-import { Compass, LogIn, Map, MapPin, User } from "lucide-react"
+import { Compass, LogIn, Map, MapPin } from "lucide-react"
 
 /**
  * BottomNav v2 — 웹용 하단 내비.
@@ -17,7 +17,6 @@ export function BottomNavV2({ tab, onTabChange, authed = false }) {
       { id: "explore", label: "탐색", Icon: Compass },
       { id: "maps", label: "내 지도", Icon: Map },
       { id: "places", label: "내 장소", Icon: MapPin },
-      { id: "profile", label: "프로필", Icon: User },
     ]
     : [
       { id: "explore", label: "탐색", Icon: Compass },
