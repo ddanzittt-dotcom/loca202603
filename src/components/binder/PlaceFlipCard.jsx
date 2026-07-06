@@ -105,9 +105,11 @@ export function PlaceFlipCard({
   const [flipped, setFlipped] = useState(false)
   const [recFormOpen, setRecFormOpen] = useState(false)
   const [recText, setRecText] = useState("")
+  const [recPhoto, setRecPhoto] = useState(null) // { file, preview }
   const [saving, setSaving] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
   const fileInputRef = useRef(null)
+  const recFileInputRef = useRef(null)
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
@@ -153,12 +155,32 @@ export function PlaceFlipCard({
     }
   }
 
+  const pickRecPhoto = (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+    if (recPhoto?.preview) URL.revokeObjectURL(recPhoto.preview)
+    setRecPhoto({ file, preview: URL.createObjectURL(file) })
+  }
+
+  const clearRecPhoto = () => {
+    if (recPhoto?.preview) URL.revokeObjectURL(recPhoto.preview)
+    setRecPhoto(null)
+  }
+
+  const closeRecForm = () => {
+    clearRecPhoto()
+    setRecText("")
+    setRecFormOpen(false)
+  }
+
   const handleSaveRecord = async () => {
     const text = recText.trim()
-    if (!text) { showToast?.("메모를 적어주세요."); return }
+    if (!text && !recPhoto) { showToast?.("메모나 사진을 남겨주세요."); return }
     setSaving(true)
     try {
-      await onAddRecord?.(text)
+      await onAddRecord?.(text, recPhoto?.file || null)
+      clearRecPhoto()
       setRecText("")
       setRecFormOpen(false)
       showToast?.("기록을 남겼어요")
@@ -245,12 +267,23 @@ export function PlaceFlipCard({
                       rows={5}
                       autoFocus
                     />
+                    {recPhoto ? (
+                      <div className="bd-recform__preview">
+                        <img src={recPhoto.preview} alt="첨부 사진 미리보기" />
+                        <button type="button" onClick={clearRecPhoto} aria-label="사진 제거">✕</button>
+                      </div>
+                    ) : null}
                     <div className="bd-recform__row">
-                      <button type="button" className="bd-mini" onClick={() => { setRecFormOpen(false); setRecText("") }}>취소</button>
+                      <button type="button" className="bd-recform__attach" onClick={() => recFileInputRef.current?.click()}>
+                        📷 {recPhoto ? "사진 변경" : "사진 추가"}
+                      </button>
+                      <span className="bd-recform__spacer" />
+                      <button type="button" className="bd-mini" onClick={closeRecForm}>취소</button>
                       <button type="button" className="bd-mini bd-mini--red" disabled={saving} onClick={handleSaveRecord}>
                         {saving ? "저장 중…" : "저장"}
                       </button>
                     </div>
+                    <input ref={recFileInputRef} type="file" accept="image/*" hidden onChange={pickRecPhoto} />
                   </div>
                 ) : null}
 

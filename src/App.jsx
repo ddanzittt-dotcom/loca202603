@@ -1992,12 +1992,27 @@ export default function App() {
           mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
           onClose={() => setPlaceCardFeature(null)}
           showToast={showToast}
-          onAddRecord={async (text) => {
+          onAddRecord={async (text, photoFile) => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
-            if (cloudMode) {
-              await addFeatureMemo(featureId, text)
+            let photoUrl = null
+            if (photoFile) {
+              if (cloudMode) {
+                const meta = await uploadMediaToCloud(createId("photo"), photoFile, "photos").catch(() => null)
+                if (meta?.publicUrl) photoUrl = meta.publicUrl
+              }
+              if (!photoUrl) {
+                photoUrl = await new Promise((resolve, reject) => {
+                  const reader = new FileReader()
+                  reader.onload = () => resolve(reader.result)
+                  reader.onerror = reject
+                  reader.readAsDataURL(photoFile)
+                })
+              }
             }
-            const newMemo = { id: createId("memo"), text, createdAt: new Date().toISOString(), photos: [] }
+            if (cloudMode) {
+              await addFeatureMemo(featureId, text, "", photoUrl ? [photoUrl] : [])
+            }
+            const newMemo = { id: createId("memo"), text, createdAt: new Date().toISOString(), photos: photoUrl ? [photoUrl] : [] }
             const attach = (feature) => ({ ...feature, memos: [...(feature.memos || []), newMemo] })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? attach(feature) : feature)))
             setPlaceCardFeature((current) => (current ? attach(current) : current))
