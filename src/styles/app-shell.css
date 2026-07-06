@@ -4901,3 +4901,46 @@
   .nfb-rays, .nfb-spark { animation: none; }
   .nfb-card { animation: none; }
 }
+
+/* 편집기 헤더: 인라인 개명 + 카드 추가 (바인더 톤) */
+.app-shell--soft-social .me-bar__name--editable {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: text;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.app-shell--soft-social .me-bar__name--editable:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.app-shell--soft-social .me-bar__name-input {
+  border: 2px solid #1B1B18;
+  border-radius: 7px;
+  background: #FFFDF4;
+  font-family: Pretendard, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1B1B18;
+  padding: 4px 8px;
+  max-width: 220px;
+}
+.app-shell--soft-social .me-bar__addcards {
+  border: 2px solid #1B1B18;
+  border-radius: 8px;
+  background: #F5C41B;
+  color: #1B1B18;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 11px;
+  box-shadow: 2px 2px 0 #1B1B18;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.app-shell--soft-social .me-bar__addcards:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1B1B18;
+}

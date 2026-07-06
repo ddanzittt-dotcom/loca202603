@@ -12,8 +12,10 @@ export function MapBuilderSheet({
   open,
   features = [],
   busy = false,
+  addMode = false,
   onClose,
   onCreate,
+  onAddToMap,
   onStartBlank,
 }) {
   // 열 때마다 부모가 key 로 리마운트하므로 상태는 자연히 초기화된다
@@ -53,11 +55,12 @@ export function MapBuilderSheet({
   }
 
   const count = selected.size
-  const canCreate = count > 0 && title.trim().length > 0 && !busy
+  const canCreate = addMode ? (count > 0 && !busy) : (count > 0 && title.trim().length > 0 && !busy)
 
   const handleCreate = () => {
     if (!canCreate) return
-    onCreate?.(title.trim(), Array.from(selected))
+    if (addMode) onAddToMap?.(Array.from(selected))
+    else onCreate?.(title.trim(), Array.from(selected))
   }
 
   return (
@@ -71,7 +74,7 @@ export function MapBuilderSheet({
       >
         <header className="mbld-head">
           <div>
-            <span className="mbld-eyebrow">NEW MAP</span>
+            <span className="mbld-eyebrow">{addMode ? "ADD CARDS" : "NEW MAP"}</span>
             <strong>담을 카드를 골라요</strong>
           </div>
           <button type="button" className="mbld-close" onClick={onClose} aria-label="닫기">
@@ -79,16 +82,18 @@ export function MapBuilderSheet({
           </button>
         </header>
 
-        <label className="mbld-name">
-          <span>지도 이름</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder="예: 성수동 카페 산책"
-            maxLength={40}
-          />
-        </label>
+        {addMode ? null : (
+          <label className="mbld-name">
+            <span>지도 이름</span>
+            <input
+              type="text"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="예: 성수동 카페 산책"
+              maxLength={40}
+            />
+          </label>
+        )}
 
         {cards.length > 0 ? (
           <>
@@ -136,12 +141,18 @@ export function MapBuilderSheet({
             )}
 
             <div className="mbld-actions">
-              <button type="button" className="mbld-ghost" onClick={onStartBlank}>
-                빈 지도로 시작
-              </button>
+              {addMode ? (
+                <button type="button" className="mbld-ghost" onClick={onClose}>취소</button>
+              ) : (
+                <button type="button" className="mbld-ghost" onClick={onStartBlank}>빈 지도로 시작</button>
+              )}
               <button type="button" className="mbld-primary" disabled={!canCreate} onClick={handleCreate}>
                 <MapPlus size={15} strokeWidth={2.2} aria-hidden="true" />
-                {busy ? "만드는 중…" : count > 0 ? `${count}곳으로 지도 만들기` : "카드를 골라주세요"}
+                {busy
+                  ? (addMode ? "담는 중…" : "만드는 중…")
+                  : count > 0
+                    ? (addMode ? `${count}곳 지도에 추가` : `${count}곳으로 지도 만들기`)
+                    : "카드를 골라주세요"}
               </button>
             </div>
           </>

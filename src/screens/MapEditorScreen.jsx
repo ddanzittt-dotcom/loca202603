@@ -133,6 +133,8 @@ export function MapEditorScreen({
   onCompleteRoute,
   onCompleteArea,
   onToggleLabels,
+  onRenameMap,
+  onAddCards,
   onOpenCollaborators,
   onOpenFeatureEdit,
   onCloseFeatureSummary,
@@ -175,6 +177,14 @@ export function MapEditorScreen({
   const stripTouchedRef = useRef(false)
   const [stripOpen, setStripOpen] = useState(() => !(communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD))
   const [shareOpen, setShareOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [nameDraft, setNameDraft] = useState(map.title)
+  const commitRename = () => {
+    const next = nameDraft.trim()
+    setRenaming(false)
+    if (next && next !== map.title) onRenameMap?.(next)
+    else setNameDraft(map.title)
+  }
   const [summaryRecordOpen, setSummaryRecordOpen] = useState(false)
   const [summaryRecordDraft, setSummaryRecordDraft] = useState(null)
   const [mapCenter, setMapCenter] = useState(() => focusPoint || myLocation || DEFAULT_MAP_CENTER)
@@ -531,7 +541,34 @@ export function MapEditorScreen({
                 <ArrowLeft size={16} />
               </button>
               <div className="me-bar__title-stack">
-                <span className="me-bar__name">{map.title}</span>
+                {onRenameMap && !readOnly ? (
+                  renaming ? (
+                    <input
+                      className="me-bar__name-input"
+                      value={nameDraft}
+                      autoFocus
+                      maxLength={40}
+                      onChange={(event) => setNameDraft(event.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") commitRename()
+                        if (event.key === "Escape") { setNameDraft(map.title); setRenaming(false) }
+                      }}
+                      aria-label="지도 이름"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      className="me-bar__name me-bar__name--editable"
+                      onClick={() => { setNameDraft(map.title); setRenaming(true) }}
+                      title="이름 바꾸기"
+                    >
+                      {map.title}
+                    </button>
+                  )
+                ) : (
+                  <span className="me-bar__name">{map.title}</span>
+                )}
                 {!hideCount ? (
                   <div className="me-bar__counters" aria-label="지도 기록 수">
                     <span className="me-bar__counter me-bar__counter--pin">
@@ -556,6 +593,16 @@ export function MapEditorScreen({
             <div className="me-bar__right">
               {!communityMode ? (
                 <>
+                  {onAddCards && !readOnly ? (
+                    <button
+                      className="me-bar__addcards"
+                      type="button"
+                      onClick={onAddCards}
+                      aria-label="카드 추가"
+                    >
+                      + 카드 추가
+                    </button>
+                  ) : null}
                   <button
                     className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
                     type="button"

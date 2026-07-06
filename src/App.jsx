@@ -36,7 +36,7 @@ import { logEvent } from "./lib/analytics"
 import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createMap as createMapRecord, placeFeatureInMap } from "./lib/mapService.write"
+import { createMap as createMapRecord, placeFeatureInMap, updateMap as updateMapRecord } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
@@ -984,6 +984,33 @@ export default function App() {
     }
   }, [cloudMode, setMaps, setFeatures, openMapEditor, showToast])
 
+  // 편집기 [+ 카드 추가] — 고른 카드를 기존 지도에 담는다
+  const handleBuilderAddToMap = useCallback(async (featureIds) => {
+    const mapId = builderAddMapId
+    const ids = Array.isArray(featureIds) ? featureIds.filter(Boolean) : []
+    if (!mapId || ids.length === 0) return
+    setMapBuilderBusy(true)
+    try {
+      if (cloudMode) {
+        for (let index = 0; index < ids.length; index += 1) {
+          await placeFeatureInMap(mapId, ids[index], index)
+        }
+      }
+      const idSet = new Set(ids)
+      setFeatures((current) => current.map((feature) => (
+        idSet.has(feature.id) ? { ...feature, mapId } : feature
+      )))
+      setMapBuilderOpen(false)
+      setBuilderAddMapId(null)
+      showToast(`${ids.length}곳을 지도에 담았어요`)
+    } catch (error) {
+      console.error("Failed to add cards to map", error)
+      showToast("카드를 담지 못했어요.")
+    } finally {
+      setMapBuilderBusy(false)
+    }
+  }, [builderAddMapId, cloudMode, setFeatures, showToast])
+
   // --- Social / Profile ---
 
   const {
@@ -1131,6 +1158,8 @@ export default function App() {
 
   // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
   const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
+  // 편집기 [+ 카드 추가] — 값이 있으면 빌더가 '기존 지도에 추가' 모드
+  const [builderAddMapId, setBuilderAddMapId] = useState(null)
   const [mapBuilderBusy, setMapBuilderBusy] = useState(false)
 
   // 빌더 후보: 아직 어떤 지도에도 안 담긴 채집 카드(mapless)
@@ -1842,6 +1871,15 @@ export default function App() {
               setEditorMode("browse")
             }}
             onToggleLabels={() => setShowMapLabels((current) => !current)}
+            onRenameMap={async (nextTitle) => {
+              const targetId = activeMap?.id
+              if (!targetId) return
+              setMaps((current) => current.map((mapItem) => (mapItem.id === targetId ? { ...mapItem, title: nextTitle } : mapItem)))
+              if (cloudMode && activeMapSource === "local") {
+                try { await updateMapRecord(targetId, { title: nextTitle }) } catch { showToast("이름 변경 저장에 실패했어요") }
+              }
+            }}
+            onAddCards={() => { setBuilderAddMapId(activeMap?.id || null); setMapBuilderOpen(true) }}
             onOpenCollaborators={activeMapSource === "local" && cloudMode && activeMap
               ? () => openCollaboratorsForMap(activeMap.id)
               : undefined}
@@ -2092,14 +2130,17 @@ export default function App() {
       />
 
       <MapBuilderSheet
-        key={mapBuilderOpen ? "builder-open" : "builder-closed"}
+        key={mapBuilderOpen ? `builder-open-${builderAddMapId || "new"}` : "builder-closed"}
         open={mapBuilderOpen}
         features={maplessFeatures}
         busy={mapBuilderBusy}
-        onClose={() => setMapBuilderOpen(false)}
+        addMode={Boolean(builderAddMapId)}
+        onClose={() => { setMapBuilderOpen(false); setBuilderAddMapId(null) }}
         onCreate={handleBuilderCreate}
+        onAddToMap={handleBuilderAddToMap}
         onStartBlank={() => {
           setMapBuilderOpen(false)
+          setBuilderAddMapId(null)
           openCreateMapSheet()
         }}
       />
