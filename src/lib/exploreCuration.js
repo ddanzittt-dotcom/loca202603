@@ -152,21 +152,21 @@ export function eventToPrefill(event) {
   }
 }
 
-// 공간 kind(api/places.js) → 도감 카테고리 id (placeCategories.js)
+// 공간 kind(api/places.js TOUR_QUERIES) → 도감 카테고리 id (placeCategories.js)
 const PLACE_KIND_TO_CATEGORY = {
-  cafe: "cafe",
-  culture: "culture",
-  attraction: "nature",
-  leisure: "etc",
-  shopping: "shop",
+  nature: "nature",
+  history: "culture",
+  park: "nature",
+  exhibit: "culture",
 }
 
-// 공간 필터 칩 (kind 기준)
+// 공간 필터 칩 (kind 기준) — 자연풍경/역사명소/전시관/공원 큐레이션
 export const PLACE_KIND_FILTERS = [
   { id: "all", label: "전체" },
-  { id: "cafe", label: "카페" },
-  { id: "culture", label: "문화" },
-  { id: "attraction", label: "명소" },
+  { id: "nature", label: "자연" },
+  { id: "history", label: "역사" },
+  { id: "exhibit", label: "전시" },
+  { id: "park", label: "공원" },
 ]
 
 export function placeToPrefill(place) {

@@ -4815,7 +4815,7 @@
 }
 
 .xc-card__art--place {
-  aspect-ratio: 4 / 2.1;
+  aspect-ratio: 4 / 2.6; /* 사진 보강 후 행사 카드와 동일 비율 */
 }
 
 .xc-card__dday--place {

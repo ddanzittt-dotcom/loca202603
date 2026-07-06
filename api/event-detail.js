@@ -93,6 +93,14 @@ export default async function handler(req, res) {
       detail.heritage = intro.heritage1 ? "Y" : ""
     }
 
+    // 문화시설 (contentTypeId=14) 전용 필드 — 전시관/박물관/미술관
+    if (contentTypeId === 14) {
+      detail.useTime = intro.usetimeculture || ""
+      detail.restDate = intro.restdateculture || ""
+      detail.useFee = intro.usefee || ""
+      detail.parking = intro.parkingculture || ""
+    }
+
     return res.status(200).json({ detail })
   } catch (error) {
     return res.status(502).json({ detail: null, error: error.message || "Failed to fetch detail" })

@@ -1,39 +1,31 @@
-// Record-worthy place recommendations for Explore.
-// Sources: Kakao Local (optional) + KTO TourAPI.
-// 2026-07 탐색 큐레이션 개편으로 복원 — isAppRequest 가드 추가 (오픈 프록시 차단)
+// 탐색 "기록할만한 공간" 큐레이션 — KTO TourAPI 중심.
+// 자연풍경 / 역사 명소 / 전시·문화 / 공원·휴양 4분류를 관광공사 카테고리 코드로 정밀 조회.
+// 공식 사진(firstimage) 우선 가점, 사진 없는 곳만 카카오 이미지 검색으로 보강.
+// 2026-07 탐색 큐레이션 개편 — isAppRequest 가드 (오픈 프록시 차단)
 
 import { isAppRequest } from "./_lib/appRequest.js"
 
 const TOUR_BASE_URL = "https://apis.data.go.kr/B551011/KorService2"
-const KAKAO_CATEGORY_URL = "https://dapi.kakao.com/v2/local/search/category.json"
+const KAKAO_IMAGE_URL = "https://dapi.kakao.com/v2/search/image"
+const IMAGE_ENRICH_LIMIT = 36 // 사진 없는 장소에 카카오 이미지 검색 보강 상한 (쿼터 보호)
 
-const KAKAO_CATEGORIES = [
-  { code: "AT4", kind: "attraction", group: "place", label: "관광명소" },
-  { code: "CT1", kind: "culture", group: "place", label: "문화시설" },
-  { code: "CE7", kind: "cafe", group: "place", label: "카페" },
+// 관광공사 분류코드 — cat1=A01 자연 / cat2=A0201 역사관광지 / A0202 휴양(공원·수목원·휴양림) / A0206 문화시설(박물관·미술관·전시관)
+const TOUR_QUERIES = [
+  { kind: "nature", label: "자연", contentTypeId: 12, cat1: "A01" },
+  { kind: "history", label: "역사", contentTypeId: 12, cat2: "A0201" },
+  { kind: "park", label: "공원", contentTypeId: 12, cat2: "A0202" },
+  { kind: "exhibit", label: "전시", contentTypeId: 14, cat2: "A0206" },
 ]
 
-const TOUR_TYPES = [
-  { id: 12, kind: "attraction", group: "place", label: "관광명소" },
-  { id: 14, kind: "culture", group: "place", label: "문화시설" },
-  { id: 28, kind: "leisure", group: "place", label: "레포츠" },
-  { id: 38, kind: "shopping", group: "place", label: "쇼핑" },
-]
-
-const PLACE_LIMIT = 72
-const KIND_CAP = 18 // 종류별 상한 — 한 종류(예: 카페)가 목록을 독점하지 않게
-const KAKAO_PAGE_SIZE = 15
-const KAKAO_PAGE_COUNT = 3
-const TOUR_ROWS_PER_PAGE = 80
-const TOUR_PAGE_COUNT = 3
+const PLACE_LIMIT = 60
+const KIND_CAP = 15 // 종류별 상한 — 한 종류가 목록을 독점하지 않게
+const TOUR_ROWS_PER_PAGE = 60
+const TOUR_PAGE_COUNT = 2
 const DEFAULT_LOCATION_RADIUS_M = 20000
 const MIN_LOCATION_RADIUS_M = 1000
 const MAX_LOCATION_RADIUS_M = 20000
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 }
-
-// "기록할만한 공간" 큐레이션에서 제외할 대형 프랜차이즈 — 어디에나 있는 곳은 추천 가치가 낮다
-const FRANCHISE_PATTERN = /(스타벅스|투썸|이디야|메가\s?(MGC)?\s?커피|컴포즈\s?커피|빽다방|할리스|커피빈|파스쿠찌|엔제리너스|폴바셋|공차|배스킨라빈스|던킨|크리스피크림|파리바게뜨|뚜레쥬르|성심당\s?DX|CGV|롯데시네마|메가박스|다이소|올리브영|스타필드|이마트|홈플러스|롯데마트)/i
 
 function toNumber(value) {
   const next = Number(value)
@@ -58,46 +50,14 @@ function sourceSearchUrl(title) {
   return `https://korean.visitkorea.or.kr/search/search_list.do?keyword=${encodeURIComponent(title || "")}`
 }
 
-function compactCategoryName(name = "") {
-  const parts = String(name).split(">").map((part) => part.trim()).filter(Boolean)
-  return parts.at(-1) || parts[0] || ""
-}
-
 function scoreItem(item) {
-  const distanceScore = Number.isFinite(item.distKm) ? Math.max(0, 45 - item.distKm * 4) : 16
-  const imageScore = item.image ? 8 : 0
-  const sourceScore = item.source === "kakao" ? 8 : 4
-  // 카카오 정확도(인기) 순위 보너스 — 상위 결과일수록 "기록할만한" 곳
-  const rankScore = Number.isFinite(item.accuracyRank) ? Math.max(0, 24 - item.accuracyRank * 1.5) : 0
-  return Math.round(30 + distanceScore + imageScore + sourceScore + rankScore)
+  const distanceScore = Number.isFinite(item.distKm) ? Math.max(0, 40 - item.distKm * 3) : 14
+  // 공식 사진이 있는 곳이 "저장하고 싶은" 카드 — 크게 가점
+  const imageScore = item.image ? 30 : 0
+  return Math.round(30 + distanceScore + imageScore)
 }
 
-function normalizeKakaoPlace(raw, category, location, accuracyRank = null) {
-  const lat = toNumber(raw.y)
-  const lng = toNumber(raw.x)
-  const distKm = raw.distance ? Math.round((Number(raw.distance) / 1000) * 10) / 10 : distanceKmFrom(location, { lat, lng })
-  const item = {
-    id: `kakao-${raw.id}`,
-    source: "kakao",
-    sourceLabel: "Kakao",
-    providerId: raw.id || "",
-    kind: category.kind,
-    group: category.group,
-    category: compactCategoryName(raw.category_name) || category.label,
-    title: raw.place_name || "",
-    addr: raw.road_address_name || raw.address_name || "",
-    lat,
-    lng,
-    phone: raw.phone || "",
-    image: "",
-    sourceUrl: raw.place_url || "",
-    distKm,
-    accuracyRank,
-  }
-  return { ...item, score: scoreItem(item) }
-}
-
-function normalizeTourPlace(raw, type, location) {
+function normalizeTourPlace(raw, query, location) {
   const lat = toNumber(raw.mapy)
   const lng = toNumber(raw.mapx)
   const tourDistKm = raw.dist ? Math.round((Number(raw.dist) / 1000) * 10) / 10 : null
@@ -106,10 +66,10 @@ function normalizeTourPlace(raw, type, location) {
     source: "tourapi",
     sourceLabel: "TourAPI",
     providerId: raw.contentid || "",
-    contentTypeId: Number(raw.contenttypeid || type.id),
-    kind: type.kind,
-    group: type.group,
-    category: type.label,
+    contentTypeId: Number(raw.contenttypeid || query.contentTypeId),
+    kind: query.kind,
+    group: "place",
+    category: query.label,
     title: raw.title || "",
     addr: raw.addr1 || raw.addr2 || "",
     lat,
@@ -133,14 +93,39 @@ function dedupePlaces(items) {
   return [...byKey.values()]
 }
 
-function isFoodPlace(item) {
-  return item?.kind === "food"
-    || item?.contentTypeId === 39
-    || String(item?.category || "").includes("음식점")
+function kakaoRestKey() {
+  return (process.env.KAKAO_REST_API_KEY || process.env.KAKAO_REST_KEY || "").trim()
 }
 
-function isFranchisePlace(item) {
-  return FRANCHISE_PATTERN.test(String(item?.title || ""))
+// 주소에서 동네 단어(구/군 단위) 추출 — 이미지 검색 정확도용
+function districtWord(addr) {
+  const parts = String(addr || "").split(" ").filter(Boolean)
+  return parts[1] || parts[0] || ""
+}
+
+// 사진 없는 장소를 카카오 이미지 검색("이름 + 동네")으로 보강.
+// 같은 KAKAO_REST_KEY 사용 — 실패해도 조용히 넘어가고 카드에는 폴백 아이콘이 뜬다.
+async function enrichImages(items) {
+  const apiKey = kakaoRestKey()
+  if (!apiKey) return items
+
+  const targets = items.filter((item) => !item.image).slice(0, IMAGE_ENRICH_LIMIT)
+  await Promise.allSettled(targets.map(async (item) => {
+    const query = `${item.title} ${districtWord(item.addr)}`.trim()
+    const params = new URLSearchParams({ query, size: "3", sort: "accuracy" })
+    const resp = await fetch(`${KAKAO_IMAGE_URL}?${params.toString()}`, {
+      headers: { Authorization: `KakaoAK ${apiKey}` },
+    })
+    if (!resp.ok) return
+    const data = await resp.json().catch(() => ({}))
+    const doc = (Array.isArray(data.documents) ? data.documents : []).find((d) => d.thumbnail_url)
+    if (doc) {
+      // http 썸네일은 https로 승격 (혼합 콘텐츠 차단 회피)
+      item.image = String(doc.thumbnail_url).replace(/^http:/, "https:")
+      item.imageSource = "kakao-image"
+    }
+  }))
+  return items
 }
 
 // 점수순을 유지하면서 종류(kind)별 개수를 상한으로 잘라 균형을 맞춘다
@@ -154,34 +139,6 @@ function capPerKind(items, cap) {
     result.push(item)
   }
   return result
-}
-
-async function fetchKakaoPlaces({ location, radius }) {
-  const apiKey = (process.env.KAKAO_REST_API_KEY || process.env.KAKAO_REST_KEY || "").trim()
-  if (!apiKey || !location) return []
-
-  const pages = Array.from({ length: KAKAO_PAGE_COUNT }, (_, index) => index + 1)
-  const requests = KAKAO_CATEGORIES.flatMap((category) => pages.map(async (page) => {
-    const params = new URLSearchParams({
-      category_group_code: category.code,
-      x: String(location.lng),
-      y: String(location.lat),
-      radius: String(radius),
-      sort: "accuracy", // 카카오 정확도(인기/품질) 랭킹 — 거리순보다 "기록할만한" 곳이 위로
-      size: String(KAKAO_PAGE_SIZE),
-      page: String(page),
-    })
-    const resp = await fetch(`${KAKAO_CATEGORY_URL}?${params.toString()}`, {
-      headers: { Authorization: `KakaoAK ${apiKey}` },
-    })
-    if (!resp.ok) return []
-    const data = await resp.json().catch(() => ({}))
-    return (Array.isArray(data.documents) ? data.documents : [])
-      .map((item, index) => normalizeKakaoPlace(item, category, location, (page - 1) * KAKAO_PAGE_SIZE + index))
-  }))
-
-  const settled = await Promise.allSettled(requests)
-  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
 }
 
 async function fetchTour(endpoint, params) {
@@ -216,27 +173,35 @@ async function fetchTour(endpoint, params) {
 
 async function fetchTourPlaces({ location, radius }) {
   const pages = Array.from({ length: TOUR_PAGE_COUNT }, (_, index) => index + 1)
-  const requests = TOUR_TYPES.flatMap((type) => pages.map(async (pageNo) => {
+  const requests = TOUR_QUERIES.flatMap((query) => pages.map(async (pageNo) => {
+    const catParams = {}
+    if (query.cat1) catParams.cat1 = query.cat1
+    if (query.cat2) {
+      catParams.cat1 = query.cat2.slice(0, 3)
+      catParams.cat2 = query.cat2
+    }
     const params = location
       ? {
         mapX: String(location.lng),
         mapY: String(location.lat),
         radius: String(radius),
         arrange: "E",
-        contentTypeId: String(type.id),
+        contentTypeId: String(query.contentTypeId),
         numOfRows: String(TOUR_ROWS_PER_PAGE),
         pageNo: String(pageNo),
+        ...catParams,
       }
       : {
         areaCode: "1",
         arrange: "O",
-        contentTypeId: String(type.id),
+        contentTypeId: String(query.contentTypeId),
         numOfRows: String(TOUR_ROWS_PER_PAGE),
         pageNo: String(pageNo),
+        ...catParams,
       }
     const endpoint = location ? "locationBasedList2" : "areaBasedList2"
     const rows = await fetchTour(endpoint, params)
-    return rows.map((item) => normalizeTourPlace(item, type, location || SEOUL_CENTER))
+    return rows.map((item) => normalizeTourPlace(item, query, location || SEOUL_CENTER))
   }))
 
   const settled = await Promise.allSettled(requests)
@@ -258,24 +223,16 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600")
 
   try {
-    const [kakaoItems, tourItems] = await Promise.all([
-      fetchKakaoPlaces({ location, radius }),
-      fetchTourPlaces({ location, radius }),
-    ])
-    const ranked = dedupePlaces([...kakaoItems, ...tourItems])
+    const tourItems = await fetchTourPlaces({ location, radius })
+    const ranked = dedupePlaces(tourItems)
       .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
-      .filter((item) => !isFoodPlace(item))
-      .filter((item) => !isFranchisePlace(item))
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-    const items = capPerKind(ranked, KIND_CAP).slice(0, PLACE_LIMIT)
+    const items = await enrichImages(capPerKind(ranked, KIND_CAP).slice(0, PLACE_LIMIT))
 
     return res.status(200).json({
       items,
       radiusKm: Math.round(radius / 1000),
-      sources: {
-        kakao: kakaoItems.length,
-        tourapi: tourItems.length,
-      },
+      sources: { tourapi: tourItems.length },
     })
   } catch (error) {
     return res.status(502).json({ items: [], error: `${error.name}: ${error.message}` })
