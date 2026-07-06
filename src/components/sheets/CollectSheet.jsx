@@ -10,7 +10,7 @@ import { PLACE_CATEGORIES, getDefaultPixelIdForCategory } from "../../lib/placeC
 // 위치를 고르면 카카오 로컬(place-match)로 주변 등록 상호를 조회해서
 //   후보 있음 → SPOT (등록된 곳, 이름·카테고리 자동)
 //   후보 없음 → NEW FIND (내가 처음 발견한 곳)
-// 저장된 기록은 지도에 안 묶인 채 도감에 쌓인다.
+// 저장된 기록은 지도에 안 묶인 채 바인더(내 장소)에 쌓인다.
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.978, zoom: 13 }
 

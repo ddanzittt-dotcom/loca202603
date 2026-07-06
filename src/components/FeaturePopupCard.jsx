@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Bookmark, Check, Edit3, FileText, Flag, MapPin, Mic, Plus, Route, Shapes, Trash2, X } from "lucide-react"
+import { Bookmark, Check, Edit3, FileText, Flag, MapPin, MapPinOff, Mic, Plus, Route, Shapes, Trash2, X } from "lucide-react"
 import { FeatureEmoji, resolveFeatureEmoji } from "./FeatureEmoji"
 import { PhotoViewer } from "./visuals/PhotoViewer"
 import { useResolvedMediaUrl } from "../hooks/useResolvedMediaUrl"
@@ -296,6 +296,7 @@ export function FeaturePopupCard({
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
+  onRemoveFromMap,
   onVoiceClick,
   currentPlayingVoiceId,
   busyImport = false,
@@ -441,11 +442,18 @@ export function FeaturePopupCard({
         )}
       </div>
 
-      {canWriteRecord ? (
+      {(canWriteRecord || typeof onRemoveFromMap === "function") ? (
         <footer className="fpc-diary-foot">
-          <button type="button" className="fpc-diary-cta fpc-diary-cta--record" onClick={onAddRecord}>
-            <Plus size={15} /> 오늘 기록
-          </button>
+          {canWriteRecord ? (
+            <button type="button" className="fpc-diary-cta fpc-diary-cta--record" onClick={onAddRecord}>
+              <Plus size={15} /> 오늘 기록
+            </button>
+          ) : null}
+          {typeof onRemoveFromMap === "function" ? (
+            <button type="button" className="fpc-diary-cta fpc-diary-cta--remove" onClick={onRemoveFromMap}>
+              <MapPinOff size={15} /> 지도에서 빼기
+            </button>
+          ) : null}
         </footer>
       ) : null}
     </article>

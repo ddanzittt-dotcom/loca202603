@@ -6,7 +6,7 @@ export function IntroScreen({ onEnter, onLogin }) {
       <div className="loca-intro__card">
         <div className="loca-intro__band">
           <span>No.000</span>
-          <i>LOCAL DEX</i>
+          <i>LOCAL BINDER</i>
         </div>
 
         <div className="loca-intro__body">

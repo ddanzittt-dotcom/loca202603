@@ -323,6 +323,38 @@ export async function placeFeatureInMap(mapId, featureId, sortOrder = 0) {
   await touchMapRecord(mapId)
 }
 
+// 카드를 지도에서만 뺀다 — Place(카드)는 바인더에 남는다 (지도에서 빼기).
+// 배치(map_feature_placements) 행 삭제 + 이 지도가 legacy map_id 였으면 null 로 되돌려
+// 지도 조회에서 사라지게 한다. 다른 지도 배치는 그대로 유지된다.
+export async function removeFeatureFromMap(mapId, featureId) {
+  await requireUser()
+  const supabase = requireSupabase()
+  if (!mapId || !featureId) return
+
+  try {
+    const { error } = await supabase
+      .from("map_feature_placements")
+      .delete()
+      .eq("map_id", mapId)
+      .eq("feature_id", featureId)
+    if (error) console.warn("placement delete skipped:", error.message)
+  } catch {
+    // 배치 테이블(050) 미적용 환경 — 조용히 건너뜀
+  }
+
+  try {
+    await supabase
+      .from("map_features")
+      .update({ map_id: null })
+      .eq("id", featureId)
+      .eq("map_id", mapId)
+  } catch {
+    // ignore — legacy map_id 보정 실패는 무시
+  }
+
+  await touchMapRecord(mapId)
+}
+
 export async function updateFeature(featureId, updates) {
   await requireUser()
   const supabase = requireSupabase()

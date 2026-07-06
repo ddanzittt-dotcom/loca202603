@@ -1606,8 +1606,19 @@
   cursor: pointer;
 }
 .fpc-diary-cta--record {
-  width: 100%;
   background: var(--accent, #FF4D1A);
   border-color: var(--accent, #FF4D1A);
   color: #fff;
+}
+
+.fpc-diary-cta--remove {
+  flex: 0 0 auto;
+  padding: 0 14px;
+  background: var(--card, #fff);
+  border-color: rgba(30, 25, 20, 0.12);
+  color: #8A8574;
+}
+.fpc-diary-cta--remove:hover {
+  color: #C0442B;
+  border-color: rgba(192, 68, 43, 0.4);
 }

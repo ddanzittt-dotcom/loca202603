@@ -116,6 +116,7 @@ export function MapEditorScreen({
   draftPoints,
   focusPoint,
   fitTrigger,
+  onRemoveFeatureFromMap,
   readOnly = false,
   hideCount = false,
   communityMode = false,
@@ -823,6 +824,14 @@ export function MapEditorScreen({
               onEdit={
                 canEditSummary
                   ? () => onOpenFeatureEdit?.(selectedFeatureSummary.id)
+                  : undefined
+              }
+              onRemoveFromMap={
+                typeof onRemoveFeatureFromMap === "function"
+                  && isSummaryAuthor
+                  && !communityMode
+                  && selectedFeatureSummary.type === "pin"
+                  ? () => onRemoveFeatureFromMap(selectedFeatureSummary.id)
                   : undefined
               }
               onRequestEdit={canRequestSummaryEdit ? handleSummaryRequestEdit : undefined}

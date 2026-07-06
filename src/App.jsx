@@ -36,7 +36,7 @@ import { logEvent } from "./lib/analytics"
 import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createMap as createMapRecord, placeFeatureInMap, updateMap as updateMapRecord } from "./lib/mapService.write"
+import { createMap as createMapRecord, placeFeatureInMap, removeFeatureFromMap, updateMap as updateMapRecord } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
@@ -206,18 +206,18 @@ function WebAuthLayout({ children }) {
     <section className="screen screen--scroll web-auth-screen">
       <div className="web-auth-workspace">
         <aside className="web-auth-workspace__intro loca-authintro" aria-label="LOCA 소개">
-          <span className="loca-authintro__eyebrow">LOCAL DEX · No.000</span>
+          <span className="loca-authintro__eyebrow">LOCAL BINDER · No.000</span>
           <h1 className="loca-authintro__logo" aria-label="LOCA">LOCA</h1>
           <p className="loca-authintro__tagline">내 동네를 기록하는 지도</p>
-          <p className="loca-authintro__desc">가 본 곳, 가고 싶은 곳을 핀으로 채집해 나만의 동네 도감을 만들어요.</p>
+          <p className="loca-authintro__desc">가 본 곳, 가고 싶은 곳을 카드로 모아 나만의 동네 지도를 만들어요.</p>
           <ul className="loca-authintro__feats">
             <li>
               <span className="loca-authintro__ic"><PenLine size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div><strong>채집</strong><em>가 본 곳을 핀으로 기록</em></div>
+              <div><strong>등록</strong><em>가 본 곳을 카드 한 장으로</em></div>
             </li>
             <li>
               <span className="loca-authintro__ic"><MapIcon size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div><strong>도감</strong><em>모은 장소로 나만의 지도</em></div>
+              <div><strong>바인더</strong><em>모은 카드로 나만의 지도</em></div>
             </li>
             <li>
               <span className="loca-authintro__ic"><MapPin size={16} strokeWidth={2.2} aria-hidden="true" /></span>
@@ -1013,6 +1013,27 @@ export default function App() {
       setMapBuilderBusy(false)
     }
   }, [builderAddMapId, cloudMode, setFeatures, showToast])
+
+  // 카드를 지도에서만 빼기 — Place(카드)는 바인더에 남는다 (편집기 선택 팝오버).
+  const handleRemoveFeatureFromMap = useCallback(async (featureId) => {
+    const mapId = activeMap?.id
+    if (!mapId || !featureId) return
+    if (!window.confirm("이 카드를 지도에서 뺄까요?\n카드는 내 장소(바인더)에 그대로 남아요.")) return
+    try {
+      if (cloudMode && activeMapSource === "local") {
+        await removeFeatureFromMap(mapId, featureId)
+      }
+      setFeatures((current) => current.map((feature) => (
+        feature.id === featureId && feature.mapId === mapId ? { ...feature, mapId: null } : feature
+      )))
+      setSelectedFeatureId(null)
+      setSelectedFeatureSummaryId(null)
+      showToast("지도에서 뺐어요 · 카드는 바인더에 남아있어요")
+    } catch (error) {
+      console.error("Failed to remove feature from map", error)
+      showToast("카드를 빼지 못했어요.")
+    }
+  }, [activeMap?.id, activeMapSource, cloudMode, setFeatures, setSelectedFeatureId, setSelectedFeatureSummaryId, showToast])
 
   // --- Social / Profile ---
 
@@ -1919,6 +1940,7 @@ export default function App() {
               setSelectedFeatureId(null)
               setSelectedFeatureSummaryId(null)
             }}
+            onRemoveFeatureFromMap={!mapEditorReadOnly && activeMapSource === "local" ? handleRemoveFeatureFromMap : undefined}
             showToast={showToast}
             coachmarkStep={coachmarkStep}
             onCoachmarkNext={(nextStep) => {
