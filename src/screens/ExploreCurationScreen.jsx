@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CalendarRange, ChevronRight, Landmark, MapPin, Plus } from "lucide-react"
+import { CalendarRange, ChevronRight, Landmark, MapPin, PawPrint, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
@@ -7,9 +7,11 @@ import {
   eventToPrefill,
   fetchNearbyEvents,
   fetchNearbyPlaces,
+  fetchNearbyWildlife,
   formatDistanceKm,
   formatEventPeriod,
   placeToPrefill,
+  wildlifeToPrefill,
 } from "../lib/exploreCuration"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
@@ -200,6 +202,60 @@ function PlaceSpotCard({ place, onRegister, onOpen, anchorId }) {
   )
 }
 
+function WildlifeCard({ item, onRegister, onOpen, anchorId }) {
+  const distance = formatDistanceKm(item.distKm)
+
+  return (
+    <article
+      id={anchorId}
+      className="xc-card xc-card--tappable xc-card--wild"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen?.(item)}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+          keyEvent.preventDefault()
+          onOpen?.(item)
+        }
+      }}
+    >
+      <div className="xc-card__art xc-card__art--wild" aria-hidden="true">
+        {item.photo ? (
+          <img src={item.photo} alt="" loading="lazy" />
+        ) : (
+          <span className="xc-card__art-emoji">{item.emoji || "✨"}</span>
+        )}
+        <span className="xc-card__dday xc-card__dday--wild">{item.emoji} {item.category}</span>
+      </div>
+      <div className="xc-card__body">
+        <strong className="xc-card__title">{item.title}</strong>
+        <span className="xc-card__meta">
+          {item.place ? <span>{item.place.split(",")[0]}</span> : null}
+        </span>
+      </div>
+      <div className="xc-card__foot">
+        {distance ? (
+          <span className="xc-card__dist">
+            <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
+            {distance}
+          </span>
+        ) : <span />}
+        <button
+          type="button"
+          className="xc-card__register"
+          onClick={(clickEvent) => {
+            clickEvent.stopPropagation()
+            onRegister?.(wildlifeToPrefill(item))
+          }}
+        >
+          <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
+          발견 기록
+        </button>
+      </div>
+    </article>
+  )
+}
+
 export function ExploreCurationScreen({ onRegister, showToast }) {
   const [location, setLocation] = useState(() => readStoredLocation())
   const [locating, setLocating] = useState(false)
@@ -208,6 +264,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
+  const [wildResult, setWildResult] = useState({ key: null, items: [], error: "" })
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
@@ -234,12 +291,27 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return () => { cancelled = true }
   }, [effectiveLocation, requestKey])
 
+  useEffect(() => {
+    let cancelled = false
+    fetchNearbyWildlife(effectiveLocation)
+      .then((items) => { if (!cancelled) setWildResult({ key: requestKey, items, error: "" }) })
+      .catch(() => {
+        if (cancelled) return
+        setWildResult({ key: requestKey, items: [], error: "주변 생물을 불러오지 못했어요." })
+      })
+    return () => { cancelled = true }
+  }, [effectiveLocation, requestKey])
+
   const loading = result.key !== requestKey
   const events = loading ? null : result.items
   const error = loading ? "" : result.error
 
   const placesLoading = placesResult.key !== requestKey
   const placesError = placesLoading ? "" : placesResult.error
+
+  const wildLoading = wildResult.key !== requestKey
+  const wildError = wildLoading ? "" : wildResult.error
+  const visibleWildlife = wildLoading ? [] : wildResult.items
 
   const locateMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -290,8 +362,9 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     })
     const evts = (Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))
     const plcs = (placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))
-    return [...evts, ...plcs].filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
-  }, [events, placesLoading, placesResult.items])
+    const wild = (wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))
+    return [...evts, ...plcs, ...wild].filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+  }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
 
   // 도트 [카드 보기] → 해당 카드로 스크롤 + 펄스 + 상세 시트 오픈
   const handleRadarSelect = useCallback((item) => {
@@ -391,6 +464,40 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           <CardRail>
             {visiblePlaces.slice(0, 24).map((place) => (
               <PlaceSpotCard key={place.id} place={place} anchorId={cardAnchorId("place", place.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
+            ))}
+          </CardRail>
+        )}
+      </section>
+
+      <section className="xc-section" aria-label="요즘 이 동네 생물">
+        <header className="xc-section__head">
+          <strong>요즘 이 동네 생물</strong>
+          <span className="xc-section__hint">
+            <PawPrint size={11} strokeWidth={2.2} aria-hidden="true" /> 근처에서 관측된 동식물
+          </span>
+        </header>
+
+        {wildLoading ? (
+          <div className="xc-grid" aria-hidden="true">
+            {Array.from({ length: 6 }, (_, index) => (
+              <div className="xc-card xc-card--skeleton" key={index} />
+            ))}
+          </div>
+        ) : wildError ? (
+          <div className="xc-empty">
+            <strong>생물 정보를 불러오지 못했어요</strong>
+            <span>{wildError}</span>
+            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
+          </div>
+        ) : visibleWildlife.length === 0 ? (
+          <div className="xc-empty">
+            <strong>주변 관측 기록이 아직 없어요</strong>
+            <span>위치를 바꾸거나 새로고침(↻)을 눌러보세요.</span>
+          </div>
+        ) : (
+          <CardRail>
+            {visibleWildlife.slice(0, 24).map((item) => (
+              <WildlifeCard key={item.id} item={item} anchorId={cardAnchorId("wildlife", item.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "wildlife", data })} />
             ))}
           </CardRail>
         )}

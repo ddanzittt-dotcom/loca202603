@@ -11,8 +11,15 @@ const TERRAIN = ["#D6CFAF", "#C6D6B4", "#F4EEDA", "#AFC9E0"]
 const INK = "#1F1A12"
 const RED = "#E5493A"
 const BLUE = "#2D6FD0"
+const GREEN = "#3E9B57"
 const YELLOW = "#FFD338"
 const PAPER = "#FFFDF4"
+
+function dotColor(type) {
+  if (type === "event") return RED
+  if (type === "wildlife") return GREEN
+  return BLUE
+}
 const WEDGE = 0.72
 const MAX_LAPS = 2
 const MAX_KM = 10
@@ -148,7 +155,7 @@ function createRadar(canvas, { onCount, onDot }) {
           ctx.fillStyle = YELLOW
           ctx.fillRect(px - 3, py - 3, CELL + 6, CELL + 6)
         }
-        ctx.fillStyle = p.item.type === "event" ? RED : BLUE
+        ctx.fillStyle = dotColor(p.item.type)
         ctx.strokeStyle = INK
         ctx.lineWidth = 1.6
         ctx.fillRect(px, py, CELL, CELL)

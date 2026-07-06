@@ -4,6 +4,7 @@
 
 const EVENTS_CACHE_PREFIX = "loca.explore.events."
 const PLACES_CACHE_PREFIX = "loca.explore.places2." // v2: TourAPI 추천순 단일 리스트 (이전 캐시 무효화)
+const WILDLIFE_CACHE_PREFIX = "loca.explore.wildlife."
 const EVENTS_CACHE_TTL_MS = 30 * 60 * 1000
 
 export const EXPLORE_LOCATION_KEY = "loca.explore.location"
@@ -57,6 +58,10 @@ export function fetchNearbyEvents(location) {
 
 export function fetchNearbyPlaces(location) {
   return fetchCurationItems("places", PLACES_CACHE_PREFIX, location)
+}
+
+export function fetchNearbyWildlife(location) {
+  return fetchCurationItems("wildlife", WILDLIFE_CACHE_PREFIX, location)
 }
 
 // TourAPI 상세 (행사 + tour 소스 공간) — contentId 단위 sessionStorage 캐시
@@ -169,5 +174,18 @@ export function placeToPrefill(place) {
     address: place.addr || "",
     lat: place.lat,
     lng: place.lng,
+  }
+}
+
+// 생물 관측 → 바인더 "새발견" 카드 프리필 (사진은 복사하지 않음 — 저작권/사용자 촬영 유도)
+export function wildlifeToPrefill(item) {
+  return {
+    name: item.title,
+    category: "nature",
+    tagLabel: item.category || "생물",
+    address: item.place || "",
+    lat: item.lat,
+    lng: item.lng,
+    asNewFind: true,
   }
 }

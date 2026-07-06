@@ -65,19 +65,25 @@ export function CollectSheet({
   useEffect(() => {
     if (!open || !prefill) return
     if (!Number.isFinite(prefill.lat) || !Number.isFinite(prefill.lng)) return
-    const candidate = {
-      name: prefill.name || "",
-      category: prefill.category || "etc",
-      categoryName: prefill.categoryName || "",
-      tagLabel: prefill.tagLabel || null,
-      address: prefill.address || "",
-      lat: prefill.lat,
-      lng: prefill.lng,
+    setPoint({ lat: prefill.lat, lng: prefill.lng })
+    setName(prefill.name || "")
+    if (prefill.asNewFind) {
+      // 생물 관측 등 — 새발견 카드로 등록
+      setCandidates([])
+      setSelectedSpot(null)
+    } else {
+      const candidate = {
+        name: prefill.name || "",
+        category: prefill.category || "etc",
+        categoryName: prefill.categoryName || "",
+        tagLabel: prefill.tagLabel || null,
+        address: prefill.address || "",
+        lat: prefill.lat,
+        lng: prefill.lng,
+      }
+      setCandidates([candidate])
+      setSelectedSpot(candidate)
     }
-    setPoint({ lat: candidate.lat, lng: candidate.lng })
-    setCandidates([candidate])
-    setSelectedSpot(candidate)
-    setName(candidate.name)
     setStep("confirm")
   }, [open, prefill])
 
@@ -155,7 +161,7 @@ export function CollectSheet({
     setSaving(true)
     try {
       const tags = isNewFind
-        ? ["새발견"]
+        ? ["새발견", ...(prefill?.asNewFind && prefill?.tagLabel ? [prefill.tagLabel] : [])]
         : [selectedSpot?.tagLabel || categoryLabel(categoryId)].filter(Boolean)
       const base = {
         type: "pin",
