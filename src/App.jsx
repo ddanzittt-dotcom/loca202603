@@ -3,6 +3,7 @@ import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } f
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
 import { PlaceFlipCard } from "./components/binder/PlaceFlipCard"
+import { NewFindBurst } from "./components/binder/NewFindBurst"
 import { CollectSheet } from "./components/sheets/CollectSheet"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
@@ -1122,6 +1123,8 @@ export default function App() {
 
   // 장소 목록에서 장소를 누르면 지도 이동 대신 카드로 먼저 보여준다
   const [placeCardFeature, setPlaceCardFeature] = useState(null)
+  // 새로운 곳 발견 연출 (등록 직후)
+  const [newFindCard, setNewFindCard] = useState(null)
 
   // 채집 시트 (B단계) — 지도 없이 장소를 먼저 등록
   const [collectSheetOpen, setCollectSheetOpen] = useState(false)
@@ -1144,6 +1147,14 @@ export default function App() {
     const index = ordered.findIndex((feature) => (feature.id || feature.feature_id) === targetId)
     return index >= 0 ? String(index + 1).padStart(3, "0") : null
   }, [placeCardFeature, b2cFeatures])
+
+  const newFindDexNo = useMemo(() => {
+    if (!newFindCard) return null
+    const targetId = newFindCard.id || newFindCard.feature_id
+    const ordered = [...b2cFeatures].sort((a, b) => featureSort(b, a))
+    const index = ordered.findIndex((feature) => (feature.id || feature.feature_id) === targetId)
+    return index >= 0 ? String(index + 1).padStart(3, "0") : null
+  }, [newFindCard, b2cFeatures])
 
   const handleBottomNavChange = useCallback((nextTab) => {
     if (nextTab === "login") {
@@ -1773,7 +1784,7 @@ export default function App() {
             action={(
               <button className="web-section__action" type="button" onClick={() => setCollectSheetOpen(true)}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
-                채집하기
+                등록하기
               </button>
             )}
           >
@@ -2048,6 +2059,18 @@ export default function App() {
         />
       ) : null}
 
+      {newFindCard ? (
+        <NewFindBurst
+          feature={newFindCard}
+          dexNo={newFindDexNo}
+          onDone={() => {
+            const card = newFindCard
+            setNewFindCard(null)
+            setPlaceCardFeature(card)
+          }}
+        />
+      ) : null}
+
       <CollectSheet
         open={collectSheetOpen}
         onClose={() => setCollectSheetOpen(false)}
@@ -2058,8 +2081,13 @@ export default function App() {
         onCollected={(collected, { isNewFind } = {}) => {
           setFeatures((current) => [collected, ...current])
           setCollectSheetOpen(false)
-          setPlaceCardFeature(collected)
-          showToast(isNewFind ? "새 발견! 도감에 담았어요" : "도감에 담았어요")
+          if (isNewFind) {
+            // 새로운 곳 발견 — 특별 연출 후 카드 오픈
+            setNewFindCard(collected)
+          } else {
+            setPlaceCardFeature(collected)
+            showToast("등록했어요")
+          }
         }}
       />
 

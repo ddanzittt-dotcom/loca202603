@@ -4758,3 +4758,118 @@
   align-items: center;
   justify-content: center;
 }
+
+/* ============================================================
+   새로운 곳 발견 연출 (등록-우선, SPOT보다 임팩트 크게)
+   ============================================================ */
+.nfb-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(27, 27, 24, 0.62);
+  overflow: hidden;
+}
+.nfb-rays {
+  position: absolute;
+  width: 150vmax;
+  height: 150vmax;
+  background: repeating-conic-gradient(from 0deg, rgba(245, 196, 27, 0.16) 0deg 8deg, transparent 8deg 16deg);
+  animation: nfb-spin 9s linear infinite;
+  pointer-events: none;
+}
+@keyframes nfb-spin { to { transform: rotate(360deg); } }
+.nfb-spark {
+  position: absolute;
+  color: #F5C41B;
+  text-shadow: 0 0 2px #1B1B18;
+  animation: nfb-twinkle 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes nfb-twinkle {
+  0%, 100% { transform: scale(0.5); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+.nfb-card {
+  position: relative;
+  z-index: 1;
+  width: min(300px, 84vw);
+  background: #FFFDF4;
+  border: 3px solid #1B1B18;
+  border-radius: 16px;
+  box-shadow: 8px 8px 0 rgba(27, 27, 24, 0.6);
+  padding: 24px 22px 20px;
+  text-align: center;
+  animation: nfb-stampin 0.55s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+@keyframes nfb-stampin {
+  0% { opacity: 0; transform: scale(1.7) rotate(-5deg); }
+  60% { opacity: 1; transform: scale(0.96) rotate(1deg); }
+  100% { transform: none; }
+}
+.nfb-tag {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-6deg);
+  font-family: "DungGeunMo", monospace;
+  font-size: 15px;
+  color: #fff;
+  background: #E8442E;
+  border: 2.5px solid #1B1B18;
+  border-radius: 8px;
+  padding: 3px 12px;
+  letter-spacing: 2px;
+  box-shadow: 2px 2px 0 #1B1B18;
+}
+.nfb-art {
+  width: 108px;
+  height: 108px;
+  margin: 10px auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2.5px solid #1B1B18;
+  border-radius: 12px;
+  background: #FBF0C8;
+  background-image: radial-gradient(rgba(27, 27, 24, 0.08) 1.4px, transparent 1.4px);
+  background-size: 12px 12px;
+}
+.nfb-title {
+  font-family: "DungGeunMo", monospace;
+  font-size: 17px;
+  color: #1B1B18;
+  margin: 0;
+}
+.nfb-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1B1B18;
+  margin: 6px 0 0;
+  font-family: Pretendard, sans-serif;
+}
+.nfb-no {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8A8574;
+  margin: 6px 0 14px;
+}
+.nfb-btn {
+  width: 100%;
+  padding: 11px;
+  border: 2.5px solid #1B1B18;
+  border-radius: 10px;
+  background: #E8442E;
+  color: #fff;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #1B1B18;
+}
+.nfb-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #1B1B18; }
+@media (prefers-reduced-motion: reduce) {
+  .nfb-rays, .nfb-spark { animation: none; }
+  .nfb-card { animation: none; }
+}

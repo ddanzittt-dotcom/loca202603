@@ -166,7 +166,7 @@ export function CollectSheet({
       onClose?.()
     } catch (error) {
       console.error("collect failed", error)
-      showToast?.("채집에 실패했어요. 잠시 후 다시 시도해주세요.")
+      showToast?.("등록에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setSaving(false)
     }
@@ -178,11 +178,11 @@ export function CollectSheet({
         className="clt-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="장소 채집"
+        aria-label="장소 등록"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="clt-head">
-          <strong>{step === "pick" ? "어디를 채집할까요?" : isNewFind ? "새로운 곳 발견!" : "등록된 곳이에요"}</strong>
+          <strong>{step === "pick" ? "어디를 등록할까요?" : isNewFind ? "새로운 곳 발견!" : "등록된 곳이에요"}</strong>
           <button type="button" className="clt-close" onClick={onClose} aria-label="닫기">
             <X size={15} strokeWidth={2.4} />
           </button>
@@ -237,7 +237,7 @@ export function CollectSheet({
               disabled={!point || checkingNearby}
               onClick={confirmPoint}
             >
-              {checkingNearby ? "주변을 살피는 중…" : "이 위치로 채집하기"}
+              {checkingNearby ? "주변을 살피는 중…" : "이 위치로 등록하기"}
             </button>
           </>
         ) : (
@@ -299,7 +299,7 @@ export function CollectSheet({
             <div className="clt-actions">
               <button type="button" className="clt-ghost" onClick={() => setStep("pick")}>위치 다시 고르기</button>
               <button type="button" className="clt-primary" disabled={saving || !name.trim()} onClick={handleSave}>
-                {saving ? "채집 중…" : "도감에 담기"}
+                {saving ? "등록 중…" : "등록하기"}
               </button>
             </div>
           </>
