@@ -41,7 +41,9 @@ import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
-const ExplorePublicScreen = lazy(() => import("./screens/ExplorePublicScreen").then((m) => ({ default: m.ExplorePublicScreen })))
+// 탐색 = 위치 기반 행사/공간 큐레이션. 공개 지도 검색(ExplorePublicScreen)은
+// 발행 지도 데이터가 쌓일 때까지 진입점 숨김 (파일은 유지)
+const ExploreCurationScreen = lazy(() => import("./screens/ExploreCurationScreen").then((m) => ({ default: m.ExploreCurationScreen })))
 const MapEditorScreen = lazy(() => import("./screens/MapEditorScreen").then((m) => ({ default: m.MapEditorScreen })))
 const MapsListScreen = lazy(() => import("./screens/MapsListScreen").then((m) => ({ default: m.MapsListScreen })))
 const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ default: m.PlacesScreen })))
@@ -1179,6 +1181,8 @@ export default function App() {
 
   // 채집 시트 (B단계) — 지도 없이 장소를 먼저 등록
   const [collectSheetOpen, setCollectSheetOpen] = useState(false)
+  // 탐색 큐레이션 → 등록 프리필 (행사/공간 카드에서 진입)
+  const [collectPrefill, setCollectPrefill] = useState(null)
 
   // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
   const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
@@ -1762,17 +1766,19 @@ export default function App() {
           )
         ) : null}
 
-        {/* 탐색 — 발행된 공개 지도, 로그인 불필요 */}
+        {/* 탐색 — 내 위치 주변 행사/공간 큐레이션, 로그인 불필요 */}
         {activeTab === "explore" ? (
           <WebPageFrame
             className="web-section--explore"
             eyebrow="EXPLORE"
             title="탐색"
-            description="공개된 지도를 로그인 없이 검색하고 구경할 수 있어요."
+            description="지금 내 주변에서 기록할만한 행사와 공간을 찾아요."
           >
-            <ExplorePublicScreen
-              onOpenMap={(slug) => {
-                window.location.href = `/s/${encodeURIComponent(slug)}`
+            <ExploreCurationScreen
+              showToast={showToast}
+              onRegister={(prefillCandidate) => {
+                setCollectPrefill(prefillCandidate)
+                setCollectSheetOpen(true)
               }}
             />
           </WebPageFrame>
@@ -2134,7 +2140,8 @@ export default function App() {
 
       <CollectSheet
         open={collectSheetOpen}
-        onClose={() => setCollectSheetOpen(false)}
+        prefill={collectPrefill}
+        onClose={() => { setCollectSheetOpen(false); setCollectPrefill(null) }}
         cloudMode={cloudMode}
         currentUserId={authUser?.id || viewerProfile.id}
         myLocation={myLocation}
@@ -2142,6 +2149,7 @@ export default function App() {
         onCollected={(collected, { isNewFind } = {}) => {
           setFeatures((current) => [collected, ...current])
           setCollectSheetOpen(false)
+          setCollectPrefill(null)
           if (isNewFind) {
             // 새로운 곳 발견 — 특별 연출 후 카드 오픈
             setNewFindCard(collected)

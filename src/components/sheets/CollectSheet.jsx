@@ -35,6 +35,7 @@ export function CollectSheet({
   myLocation,
   onCollected,
   showToast,
+  prefill = null, // 탐색 큐레이션 → {name, category, categoryName, tagLabel, address, lat, lng}
 }) {
   const [step, setStep] = useState("pick") // pick → confirm
   const [point, setPoint] = useState(null)
@@ -59,6 +60,26 @@ export function CollectSheet({
     setName("")
     setSaving(false)
   }, [open])
+
+  // 탐색 큐레이션에서 진입 — 후보가 확정된 상태로 confirm 단계에서 시작
+  useEffect(() => {
+    if (!open || !prefill) return
+    if (!Number.isFinite(prefill.lat) || !Number.isFinite(prefill.lng)) return
+    const candidate = {
+      name: prefill.name || "",
+      category: prefill.category || "etc",
+      categoryName: prefill.categoryName || "",
+      tagLabel: prefill.tagLabel || null,
+      address: prefill.address || "",
+      lat: prefill.lat,
+      lng: prefill.lng,
+    }
+    setPoint({ lat: candidate.lat, lng: candidate.lng })
+    setCandidates([candidate])
+    setSelectedSpot(candidate)
+    setName(candidate.name)
+    setStep("confirm")
+  }, [open, prefill])
 
   // 키워드 검색 (현재 위치/선택 위치 기준)
   useEffect(() => {
@@ -135,7 +156,7 @@ export function CollectSheet({
     try {
       const tags = isNewFind
         ? ["새발견"]
-        : [categoryLabel(categoryId)].filter(Boolean)
+        : [selectedSpot?.tagLabel || categoryLabel(categoryId)].filter(Boolean)
       const base = {
         type: "pin",
         title: trimmedName,
@@ -251,7 +272,7 @@ export function CollectSheet({
                 <p>
                   {isNewFind
                     ? "지도에 등록되지 않은 곳이에요. 내가 처음 발견한 곳!"
-                    : `${categoryLabel(categoryId)} · 등록된 장소를 카드로 담아요.`}
+                    : `${selectedSpot?.categoryName || categoryLabel(categoryId)} · 등록된 장소를 카드로 담아요.`}
                 </p>
               </div>
             </div>

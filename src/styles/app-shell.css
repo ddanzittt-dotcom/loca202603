@@ -4491,3 +4491,299 @@
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0 #1B1B18;
 }
+
+/* ============================================================
+   탐색 큐레이션 (ExploreCurationScreen) — 행사/공간 카드
+   ============================================================ */
+
+.xc-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xc-locbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xc-locchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12.5px;
+  color: #1F1A12;
+  cursor: pointer;
+}
+
+.xc-locchip.is-set {
+  background: #FFD338;
+}
+
+.xc-locchip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.xc-locchip:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+.xc-reload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  color: #1F1A12;
+  cursor: pointer;
+}
+
+.xc-reload:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.xc-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xc-section__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.xc-section__head strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  color: #1F1A12;
+}
+
+.xc-section__count {
+  font-family: "DungGeunMo", monospace;
+  font-size: 13px;
+  color: #E5493A;
+}
+
+.xc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 560px) {
+  .xc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+.xc-card {
+  display: flex;
+  flex-direction: column;
+  border: 2.5px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.9);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.xc-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 rgba(31, 26, 18, 0.9);
+}
+
+.xc-card--skeleton {
+  min-height: 210px;
+  background: linear-gradient(100deg, #F6EFDB 40%, #FFFDF4 50%, #F6EFDB 60%);
+  background-size: 200% 100%;
+  animation: xc-shimmer 1.2s infinite linear;
+  box-shadow: none;
+  border-color: rgba(31, 26, 18, 0.25);
+}
+
+@keyframes xc-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -80% 0; }
+}
+
+.xc-card__art {
+  position: relative;
+  aspect-ratio: 4 / 2.6;
+  background: #F6EFDB;
+  border-bottom: 2px solid #1F1A12;
+}
+
+.xc-card__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.xc-card__art-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8B7F63;
+}
+
+.xc-card__dday {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border: 2px solid #1F1A12;
+  border-radius: 6px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+}
+
+.xc-card__dday--ongoing {
+  background: #E5493A;
+  color: #FFF6E8;
+}
+
+.xc-card__dday--upcoming {
+  background: #FFD338;
+  color: #1F1A12;
+}
+
+.xc-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 11px 6px;
+  flex: 1;
+}
+
+.xc-card__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1F1A12;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.xc-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11.5px;
+  color: #8B7F63;
+}
+
+.xc-card__meta em {
+  font-style: normal;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #1F1A12;
+}
+
+.xc-card__meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xc-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+
+.xc-card__dist {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8B7F63;
+}
+
+.xc-card__register {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.xc-card__register:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
+}
+
+.xc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 16px;
+  border: 2px dashed rgba(31, 26, 18, 0.35);
+  border-radius: 12px;
+  background: rgba(246, 239, 219, 0.6);
+  text-align: center;
+}
+
+.xc-empty strong {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-weight: 400;
+  font-size: 14.5px;
+  color: #1F1A12;
+}
+
+.xc-empty span {
+  font-size: 12.5px;
+  color: #8B7F63;
+}
+
+.xc-empty button {
+  margin-top: 8px;
+  height: 32px;
+  padding: 0 14px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  color: #1F1A12;
+  cursor: pointer;
+}
