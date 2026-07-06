@@ -13,22 +13,17 @@ const MAX_RADIUS_KM = 15
 const SPARSE_THRESHOLD = 8
 const RESULT_LIMIT = 30
 
-// iconic taxon → 한국어 분류군 라벨 + 이모지(사진 없을 때 폴백)
+// 노출할 분류군만 — 새/동물(포유·양서·파충·어류)/식물. 곤충·거미·연체·버섯 제외.
 const TAXON_META = {
   Aves: { label: "새", emoji: "🐦" },
-  Insecta: { label: "곤충", emoji: "🐛" },
   Plantae: { label: "식물", emoji: "🌿" },
   Mammalia: { label: "포유류", emoji: "🦔" },
   Amphibia: { label: "양서류", emoji: "🐸" },
   Reptilia: { label: "파충류", emoji: "🦎" },
   Actinopterygii: { label: "물고기", emoji: "🐟" },
-  Mollusca: { label: "연체동물", emoji: "🐌" },
-  Arachnida: { label: "거미", emoji: "🕷️" },
-  Fungi: { label: "버섯", emoji: "🍄" },
-  Animalia: { label: "동물", emoji: "🐾" },
-  Chromista: { label: "기타", emoji: "🦠" },
-  Protozoa: { label: "기타", emoji: "🦠" },
 }
+// iNaturalist iconic_taxa 파라미터로 소스에서 필터 (곤충 등 제외)
+const ALLOWED_TAXA = Object.keys(TAXON_META)
 
 function toNumber(value) {
   const next = Number(value)
@@ -55,7 +50,7 @@ function normalize(obs, location) {
   const lng = coords ? toNumber(coords[0]) : toNumber(obs.longitude)
   const lat = coords ? toNumber(coords[1]) : toNumber(obs.latitude)
   const photo = obs.photos && obs.photos[0] ? obs.photos[0] : null
-  const meta = TAXON_META[taxon.iconic_taxon_name] || { label: "생물", emoji: "✨" }
+  const meta = TAXON_META[taxon.iconic_taxon_name] || { label: "동물", emoji: "🐾" }
   return {
     id: `inat-${obs.id}`,
     type: "wildlife",
@@ -90,6 +85,7 @@ async function fetchObservations(location, radiusKm) {
     locale: "ko",
     order_by: "observed_on",
     order: "desc",
+    iconic_taxa: ALLOWED_TAXA.join(","), // 새/동물/식물만 — 곤충·거미·버섯 제외
   })
   let resp
   try {
@@ -107,6 +103,7 @@ function dedupeByTaxon(items) {
   const byTaxon = new Map()
   for (const item of items) {
     if (!Number.isFinite(item.lat) || !Number.isFinite(item.lng)) continue
+    if (!TAXON_META[item.taxonGroup]) continue // 허용 분류군(새/동물/식물)만
     const key = item.taxonId || item.title
     const prev = byTaxon.get(key)
     if (!prev) { byTaxon.set(key, item); continue }

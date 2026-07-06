@@ -10,16 +10,10 @@ const CELL = 8
 const TERRAIN = ["#D6CFAF", "#C6D6B4", "#F4EEDA", "#AFC9E0"]
 const INK = "#1F1A12"
 const RED = "#E5493A"
-const BLUE = "#2D6FD0"
-const GREEN = "#3E9B57"
 const YELLOW = "#FFD338"
 const PAPER = "#FFFDF4"
-
-function dotColor(type) {
-  if (type === "event") return RED
-  if (type === "wildlife") return GREEN
-  return BLUE
-}
+const TILE = 20 // 이모지 도트 타일 크기(px)
+const EMOJI_FONT = '13px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
 const WEDGE = 0.72
 const MAX_LAPS = 2
 const MAX_KM = 10
@@ -96,8 +90,36 @@ function createRadar(canvas, { onCount, onDot }) {
       let y = st.cy + Math.sin(angGeo) * spanY * rRatio
       x = Math.max(CELL, Math.min(w - CELL, x))
       y = Math.max(CELL, Math.min(h - CELL, y))
-      return { x, y, ang: Math.atan2(y - st.cy, x - st.cx), item, seen: false, hit: 0 }
+      return { x, y, ang: 0, item, seen: false, hit: 0 }
     })
+
+    // 이모지 타일이 겹치지 않게 살짝 밀어내기 (n≤18, 몇 번만)
+    const minGap = TILE + 4
+    const dots = st.dots
+    for (let pass = 0; pass < 6; pass += 1) {
+      for (let i = 0; i < dots.length; i += 1) {
+        for (let j = i + 1; j < dots.length; j += 1) {
+          const a = dots[i]
+          const b = dots[j]
+          const dx = b.x - a.x
+          const dy = b.y - a.y
+          const dist = Math.hypot(dx, dy) || 0.01
+          if (dist < minGap) {
+            const push = (minGap - dist) / 2
+            const ux = dx / dist
+            const uy = dy / dist
+            a.x -= ux * push; a.y -= uy * push
+            b.x += ux * push; b.y += uy * push
+          }
+        }
+      }
+      for (const d of dots) {
+        d.x = Math.max(TILE, Math.min(w - TILE, d.x))
+        d.y = Math.max(TILE, Math.min(h - TILE, d.y))
+      }
+    }
+    // 스윕 점등 판정용 각도는 최종 위치 기준
+    for (const d of dots) d.ang = Math.atan2(d.y - st.cy, d.x - st.cx)
   }
 
   function emitCount() {
@@ -138,35 +160,38 @@ function createRadar(canvas, { onCount, onDot }) {
       ctx.stroke()
     }
 
+    ctx.textAlign = "center"
+    ctx.textBaseline = "middle"
     for (const p of st.dots) {
-      const px = p.x - CELL / 2
-      const py = p.y - CELL / 2
+      const half = TILE / 2
+      const tx = p.x - half
+      const ty = p.y - half
       const glow = p.hit ? Math.max(0, 1 - (now - p.hit) / 1100) : 0
       if (p.seen || reduce) {
+        // 선택/점등 하이라이트
         if (p === st.selected) {
           const sp = (now / 700) % 1
           ctx.strokeStyle = `rgba(229,73,58,${0.9 * (1 - sp)})`
           ctx.lineWidth = 2
-          const sr = 6 + sp * 10
+          const sr = half + 3 + sp * 9
           ctx.strokeRect(p.x - sr, p.y - sr, sr * 2, sr * 2)
-          ctx.fillStyle = YELLOW
-          ctx.fillRect(px - 3, py - 3, CELL + 6, CELL + 6)
-        } else if (glow > 0.02) {
-          ctx.fillStyle = YELLOW
-          ctx.fillRect(px - 3, py - 3, CELL + 6, CELL + 6)
         }
-        ctx.fillStyle = dotColor(p.item.type)
+        if (glow > 0.02 || p === st.selected) {
+          ctx.fillStyle = YELLOW
+          ctx.fillRect(tx - 2, ty - 2, TILE + 4, TILE + 4)
+        }
+        // 미니 카드 타일 + 이모지
+        ctx.fillStyle = PAPER
+        ctx.fillRect(tx, ty, TILE, TILE)
         ctx.strokeStyle = INK
         ctx.lineWidth = 1.6
-        ctx.fillRect(px, py, CELL, CELL)
-        ctx.strokeRect(px, py, CELL, CELL)
-        if (glow > 0.02 || p === st.selected) {
-          ctx.fillStyle = PAPER
-          ctx.fillRect(px + 2.5, py + 2.5, 3, 3)
-        }
+        ctx.strokeRect(tx, ty, TILE, TILE)
+        ctx.font = EMOJI_FONT
+        ctx.fillText(p.item.emoji || "📍", p.x, p.y + 1)
       } else {
-        ctx.fillStyle = "rgba(31,26,18,0.14)"
-        ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4)
+        // 미탐지 = 흐릿한 빈 슬리브
+        ctx.fillStyle = "rgba(31,26,18,0.12)"
+        ctx.fillRect(tx + 3, ty + 3, TILE - 6, TILE - 6)
       }
     }
     // 중심(나)은 DOM 고양이가 표시한다 — 캔버스엔 그리지 않음

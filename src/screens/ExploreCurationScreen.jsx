@@ -21,6 +21,14 @@ function cardAnchorId(type, id) {
   return `xc-card-${type}-${id}`
 }
 
+// 공간 카테고리별 레이더 도트 이모지 (자연/역사/공원/전시)
+const PLACE_KIND_EMOJI = {
+  nature: "⛰️",
+  history: "🏛️",
+  park: "🌳",
+  exhibit: "🖼️",
+}
+
 function prefersReduced() {
   return typeof window !== "undefined"
     && window.matchMedia
@@ -353,10 +361,15 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   // 추천순 단일 리스트 — 칩 없이 서버 추천 점수 순서 그대로
   const visiblePlaces = placesLoading ? [] : placesResult.items
 
-  // 레이더 도트 = 행사 + 공간(실좌표 있는 것). 행사 먼저, 이어서 상위 공간.
+  // 레이더 도트 = 행사 + 공간 + 생물. 도트 이모지: 행사=동일 / 공간=카테고리별 / 생물=종별
   const radarItems = useMemo(() => {
+    const dotEmoji = (raw, type) => {
+      if (type === "event") return "🎪"
+      if (type === "wildlife") return raw.emoji || "🐾"
+      return PLACE_KIND_EMOJI[raw.kind] || "📍"
+    }
     const toDot = (raw, type) => ({
-      id: raw.id, type, title: raw.title,
+      id: raw.id, type, title: raw.title, emoji: dotEmoji(raw, type),
       lat: Number(raw.lat), lng: Number(raw.lng),
       distKm: raw.distKm, category: raw.category, data: raw,
     })
