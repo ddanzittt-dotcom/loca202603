@@ -162,14 +162,7 @@ function createRadar(canvas, { onCount, onDot }) {
         ctx.fillRect(px + 2, py + 2, CELL - 4, CELL - 4)
       }
     }
-
-    // 중심 = 나
-    ctx.fillStyle = INK
-    ctx.fillRect(cx - CELL / 2 - 1, cy - CELL / 2 - 1, CELL + 2, CELL + 2)
-    ctx.fillStyle = RED
-    ctx.fillRect(cx - CELL / 2, cy - CELL / 2, CELL, CELL)
-    ctx.fillStyle = PAPER
-    ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3)
+    // 중심(나)은 DOM 고양이가 표시한다 — 캔버스엔 그리지 않음
   }
 
   function alive(now) {
@@ -319,7 +312,33 @@ export function PixelRadar({
   return (
     <div className="xradar" aria-label="주변 탐지 레이더">
       <canvas ref={canvasRef} className="xradar__canvas" />
-      <span className="xradar__center-ring" aria-hidden="true" />
+      <span className="xradar__cat" aria-hidden="true">
+        <span className="xradar__cat-inner">
+          <svg className="xradar__cat-svg" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg">
+            <g className="cat-tail" fill="#1F1A12">
+              <rect x="2" y="7" width="3" height="3" />
+              <rect x="0" y="4" width="3" height="4" />
+              <rect x="1" y="2" width="3" height="3" />
+            </g>
+            <g fill="#1F1A12">
+              <rect x="4" y="9" width="18" height="7" rx="2" />
+              <rect x="17" y="6" width="9" height="9" rx="2" />
+              <rect x="21" y="3" width="9" height="7" rx="1.5" />
+              <path d="M21 4 L21 0 L25 4 Z" />
+              <path d="M30 4 L30 0 L26 4 Z" />
+            </g>
+            <rect x="25" y="5" width="2" height="2" fill="#FFFDF4" />
+            <g className="cat-legs cat-legs--a" fill="#1F1A12">
+              <rect x="6" y="15" width="2.6" height="5" /><rect x="12" y="15" width="2.6" height="5" />
+              <rect x="17" y="15" width="2.6" height="5" /><rect x="22" y="15" width="2.6" height="5" />
+            </g>
+            <g className="cat-legs cat-legs--b" fill="#1F1A12">
+              <rect x="8" y="15" width="2.6" height="5" /><rect x="10" y="15" width="2.6" height="5" />
+              <rect x="19" y="15" width="2.6" height="5" /><rect x="24" y="15" width="2.6" height="5" />
+            </g>
+          </svg>
+        </span>
+      </span>
       <div className="xradar__overlay">
         <button
           type="button"

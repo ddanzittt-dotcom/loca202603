@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { CalendarRange, ChevronRight, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
@@ -23,6 +23,44 @@ function prefersReduced() {
   return typeof window !== "undefined"
     && window.matchMedia
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+// 가로 한 줄 레일 — 오른쪽 화살표로 한 페이지씩 넘기고, 끝에서 처음으로 순환
+function CardRail({ children }) {
+  const railRef = useRef(null)
+  const [atEnd, setAtEnd] = useState(false)
+
+  const update = useCallback(() => {
+    const el = railRef.current
+    if (!el) return
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8)
+  }, [])
+
+  const advance = () => {
+    const el = railRef.current
+    if (!el) return
+    if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 8) {
+      el.scrollTo({ left: 0, behavior: prefersReduced() ? "auto" : "smooth" })
+    } else {
+      el.scrollBy({ left: el.clientWidth * 0.85, behavior: prefersReduced() ? "auto" : "smooth" })
+    }
+  }
+
+  return (
+    <div className="xc-railwrap">
+      <div className="xc-rail" ref={railRef} onScroll={update}>
+        {children}
+      </div>
+      <button
+        type="button"
+        className={`xc-rail__arrow${atEnd ? " is-end" : ""}`}
+        onClick={advance}
+        aria-label={atEnd ? "처음으로" : "다음 보기"}
+      >
+        <ChevronRight size={18} strokeWidth={2.6} />
+      </button>
+    </div>
+  )
 }
 
 // 탐색 — 내 위치 주변에서 기록할만한 행사/축제 + 공간 큐레이션.
@@ -304,11 +342,11 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
             <span>위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요.</span>
           </div>
         ) : (
-          <div className="xc-grid">
+          <CardRail>
             {ongoing.slice(0, 24).map((event) => (
               <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
-          </div>
+          </CardRail>
         )}
       </section>
 
@@ -318,11 +356,11 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
             <strong>곧 시작해요</strong>
             <span className="xc-section__count">{upcoming.length}</span>
           </header>
-          <div className="xc-grid">
+          <CardRail>
             {upcoming.slice(0, 12).map((event) => (
               <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
             ))}
-          </div>
+          </CardRail>
         </section>
       ) : null}
 
@@ -350,11 +388,11 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
             <span>위치를 바꾸거나 새로고침(↻)을 눌러보세요.</span>
           </div>
         ) : (
-          <div className="xc-grid">
+          <CardRail>
             {visiblePlaces.slice(0, 24).map((place) => (
               <PlaceSpotCard key={place.id} place={place} anchorId={cardAnchorId("place", place.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
             ))}
-          </div>
+          </CardRail>
         )}
       </section>
 

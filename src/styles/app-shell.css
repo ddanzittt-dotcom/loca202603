@@ -5057,26 +5057,65 @@
 .xradar__canvas {
   display: block;
   width: 100%;
-  height: 150px;
+  height: 208px;
   touch-action: manipulation;
 }
 
-.xradar__center-ring {
+/* 중심(나) = 걷는 픽셀 고양이 */
+.xradar__cat {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  transform: translate(-50%, -50%);
-  border: 2px solid rgba(31, 26, 18, 0.5);
+  width: 38px;
+  transform: translate(-50%, -58%);
   pointer-events: none;
-  animation: xradarPulse 1.6s ease-out infinite;
+  z-index: 2;
 }
 
-@keyframes xradarPulse {
-  0% { width: 12px; height: 12px; opacity: 0.55; }
-  100% { width: 44px; height: 44px; opacity: 0; }
+.xradar__cat::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 26px;
+  height: 5px;
+  background: rgba(31, 26, 18, 0.18);
+  border-radius: 50%;
+  transform: translateX(-50%);
 }
+
+.xradar__cat-inner {
+  display: block;
+  animation: xcatBob 0.5s steps(2, end) infinite;
+}
+
+.xradar__cat-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(1px 2px 0 rgba(31, 26, 18, 0.22));
+}
+
+.xradar__cat-svg .cat-tail {
+  transform-box: fill-box;
+  transform-origin: 100% 100%;
+  animation: xcatTail 1s ease-in-out infinite;
+}
+
+.xradar__cat-svg .cat-legs--a { animation: xcatLegA 0.5s steps(1) infinite; }
+.xradar__cat-svg .cat-legs--b { animation: xcatLegB 0.5s steps(1) infinite; }
+
+@keyframes xcatBob {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+  100% { transform: translateY(0); }
+}
+@keyframes xcatTail {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(13deg); }
+}
+@keyframes xcatLegA { 0%, 49.9% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes xcatLegB { 0%, 49.9% { opacity: 0; } 50%, 100% { opacity: 1; } }
 
 .xradar__overlay {
   position: absolute;
@@ -5201,6 +5240,57 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .xradar__center-ring { animation: none; }
   .xc-card--pulse { animation: none; }
+  .xradar__cat-inner,
+  .xradar__cat-svg .cat-tail,
+  .xradar__cat-svg .cat-legs--a,
+  .xradar__cat-svg .cat-legs--b { animation: none; }
+  .xradar__cat-svg .cat-legs--b { opacity: 0; }
+}
+
+/* 가로 한 줄 레일 + 오른쪽 넘김 화살표 */
+.xc-railwrap {
+  position: relative;
+}
+
+.xc-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 2px 2px 6px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.xc-rail::-webkit-scrollbar { display: none; }
+
+.xc-rail > .xc-card {
+  flex: 0 0 clamp(150px, 58vw, 194px);
+}
+
+.xc-rail__arrow {
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2.5px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFD338;
+  color: #1F1A12;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.9);
+  cursor: pointer;
+}
+
+.xc-rail__arrow:active { transform: translateY(-50%) translate(1px, 1px); box-shadow: 1px 1px 0 rgba(31, 26, 18, 0.9); }
+.xc-rail__arrow.is-end svg { transform: rotate(180deg); }
+
+@media (min-width: 720px) {
+  .xc-rail > .xc-card { flex: 0 0 200px; }
 }
