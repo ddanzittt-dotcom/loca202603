@@ -3,7 +3,6 @@ import { CalendarRange, Landmark, LocateFixed, MapPin, Plus, RotateCw } from "lu
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
-  PLACE_KIND_FILTERS,
   eventDdayBadge,
   eventToPrefill,
   fetchNearbyEvents,
@@ -153,7 +152,6 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [location, setLocation] = useState(() => readStoredLocation())
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [placeKind, setPlaceKind] = useState("all")
   const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place", data}
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
@@ -228,11 +226,8 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return result
   }, [events])
 
-  const visiblePlaces = useMemo(() => {
-    const list = placesLoading ? [] : placesResult.items
-    if (placeKind === "all") return list
-    return list.filter((place) => place.kind === placeKind)
-  }, [placeKind, placesLoading, placesResult.items])
+  // 추천순 단일 리스트 — 칩 없이 서버 추천 점수 순서 그대로
+  const visiblePlaces = placesLoading ? [] : placesResult.items
 
   return (
     <div className="xc-view">
@@ -306,24 +301,8 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       <section className="xc-section" aria-label="기록할만한 공간">
         <header className="xc-section__head">
           <strong>기록할만한 공간</strong>
-          {!placesLoading && visiblePlaces.length > 0 ? (
-            <span className="xc-section__count">{visiblePlaces.length}</span>
-          ) : null}
+          <span className="xc-section__hint">10km 안 가볼만한 곳</span>
         </header>
-
-        <div className="xc-chips" role="radiogroup" aria-label="공간 종류 필터">
-          {PLACE_KIND_FILTERS.map((filterItem) => (
-            <button
-              key={filterItem.id}
-              type="button"
-              className={`xc-chip${placeKind === filterItem.id ? " is-active" : ""}`}
-              aria-pressed={placeKind === filterItem.id}
-              onClick={() => setPlaceKind(filterItem.id)}
-            >
-              {filterItem.label}
-            </button>
-          ))}
-        </div>
 
         {placesLoading ? (
           <div className="xc-grid" aria-hidden="true">
@@ -339,12 +318,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </div>
         ) : visiblePlaces.length === 0 ? (
           <div className="xc-empty">
-            <strong>조건에 맞는 공간이 없어요</strong>
-            <span>다른 종류를 골라보거나 위치를 바꿔보세요.</span>
+            <strong>주변에서 추천할 공간을 찾지 못했어요</strong>
+            <span>위치를 바꾸거나 새로고침(↻)을 눌러보세요.</span>
           </div>
         ) : (
           <div className="xc-grid">
-            {visiblePlaces.slice(0, 18).map((place) => (
+            {visiblePlaces.slice(0, 24).map((place) => (
               <PlaceSpotCard key={place.id} place={place} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
             ))}
           </div>

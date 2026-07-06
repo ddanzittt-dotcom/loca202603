@@ -3,7 +3,7 @@
 // 엣지 캐시를 공유하고, 클라이언트 sessionStorage 캐시(30분)로 재방문 요청을 줄인다.
 
 const EVENTS_CACHE_PREFIX = "loca.explore.events."
-const PLACES_CACHE_PREFIX = "loca.explore.places."
+const PLACES_CACHE_PREFIX = "loca.explore.places2." // v2: TourAPI 추천순 단일 리스트 (이전 캐시 무효화)
 const EVENTS_CACHE_TTL_MS = 30 * 60 * 1000
 
 export const EXPLORE_LOCATION_KEY = "loca.explore.location"
@@ -159,15 +159,6 @@ const PLACE_KIND_TO_CATEGORY = {
   park: "nature",
   exhibit: "culture",
 }
-
-// 공간 필터 칩 (kind 기준) — 자연풍경/역사명소/전시관/공원 큐레이션
-export const PLACE_KIND_FILTERS = [
-  { id: "all", label: "전체" },
-  { id: "nature", label: "자연" },
-  { id: "history", label: "역사" },
-  { id: "exhibit", label: "전시" },
-  { id: "park", label: "공원" },
-]
 
 export function placeToPrefill(place) {
   return {

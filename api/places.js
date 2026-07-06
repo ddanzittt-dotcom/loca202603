@@ -18,12 +18,13 @@ const TOUR_QUERIES = [
 ]
 
 const PLACE_LIMIT = 60
-const KIND_CAP = 15 // 종류별 상한 — 한 종류가 목록을 독점하지 않게
+const KIND_CAP = 15 // 종류별 상한 — 한 종류가 목록을 독점하지 않게 (내부 다양성용, UI 칩 없음)
 const TOUR_ROWS_PER_PAGE = 60
 const TOUR_PAGE_COUNT = 2
-const DEFAULT_LOCATION_RADIUS_M = 20000
+const DEFAULT_LOCATION_RADIUS_M = 10000 // 10km 안 가볼만한 곳
 const MIN_LOCATION_RADIUS_M = 1000
 const MAX_LOCATION_RADIUS_M = 20000
+const SPARSE_THRESHOLD = 10 // 10km 결과가 이보다 적으면 20km로 자동 확장
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 }
 
@@ -51,10 +52,11 @@ function sourceSearchUrl(title) {
 }
 
 function scoreItem(item) {
-  const distanceScore = Number.isFinite(item.distKm) ? Math.max(0, 40 - item.distKm * 3) : 14
-  // 공식 사진이 있는 곳이 "저장하고 싶은" 카드 — 크게 가점
-  const imageScore = item.image ? 30 : 0
-  return Math.round(30 + distanceScore + imageScore)
+  // 추천순 — 거리는 부차적(반경 안이면 어디든 가볼만함), 사진·정보 충실도가 우선
+  const distanceScore = Number.isFinite(item.distKm) ? Math.max(0, 10 - item.distKm) : 4
+  const imageScore = item.image ? 40 : 0
+  const infoScore = (item.addr ? 4 : 0) + (item.phone ? 3 : 0)
+  return Math.round(30 + distanceScore + imageScore + infoScore)
 }
 
 function normalizeTourPlace(raw, query, location) {
@@ -223,7 +225,11 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600")
 
   try {
-    const tourItems = await fetchTourPlaces({ location, radius })
+    let tourItems = await fetchTourPlaces({ location, radius })
+    // 주변이 한산하면(10km 결과 부족) 20km로 자동 확장 — "아예 없음"을 피한다
+    if (location && tourItems.length < SPARSE_THRESHOLD && radius < MAX_LOCATION_RADIUS_M) {
+      tourItems = await fetchTourPlaces({ location, radius: MAX_LOCATION_RADIUS_M })
+    }
     const ranked = dedupePlaces(tourItems)
       .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
       .sort((a, b) => (b.score || 0) - (a.score || 0))
