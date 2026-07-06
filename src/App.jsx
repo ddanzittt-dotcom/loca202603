@@ -937,6 +937,9 @@ export default function App() {
   }, [cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
 
   // C단계 빌더: 채집한 카드를 골라 새 지도로 묶는다
+  // 편집기 [+ 카드 추가] — 값이 있으면 빌더가 '기존 지도에 추가' 모드
+  const [builderAddMapId, setBuilderAddMapId] = useState(null)
+
   const handleBuilderCreate = useCallback(async (title, featureIds) => {
     const trimmed = `${title || ""}`.trim()
     const ids = Array.isArray(featureIds) ? featureIds.filter(Boolean) : []
@@ -1158,8 +1161,6 @@ export default function App() {
 
   // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
   const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
-  // 편집기 [+ 카드 추가] — 값이 있으면 빌더가 '기존 지도에 추가' 모드
-  const [builderAddMapId, setBuilderAddMapId] = useState(null)
   const [mapBuilderBusy, setMapBuilderBusy] = useState(false)
 
   // 빌더 후보: 아직 어떤 지도에도 안 담긴 채집 카드(mapless)
