@@ -287,8 +287,29 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
   let regionName = null
   let regionCode = null
 
+  // 카카오 지오코더 우선 (앱이 카카오맵 사용, services 라이브러리 로드됨)
   try {
-    if (window.naver?.maps?.Service) {
+    if (window.kakao?.maps?.services?.Geocoder) {
+      const geocoder = new window.kakao.maps.services.Geocoder()
+      const result = await new Promise((resolve, reject) => {
+        geocoder.coord2regioncode(lng, lat, (res, status) => {
+          if (status !== window.kakao.maps.services.Status.OK || !Array.isArray(res) || !res.length) {
+            return reject(new Error("kakao rg fail"))
+          }
+          resolve(res)
+        })
+      })
+      const item = result.find((r) => r.region_type === "B") || result[0]
+      if (item) {
+        regionName = [item.region_1depth_name, item.region_2depth_name, item.region_3depth_name]
+          .filter(Boolean).join(" ")
+        regionCode = item.code || null
+      }
+    }
+  } catch { /* 카카오 실패 시 네이버/Nominatim fallback */ }
+
+  try {
+    if (!regionName && window.naver?.maps?.Service) {
       const result = await new Promise((resolve, reject) => {
         window.naver.maps.Service.reverseGeocode(
           { coords: new window.naver.maps.LatLng(lat, lng), orders: "legalcode,addr" },

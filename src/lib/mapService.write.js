@@ -9,6 +9,7 @@ import {
   toFeatureInsert,
   toFeaturePatch,
   touchMapRecord,
+  reverseGeocodeAndTag,
 } from "./mapService.utils"
 import { normalizeFeatureStyle } from "./featureStyle"
 
@@ -279,6 +280,14 @@ export async function createFeature(mapId, featureData) {
     } catch {
       // 배치 테이블이 없어도 기록 생성은 성공으로 처리
     }
+  }
+
+  // 동네(region_name) 태깅 — 좌표로 역지오코딩해 DB에 기록 (best-effort, 저장·반환에 영향 없음).
+  // 대시보드 "동네 도감"이 이 값을 쓴다. 없으면 동네가 안 잡힘.
+  const gcLat = Number(data?.lat)
+  const gcLng = Number(data?.lng)
+  if (data?.id && Number.isFinite(gcLat) && Number.isFinite(gcLng) && (gcLat !== 0 || gcLng !== 0)) {
+    reverseGeocodeAndTag(supabase, data.id, gcLat, gcLng).catch(() => {})
   }
 
   await touchMapRecord(mapId)

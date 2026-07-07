@@ -48,7 +48,8 @@ function townOf(feature) {
   const note = `${feature?.note || ""}`.trim()
   if (note && note.length <= 60 && /(로|길)\s?\d|(동|리)\s?\d|번길|[가-힣]+(시|군)\s[가-힣]/.test(note)) {
     const words = note.split(/\s+/)
-    return words.find((w) => /(구|군|동|읍|면)$/.test(w)) || words[0]
+    // 행정구역 어절만 채택 — 없으면 null (상호명 words[0] 을 동네로 오인하지 않도록)
+    return words.find((w) => /(구|군|동|읍|면)$/.test(w)) || null
   }
   return null
 }

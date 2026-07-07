@@ -471,6 +471,9 @@
 }
 
 .drecent__card { min-height: 0; }
+/* 표지 사진(img)은 position:absolute 라 자체 높이가 없다 → 아트 영역에 최소 높이를 줘야
+   min-height:0 카드에서도 접히지 않고 사진이 보인다 (이모지 카드와 높이도 통일) */
+.drecent .bd-sl-art { min-height: 108px; }
 .drecent .bd-card:hover { box-shadow: 5px 5px 0 var(--px-ink); }
 
 /* ── ⑤ 모험 연대기 ── */

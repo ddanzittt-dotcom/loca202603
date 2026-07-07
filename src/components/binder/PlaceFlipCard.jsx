@@ -3,6 +3,8 @@ import { FeatureEmoji } from "../FeatureEmoji"
 import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
 import { getPlaceType } from "../../lib/placeTypes"
 import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
+import { PlaceSharePoster } from "./PlaceSharePoster"
+import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
 
 // 카드 바인더 리디자인 — 장소 카드 앞면(슬리브 커버) + 플립 상세(뒷면).
 // 시각·인터랙션 레퍼런스: loca-binder-prototype.html
@@ -119,6 +121,8 @@ export function PlaceFlipCard({
   const fileInputRef = useRef(null)
   const recFileInputRef = useRef(null)
   const flipRafRef = useRef(0)
+  const posterRef = useRef(null)
+  const [imgBusy, setImgBusy] = useState(null) // "share" | "download" | null
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
