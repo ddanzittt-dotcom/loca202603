@@ -168,6 +168,46 @@
   text-underline-offset: 2px;
 }
 
+/* ── 프로필 캐릭터(남/여) 선택 ── */
+.acct-charpick {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.acct-charopt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border: 2.5px solid var(--px-ink, #1B1B18);
+  border-radius: 14px;
+  background: var(--card, #FFFDF4);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.acct-charopt:hover { transform: translateY(-1px); }
+.acct-charopt.is-on {
+  background: var(--accent-faint, #FDE7E3);
+  box-shadow: 3px 3px 0 var(--px-ink, #1B1B18);
+}
+.acct-charopt__face {
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--px-ink, #1B1B18);
+  border-radius: 12px;
+  background: var(--px-tint-green, #DDF0E4);
+  overflow: hidden;
+  display: block;
+}
+.acct-charopt__face .px-avatar { padding: 6px 6px 0; box-sizing: border-box; image-rendering: pixelated; }
+.acct-charopt__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-strong, #1B1B18);
+}
+.acct-charopt.is-on .acct-charopt__label { color: var(--accent, #E5493A); }
+
 /* ── 폼 필드 ── */
 .acct-fields {
   display: flex;

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react"
-import { Bell, BellOff, ChevronRight, Download, Edit3, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Bell, BellOff, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2 } from "lucide-react"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
-import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { updatePassword } from "../lib/auth"
+import { PixelAvatar, avatarCharOf, avatarCharSentinel } from "../components/PixelAvatar"
 import "../styles/account-v2.css"
 
 // 내 정보 관리 — 우상단 계정 버튼 전용 화면 (2026-07 프로필→대시보드 개편 1단계)
@@ -56,23 +56,6 @@ function readJsonSetting(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)) } catch { return fallback }
 }
 
-const resizeImage = (file, maxSize = 256) => new Promise((resolve) => {
-  const img = new Image()
-  img.onload = () => {
-    const canvas = document.createElement("canvas")
-    let width = img.width
-    let height = img.height
-    if (width > height) { height = Math.round((height / width) * maxSize); width = maxSize }
-    else { width = Math.round((width / height) * maxSize); height = maxSize }
-    canvas.width = width
-    canvas.height = height
-    canvas.getContext("2d")?.drawImage(img, 0, 0, width, height)
-    resolve(canvas.toDataURL("image/jpeg", 0.85))
-  }
-  img.onerror = () => resolve(null)
-  img.src = URL.createObjectURL(file)
-})
-
 export function AccountScreen({
   user,
   authUser,
@@ -97,10 +80,9 @@ export function AccountScreen({
   const [editHandle, setEditHandle] = useState((user.handle || "").replace(/^@/, ""))
   const [editBio, setEditBio] = useState((user.bio || "").slice(0, PROFILE_BIO_MAX))
   const [editLink, setEditLink] = useState(user.link || "")
-  const [editAvatarPreview, setEditAvatarPreview] = useState(user.avatarUrl || null)
+  const [editChar, setEditChar] = useState(() => avatarCharOf(user) || "male")
   const [profileDirty, setProfileDirty] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
-  const fileInputRef = useRef(null)
 
   // 클라우드 프로필이 뒤늦게 로드되면 편집 전 폼에 반영
   useEffect(() => {
@@ -110,7 +92,7 @@ export function AccountScreen({
     setEditHandle((user.handle || "").replace(/^@/, ""))
     setEditBio((user.bio || "").slice(0, PROFILE_BIO_MAX))
     setEditLink(user.link || "")
-    setEditAvatarPreview(user.avatarUrl || null)
+    setEditChar(avatarCharOf(user) || "male")
   }, [profileDirty, user])
 
   const markDirty = (setter) => (value) => {
@@ -122,21 +104,7 @@ export function AccountScreen({
   const setHandle = markDirty(setEditHandle)
   const setBio = markDirty(setEditBio)
   const setLink = markDirty(setEditLink)
-  const setAvatarPreview = markDirty(setEditAvatarPreview)
-
-  const editInitials = getInitials(editName || user.name).slice(0, 1)
-  const editColors = getAvatarColors(editName || user.name)
-
-  const handlePhotoSelect = async (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    if (file.size > 10 * 1024 * 1024) {
-      showToast?.("10MB 이하의 이미지만 업로드할 수 있어요.")
-      return
-    }
-    const resized = await resizeImage(file)
-    if (resized) setAvatarPreview(resized)
-  }
+  const pickChar = markDirty(setEditChar)
 
   const saveProfile = async () => {
     setProfileSaving(true)
@@ -147,7 +115,9 @@ export function AccountScreen({
         bio: editBio,
         handle: editHandle,
         link: editLink,
-        avatarUrl: editAvatarPreview || null,
+        // 아바타 = 남/여 도트 캐릭터 (센티넬로 저장, 사진 아바타 대체)
+        emoji: avatarCharSentinel(editChar),
+        avatarUrl: null,
       })
       setProfileDirty(false)
       showToast?.("개인정보를 저장했어요.")
@@ -241,13 +211,20 @@ export function AccountScreen({
 
         <article className="acct-card" aria-label="개인정보 수정">
           <h2>개인정보</h2>
-          <div className="acct-avatar-wrap">
-            <button className="acct-avatar" type="button" onClick={() => fileInputRef.current?.click()} aria-label="프로필 사진 수정">
-              {editAvatarPreview ? <img src={editAvatarPreview} alt="프로필" /> : <span style={{ background: editColors.bg, color: editColors.text }}>{editInitials}</span>}
-              <i aria-hidden="true"><Edit3 size={12} strokeWidth={2.4} /></i>
-            </button>
-            {editAvatarPreview ? <button className="acct-avatar-remove" type="button" onClick={() => setAvatarPreview(null)}>사진 제거</button> : null}
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePhotoSelect} />
+          <div className="acct-charpick" role="radiogroup" aria-label="프로필 캐릭터 선택">
+            {[{ id: "male", label: "남자" }, { id: "female", label: "여자" }].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                role="radio"
+                aria-checked={editChar === opt.id}
+                className={`acct-charopt${editChar === opt.id ? " is-on" : ""}`}
+                onClick={() => pickChar(opt.id)}
+              >
+                <span className="acct-charopt__face"><PixelAvatar char={opt.id} /></span>
+                <span className="acct-charopt__label">{opt.label}</span>
+              </button>
+            ))}
           </div>
           <div className="acct-fields">
             <label className="acct-field">

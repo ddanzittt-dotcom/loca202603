@@ -377,7 +377,7 @@ export function PlaceFlipCard({
 
       {/* 인스타 공유용 포스터 — 화면 밖에서 렌더되어 캡처 대상이 된다 */}
       <div className="cardshare-hidden" aria-hidden="true">
-        <PlaceSharePoster feature={feature} dexNo={dexNo} innerRef={posterRef} />
+        <PlaceSharePoster feature={feature} dexNo={dexNo} mapTitle={mapTitle} innerRef={posterRef} />
       </div>
     </div>
   )

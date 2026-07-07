@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { getPlaceType } from "../lib/placeTypes"
-import { getAvatarColors, getInitials } from "../lib/avatarUtils"
 import { formatDotDate } from "../lib/binderCardData"
+import { PixelAvatar, avatarCharOf } from "../components/PixelAvatar"
 import { PlaceCardFront } from "../components/binder/PlaceFlipCard"
 import "../styles/dashboard-v2.css"
 
@@ -272,7 +272,6 @@ export function DashboardScreen({
   }, [recordFeatures])
   const quote = useTypewriter(latest ? `"${latest.text}" — ${latest.name}, ${latest.dateText}` : "")
 
-  const avatarColors = getAvatarColors(user.name)
   const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
   const hasRecords = recordFeatures.length > 0
 
@@ -281,10 +280,8 @@ export function DashboardScreen({
       <div className="dash">
         {/* ① 히어로 ID 카드 */}
         <div className="hero-id">
-          <div className="hi-avatar" aria-hidden="true">
-            {user.avatarUrl
-              ? <img src={user.avatarUrl} alt="" />
-              : <span style={{ background: avatarColors.bg, color: avatarColors.text }}>{getInitials(user.name).slice(0, 1)}</span>}
+          <div className="hi-avatar hi-avatar--char" aria-hidden="true">
+            <PixelAvatar char={avatarCharOf(user) || "male"} />
           </div>
           <div className="hi-main">
             <div className="hi-name">{user.name}</div>
