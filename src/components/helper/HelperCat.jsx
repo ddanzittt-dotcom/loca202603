@@ -11,7 +11,6 @@ const PALETTE = {
   w: "#FFFDF4", // 흰 털
   W: "#E7E1CE", // 흰 털 음영
   p: "#F2A7AE", // 분홍(귀 안쪽·코)
-  g: "#A8C94F", // 눈(연두)
   G: "#14100B", // 눈동자
 }
 
@@ -23,8 +22,8 @@ const CAT_GRID = [
   ".kKppkkkkkkkkkkkkppKk.",
   ".kkkkkkkkkkkkkkkkkkkk.",
   ".kskkkkkkkkkkkkkkkkkk.",
-  ".kkkkgGgkkkkkkgGgkkkk.",
-  ".kkkkgggkkkkkkgggkkkk.",
+  ".kkkkwGwkkkkkkwGwkkkk.",
+  ".kkkkwGwkkkkkkwGwkkkk.",
   ".kkkkkkkwwwwwwkkkkkkk.",
   ".kkkkkkkwwppwwkkkkkkk.",
   ".kkkkkkwwwppwwwkkkkkk.",
