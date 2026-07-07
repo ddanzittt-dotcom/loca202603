@@ -1,0 +1,365 @@
+/* ============================================================
+ * 내 정보 관리 (AccountScreen) — Cream & Ember v2
+ * 우상단 계정 버튼 → 계정/개인정보/비밀번호/설정 관리 화면
+ * ============================================================ */
+
+.account-screen {
+  padding-bottom: 96px;
+}
+
+.acct {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.acct-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-big);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.acct-card > h2 {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+}
+
+/* ── 정보 행 ── */
+.acct-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.acct-row:last-child {
+  border-bottom: none;
+}
+
+.acct-row__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-mute);
+}
+
+.acct-row__value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.acct-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+}
+
+/* ── 링크형 행 버튼 ── */
+.acct-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 0;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.acct-link-row:last-child {
+  border-bottom: none;
+}
+
+.acct-link-row svg:first-child {
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.acct-link-row svg:last-child {
+  margin-left: auto;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+
+/* ── 아바타 ── */
+.acct-avatar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.acct-avatar {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.acct-avatar img,
+.acct-avatar > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.acct-avatar i {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--ink-strong);
+  color: #fff;
+  border: 2px solid var(--card);
+}
+
+.acct-avatar-remove {
+  border: none;
+  background: none;
+  padding: 6px 4px;
+  color: var(--ink-mute);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── 폼 필드 ── */
+.acct-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.acct-field__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: -0.005em;
+}
+
+.acct-field__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.acct-field__count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.acct-field input,
+.acct-field textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.acct-field input:focus,
+.acct-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.acct-field textarea {
+  resize: vertical;
+  min-height: 66px;
+}
+
+.acct-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.acct-chips button {
+  border: 1px solid var(--line-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.acct-chips button:active {
+  background: var(--accent-faint);
+  border-color: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+/* ── 저장/제출 버튼 ── */
+.acct-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 13px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--ink-strong);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.acct-save:disabled {
+  background: var(--bg-deep);
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.acct-error {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-deep);
+}
+
+.acct-note {
+  margin: 2px 0 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* ── 테마 선택 ── */
+.acct-theme-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.acct-theme-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 11px 8px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink-mute);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.acct-theme-btn.is-active {
+  border-color: var(--accent);
+  background: var(--accent-faint);
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+
+/* ── 토글 행 ── */
+.acct-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0 4px;
+  cursor: pointer;
+}
+
+.acct-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.acct-toggle-label svg {
+  color: var(--ink-mute);
+}
+
+.acct-toggle-row input[type="checkbox"] {
+  width: 38px;
+  height: 21px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ── 로그아웃 ── */
+.acct-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-big);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

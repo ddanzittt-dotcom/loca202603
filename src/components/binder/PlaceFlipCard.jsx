@@ -103,6 +103,15 @@ export function PlaceFlipCard({
   showToast,
 }) {
   const [flipped, setFlipped] = useState(false)
+  // 앞뒤 차이가 적어 앞면은 제거 — 열리자마자 회전해서 바로 뒷면(상세)을 보여준다.
+  useEffect(() => {
+    const raf1 = window.requestAnimationFrame(() => {
+      const raf2 = window.requestAnimationFrame(() => setFlipped(true))
+      flipRafRef.current = raf2
+    })
+    flipRafRef.current = raf1
+    return () => window.cancelAnimationFrame(flipRafRef.current)
+  }, [])
   const [recFormOpen, setRecFormOpen] = useState(false)
   const [recText, setRecText] = useState("")
   const [recPhoto, setRecPhoto] = useState(null) // { file, preview }
@@ -110,6 +119,7 @@ export function PlaceFlipCard({
   const [photoBusy, setPhotoBusy] = useState(false)
   const fileInputRef = useRef(null)
   const recFileInputRef = useRef(null)
+  const flipRafRef = useRef(0)
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
@@ -196,16 +206,10 @@ export function PlaceFlipCard({
       <div className="bd-stage" onClick={(event) => event.stopPropagation()}>
         <button type="button" className="bd-flipclose" onClick={onClose} aria-label="닫기">✕</button>
         <div className={`bd-3d${flipped ? " is-flipped" : ""}`}>
-          {/* 앞면 */}
-          <button
-            type="button"
-            className="bd-face bd-face--front bd-card"
-            onClick={() => setFlipped(true)}
-            aria-label={`${name} 카드 — 눌러서 상세 보기`}
-          >
+          {/* 앞면 — 회전 표면으로만 남김 (열리면 자동으로 뒷면으로 뒤집힘) */}
+          <div className="bd-face bd-face--front bd-card" aria-hidden="true">
             <PlaceCardFront feature={feature} dexNo={dexNo} mapTitle={mapTitle} big />
-            <span className="bd-fronthint" aria-hidden="true">카드를 누르면 뒤집혀요</span>
-          </button>
+          </div>
 
           {/* 뒷면 */}
           <div className="bd-face bd-face--back" role="dialog" aria-modal="true" aria-label={`${name} 상세`}>

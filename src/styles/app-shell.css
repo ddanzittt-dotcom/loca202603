@@ -968,7 +968,7 @@
   }
 
   .web-section.maps-library-screen--v2 .maps-v3-grid {
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: 14px;
     padding: 0;
   }
@@ -1577,6 +1577,9 @@
   padding: 7px 10px 5px;
   border-bottom: 2px solid #1F1A12;
   background: #FFD338;
+  /* 카드는 overflow:visible(메뉴 노출용)라 각진 헤더가 rounded 카드 밖으로 삐져나온다.
+     카드 안쪽 반경(카드 10px − 보더 2px = 8px)에 상단 모서리를 맞춰 마감을 정리한다. */
+  border-radius: 8px 8px 0 0;
 }
 
 .app-shell--soft-social .web-section--maps .maps-v3-card__preview {
@@ -2838,7 +2841,10 @@
 .mbld-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 76;
+  /* 카드 추가 창을 항상 최상단에 — 요약 팝업(520)·편집기 FAB(1200)·시트(1300~1301)
+     위로 올려 뒤의 지도·편집기 UI·장소 상세 카드까지 backdrop 으로 어둡게 덮는다.
+     단, 토스트(1400)보다는 아래로 두어 담기 실패 등 알림이 가려지지 않게 한다. */
+  z-index: 1350;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3998,7 +4004,6 @@
   width: 100%;
   padding: 0;
   text-align: left;
-  cursor: pointer;
 }
 .bd-face--front .bd-cart { height: 230px; }
 .bd-face--back {
@@ -4007,14 +4012,6 @@
   transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
-}
-.bd-fronthint {
-  margin-top: auto;
-  text-align: center;
-  font-family: "DungGeunMo", monospace;
-  font-size: 11px;
-  color: #8A8574;
-  padding: 12px;
 }
 .bd-backhero {
   position: relative;

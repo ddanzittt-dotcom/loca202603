@@ -372,6 +372,33 @@ export async function listFeaturesForMapIds(mapIds) {
   })
 }
 
+// 지도-기록 M:N 배치(050) 조회 — 한 카드가 여러 지도에 담긴 관계를 { [mapId]: featureId[] } 로.
+// 배치 테이블이 없는 환경(050 미적용)이면 빈 객체를 반환해 스칼라 map_id 기반으로 폴백한다.
+export async function listPlacementsForMapIds(mapIds) {
+  if (!mapIds.length) return {}
+  const supabase = requireSupabase()
+  const byMap = {}
+
+  for (const chunk of chunkArray(mapIds)) {
+    const { data, error } = await supabase
+      .from("map_feature_placements")
+      .select("map_id, feature_id, sort_order")
+      .in("map_id", chunk)
+      .order("sort_order", { ascending: true })
+
+    if (error) {
+      if (canIgnoreOptionalTableRead(error, "map_feature_placements")) return {}
+      throw error
+    }
+    for (const row of data || []) {
+      if (!row?.map_id || !row?.feature_id) continue
+      ;(byMap[row.map_id] ||= []).push(row.feature_id)
+    }
+  }
+
+  return byMap
+}
+
 export async function listMemosForFeatureIds(featureIds) {
   if (!featureIds.length) return []
   const supabase = requireSupabase()
@@ -551,7 +578,7 @@ export async function getMyAppData() {
   })
 
   const mapIds = mapRows.map((row) => row.id)
-  const [mappedFeatureRows, maplessFeatureRows, publicationRows, collaboratorCounts, collaborationInvites] = await Promise.all([
+  const [mappedFeatureRows, maplessFeatureRows, publicationRows, collaboratorCounts, collaborationInvites, placements] = await Promise.all([
     listFeaturesForMapIds(mapIds).catch((error) => {
       console.error("Failed to load personal map features", error)
       return []
@@ -569,6 +596,11 @@ export async function getMyAppData() {
     listCollaborationInvites().catch((error) => {
       console.warn("Failed to load collaboration invites", error)
       return []
+    }),
+    // 지도-기록 M:N 배치(050): 한 카드가 여러 지도에 담긴 관계
+    listPlacementsForMapIds(mapIds).catch((error) => {
+      console.warn("Failed to load feature placements", error)
+      return {}
     }),
   ])
 
@@ -601,6 +633,7 @@ export async function getMyAppData() {
       ))
       .sort((a, b) => `${b.updatedAt || ""}`.localeCompare(`${a.updatedAt || ""}`)),
     features: mergeFeaturesWithMemos(featureRows, memoRows, mediaRows),
+    placements,
     shares: activePublicationRows.map((row) => normalizePublication(row)),
     followed: followsRes.error ? [] : (followsRes.data || []).map((row) => row.following_id),
     followerCount: followersRes.error ? 0 : (followersRes.count ?? 0),

@@ -27,11 +27,17 @@ export function PlacesScreen({
   embedded = false,
   title = "장소",
   subtitle = "저장한 장소와 길을 빠르게 찾기",
+  initialQuery = null, // 대시보드 동네 도감 → 동네명으로 진입
 }) {
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(0)
   const [pageAnim, setPageAnim] = useState(0)
   const [pageSize, setPageSize] = useState(initialPageSize)
+
+  // 외부에서 검색어를 주입하면(동네 타일 클릭 등) 반영
+  useEffect(() => {
+    if (initialQuery != null) setQuery(initialQuery)
+  }, [initialQuery])
 
   const personalMaps = maps
   const personalMapIds = useMemo(

@@ -354,6 +354,9 @@ export async function requireUser() {
 }
 
 export async function touchMapRecord(mapId) {
+  // 채집-우선(050): 지도 없이 만든 mapless 기록은 갱신할 지도가 없다.
+  // 가드 없으면 .eq("id", null) 이 에러를 던져 insert 성공 후에도 "등록 실패"로 보인다.
+  if (!mapId) return
   const supabase = requireSupabase()
   const { error } = await supabase
     .from("maps")

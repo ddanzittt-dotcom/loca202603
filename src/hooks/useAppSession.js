@@ -24,7 +24,7 @@ const isAnonymousAuthUser = (user) => Boolean(user?.is_anonymous || user?.app_me
 
 export function useAppSession({
   setMaps, setFeatures, setShares, setFollowed, setViewerProfile,
-  setCollaborationInvites,
+  setCollaborationInvites, setPlacements,
   setActiveTab, setMapsView, setActiveMapSource, setActiveMapId,
   setSelectedFeatureId, setSelectedFeatureSummaryId,
   setFeatureSheet, setEditorMode, setDraftPoints,
@@ -103,13 +103,17 @@ export function useAppSession({
       const cloudEmpty = appData.maps.length === 0
       const appMaps = appData.maps.filter((mapItem) => !mapItem.isCommunity)
       const appMapIds = new Set(appMaps.map((mapItem) => mapItem.id))
-      const appFeatures = appData.features.filter((featureItem) => appMapIds.has(featureItem.mapId))
+      // 채집-우선 구조(050): 내 지도 소속 카드 + 아직 어떤 지도에도 안 담긴 mapless 카드 모두 도감에 포함
+      const appFeatures = appData.features.filter(
+        (featureItem) => !featureItem.mapId || appMapIds.has(featureItem.mapId),
+      )
       const localData = readLocalImportData()
       const hasLocalData = localData.hasAny && localData.maps.length > 0
         && !localData.maps.every((m) => mapsSeed.some((s) => s.id === m.id))
 
       setMaps(appMaps)
       setFeatures((current) => mergeFeatureListWithLocalMedia(appFeatures, current))
+      setPlacements?.(appData.placements || {})
       setShares(appData.shares)
       setFollowed(appData.followed)
       setCollaborationInvites?.(appData.collaborationInvites || [])
@@ -151,12 +155,13 @@ export function useAppSession({
     } finally {
       setCloudLoading(false)
     }
-  }, [readLocalImportData, routeAtLoad, setCollaborationInvites, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, showToast, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
+  }, [readLocalImportData, routeAtLoad, setCollaborationInvites, setFeatures, setFollowed, setMaps, setPlacements, setShares, setViewerProfile, showToast, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
   const resetToLoggedOut = useCallback(() => {
     const keepSharedViewer = routeAtLoad?.type === "shared" || routeAtLoad?.type === "slug"
     setMaps(mapsSeed)
     setFeatures(featuresSeed)
+    setPlacements?.({})
     setShares(sharesSeed)
     setFollowed(followedSeed)
     setCollaborationInvites?.([])
@@ -183,7 +188,7 @@ export function useAppSession({
     setSelectedPostRef(null)
     if (!keepSharedViewer) setSharedMapData(null)
     setShareEditorImage(null)
-  }, [routeAtLoad?.type, setCollaborationInvites, setFeatures, setFollowed, setMaps, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
+  }, [routeAtLoad?.type, setCollaborationInvites, setFeatures, setFollowed, setMaps, setPlacements, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
 
   // 초기 세션 확인 + auth state 구독
   useEffect(() => {

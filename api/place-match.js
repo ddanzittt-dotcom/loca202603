@@ -37,6 +37,36 @@ function normalizeDocument(doc) {
   }
 }
 
+// 주소 검색(address.json) 결과 정규화 — 상호가 아니라 도로명/지번 주소를 카드로.
+function normalizeAddressDocument(doc, bias) {
+  const road = doc.road_address
+  const addressName = road?.address_name || doc.address_name || ""
+  const name = road?.building_name?.trim() || addressName
+  const lat = Number(doc.y)
+  const lng = Number(doc.x)
+  return {
+    name,
+    category: "etc",
+    categoryName: "주소",
+    address: addressName,
+    lat,
+    lng,
+    distance: bias ? haversineMeters(bias.lat, bias.lng, lat, lng) : 0,
+    kakaoUrl: null,
+  }
+}
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return 0
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const R = 6371000
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)))
+}
+
 async function kakaoSearch(path, params, key) {
   const search = new URLSearchParams(params)
   const response = await fetch(`${KAKAO_LOCAL_BASE}/${path}?${search.toString()}`, {
@@ -82,17 +112,31 @@ export default async function handler(req, res) {
   const query = (req.query.q || "").toString().trim().slice(0, 60)
 
   try {
-    let documents = []
+    let matched = []
 
     if (query) {
-      documents = await kakaoSearch("keyword.json", {
-        query,
-        x: lng.toFixed(6),
-        y: lat.toFixed(6),
-        radius: "300",
-        sort: "distance",
-        size: "10",
-      }, key)
+      // 검색은 상호(keyword)와 주소(address)를 병행한다 — 사용자가 "성수 카페" 든 "성정로 75" 든 다 잡히게.
+      // 위치를 기준점으로 두되 상호 검색 반경은 카카오 최대치(20km)까지 넓힌다(기존 300m 는 사실상 검색 불가).
+      const [keywordDocs, addressDocs] = await Promise.all([
+        kakaoSearch("keyword.json", {
+          query,
+          x: lng.toFixed(6),
+          y: lat.toFixed(6),
+          radius: "20000",
+          sort: "distance",
+          size: "15",
+        }, key).catch(() => []),
+        kakaoSearch("address.json", { query, size: "5" }, key).catch(() => []),
+      ])
+      const bias = { lat, lng }
+      const keywordCandidates = keywordDocs
+        .map(normalizeDocument)
+        .sort((a, b) => a.distance - b.distance)
+      const addressCandidates = addressDocs
+        .map((doc) => normalizeAddressDocument(doc, bias))
+        .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
+      // 상호 결과를 먼저(더 구체적), 주소 결과를 뒤에 붙인다.
+      matched = [...keywordCandidates, ...addressCandidates]
     } else {
       const results = await Promise.all(CATEGORY_GROUPS.map((group) =>
         kakaoSearch("category.json", {
@@ -104,19 +148,20 @@ export default async function handler(req, res) {
           size: "5",
         }, key).catch(() => []),
       ))
-      documents = results.flat()
+      matched = results
+        .flat()
+        .map(normalizeDocument)
+        .sort((a, b) => a.distance - b.distance)
     }
 
     const seen = new Set()
-    const candidates = documents
-      .map(normalizeDocument)
+    const candidates = matched
       .filter((item) => {
         const dedupeKey = `${item.name}|${item.lat}|${item.lng}`
         if (seen.has(dedupeKey)) return false
         seen.add(dedupeKey)
         return true
       })
-      .sort((a, b) => a.distance - b.distance)
       .slice(0, 8)
 
     res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400")

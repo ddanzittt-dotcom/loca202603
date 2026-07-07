@@ -31,8 +31,10 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  transform: translate(-50%, -100%);
-  transform-origin: center bottom;
+  /* 앵커링은 카카오 CustomOverlay(xAnchor:0.5, yAnchor:1)가 전담한다.
+     여기에 translate(-50%,-100%) 를 더하면 이중 앵커링이 되어 화면상 고정 픽셀만큼
+     밀리고, 그 픽셀 오프셋이 줌마다 지상거리로 달라져 핀이 이동하는 것처럼 보인다.
+     (길/영역 라벨 앵커처럼 translate 없이 카카오 앵커만 사용) */
   pointer-events: none;
   overflow: visible;
 }
@@ -117,7 +119,13 @@
 
 .loca-place-marker__label {
   box-sizing: border-box;
-  margin-top: 2px;
+  /* 라벨을 흐름에서 빼 이모지 아래에 절대배치 — 이모지가 마커의 바닥이 되어
+     그 바닥(=좌표)이 줌·라벨표시와 무관하게 고정된다. (흐름에 두면 라벨 밑이 앵커가 되고
+     그 위의 이모지가 스케일마다 상하로 이동해 핀이 움직이는 것처럼 보인다) */
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
   padding: 3px 8px;
   max-width: 96px;
   border-radius: 6px;
@@ -174,12 +182,14 @@
 
 .loca-place-marker--selected::after {
   content: "";
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 50%;
   width: 6px;
   height: 6px;
-  margin-top: -1px;
   border-radius: 2px;
   background: #FF5A2D;
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg);
   opacity: 0.75;
 }
 
@@ -393,11 +403,13 @@
   color: #0F6E56;
 }
 
-/* 핀 라벨과 동일하게 지도 줌 스케일을 적용해 크기 체감을 통일 */
+/* 핀 라벨과 동일하게 지도 줌 스케일을 적용해 크기 체감을 통일.
+   라벨 오버레이는 yAnchor:1(하단 앵커)로 좌표에 붙으므로, 스케일 기준점도
+   하단(center bottom)이어야 줌 시 앵커점이 고정된다. (center top 이면 줌마다 세로로 어긋남) */
 .loca-route-label,
 .loca-area-label {
   transform: scale(var(--map-scale, 1));
-  transform-origin: center top;
+  transform-origin: center bottom;
   transition: transform 0.15s ease-out;
 }
 

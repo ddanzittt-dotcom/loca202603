@@ -1959,7 +1959,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translate(-50%, -100%);
+  /* 앵커링은 카카오 CustomOverlay(xAnchor:0.5, yAnchor:1)가 전담 — translate 로 이중 앵커링하면
+     화면상 고정 픽셀만큼 밀리고 그 오프셋이 줌마다 지상거리로 달라져 마커가 이동해 보인다. */
   transform-origin: center bottom;
   pointer-events: auto;
   user-select: none;
