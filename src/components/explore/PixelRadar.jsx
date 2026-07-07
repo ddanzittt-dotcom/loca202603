@@ -16,9 +16,8 @@ const TILE = 20 // 이모지 도트 타일 크기(px)
 const EMOJI_FONT = '13px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
 const WEDGE = 0.72
 const MAX_LAPS = 2
-const MAX_KM = 10
 const HIT_RADIUS = 18
-const MAX_DOTS = 18
+const MAX_DOTS = 30
 
 function hashSeed(input) {
   const str = String(input || "seed")
@@ -79,13 +78,20 @@ function createRadar(canvas, { onCount, onDot }) {
 
     const loc = st.location || { lat: 37.5665, lng: 126.978 }
     const cosLat = Math.cos((loc.lat * Math.PI) / 180) || 1
-    const spanX = w * 0.42
-    const spanY = h * 0.40
-    st.dots = st.items.slice(0, MAX_DOTS).map((item) => {
+    const spanX = w * 0.44
+    const spanY = h * 0.42
+    const pool = st.items.slice(0, MAX_DOTS)
+    // 자동 줌 — 가장 먼 도트를 기준으로 정규화해 행사·공간·생물이 거리와 무관하게 모두 보이게.
+    // sqrt 스케일로 가까운 것들도 중앙에 뭉치지 않고 퍼진다.
+    const dists = pool.map((i) => (Number.isFinite(i.distKm) ? i.distKm : null)).filter((v) => v != null)
+    // 3~30km 범위로 자동 줌 — 아주 먼 행사 1개가 나머지를 중앙에 뭉치게 하지 않도록 상한 30km
+    const maxDist = Math.min(30, Math.max(3, ...(dists.length ? dists : [5])))
+    st.dots = pool.map((item) => {
       const east = (item.lng - loc.lng) * cosLat
       const north = item.lat - loc.lat
       const angGeo = Math.atan2(-north, east) // 화면 y는 아래로 → 북쪽이 위
-      const rRatio = Math.min(1, (Number.isFinite(item.distKm) ? item.distKm : 5) / MAX_KM) * 0.9 + 0.08
+      const ratio = Math.min(1, (Number.isFinite(item.distKm) ? item.distKm : maxDist) / maxDist)
+      const rRatio = Math.sqrt(ratio) * 0.92 + 0.06
       let x = st.cx + Math.cos(angGeo) * spanX * rRatio
       let y = st.cy + Math.sin(angGeo) * spanY * rRatio
       x = Math.max(CELL, Math.min(w - CELL, x))

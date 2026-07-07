@@ -373,10 +373,13 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       lat: Number(raw.lat), lng: Number(raw.lng),
       distKm: raw.distKm, category: raw.category, data: raw,
     })
-    const evts = (Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))
-    const plcs = (placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))
-    const wild = (wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))
-    return [...evts, ...plcs, ...wild].filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+    // 좌표 있는 것만, 카테고리별 상한(PER)으로 균형 배치 — 한 종류가 도트를 독점하지 않게
+    const PER = 10
+    const withCoords = (arr) => arr.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
+    const evts = withCoords((Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))).slice(0, PER)
+    const plcs = withCoords((placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))).slice(0, PER)
+    const wild = withCoords((wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))).slice(0, PER)
+    return [...evts, ...plcs, ...wild]
   }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
 
   // 도트 [카드 보기] → 해당 카드로 스크롤 + 펄스 + 상세 시트 오픈
