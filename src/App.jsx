@@ -36,7 +36,7 @@ import { logEvent } from "./lib/analytics"
 import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createMap as createMapRecord, placeFeatureInMap, removeFeatureFromMap, updateMap as updateMapRecord } from "./lib/mapService.write"
+import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord } from "./lib/mapService.write"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
@@ -957,9 +957,13 @@ export default function App() {
           category: "personal",
           config: {},
         })
-        // 고른 카드를 순서대로 새 지도에 담기 (050 배치 테이블 기준)
-        for (let index = 0; index < ids.length; index += 1) {
-          await placeFeatureInMap(nextMap.id, ids[index], index)
+        // 고른 카드를 순서대로 새 지도에 담기 (050 배치 테이블 기준, bulk)
+        try {
+          await placeFeaturesInMap(nextMap.id, ids)
+        } catch (placementError) {
+          // 카드를 못 담으면 방금 만든 빈 지도가 남지 않게 정리 후 실패 처리
+          await deleteMapRecord(nextMap.id).catch(() => {})
+          throw placementError
         }
       } else {
         nextMap = {
@@ -997,9 +1001,8 @@ export default function App() {
     setMapBuilderBusy(true)
     try {
       if (cloudMode) {
-        for (let index = 0; index < ids.length; index += 1) {
-          await placeFeatureInMap(mapId, ids[index], index)
-        }
+        // bulk 담기 — 대상 지도의 기존 sort_order 뒤에 이어붙는다
+        await placeFeaturesInMap(mapId, ids)
       }
       const idSet = new Set(ids)
       setFeatures((current) => current.map((feature) => (

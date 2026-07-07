@@ -269,6 +269,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place", data}
+  const [radarExpanded, setRadarExpanded] = useState(false)
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
@@ -373,13 +374,20 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       lat: Number(raw.lat), lng: Number(raw.lng),
       distKm: raw.distKm, category: raw.category, data: raw,
     })
-    // 좌표 있는 것만, 카테고리별 상한(PER)으로 균형 배치 — 한 종류가 도트를 독점하지 않게
-    const PER = 10
+    // 좌표 있는 것만, 카테고리별 상한(PER)으로. 인터리브해서 앞에서 잘라도(maxDots) 균형 유지.
+    const PER = 24
     const withCoords = (arr) => arr.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
     const evts = withCoords((Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))).slice(0, PER)
     const plcs = withCoords((placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))).slice(0, PER)
     const wild = withCoords((wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))).slice(0, PER)
-    return [...evts, ...plcs, ...wild]
+    const interleaved = []
+    const maxLen = Math.max(evts.length, plcs.length, wild.length)
+    for (let i = 0; i < maxLen; i += 1) {
+      if (evts[i]) interleaved.push(evts[i])
+      if (plcs[i]) interleaved.push(plcs[i])
+      if (wild[i]) interleaved.push(wild[i])
+    }
+    return interleaved
   }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
 
   // 도트 [카드 보기] → 해당 카드로 스크롤 + 펄스 + 상세 시트 오픈
@@ -402,9 +410,11 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         label={effectiveLocation.label}
         hasLocation={Boolean(location)}
         locating={locating}
+        maxDots={24}
         onLocate={locateMe}
         onReload={() => setReloadKey((value) => value + 1)}
         onSelect={handleRadarSelect}
+        onExpand={() => setRadarExpanded(true)}
       />
 
       <section className="xc-section" aria-label="지금 열린 행사">
@@ -518,6 +528,27 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </CardRail>
         )}
       </section>
+
+      {radarExpanded ? (
+        <div className="xradar-modal" role="presentation" onClick={() => setRadarExpanded(false)}>
+          <div className="xradar-modal__panel" onClick={(e) => e.stopPropagation()}>
+            <p className="xradar-modal__title">📡 내 주변에 이만큼 있어요</p>
+            <PixelRadar
+              items={radarItems}
+              location={effectiveLocation}
+              label={effectiveLocation.label}
+              hasLocation={Boolean(location)}
+              locating={locating}
+              maxDots={90}
+              expanded
+              onLocate={locateMe}
+              onReload={() => setReloadKey((value) => value + 1)}
+              onSelect={(item) => { setRadarExpanded(false); handleRadarSelect(item) }}
+              onClose={() => setRadarExpanded(false)}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {detailItem ? (
         <CurationDetailSheet

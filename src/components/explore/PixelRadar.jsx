@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { LocateFixed, RotateCw } from "lucide-react"
+import { LocateFixed, Maximize2, RotateCw, X } from "lucide-react"
 
 // 탐색 헤더 픽셀 레이더 — 내 위치 중심으로 주변 추천(행사·공간)을 "탐지"하는 스캔 연출.
 // 도트 = 실제 아이템(실좌표를 방위·거리로 배치). 점등된 도트 클릭 → 팝오버 → [카드 보기].
@@ -17,7 +17,6 @@ const EMOJI_FONT = '13px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"
 const WEDGE = 0.72
 const MAX_LAPS = 2
 const HIT_RADIUS = 18
-const MAX_DOTS = 30
 
 function hashSeed(input) {
   const str = String(input || "seed")
@@ -36,13 +35,13 @@ function angDiff(a, b) {
   return d
 }
 
-function createRadar(canvas, { onCount, onDot }) {
+function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   const ctx = canvas.getContext("2d")
   const reduce = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   const st = {
     W: 0, H: 0, cx: 0, cy: 0, terrain: [], dots: [],
     sweep: -Math.PI / 2, laps: 0, sweeping: false, last: 0, selected: null,
-    items: [], location: null, seed: 7, count: -1,
+    items: [], location: null, seed: 7, count: -1, revealed: false, maxDots,
   }
   let raf = 0
 
@@ -80,7 +79,7 @@ function createRadar(canvas, { onCount, onDot }) {
     const cosLat = Math.cos((loc.lat * Math.PI) / 180) || 1
     const spanX = w * 0.44
     const spanY = h * 0.42
-    const pool = st.items.slice(0, MAX_DOTS)
+    const pool = st.items.slice(0, st.maxDots)
     // 자동 줌 — 가장 먼 도트를 기준으로 정규화해 행사·공간·생물이 거리와 무관하게 모두 보이게.
     // sqrt 스케일로 가까운 것들도 중앙에 뭉치지 않고 퍼진다.
     const dists = pool.map((i) => (Number.isFinite(i.distKm) ? i.distKm : null)).filter((v) => v != null)
@@ -96,7 +95,8 @@ function createRadar(canvas, { onCount, onDot }) {
       let y = st.cy + Math.sin(angGeo) * spanY * rRatio
       x = Math.max(CELL, Math.min(w - CELL, x))
       y = Math.max(CELL, Math.min(h - CELL, y))
-      return { x, y, ang: 0, item, seen: false, hit: 0 }
+      // 이미 탐지가 끝난 상태(리사이즈·확대 등)면 재배치 후에도 점등 유지
+      return { x, y, ang: 0, item, seen: st.revealed, hit: 0 }
     })
 
     // 이모지 타일이 겹치지 않게 살짝 밀어내기 (n≤18, 몇 번만)
@@ -221,7 +221,7 @@ function createRadar(canvas, { onCount, onDot }) {
         }
       }
       emitCount()
-      if (st.laps >= MAX_LAPS) st.sweeping = false
+      if (st.laps >= MAX_LAPS) { st.sweeping = false; st.revealed = true }
     }
     draw(now)
     if (alive(now)) {
@@ -275,6 +275,8 @@ function createRadar(canvas, { onCount, onDot }) {
       st.seed = seed
       st.selected = null
       onDot(null)
+      // 스윕 없이 바로 보여주는 경우(reduce/빈 데이터)면 revealed=true 로 두고 빌드
+      st.revealed = reduce || st.items.length === 0
       build()
       st.count = -1
       if (reduce || st.dots.length === 0) {
@@ -307,9 +309,13 @@ export function PixelRadar({
   label = "내 위치 주변",
   hasLocation = false,
   locating = false,
+  maxDots = 30,
+  expanded = false,
   onLocate,
   onReload,
   onSelect,
+  onExpand,
+  onClose,
 }) {
   const canvasRef = useRef(null)
   const radarRef = useRef(null)
@@ -324,6 +330,7 @@ export function PixelRadar({
     const canvas = canvasRef.current
     if (!canvas) return undefined
     const radar = createRadar(canvas, {
+      maxDots,
       onCount: setCount,
       onDot: (info) => {
         if (!info) { setPopover(null); return }
@@ -339,6 +346,7 @@ export function PixelRadar({
     })
     radarRef.current = radar
     return () => { radar.destroy(); radarRef.current = null }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -348,8 +356,13 @@ export function PixelRadar({
   }, [signature])
 
   return (
-    <div className="xradar" aria-label="주변 탐지 레이더">
+    <div className={`xradar${expanded ? " xradar--expanded" : ""}`} aria-label="주변 탐지 레이더">
       <canvas ref={canvasRef} className="xradar__canvas" />
+      {onClose ? (
+        <button type="button" className="xradar__close" onClick={onClose} aria-label="레이더 닫기">
+          <X size={16} strokeWidth={2.5} />
+        </button>
+      ) : null}
       <span className="xradar__cat" aria-hidden="true">
         <span className="xradar__cat-inner">
           <svg className="xradar__cat-svg" viewBox="0 0 32 22" xmlns="http://www.w3.org/2000/svg">
@@ -389,6 +402,11 @@ export function PixelRadar({
         </button>
         <div className="xradar__right">
           <span className="xradar__detect">주변 <b>{count}</b>곳 탐지</span>
+          {onExpand ? (
+            <button type="button" className="xradar__reload" onClick={onExpand} aria-label="지도 크게 보기">
+              <Maximize2 size={13} strokeWidth={2.4} />
+            </button>
+          ) : null}
           <button type="button" className="xradar__reload" onClick={onReload} aria-label="다시 탐지">
             <RotateCw size={13} strokeWidth={2.4} />
           </button>

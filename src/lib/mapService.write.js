@@ -285,40 +285,62 @@ export async function createFeature(mapId, featureData) {
   return normalizeFeature(data)
 }
 
+// 배치 테이블(050) 자체가 없는 환경만 하위호환으로 무시한다.
+// RLS 거부 등 나머지 에러는 호출부까지 올려 사용자에게 실패를 알린다.
+function isMissingPlacementsTable(error) {
+  if (!error) return false
+  return error.code === "42P01" || error.code === "PGRST205"
+}
+
 // 채집한 기록(대개 지도 없이 도감에 쌓인 것)을 지도에 담는다 — C단계 빌더용.
 // 050 적용 후: M:N 배치(map_feature_placements)로 기록. 한 카드가 여러 지도에 담길 수 있다.
-// 050 미적용/하위호환: 아직 소속 지도가 없는 기록이면 map_id 도 채워 기존 조회에 노출.
-export async function placeFeatureInMap(mapId, featureId, sortOrder = 0) {
+// 050 미적용/하위호환: 배치 테이블이 없으면 건너뛰고, 소속 지도가 없는 기록의 map_id 만 채운다.
+// 카드 수와 무관하게 요청 3회(다음 순번 조회 + bulk upsert + map_id 보정)로 처리한다.
+export async function placeFeaturesInMap(mapId, featureIds) {
   const user = await requireUser()
   const supabase = requireSupabase()
-  if (!mapId || !featureId) return
+  const ids = (Array.isArray(featureIds) ? featureIds : [featureIds]).filter(Boolean)
+  if (!mapId || ids.length === 0) return
 
-  try {
+  // 대상 지도의 기존 배치 뒤에 이어붙인다 — 기존 카드들과 sort_order 충돌 방지
+  let placementsSupported = true
+  let nextSortOrder = 0
+  const { data: lastRows, error: lastError } = await supabase
+    .from("map_feature_placements")
+    .select("sort_order")
+    .eq("map_id", mapId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+  if (lastError) {
+    if (!isMissingPlacementsTable(lastError)) throw lastError
+    placementsSupported = false
+  } else if (lastRows?.length) {
+    nextSortOrder = (Number(lastRows[0].sort_order) || 0) + 1
+  }
+
+  if (placementsSupported) {
+    // 이미 담긴 카드(UNIQUE 충돌)는 정상으로 취급 — ignoreDuplicates 로 건너뛴다
     const { error } = await supabase
       .from("map_feature_placements")
-      .insert({
-        map_id: mapId,
-        feature_id: featureId,
-        sort_order: sortOrder,
-        added_by: user?.id || null,
-      })
-    // 23505 = 이미 담긴 카드(UNIQUE 충돌) → 정상으로 취급
-    if (error && error.code !== "23505") {
-      console.warn("placement insert skipped:", error.message)
-    }
-  } catch {
-    // 배치 테이블(050) 미적용 환경 — 조용히 건너뜀
+      .upsert(
+        ids.map((featureId, index) => ({
+          map_id: mapId,
+          feature_id: featureId,
+          sort_order: nextSortOrder + index,
+          added_by: user?.id || null,
+        })),
+        { onConflict: "map_id,feature_id", ignoreDuplicates: true },
+      )
+    if (error) throw error
   }
 
-  try {
-    await supabase
-      .from("map_features")
-      .update({ map_id: mapId })
-      .eq("id", featureId)
-      .is("map_id", null)
-  } catch {
-    // ignore — 하위호환 보정 실패는 무시
-  }
+  // 하위호환 보정: 아직 소속 지도가 없는 기록이면 map_id 도 채워 기존 조회에 노출
+  const { error: legacyError } = await supabase
+    .from("map_features")
+    .update({ map_id: mapId })
+    .in("id", ids)
+    .is("map_id", null)
+  if (legacyError) throw legacyError
 
   await touchMapRecord(mapId)
 }
@@ -331,26 +353,20 @@ export async function removeFeatureFromMap(mapId, featureId) {
   const supabase = requireSupabase()
   if (!mapId || !featureId) return
 
-  try {
-    const { error } = await supabase
-      .from("map_feature_placements")
-      .delete()
-      .eq("map_id", mapId)
-      .eq("feature_id", featureId)
-    if (error) console.warn("placement delete skipped:", error.message)
-  } catch {
-    // 배치 테이블(050) 미적용 환경 — 조용히 건너뜀
-  }
+  const { error } = await supabase
+    .from("map_feature_placements")
+    .delete()
+    .eq("map_id", mapId)
+    .eq("feature_id", featureId)
+  // 배치 테이블(050) 미적용 환경만 건너뛰고, 나머지 실패는 호출부로 올린다
+  if (error && !isMissingPlacementsTable(error)) throw error
 
-  try {
-    await supabase
-      .from("map_features")
-      .update({ map_id: null })
-      .eq("id", featureId)
-      .eq("map_id", mapId)
-  } catch {
-    // ignore — legacy map_id 보정 실패는 무시
-  }
+  const { error: legacyError } = await supabase
+    .from("map_features")
+    .update({ map_id: null })
+    .eq("id", featureId)
+    .eq("map_id", mapId)
+  if (legacyError) throw legacyError
 
   await touchMapRecord(mapId)
 }
