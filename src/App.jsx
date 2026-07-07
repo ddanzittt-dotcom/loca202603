@@ -74,7 +74,9 @@ import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
 import { CollaboratorsSheet } from "./components/sheets/CollaboratorsSheet"
 import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
-import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated } from "./lib/onboarding"
+import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated, isTutorialSeen, markTutorialSeen } from "./lib/onboarding"
+import { HelperCat } from "./components/helper/HelperCat"
+import { TutorialDialog } from "./components/helper/TutorialDialog"
 import { CoachMark } from "./components/CoachMark"
 import { mergeFeatureListWithLocalMedia } from "./lib/featureMediaMerge"
 import { getPendingFeatureMediaSyncKeys, syncFeatureListLocalMediaToCloud } from "./lib/mediaCloudSync"
@@ -360,6 +362,8 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(() => (
     !initialSharedMapData && !initialStoredTarget && !localStorage.getItem("loca.intro_seen")
   ))
+  // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
+  const [tutorial, setTutorial] = useState(null)
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -507,6 +511,13 @@ export default function App() {
   })
 
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
+
+  // 회원가입/로그인 후 첫 진입 — 로카냥 튜토리얼 1회 자동 재생
+  useEffect(() => {
+    if (authUser && cloudDataReady && !isTutorialSeen("authed")) {
+      setTutorial({ step: 0, auto: "authed" })
+    }
+  }, [authUser, cloudDataReady])
   const hasStoredPersonalCacheForUser = Boolean(authUser?.id && storedCloudUserId === authUser.id)
   const isFirstCloudLoadForUser = cloudLoading && !cloudDataReady && cloudLoadedUserId !== authUser?.id && !hasStoredPersonalCacheForUser
   const requiresAuthForCurrentTab =
@@ -1313,7 +1324,7 @@ export default function App() {
   }, [publishMap, publishSubmitting])
 
   // 프로필 공개/내리기 공통 confirm 진입점.
-  // 호출부: MapsList / MapEditor / PublishSheet 성공 후속 / ProfileScreen 내부.
+  // 호출부: MapsList / MapEditor / PublishSheet 성공 후속.
   const requestProfilePlacement = useCallback((mode, mapId, onSuccess) => {
     if (!mapId) return
     setProfilePlacementSheet({ mode, mapId, onSuccess: onSuccess || null })
@@ -1716,7 +1727,12 @@ export default function App() {
     return (
       <div className="app-shell app-shell--soft-social app-shell--intro">
         <IntroScreen
-          onEnter={() => { dismissIntro(); setActiveTab("explore") }}
+          onEnter={() => {
+            dismissIntro()
+            setActiveTab("explore")
+            // 입장 직후 로카냥 튜토리얼 1회 자동 재생
+            if (!isTutorialSeen("guest")) setTutorial({ step: 0, auto: "guest" })
+          }}
           onLogin={() => { dismissIntro(); setActiveTab("login") }}
         />
       </div>
@@ -2082,6 +2098,22 @@ export default function App() {
         authed={Boolean(authUser)}
       />
       )}
+
+      {/* 도우미 로카냥 — 좌하단 상주, 누르면 도움말 메뉴 (편집/뷰어/로그인 화면에선 숨김) */}
+      {!shouldHideBottomNav && !isMapEditorLayout && bottomNavTab !== "login" ? (
+        <HelperCat onOpenTutorial={(step) => setTutorial({ step, auto: null })} />
+      ) : null}
+
+      {/* 로카냥 튜토리얼 오버레이 */}
+      {tutorial ? (
+        <TutorialDialog
+          startStep={tutorial.step}
+          onClose={() => {
+            if (tutorial.auto) markTutorialSeen(tutorial.auto)
+            setTutorial(null)
+          }}
+        />
+      ) : null}
 
       {placeCardFeature ? (
         <PlaceFlipCard

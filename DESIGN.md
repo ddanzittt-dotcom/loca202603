@@ -17,8 +17,9 @@
 >
 > 적용된 stylesheets (`src/styles/`):
 > - tokens-v2.css · app-shell.css · visuals.css · animations.css
-> - home-v2.css · maps-v2.css · explore-v2.css · profile-v2.css
+> - home-v2.css · maps-v2.css · explore-v2.css
 > - map-detail-v2.css · feature-detail-v2.css · feature-sheets-v2.css
+> - dashboard-v2.css · account-v2.css (내 대시보드 / 내 정보 관리, 각 스크린이 직접 import)
 >
 > 키프레임은 `animations.css` 한 곳에 모아두었습니다(loca-pin-pulse · pin-bob · sheet-in · backdrop-in · fab-rotate · record-pulse). 모든 애니메이션은 `prefers-reduced-motion: reduce` 에서 자동 비활성화.
 

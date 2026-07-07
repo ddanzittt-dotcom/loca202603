@@ -34,12 +34,13 @@ src/
     MapEditorScreen.jsx# 지도 편집, 피처 그리기, 공유
     MapShareEditor.jsx # 지도 공유 이미지 생성 (프레임/스티커/QR)
     SharedMapViewer.jsx# 발행/공유 지도 읽기 전용 뷰어 + 라이브러리 저장 + 공유
-    PlacesScreen.jsx   # 전체 피처 검색 + EmptyState
-    ProfileScreen.jsx  # 프로필, 발행 지도
+    PlacesScreen.jsx   # 전체 피처 검색(카드 바인더) + EmptyState
+    DashboardScreen.jsx# 내 대시보드 — 등록·기록 데이터 수첩(히어로 ID카드/동네 도감/연대기)
+    AccountScreen.jsx  # 내 정보 관리 — 계정/개인정보/비밀번호/설정 (우상단 계정 버튼)
     AuthScreen.jsx     # 로그인/회원가입 + 한국어 에러 메시지
     PublicCommunityPage.jsx # 모두의 지도 public 웹 (/community-web, main.jsx에서 분기)
                        # 구 홈/탐색/검색 스크린은 웹 워크스페이스 개편(2026-06)으로 삭제됨
-                       # 현재 탭: 로그인 / 지도 제작 / 지도 목록 / 장소 목록 / 프로필 (BottomNav.v2)
+                       # 현재 탭: 탐색 / 내 지도 / 내 장소 / 내 대시보드 (BottomNav.v2), 우상단 계정 버튼→내 정보 관리
   components/
     ui.jsx             # 재사용 UI (BottomSheet, MapCard, Spinner, SkeletonCard, EmptyState, Toast)
     BottomNav.v2.jsx   # 하단 내비게이션 v2

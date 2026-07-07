@@ -5439,3 +5439,220 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ═══════════ 도우미 고양이 "로카냥" + 튜토리얼 (2026-07-07) ═══════════ */
+
+/* 좌하단 상주 버튼 — 모바일: 하단 내비 위, 데스크톱(내비 상단 이동): 좌하단 구석 */
+.hcat {
+  position: fixed;
+  left: 10px;
+  bottom: calc(94px + env(safe-area-inset-bottom));
+  z-index: 52;
+}
+@media (min-width: 960px) {
+  .hcat { left: 20px; bottom: 20px; }
+}
+.hcat-btn {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #FFF6E7;
+  border: 3px solid #1B1B18;
+  box-shadow: 3px 3px 0 rgba(27, 27, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.hcat-btn:hover { transform: translateY(-2px); box-shadow: 4px 5px 0 rgba(27, 27, 24, 0.55); }
+.hcat-btn.is-open { background: #F5C41B; }
+.hcat-btn:focus-visible { outline: 2px solid var(--accent, #E8442E); outline-offset: 2px; }
+
+/* 스프라이트 idle 애니메이션 — 몸 들썩 + 꼬리 살랑, 메뉴 열리면 팔 인사 */
+.hcat-svg { animation: hcatBob 1.2s steps(2, end) infinite; overflow: visible; }
+.hcat-svg .hcat-tail {
+  transform-origin: 25px 31px;
+  animation: hcatTail 1.6s ease-in-out infinite;
+}
+.hcat-svg .hcat-eyes { animation: hcatBlink 4s steps(1) infinite; }
+.hcat-svg.is-waving .hcat-arm {
+  transform-origin: 5px 18px;
+  animation: hcatWave 0.5s ease-in-out infinite alternate;
+}
+@keyframes hcatBob { 0%, 49.9% { transform: translateY(0); } 50%, 100% { transform: translateY(1px); } }
+@keyframes hcatTail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-14deg); } }
+@keyframes hcatBlink { 0%, 92%, 100% { opacity: 1; } 93%, 97% { opacity: 0; } }
+@keyframes hcatWave { from { transform: rotate(0deg); } to { transform: rotate(-24deg); } }
+
+/* 말풍선 도움말 메뉴 */
+.hcat-menu {
+  position: absolute;
+  left: 0;
+  bottom: 62px;
+  width: 210px;
+  background: #FFFDF4;
+  border: 3px solid #1B1B18;
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 rgba(27, 27, 24, 0.5);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: hcatMenuPop 0.16s ease both;
+}
+.hcat-menu::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -12px;
+  border: 6px solid transparent;
+  border-top-color: #1B1B18;
+}
+@keyframes hcatMenuPop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.hcat-menu__title {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8A8574;
+  padding: 2px 6px 6px;
+}
+.hcat-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1B1B18;
+  text-align: left;
+  cursor: pointer;
+}
+.hcat-menu__item:hover { background: #F5EFDC; }
+
+/* ── 튜토리얼 오버레이 ── */
+.tut-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(27, 27, 24, 0.62);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 20px;
+}
+.tut-skip {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 16px;
+  background: rgba(255, 253, 244, 0.14);
+  border: 2px solid rgba(255, 253, 244, 0.6);
+  border-radius: 999px;
+  color: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.tut-card {
+  width: min(320px, 88vw);
+  background: #FFFDF4;
+  border: 3px solid #1B1B18;
+  border-radius: 14px;
+  box-shadow: 6px 7px 0 rgba(27, 27, 24, 0.45);
+  padding: 26px 20px 18px;
+  text-align: center;
+  animation: tutCardIn 0.24s ease both;
+}
+@keyframes tutCardIn { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }
+.tut-card__emoji { font-size: 40px; display: block; }
+.tut-card__title {
+  display: block;
+  margin-top: 12px;
+  font-size: 17px;
+  color: #1B1B18;
+}
+.tut-card__desc {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: #55523F;
+  line-height: 1.5;
+}
+.tut-dots { margin-top: 16px; display: flex; justify-content: center; gap: 7px; }
+.tut-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #D8D3C0;
+}
+.tut-dot.is-on { background: #E8442E; }
+
+/* 하단 대화창 (포켓몬식) */
+.tut-dlg {
+  position: relative;
+  width: min(420px, 92vw);
+  min-height: 96px;
+  background: #FFFDF4;
+  border: 3.5px solid #1B1B18;
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 3px rgba(27, 27, 24, 0.12), 5px 6px 0 rgba(27, 27, 24, 0.45);
+  padding: 20px 18px 16px 68px;
+  text-align: left;
+  cursor: pointer;
+}
+.tut-dlg__cat {
+  position: absolute;
+  left: 10px;
+  bottom: 12px;
+}
+.tut-dlg__name {
+  position: absolute;
+  top: -12px;
+  left: 56px;
+  background: #1B1B18;
+  color: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+.tut-dlg__text {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1B1B18;
+  font-weight: 600;
+  min-height: 44px;
+}
+.tut-dlg__caret { animation: tutCaret 0.7s steps(1) infinite; }
+@keyframes tutCaret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.tut-dlg__next {
+  position: absolute;
+  right: 14px;
+  bottom: 8px;
+  color: #E8442E;
+  font-family: "DungGeunMo", monospace;
+  font-size: 13px;
+  animation: tutNextNudge 0.8s ease-in-out infinite alternate;
+}
+@keyframes tutNextNudge { from { transform: translateY(0); } to { transform: translateY(3px); } }
+.tut-hint {
+  margin: 0;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  color: rgba(255, 253, 244, 0.75);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hcat-svg,
+  .hcat-svg .hcat-tail,
+  .hcat-svg .hcat-eyes,
+  .hcat-svg.is-waving .hcat-arm,
+  .tut-dlg__next,
+  .tut-card { animation: none; }
+}

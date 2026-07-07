@@ -40,6 +40,14 @@ export function resetCoachmark() {
   remove(KEYS.coachmarkSeen)
 }
 
+// 도우미 고양이(로카냥) 튜토리얼 — 입장 직후(guest) / 로그인 첫 진입(authed) 각 1회 자동 재생
+export function isTutorialSeen(mode) {
+  return read(`loca.tutorial_seen_${mode}`) === ONBOARDING_VERSION
+}
+export function markTutorialSeen(mode) {
+  write(`loca.tutorial_seen_${mode}`, ONBOARDING_VERSION)
+}
+
 // 첫 핀 축하
 export function isFirstPinCelebrated() {
   return read(KEYS.firstPinCelebrated) === "true"
