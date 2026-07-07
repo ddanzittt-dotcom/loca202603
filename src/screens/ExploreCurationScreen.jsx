@@ -15,6 +15,7 @@ import {
 } from "../lib/exploreCuration"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
+import { fetchRealTerrain } from "../lib/realTerrain"
 
 // 레이더 도트 → 카드 앵커 id (스크롤·선택용)
 function cardAnchorId(type, id) {
@@ -278,6 +279,19 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
 
+  // 실제 지형(OSM) — 레이더 오버월드 배경용. 실패하면 null → 절차 생성 필드 폴백
+  const [terrain, setTerrain] = useState(null)
+  const terrainKey = `${Number(effectiveLocation.lat).toFixed(2)},${Number(effectiveLocation.lng).toFixed(2)}`
+  useEffect(() => {
+    let cancelled = false
+    fetchRealTerrain(effectiveLocation.lat, effectiveLocation.lng)
+      .then((data) => { if (!cancelled) setTerrain(data) })
+      .catch(() => { if (!cancelled) setTerrain(null) })
+    return () => { cancelled = true }
+    // 위치 그리드(~1.1km) 단위로만 재요청
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [terrainKey])
+
   useEffect(() => {
     let cancelled = false
     fetchNearbyEvents(effectiveLocation)
@@ -407,6 +421,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       <PixelRadar
         items={radarItems}
         location={effectiveLocation}
+        terrain={terrain}
         label={effectiveLocation.label}
         hasLocation={Boolean(location)}
         locating={locating}
@@ -536,6 +551,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
             <PixelRadar
               items={radarItems}
               location={effectiveLocation}
+              terrain={terrain}
               label={effectiveLocation.label}
               hasLocation={Boolean(location)}
               locating={locating}

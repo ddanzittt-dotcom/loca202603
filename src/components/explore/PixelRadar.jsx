@@ -53,7 +53,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   const ctx = canvas.getContext("2d")
   const reduce = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   const st = {
-    W: 0, H: 0, cx: 0, cy: 0, map: null, rings: [], dots: [],
+    W: 0, H: 0, cx: 0, cy: 0, map: null, rings: [], dots: [], terrain: null, terrainPx: null,
     sweep: -Math.PI / 2, laps: 0, sweeping: false, last: 0, selected: null,
     items: [], location: null, seed: 7, count: -1, revealed: false, maxDots,
   }
@@ -140,18 +140,37 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     const dists = pool.map((i) => (Number.isFinite(i.distKm) ? i.distKm : null)).filter((v) => v != null)
     // 3~30km 범위로 자동 줌 — 아주 먼 행사 1개가 나머지를 중앙에 뭉치게 하지 않도록 상한 30km
     const maxDist = Math.min(30, Math.max(3, ...(dists.length ? dists : [5])))
+    // 실지형 모드 = 선형 축척(지형·마커·링이 같은 자리), 폴백 = sqrt 스케일(퍼짐 우선)
+    const real = st.terrain
+    const rOf = real
+      ? (d) => Math.min(1, d / maxDist) * 0.92
+      : (d) => Math.sqrt(Math.min(1, d / maxDist)) * 0.92 + 0.06
     // 거리 링 — 자동 줌 범위에 맞는 "예쁜 숫자" 2개 (안쪽/바깥쪽)
-    const rOf = (d) => Math.sqrt(Math.min(1, d / maxDist)) * 0.92 + 0.06
     const pickStep = (target) => RING_STEPS.reduce((best, v) => (Math.abs(v - target) < Math.abs(best - target) ? v : best), RING_STEPS[0])
     st.rings = [...new Set([pickStep(maxDist * 0.3), pickStep(maxDist * 0.85)])]
       .filter((km) => km <= maxDist * 1.05)
       .map((km) => ({ km, rx: spanX * rOf(km), ry: spanY * rOf(km) }))
+    // 실지형 투영 — 실제 도로/물/공원 좌표 → 캔버스 px (선형, 북=위)
+    st.terrainPx = null
+    if (real) {
+      const kmX = (spanX * 0.92) / maxDist
+      const kmY = (spanY * 0.92) / maxDist
+      const toXY = (pt) => [
+        st.cx + (pt[1] - loc.lng) * cosLat * 111.32 * kmX,
+        st.cy - (pt[0] - loc.lat) * 110.574 * kmY,
+      ]
+      st.terrainPx = {
+        parks: (real.parks || []).map((p) => p.map(toXY)),
+        waters: (real.waters || []).map((p) => p.map(toXY)),
+        streams: (real.streams || []).map((p) => p.map(toXY)),
+        roads: (real.roads || []).map((r) => ({ pts: r.c.map(toXY), major: r.major })),
+      }
+    }
     st.dots = pool.map((item) => {
       const east = (item.lng - loc.lng) * cosLat
       const north = item.lat - loc.lat
       const angGeo = Math.atan2(-north, east) // 화면 y는 아래로 → 북쪽이 위
-      const ratio = Math.min(1, (Number.isFinite(item.distKm) ? item.distKm : maxDist) / maxDist)
-      const rRatio = Math.sqrt(ratio) * 0.92 + 0.06
+      const rRatio = rOf(Number.isFinite(item.distKm) ? item.distKm : maxDist)
       let x = st.cx + Math.cos(angGeo) * spanX * rRatio
       let y = st.cy + Math.sin(angGeo) * spanY * rRatio
       x = Math.max(CELL, Math.min(w - CELL, x))
@@ -233,6 +252,37 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     ctx.fillRect(px + pond.w * 0.55, py + pond.h * 0.58, 8, 3)
   }
 
+  function tracePoly(pts) {
+    ctx.beginPath()
+    for (let i = 0; i < pts.length; i += 1) {
+      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1])
+      else ctx.lineTo(pts[i][0], pts[i][1])
+    }
+  }
+
+  // 실제 지형(OSM) — 공원/수면/하천/도로를 오버월드 팔레트로
+  function drawRealTerrain() {
+    const t = st.terrainPx
+    ctx.fillStyle = BUSH
+    for (const p of t.parks) { tracePoly(p); ctx.closePath(); ctx.fill() }
+    ctx.fillStyle = POND
+    for (const p of t.waters) { tracePoly(p); ctx.closePath(); ctx.fill() }
+    ctx.lineJoin = "round"
+    ctx.lineCap = "round"
+    ctx.strokeStyle = POND
+    ctx.lineWidth = 5
+    for (const p of t.streams) { tracePoly(p); ctx.stroke() }
+    // 도로 = 흙길 — 테두리 패스를 먼저 깔고 위에 본길
+    for (const pass of [0, 1]) {
+      ctx.strokeStyle = pass === 0 ? PATH_EDGE : PATH
+      for (const r of t.roads) {
+        ctx.lineWidth = (r.major ? 7 : 4) + (pass === 0 ? 2.5 : 0)
+        tracePoly(r.pts)
+        ctx.stroke()
+      }
+    }
+  }
+
   function draw(now) {
     const { W, H, cx, cy } = st
     ctx.clearRect(0, 0, W, H)
@@ -242,7 +292,17 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     ctx.fillStyle = GRASS_ALT
     for (let y = 16; y < H; y += 32) ctx.fillRect(0, y, W, 16)
     const map = st.map
-    if (map) {
+    if (st.terrainPx) {
+      // 실지형 모드 — 절차 생성 필드 대신 실제 동네 지형 + 장식(꽃·나무 경계)만 유지
+      drawRealTerrain()
+      if (map) {
+        ctx.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+        ctx.textAlign = "center"
+        ctx.textBaseline = "middle"
+        for (const f of map.flowers) ctx.fillText(f[2], f[0], f[1])
+        for (const t of map.trees) drawTree(t[0], t[1])
+      }
+    } else if (map) {
       // 밭 패치 → 풀숲 → 연못 → 흙길 → 꽃 → 나무 경계 순서
       ctx.fillStyle = FIELD
       for (const b of map.blocks) ctx.fillRect(b[0], b[1], b[2], b[3])
@@ -461,9 +521,10 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   if (ro) ro.observe(canvas)
 
   return {
-    setData(items, location, seed) {
+    setData(items, location, seed, terrain) {
       st.items = Array.isArray(items) ? items : []
       st.location = location || null
+      st.terrain = terrain || null
       st.seed = seed
       st.selected = null
       onDot(null)
@@ -498,6 +559,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
 export function PixelRadar({
   items = [],
   location,
+  terrain = null, // 실제 지형(OSM) — 있으면 절차 생성 필드 대신 실지형 렌더
   label = "내 위치 주변",
   hasLocation = false,
   locating = false,
@@ -515,8 +577,8 @@ export function PixelRadar({
   const [popover, setPopover] = useState(null) // {item, x, y, flip}
 
   const signature = useMemo(() => (
-    `${location?.lat},${location?.lng}|${items.map((it) => it.id).join(",")}`
-  ), [items, location])
+    `${location?.lat},${location?.lng}|${terrain?.key || ""}|${items.map((it) => it.id).join(",")}`
+  ), [items, location, terrain])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -542,8 +604,8 @@ export function PixelRadar({
   }, [])
 
   useEffect(() => {
-    radarRef.current?.setData(items, location, hashSeed(signature))
-    // signature 로만 갱신 — items/location 은 signature 에 반영됨
+    radarRef.current?.setData(items, location, hashSeed(signature), terrain)
+    // signature 로만 갱신 — items/location/terrain 은 signature 에 반영됨
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature])
 
