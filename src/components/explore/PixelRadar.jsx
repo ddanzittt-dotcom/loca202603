@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { LocateFixed, Maximize2, RotateCw, X } from "lucide-react"
+import { LocateFixed, Maximize2, Minimize2, RotateCw, X } from "lucide-react"
 
 // 탐색 헤더 픽셀 레이더 — 내 위치 중심으로 주변 추천(행사·공간)을 "탐지"하는 스캔 연출.
 // 도트 = 실제 아이템(실좌표를 방위·거리로 배치). 점등된 도트 클릭 → 팝오버 → [카드 보기].
@@ -521,10 +521,11 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   if (ro) ro.observe(canvas)
 
   return {
-    setData(items, location, seed, terrain) {
+    setData(items, location, seed, terrain, nextMaxDots) {
       st.items = Array.isArray(items) ? items : []
       st.location = location || null
       st.terrain = terrain || null
+      if (Number.isFinite(nextMaxDots)) st.maxDots = nextMaxDots
       st.seed = seed
       st.selected = null
       onDot(null)
@@ -577,8 +578,8 @@ export function PixelRadar({
   const [popover, setPopover] = useState(null) // {item, x, y, flip}
 
   const signature = useMemo(() => (
-    `${location?.lat},${location?.lng}|${terrain?.key || ""}|${items.map((it) => it.id).join(",")}`
-  ), [items, location, terrain])
+    `${location?.lat},${location?.lng}|${terrain?.key || ""}|${maxDots}|${items.map((it) => it.id).join(",")}`
+  ), [items, location, terrain, maxDots])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -604,8 +605,8 @@ export function PixelRadar({
   }, [])
 
   useEffect(() => {
-    radarRef.current?.setData(items, location, hashSeed(signature), terrain)
-    // signature 로만 갱신 — items/location/terrain 은 signature 에 반영됨
+    radarRef.current?.setData(items, location, hashSeed(signature), terrain, maxDots)
+    // signature 로만 갱신 — items/location/terrain/maxDots 는 signature 에 반영됨
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature])
 
@@ -657,8 +658,13 @@ export function PixelRadar({
         <div className="xradar__right">
           <span className="xradar__detect">주변 <b>{count}</b>곳 탐지</span>
           {onExpand ? (
-            <button type="button" className="xradar__reload" onClick={onExpand} aria-label="지도 크게 보기">
-              <Maximize2 size={13} strokeWidth={2.4} />
+            <button
+              type="button"
+              className="xradar__reload"
+              onClick={onExpand}
+              aria-label={expanded ? "지도 작게 보기" : "지도 크게 보기"}
+            >
+              {expanded ? <Minimize2 size={13} strokeWidth={2.4} /> : <Maximize2 size={13} strokeWidth={2.4} />}
             </button>
           ) : null}
           <button type="button" className="xradar__reload" onClick={onReload} aria-label="다시 탐지">

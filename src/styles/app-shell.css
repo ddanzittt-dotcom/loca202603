@@ -5105,6 +5105,7 @@
   width: 100%;
   height: 252px;
   touch-action: manipulation;
+  /* height transition 금지 — 캔버스 ResizeObserver 재빌드와 얽혀 전환이 멈추는 이슈 */
 }
 
 /* 중심(나) = 걷는 픽셀 고양이 */
@@ -5233,35 +5234,6 @@
 .xradar__reload:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1F1A12; }
 
 /* 확대 뷰(모달) */
-.xradar-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 18px;
-  background: rgba(31, 26, 18, 0.62);
-}
-
-.xradar-modal__panel {
-  width: clamp(300px, 96vw, 560px);
-  max-width: 96vw;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.xradar-modal__title {
-  margin: 0;
-  text-align: center;
-  font-family: "DungGeunMo", Pretendard, sans-serif;
-  font-size: 15px;
-  color: #FFFDF4;
-}
-
 .xradar--expanded .xradar__canvas {
   height: clamp(340px, 66vh, 560px);
 }

@@ -404,15 +404,8 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return interleaved
   }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
 
-  // 도트 [카드 보기] → 해당 카드로 스크롤 + 펄스 + 상세 시트 오픈
+  // 도트 [카드 보기] → 아래 목록으로 이동하지 않고 바로 상세 카드 오픈
   const handleRadarSelect = useCallback((item) => {
-    const el = typeof document !== "undefined" && document.getElementById(cardAnchorId(item.type, item.id))
-    if (el) {
-      el.scrollIntoView({ behavior: prefersReduced() ? "auto" : "smooth", block: "center" })
-      el.classList.remove("xc-card--pulse")
-      void el.offsetWidth
-      el.classList.add("xc-card--pulse")
-    }
     setDetailItem({ type: item.type, data: item.data })
   }, [])
 
@@ -425,11 +418,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         label={effectiveLocation.label}
         hasLocation={Boolean(location)}
         locating={locating}
-        maxDots={24}
+        maxDots={radarExpanded ? 60 : 24}
+        expanded={radarExpanded}
         onLocate={locateMe}
         onReload={() => setReloadKey((value) => value + 1)}
         onSelect={handleRadarSelect}
-        onExpand={() => setRadarExpanded(true)}
+        onExpand={() => setRadarExpanded((value) => !value)}
       />
 
       <section className="xc-section" aria-label="지금 열린 행사">
@@ -543,28 +537,6 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </CardRail>
         )}
       </section>
-
-      {radarExpanded ? (
-        <div className="xradar-modal" role="presentation" onClick={() => setRadarExpanded(false)}>
-          <div className="xradar-modal__panel" onClick={(e) => e.stopPropagation()}>
-            <p className="xradar-modal__title">📡 내 주변에 이만큼 있어요</p>
-            <PixelRadar
-              items={radarItems}
-              location={effectiveLocation}
-              terrain={terrain}
-              label={effectiveLocation.label}
-              hasLocation={Boolean(location)}
-              locating={locating}
-              maxDots={90}
-              expanded
-              onLocate={locateMe}
-              onReload={() => setReloadKey((value) => value + 1)}
-              onSelect={(item) => { setRadarExpanded(false); handleRadarSelect(item) }}
-              onClose={() => setRadarExpanded(false)}
-            />
-          </div>
-        </div>
-      ) : null}
 
       {detailItem ? (
         <CurationDetailSheet
