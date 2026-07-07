@@ -5,6 +5,7 @@ import { getPlaceType } from "../../lib/placeTypes"
 import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
 import { PlaceSharePoster } from "./PlaceSharePoster"
 import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
+import { logEvent } from "../../lib/analytics"
 
 // 카드 바인더 리디자인 — 장소 카드 앞면(슬리브 커버) + 플립 상세(뒷면).
 // 시각·인터랙션 레퍼런스: loca-binder-prototype.html
@@ -204,6 +205,44 @@ export function PlaceFlipCard({
     }
   }
 
+  const handleShareImage = async () => {
+    if (imgBusy) return
+    setImgBusy("share")
+    try {
+      const blob = await capturePosterBlob(posterRef.current)
+      if (!blob) throw new Error("capture failed")
+      const result = await shareImage(blob, {
+        filename: sanitizeCardFilename(name),
+        title: `${name} · LOCA`,
+        text: `${name} — 내 동네를 기록하는 지도 LOCA`,
+      })
+      if (result !== "canceled") {
+        logEvent("place_card_share", { meta: { feature_id: feature?.id, method: result, surface: "place_card" } })
+      }
+      if (result === "downloaded") showToast?.("이미지를 저장했어요. 인스타에 올려보세요!")
+    } catch {
+      showToast?.("이미지를 만들지 못했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setImgBusy(null)
+    }
+  }
+
+  const handleDownloadImage = async () => {
+    if (imgBusy) return
+    setImgBusy("download")
+    try {
+      const blob = await capturePosterBlob(posterRef.current)
+      if (!blob) throw new Error("capture failed")
+      downloadImage(blob, sanitizeCardFilename(name))
+      logEvent("place_card_share", { meta: { feature_id: feature?.id, method: "download", surface: "place_card" } })
+      showToast?.("카드를 저장했어요")
+    } catch {
+      showToast?.("저장에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setImgBusy(null)
+    }
+  }
+
   return (
     <div className="bd-flipov" onClick={onClose} role="presentation">
       <div className="bd-stage" onClick={(event) => event.stopPropagation()}>
@@ -303,6 +342,24 @@ export function PlaceFlipCard({
             </div>
 
             <div className="bd-backfoot">
+              <div className="bd-footrow">
+                <button
+                  type="button"
+                  className="bd-btn bd-btn--dark"
+                  onClick={handleShareImage}
+                  disabled={Boolean(imgBusy)}
+                >
+                  {imgBusy === "share" ? "준비 중…" : "📤 공유하기"}
+                </button>
+                <button
+                  type="button"
+                  className="bd-btn bd-btn--paper"
+                  onClick={handleDownloadImage}
+                  disabled={Boolean(imgBusy)}
+                >
+                  {imgBusy === "download" ? "저장 중…" : "⬇ 다운로드"}
+                </button>
+              </div>
               <button
                 type="button"
                 className="bd-btn bd-btn--red"
@@ -316,6 +373,11 @@ export function PlaceFlipCard({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* 인스타 공유용 포스터 — 화면 밖에서 렌더되어 캡처 대상이 된다 */}
+      <div className="cardshare-hidden" aria-hidden="true">
+        <PlaceSharePoster feature={feature} dexNo={dexNo} innerRef={posterRef} />
       </div>
     </div>
   )
