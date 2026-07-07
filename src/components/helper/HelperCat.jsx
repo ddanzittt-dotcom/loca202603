@@ -5,46 +5,47 @@ import { useEffect, useRef, useState } from "react"
 // 스프라이트는 pixelEmojiCatalog 와 같은 문자 그리드 방식 — 셀 단위로 촘촘하게.
 
 const PALETTE = {
-  k: "#1F1A12", // 검정 털
+  k: "#1F1A12", // 검정 털·윤곽선
   K: "#120E09", // 진한 음영(발끝·귀 테)
-  s: "#3B342B", // 하이라이트(정수리 윤기)
   w: "#FFFDF4", // 흰 털
   W: "#E7E1CE", // 흰 털 음영
-  p: "#F2A7AE", // 분홍(귀 안쪽·코)
+  p: "#F2A7AE", // 분홍(귀 안쪽·코·입)
+  b: "#F6BFC7", // 볼터치
   G: "#14100B", // 눈동자
 }
 
-// 22×30 본체 (꼬리는 살랑 애니메이션용으로 분리)
+// 22×30 본체 — 흰 바탕 + 검은 얼룩 젖소무늬 고양이 (참고 사진 기반).
+// 검은 모자(귀~정수리) + 왼뺨 검은 무늬 + 오른쪽 옆구리 얼룩 + 볼터치. 꼬리는 분리(살랑).
 const CAT_GRID = [
   "..kk..............kk..",
   ".kKKk............kKKk.",
   ".kKpKk..........kKpKk.",
   ".kKppkkkkkkkkkkkkppKk.",
   ".kkkkkkkkkkkkkkkkkkkk.",
-  ".kskkkkkkkkkkkkkkkkkk.",
-  ".kkkkwGwkkkkkkwGwkkkk.",
-  ".kkkkwGwkkkkkkwGwkkkk.",
-  ".kkkkkkkwwwwwwkkkkkkk.",
-  ".kkkkkkkwwppwwkkkkkkk.",
-  ".kkkkkkwwwppwwwkkkkkk.",
-  ".kkkkkkkwwwwwwkkkkkkk.",
-  ".kkkkkkkkkkkkkkkkkkkk.",
-  "..kkkkkkkkkkkkkkkkkk..",
-  "...kkkkwwwwwwwwkkkk...",
-  "...kkkkwwwwwwwwkkkk...",
-  ".kkkkkkwwwwwwwwkkkkkk.",
-  ".kkkkkkwWWwwWWwkkkkkk.",
-  ".kkkkkkwwwwwwwwkkkkkk.",
-  ".kwwkkkwwwwwwwwkkkwwk.",
-  "...kkkkwwwwwwwwkkkk...",
-  "...kkkkkwwwwwwkkkkk...",
-  "...kkkkkkwwwwkkkkkk...",
-  "...kkkkkkkkkkkkkkkk...",
-  "...kkkkkkkkkkkkkkkk...",
-  "....kkkkk....kkkkk....",
-  "....kkkkk....kkkkk....",
-  "....wwwww....wwwww....",
-  "....wwwww....wwwww....",
+  ".kkkkkwwwwwwwwwwkkkkk.",
+  ".kkkwwwGGwwwwGGwwwwwk.",
+  ".kkkwwwGGwwwwGGwwwwwk.",
+  ".kwwwwwwwwppwwwwwwwwk.",
+  ".kwbbwwwwwkkwwwwwbbwk.",
+  ".kwwwwwwwwwwwwwwwwwwk.",
+  "..kwwwwwwwwwwwwwwwwk..",
+  "...kkwwwwwwwwwwwwkk...",
+  "..kkwwwwwwwwwwwwwwkk..",
+  ".kwwwwwwwwwwwwwwwwwwk.",
+  ".kwwwwwwwwwwwwwkkkkwk.",
+  ".kwwwwwwwwwwwwkkkkkwk.",
+  ".kwWWwwwwwwwwwkkkkkwk.",
+  ".kwwwwwwwwwwwwwkkkkwk.",
+  ".kwwkwwwwwwwwwwwwkwwk.",
+  "..kwwwwwwwwwwwwwwwwk..",
+  "..kwwwwwwwwwwwwwwwwk..",
+  "...kwwwwwwwwwwwwwwk...",
+  "...kwwwwwwwwwwwwwwk...",
+  "...kwwwwwwwwwwwwwwk...",
+  "....kwwwk....kwwwk....",
+  "....kwwwk....kwwwk....",
+  "....kwwwk....kwwwk....",
+  "....kwwwk....kwwwk....",
   "....KKKKK....KKKKK....",
 ]
 
@@ -108,10 +109,10 @@ export function TuxCatSprite({ size = 34, waving = false }) {
       {CAT_RECTS.map((r) => (
         <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />
       ))}
-      {/* 깜빡임 눈꺼풀 — 눈 위에 털색 덮개가 잠깐 나타난다 */}
-      <g className="hcat-lids" fill={PALETTE.k}>
-        <rect x="5" y="6" width="3" height="2" />
-        <rect x="14" y="6" width="3" height="2" />
+      {/* 깜빡임 눈꺼풀 — 눈 위에 털색(흰) 덮개가 잠깐 나타난다 */}
+      <g className="hcat-lids" fill={PALETTE.w}>
+        <rect x="7" y="6" width="2" height="2" />
+        <rect x="13" y="6" width="2" height="2" />
       </g>
     </svg>
   )
