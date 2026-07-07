@@ -16,6 +16,7 @@ import {
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
 import { fetchRealTerrain } from "../lib/realTerrain"
+import { spriteForRadarItem } from "../lib/radarSprites"
 
 // 레이더 도트 → 카드 앵커 id (스크롤·선택용)
 function cardAnchorId(type, id) {
@@ -23,13 +24,6 @@ function cardAnchorId(type, id) {
 }
 
 // 공간 카테고리별 레이더 도트 이모지 (자연/역사/공원/전시)
-const PLACE_KIND_EMOJI = {
-  nature: "⛰️",
-  history: "🏛️",
-  park: "🌳",
-  exhibit: "🖼️",
-}
-
 function prefersReduced() {
   return typeof window !== "undefined"
     && window.matchMedia
@@ -376,15 +370,10 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   // 추천순 단일 리스트 — 칩 없이 서버 추천 점수 순서 그대로
   const visiblePlaces = placesLoading ? [] : placesResult.items
 
-  // 레이더 도트 = 행사 + 공간 + 생물. 도트 이모지: 행사=동일 / 공간=카테고리별 / 생물=종별
+  // 레이더 도트 = 행사 + 공간 + 생물. 마커는 도트 스프라이트(행사=텐트 / 공간=종류별 / 생물=종별 20종)
   const radarItems = useMemo(() => {
-    const dotEmoji = (raw, type) => {
-      if (type === "event") return "🎪"
-      if (type === "wildlife") return raw.emoji || "🐾"
-      return PLACE_KIND_EMOJI[raw.kind] || "📍"
-    }
     const toDot = (raw, type) => ({
-      id: raw.id, type, title: raw.title, emoji: dotEmoji(raw, type),
+      id: raw.id, type, title: raw.title, sprite: spriteForRadarItem(type, raw),
       lat: Number(raw.lat), lng: Number(raw.lng),
       distKm: raw.distKm, category: raw.category, data: raw,
     })

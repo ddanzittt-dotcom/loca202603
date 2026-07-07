@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { LocateFixed, Maximize2, Minimize2, RotateCw, X } from "lucide-react"
+import { drawPixelArtToCanvas } from "../../lib/pixelEmojiCatalog"
 
 // 탐색 헤더 픽셀 레이더 — 내 위치 중심으로 주변 추천(행사·공간)을 "탐지"하는 스캔 연출.
 // 도트 = 실제 아이템(실좌표를 방위·거리로 배치). 점등된 도트 클릭 → 팝오버 → [카드 보기].
@@ -23,8 +24,7 @@ const TREE_LEAF = "#4E7A46"
 const TREE_LEAF_HI = "#5C8C50"
 const TREE_TRUNK = "#7A5A38"
 const BUSH = "#93BE72" // 키큰 풀숲 바탕
-const TILE = 20 // 이모지 마커 간격 기준(px)
-const EMOJI_FONT = '16px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+const TILE = 22 // 도트 마커 타일 크기(px)
 const LABEL_FONT = '9px "DungGeunMo", monospace'
 // 거리 링 후보 값(km) — 자동 줌 범위에 맞는 "예쁜 숫자"를 고른다
 const RING_STEPS = [0.5, 1, 2, 3, 5, 10, 15, 20, 30]
@@ -54,6 +54,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   const reduce = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   const st = {
     W: 0, H: 0, cx: 0, cy: 0, map: null, rings: [], dots: [], terrain: null, terrainPx: null,
+    bg: null, lastDraw: 0,
     sweep: -Math.PI / 2, laps: 0, sweeping: false, last: 0, selected: null,
     items: [], location: null, seed: 7, count: -1, revealed: false, maxDots,
   }
@@ -166,7 +167,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
         roads: (real.roads || []).map((r) => ({ pts: r.c.map(toXY), major: r.major })),
       }
     }
-    st.dots = pool.map((item) => {
+    st.dots = pool.map((item, idx) => {
       const east = (item.lng - loc.lng) * cosLat
       const north = item.lat - loc.lat
       const angGeo = Math.atan2(-north, east) // 화면 y는 아래로 → 북쪽이 위
@@ -176,7 +177,8 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
       x = Math.max(CELL, Math.min(w - CELL, x))
       y = Math.max(CELL, Math.min(h - CELL, y))
       // 이미 탐지가 끝난 상태(리사이즈·확대 등)면 재배치 후에도 점등 유지
-      return { x, y, ang: 0, item, seen: st.revealed, hit: 0 }
+      // ph = 모션 위상 오프셋(마커마다 다르게 → 다 같이 안 튐)
+      return { x, y, ang: 0, item, seen: st.revealed, hit: 0, ph: (idx * 3) % 8 }
     })
 
     // 이모지 타일이 겹치지 않게 살짝 밀어내기 (n≤18, 몇 번만)
@@ -206,6 +208,9 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     }
     // 스윕 점등 판정용 각도는 최종 위치 기준
     for (const d of dots) d.ang = Math.atan2(d.y - st.cy, d.x - st.cx)
+
+    // 정적 배경을 오프스크린에 굽는다 (매 프레임 blit → idle 모션 저렴)
+    buildBackground()
   }
 
   function emitCount() {
@@ -213,184 +218,221 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     if (seen !== st.count) { st.count = seen; onCount(seen) }
   }
 
-  function drawTree(x, y) {
-    ctx.fillStyle = TREE_TRUNK
-    ctx.fillRect(x + 4, y + 10, 4, 5)
-    ctx.fillStyle = TREE_LEAF_HI
-    ctx.beginPath()
-    ctx.arc(x + 2.5, y + 8, 4, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(x + 9.5, y + 8, 4, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = TREE_LEAF
-    ctx.beginPath()
-    ctx.arc(x + 6, y + 5.5, 5.5, 0, Math.PI * 2)
-    ctx.fill()
+  function drawTree(g, x, y) {
+    g.fillStyle = TREE_TRUNK
+    g.fillRect(x + 4, y + 10, 4, 5)
+    g.fillStyle = TREE_LEAF_HI
+    g.beginPath()
+    g.arc(x + 2.5, y + 8, 4, 0, Math.PI * 2)
+    g.fill()
+    g.beginPath()
+    g.arc(x + 9.5, y + 8, 4, 0, Math.PI * 2)
+    g.fill()
+    g.fillStyle = TREE_LEAF
+    g.beginPath()
+    g.arc(x + 6, y + 5.5, 5.5, 0, Math.PI * 2)
+    g.fill()
   }
 
-  function drawPond(w, h, pond) {
+  function drawPond(g, w, h, pond) {
     // 코너 배치 — 0:우상 1:우하 2:좌하 3:좌상 (나무 경계 안쪽)
     const m = 18
     const px = pond.corner === 0 || pond.corner === 1 ? w - pond.w - m : m
     const py = pond.corner === 0 || pond.corner === 3 ? m + 4 : h - pond.h - m
     const rr = (x, y, rw, rh, r, fill) => {
-      ctx.fillStyle = fill
-      ctx.beginPath()
-      ctx.moveTo(x + r, y)
-      ctx.arcTo(x + rw, y, x + rw, y + rh, r)
-      ctx.arcTo(x + rw, y + rh, x, y + rh, r)
-      ctx.arcTo(x, y + rh, x, y, r)
-      ctx.arcTo(x, y, x + rw, y, r)
-      ctx.closePath()
-      ctx.fill()
+      g.fillStyle = fill
+      g.beginPath()
+      g.moveTo(x + r, y)
+      g.arcTo(x + rw, y, x + rw, y + rh, r)
+      g.arcTo(x + rw, y + rh, x, y + rh, r)
+      g.arcTo(x, y + rh, x, y, r)
+      g.arcTo(x, y, x + rw, y, r)
+      g.closePath()
+      g.fill()
     }
     rr(px, py, pond.w, pond.h, 14, POND)
     rr(px + 8, py + 8, pond.w - 16, pond.h - 16, 10, POND_CORE)
-    ctx.fillStyle = "rgba(255,253,244,0.7)"
-    ctx.fillRect(px + pond.w * 0.24, py + pond.h * 0.3, 12, 3)
-    ctx.fillRect(px + pond.w * 0.55, py + pond.h * 0.58, 8, 3)
+    g.fillStyle = "rgba(255,253,244,0.7)"
+    g.fillRect(px + pond.w * 0.24, py + pond.h * 0.3, 12, 3)
+    g.fillRect(px + pond.w * 0.55, py + pond.h * 0.58, 8, 3)
   }
 
-  function tracePoly(pts) {
-    ctx.beginPath()
+  function tracePoly(g, pts) {
+    g.beginPath()
     for (let i = 0; i < pts.length; i += 1) {
-      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1])
-      else ctx.lineTo(pts[i][0], pts[i][1])
+      if (i === 0) g.moveTo(pts[i][0], pts[i][1])
+      else g.lineTo(pts[i][0], pts[i][1])
     }
   }
 
   // 실제 지형(OSM) — 공원/수면/하천/도로를 오버월드 팔레트로
-  function drawRealTerrain() {
+  function drawRealTerrain(g) {
     const t = st.terrainPx
-    ctx.fillStyle = BUSH
-    for (const p of t.parks) { tracePoly(p); ctx.closePath(); ctx.fill() }
-    ctx.fillStyle = POND
-    for (const p of t.waters) { tracePoly(p); ctx.closePath(); ctx.fill() }
-    ctx.lineJoin = "round"
-    ctx.lineCap = "round"
-    ctx.strokeStyle = POND
-    ctx.lineWidth = 5
-    for (const p of t.streams) { tracePoly(p); ctx.stroke() }
+    g.fillStyle = BUSH
+    for (const p of t.parks) { tracePoly(g, p); g.closePath(); g.fill() }
+    g.fillStyle = POND
+    for (const p of t.waters) { tracePoly(g, p); g.closePath(); g.fill() }
+    g.lineJoin = "round"
+    g.lineCap = "round"
+    g.strokeStyle = POND
+    g.lineWidth = 5
+    for (const p of t.streams) { tracePoly(g, p); g.stroke() }
     // 도로 = 흙길 — 테두리 패스를 먼저 깔고 위에 본길
     for (const pass of [0, 1]) {
-      ctx.strokeStyle = pass === 0 ? PATH_EDGE : PATH
+      g.strokeStyle = pass === 0 ? PATH_EDGE : PATH
       for (const r of t.roads) {
-        ctx.lineWidth = (r.major ? 7 : 4) + (pass === 0 ? 2.5 : 0)
-        tracePoly(r.pts)
-        ctx.stroke()
+        g.lineWidth = (r.major ? 7 : 4) + (pass === 0 ? 2.5 : 0)
+        tracePoly(g, r.pts)
+        g.stroke()
       }
     }
   }
 
-  function draw(now) {
+  // 정적 배경(지형·링·나침반·내 위치)을 오프스크린에 한 번만 그린다 → 매 프레임 blit.
+  function paintBackground(g) {
     const { W, H, cx, cy } = st
-    ctx.clearRect(0, 0, W, H)
-    // 잔디 바탕 + 깎은 결 줄무늬
-    ctx.fillStyle = GRASS
-    ctx.fillRect(0, 0, W, H)
-    ctx.fillStyle = GRASS_ALT
-    for (let y = 16; y < H; y += 32) ctx.fillRect(0, y, W, 16)
+    g.clearRect(0, 0, W, H)
+    g.fillStyle = GRASS
+    g.fillRect(0, 0, W, H)
+    g.fillStyle = GRASS_ALT
+    for (let y = 16; y < H; y += 32) g.fillRect(0, y, W, 16)
     const map = st.map
     if (st.terrainPx) {
-      // 실지형 모드 — 절차 생성 필드 대신 실제 동네 지형 + 장식(꽃·나무 경계)만 유지
-      drawRealTerrain()
+      drawRealTerrain(g)
       if (map) {
-        ctx.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
-        ctx.textAlign = "center"
-        ctx.textBaseline = "middle"
-        for (const f of map.flowers) ctx.fillText(f[2], f[0], f[1])
-        for (const t of map.trees) drawTree(t[0], t[1])
+        g.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+        g.textAlign = "center"
+        g.textBaseline = "middle"
+        for (const f of map.flowers) g.fillText(f[2], f[0], f[1])
+        for (const t of map.trees) drawTree(g, t[0], t[1])
       }
     } else if (map) {
-      // 밭 패치 → 풀숲 → 연못 → 흙길 → 꽃 → 나무 경계 순서
-      ctx.fillStyle = FIELD
-      for (const b of map.blocks) ctx.fillRect(b[0], b[1], b[2], b[3])
+      g.fillStyle = FIELD
+      for (const b of map.blocks) g.fillRect(b[0], b[1], b[2], b[3])
       for (const bush of map.bushes) {
-        ctx.fillStyle = BUSH
-        ctx.fillRect(bush.x, bush.y, bush.w, bush.h)
-        ctx.fillStyle = TREE_LEAF
+        g.fillStyle = BUSH
+        g.fillRect(bush.x, bush.y, bush.w, bush.h)
+        g.fillStyle = TREE_LEAF
         for (const t of bush.tufts) {
-          ctx.beginPath()
-          ctx.moveTo(t[0], t[1] + 9)
-          ctx.lineTo(t[0] + 3, t[1])
-          ctx.lineTo(t[0] + 6, t[1] + 9)
-          ctx.closePath()
-          ctx.fill()
+          g.beginPath()
+          g.moveTo(t[0], t[1] + 9)
+          g.lineTo(t[0] + 3, t[1])
+          g.lineTo(t[0] + 6, t[1] + 9)
+          g.closePath()
+          g.fill()
         }
       }
-      if (map.pond) drawPond(W, H, map.pond)
+      if (map.pond) drawPond(g, W, H, map.pond)
       for (const y of map.hRoads) {
-        ctx.fillStyle = PATH_EDGE
-        ctx.fillRect(0, y - 6, W, 12)
-        ctx.fillStyle = PATH
-        ctx.fillRect(0, y - 5, W, 10)
+        g.fillStyle = PATH_EDGE
+        g.fillRect(0, y - 6, W, 12)
+        g.fillStyle = PATH
+        g.fillRect(0, y - 5, W, 10)
       }
       for (const x of map.vRoads) {
-        ctx.fillStyle = PATH_EDGE
-        ctx.fillRect(x - 6, 0, 12, H)
-        ctx.fillStyle = PATH
-        ctx.fillRect(x - 5, 0, 10, H)
+        g.fillStyle = PATH_EDGE
+        g.fillRect(x - 6, 0, 12, H)
+        g.fillStyle = PATH
+        g.fillRect(x - 5, 0, 10, H)
       }
-      ctx.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
-      ctx.textAlign = "center"
-      ctx.textBaseline = "middle"
-      for (const f of map.flowers) ctx.fillText(f[2], f[0], f[1])
-      for (const t of map.trees) drawTree(t[0], t[1])
+      g.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+      g.textAlign = "center"
+      g.textBaseline = "middle"
+      for (const f of map.flowers) g.fillText(f[2], f[0], f[1])
+      for (const t of map.trees) drawTree(g, t[0], t[1])
     }
 
-    // 거리 링 + km 라벨 — 축척 직관
-    ctx.setLineDash([4, 4])
-    ctx.strokeStyle = "rgba(31,26,18,0.32)"
-    ctx.lineWidth = 1.2
+    // 거리 링 + km 라벨
+    g.setLineDash([4, 4])
+    g.strokeStyle = "rgba(31,26,18,0.32)"
+    g.lineWidth = 1.2
     for (const ring of st.rings) {
-      ctx.beginPath()
-      ctx.ellipse(cx, cy, ring.rx, ring.ry, 0, 0, Math.PI * 2)
-      ctx.stroke()
+      g.beginPath()
+      g.ellipse(cx, cy, ring.rx, ring.ry, 0, 0, Math.PI * 2)
+      g.stroke()
     }
-    ctx.setLineDash([])
-    ctx.font = LABEL_FONT
-    ctx.textAlign = "left"
-    ctx.textBaseline = "middle"
+    g.setLineDash([])
+    g.font = LABEL_FONT
+    g.textAlign = "left"
+    g.textBaseline = "middle"
     for (const ring of st.rings) {
       const label = `${ring.km}km`
       const lx = cx + ring.rx * 0.72
       const ly = cy - ring.ry * 0.72
-      ctx.strokeStyle = PAPER
-      ctx.lineWidth = 3
-      ctx.strokeText(label, lx, ly)
-      ctx.fillStyle = "#55523F"
-      ctx.fillText(label, lx, ly)
+      g.strokeStyle = PAPER
+      g.lineWidth = 3
+      g.strokeText(label, lx, ly)
+      g.fillStyle = "#55523F"
+      g.fillText(label, lx, ly)
     }
 
-    // 나침반 N (상단 중앙)
-    ctx.fillStyle = RED
-    ctx.beginPath()
-    ctx.moveTo(cx, 5)
-    ctx.lineTo(cx - 4, 13)
-    ctx.lineTo(cx + 4, 13)
-    ctx.closePath()
-    ctx.fill()
-    ctx.font = LABEL_FONT
-    ctx.textAlign = "center"
-    ctx.strokeStyle = PAPER
-    ctx.lineWidth = 3
-    ctx.strokeText("N", cx, 20)
-    ctx.fillStyle = INK
-    ctx.fillText("N", cx, 20)
+    // 나침반 N
+    g.fillStyle = RED
+    g.beginPath()
+    g.moveTo(cx, 5)
+    g.lineTo(cx - 4, 13)
+    g.lineTo(cx + 4, 13)
+    g.closePath()
+    g.fill()
+    g.font = LABEL_FONT
+    g.textAlign = "center"
+    g.strokeStyle = PAPER
+    g.lineWidth = 3
+    g.strokeText("N", cx, 20)
+    g.fillStyle = INK
+    g.fillText("N", cx, 20)
 
-    // 내 위치 펄스 (DOM 고양이 발밑)
-    ctx.fillStyle = "rgba(255,211,56,0.4)"
-    ctx.beginPath()
-    ctx.arc(cx, cy, 13, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = RED
-    ctx.strokeStyle = INK
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.stroke()
+    // 내 위치 펄스
+    g.fillStyle = "rgba(255,211,56,0.4)"
+    g.beginPath()
+    g.arc(cx, cy, 13, 0, Math.PI * 2)
+    g.fill()
+    g.fillStyle = RED
+    g.strokeStyle = INK
+    g.lineWidth = 1.5
+    g.beginPath()
+    g.arc(cx, cy, 3.5, 0, Math.PI * 2)
+    g.fill()
+    g.stroke()
+  }
+
+  function buildBackground() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    if (!st.bg) st.bg = document.createElement("canvas")
+    st.bg.width = canvas.width
+    st.bg.height = canvas.height
+    const g = st.bg.getContext("2d")
+    g.setTransform(dpr, 0, 0, dpr, 0, 0)
+    paintBackground(g)
+  }
+
+  // 카테고리별 마커 모션 오프셋 — 8fps 스텝(레트로). {dx, dy, lift}
+  function motionOffset(kind, phase, now) {
+    if (reduce) return { dx: 0, dy: 0, lift: 0 }
+    const step = Math.floor(now / 120) + phase
+    if (kind === "hop") {
+      const seq = [0, 0, 0, 0, 0, -5, -2, 0] // 대부분 가만 → 이따금 폴짝
+      const dy = seq[step % seq.length]
+      return { dx: 0, dy, lift: -dy }
+    }
+    if (kind === "bounce") {
+      const seq = [0, -2, -3, -2] // 통통
+      const dy = seq[step % seq.length]
+      return { dx: 0, dy, lift: -dy }
+    }
+    if (kind === "sway") {
+      const seq = [-1, 0, 1, 0] // 좌우 흔들
+      return { dx: seq[step % seq.length], dy: 0, lift: 0 }
+    }
+    // bob (공간) — 느긋한 둥실
+    const seq2 = [0, -1, -2, -1]
+    const dy = seq2[Math.floor(now / 260 + phase) % seq2.length]
+    return { dx: 0, dy, lift: -dy * 0.5 }
+  }
+
+  function draw(now) {
+    const { W, H, cx, cy } = st
+    if (st.bg) ctx.drawImage(st.bg, 0, 0, W, H)
 
     if (st.sweeping) {
       const cols = Math.ceil(W / CELL)
@@ -415,12 +457,12 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
       ctx.stroke()
     }
 
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
     for (const p of st.dots) {
       const half = TILE / 2
       const glow = p.hit ? Math.max(0, 1 - (now - p.hit) / 1100) : 0
       if (p.seen || reduce) {
+        const sprite = p.item.sprite
+        const mv = motionOffset(sprite?.motion, p.ph || 0, now)
         // 선택 = 붉은 원형 파문
         if (p === st.selected) {
           const sp = (now / 700) % 1
@@ -434,16 +476,21 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
         if (glow > 0.02 || p === st.selected) {
           ctx.fillStyle = `rgba(255,211,56,${Math.max(glow, p === st.selected ? 0.6 : 0)})`
           ctx.beginPath()
-          ctx.arc(p.x, p.y, half + 3, 0, Math.PI * 2)
+          ctx.arc(p.x, p.y + 6, half + 3, 0, Math.PI * 2)
           ctx.fill()
         }
-        // 네모틀 없이 이모지를 지도 위에 바로 — 가독용 소프트 헤일로만
-        ctx.fillStyle = "rgba(255,253,244,0.66)"
+        // 발밑 그림자 — 지면에 붙는 느낌 (점프 시 작아짐)
+        const shR = half - 1 - mv.lift * 0.35
+        ctx.fillStyle = "rgba(31,26,18,0.22)"
         ctx.beginPath()
-        ctx.arc(p.x, p.y, half - 0.5, 0, Math.PI * 2)
+        ctx.ellipse(p.x + mv.dx, p.y + half - 1, Math.max(3, shR), 2.4, 0, 0, Math.PI * 2)
         ctx.fill()
-        ctx.font = EMOJI_FONT
-        ctx.fillText(p.item.emoji || "📍", p.x, p.y + 1)
+        // 도트 스프라이트 — 발밑 기준(anchor bottom)으로 그려 점프가 자연스럽게
+        if (sprite) {
+          const sx = p.x - half + mv.dx
+          const sy = p.y - TILE + 4 + mv.dy
+          drawPixelArtToCanvas(ctx, sprite, sx, sy, TILE)
+        }
       } else {
         // 미탐지 = 흐릿한 점
         ctx.fillStyle = "rgba(31,26,18,0.15)"
@@ -455,11 +502,14 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     // 중심(나)은 DOM 고양이가 표시한다 — 캔버스엔 그리지 않음
   }
 
-  function alive(now) {
-    return st.sweeping || st.selected || st.dots.some((d) => d.hit && now - d.hit < 1200)
+  // 탐지 완료 후에도 마커 idle 모션을 위해 계속 살아있게 (reduce 면 정지)
+  function alive() {
+    return !reduce
   }
 
   function frame(now) {
+    // 탭이 숨겨지면 멈춘다 (배터리) — 다시 보이면 kick() 으로 재개
+    if (typeof document !== "undefined" && document.hidden) { raf = 0; return }
     if (st.sweeping) {
       const dt = Math.min(48, now - st.last || 16)
       st.last = now
@@ -475,8 +525,13 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
       emitCount()
       if (st.laps >= MAX_LAPS) { st.sweeping = false; st.revealed = true }
     }
-    draw(now)
-    if (alive(now)) {
+    // 스윕/선택/최근점등 중엔 풀레이트, 그 외 idle 모션은 ~30fps 스로틀
+    const busy = st.sweeping || st.selected || st.dots.some((d) => d.hit && now - d.hit < 1200)
+    if (busy || now - st.lastDraw >= 32) {
+      st.lastDraw = now
+      draw(now)
+    }
+    if (alive()) {
       raf = requestAnimationFrame(frame)
     } else {
       raf = 0
@@ -515,6 +570,10 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   canvas.addEventListener("pointermove", onMove)
   canvas.addEventListener("click", onClick)
 
+  // 탭 복귀 시 idle 모션 루프 재개
+  const onVisible = () => { if (!document.hidden && !reduce) kick() }
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisible)
+
   const ro = typeof ResizeObserver !== "undefined"
     ? new ResizeObserver(() => { build(); if (!raf) draw(performance.now()) })
     : null
@@ -552,6 +611,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
       if (raf) cancelAnimationFrame(raf)
       canvas.removeEventListener("pointermove", onMove)
       canvas.removeEventListener("click", onClick)
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisible)
       if (ro) ro.disconnect()
     },
   }
