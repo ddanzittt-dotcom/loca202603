@@ -11,7 +11,7 @@ const DEFAULT_RADIUS_KM = 5
 const MIN_RADIUS_KM = 1
 const MAX_RADIUS_KM = 15
 const SPARSE_THRESHOLD = 8
-const RESULT_LIMIT = 30
+const RESULT_LIMIT = 60
 
 // 노출할 분류군만 — 새/동물(포유·양서·파충·어류)/식물. 곤충·거미·연체·버섯 제외.
 const TAXON_META = {
@@ -80,7 +80,7 @@ async function fetchObservations(location, radiusKm) {
     lat: String(location.lat),
     lng: String(location.lng),
     radius: String(radiusKm),
-    per_page: "100",
+    per_page: "200",
     photos: "true",
     locale: "ko",
     order_by: "observed_on",

@@ -12,6 +12,7 @@ const PALETTE = {
   p: "#F2A7AE", // 분홍(귀 안쪽·코·입)
   b: "#F6BFC7", // 볼터치
   G: "#14100B", // 눈동자
+  R: "#E5493A", // 나비넥타이(정장)
 }
 
 // 22×30 본체 — 흰 바탕 + 검은 얼룩 젖소무늬 고양이 (참고 사진 기반).
@@ -90,7 +91,16 @@ function gridToRects(grid, offsetX = 0, offsetY = 0) {
 const CAT_RECTS = gridToRects(CAT_GRID)
 const TAIL_RECTS = gridToRects(TAIL_GRID, 20, 15)
 
-export function TuxCatSprite({ size = 34, waving = false }) {
+// 나비넥타이 — 정장 차림용. 턱 아래 목 부분(y=12)에 얹는다.
+// 바깥 날개는 높고 가운데는 매듭(k)으로 잘록하게 → ◄► 보타이 실루엣.
+const BOW_GRID = [
+  "R...R",
+  "RRkRR",
+  "R...R",
+]
+const BOW_RECTS = gridToRects(BOW_GRID, 8, 12)
+
+export function TuxCatSprite({ size = 34, waving = false, formal = false }) {
   return (
     <svg
       className={`hcat-svg${waving ? " is-waving" : ""}`}
@@ -109,6 +119,9 @@ export function TuxCatSprite({ size = 34, waving = false }) {
       {CAT_RECTS.map((r) => (
         <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />
       ))}
+      {formal ? BOW_RECTS.map((r) => (
+        <rect key={`b${r.x}-${r.y}`} x={r.x} y={r.y} width={r.w} height="1" fill={r.fill} />
+      )) : null}
       {/* 깜빡임 눈꺼풀 — 눈 위에 털색(흰) 덮개가 잠깐 나타난다 */}
       <g className="hcat-lids" fill={PALETTE.w}>
         <rect x="7" y="6" width="2" height="2" />

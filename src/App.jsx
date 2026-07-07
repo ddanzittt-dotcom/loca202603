@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CheckCircle2, Database, Map as MapIcon, MapPin, PenLine, Plus, User } from "lucide-react"
+import { CheckCircle2, Database, Map as MapIcon, Plus, User } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
 import { PlaceFlipCard } from "./components/binder/PlaceFlipCard"
@@ -75,7 +75,7 @@ import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlaceme
 import { CollaboratorsSheet } from "./components/sheets/CollaboratorsSheet"
 import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
 import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated, isTutorialSeen, markTutorialSeen } from "./lib/onboarding"
-import { HelperCat } from "./components/helper/HelperCat"
+import { HelperCat, TuxCatSprite } from "./components/helper/HelperCat"
 import { TutorialDialog } from "./components/helper/TutorialDialog"
 import { CoachMark } from "./components/CoachMark"
 import { mergeFeatureListWithLocalMedia } from "./lib/featureMediaMerge"
@@ -212,25 +212,18 @@ function WebAuthLayout({ children }) {
   return (
     <section className="screen screen--scroll web-auth-screen">
       <div className="web-auth-workspace">
-        <aside className="web-auth-workspace__intro loca-authintro" aria-label="LOCA 소개">
+        <aside className="web-auth-workspace__intro loca-authintro loca-authintro--greet" aria-label="LOCA 소개">
           <span className="loca-authintro__eyebrow">LOCAL BINDER · No.000</span>
-          <h1 className="loca-authintro__logo" aria-label="LOCA">LOCA</h1>
-          <p className="loca-authintro__tagline">내 동네를 기록하는 지도</p>
-          <p className="loca-authintro__desc">가 본 곳, 가고 싶은 곳을 카드로 모아 나만의 동네 지도를 만들어요.</p>
-          <ul className="loca-authintro__feats">
-            <li>
-              <span className="loca-authintro__ic"><PenLine size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div><strong>등록</strong><em>가 본 곳을 카드 한 장으로</em></div>
-            </li>
-            <li>
-              <span className="loca-authintro__ic"><MapIcon size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div><strong>바인더</strong><em>모은 카드로 나만의 지도</em></div>
-            </li>
-            <li>
-              <span className="loca-authintro__ic"><MapPin size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-              <div><strong>발견</strong><em>새로운 동네를 찾아 담기</em></div>
-            </li>
-          </ul>
+          <div className="loca-greet">
+            <div className="loca-greet__bubble" role="note">
+              <p className="loca-greet__hello">내 동네를 기록하는 <b>LOCA</b>에<br />오신 걸 환영합니다.</p>
+              <p className="loca-greet__wish">당신과 주변 세계가 더 가까워지기를 바랍니다.</p>
+            </div>
+            <div className="loca-greet__cat">
+              <TuxCatSprite size={150} formal />
+            </div>
+            <span className="loca-greet__sign">— 도우미 로카냥 올림</span>
+          </div>
         </aside>
         <div className="web-auth-workspace__panel">
           {children}

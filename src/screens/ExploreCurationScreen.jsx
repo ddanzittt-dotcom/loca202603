@@ -377,18 +377,19 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       lat: Number(raw.lat), lng: Number(raw.lng),
       distKm: raw.distKm, category: raw.category, data: raw,
     })
-    // 좌표 있는 것만, 카테고리별 상한(PER)으로. 인터리브해서 앞에서 잘라도(maxDots) 균형 유지.
-    const PER = 24
+    // 좌표 있는 것만. 생물(채집 핵심)은 상한을 크게 + 인터리브에서 2배 자리 → 앞에서 잘려도 덜 눌림.
     const withCoords = (arr) => arr.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
-    const evts = withCoords((Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))).slice(0, PER)
-    const plcs = withCoords((placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))).slice(0, PER)
-    const wild = withCoords((wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))).slice(0, PER)
+    const evts = withCoords((Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))).slice(0, 24)
+    const plcs = withCoords((placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))).slice(0, 24)
+    const wild = withCoords((wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))).slice(0, 60)
+    // 한 라운드마다 행사1·공간1·생물2 → 생물이 절반 비중, 앞에서 maxDots 로 잘라도 동물이 넉넉히 남는다
     const interleaved = []
-    const maxLen = Math.max(evts.length, plcs.length, wild.length)
+    const maxLen = Math.max(evts.length, plcs.length, Math.ceil(wild.length / 2))
     for (let i = 0; i < maxLen; i += 1) {
       if (evts[i]) interleaved.push(evts[i])
       if (plcs[i]) interleaved.push(plcs[i])
-      if (wild[i]) interleaved.push(wild[i])
+      if (wild[i * 2]) interleaved.push(wild[i * 2])
+      if (wild[i * 2 + 1]) interleaved.push(wild[i * 2 + 1])
     }
     return interleaved
   }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
@@ -407,7 +408,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         label={effectiveLocation.label}
         hasLocation={Boolean(location)}
         locating={locating}
-        maxDots={radarExpanded ? 60 : 24}
+        maxDots={radarExpanded ? 110 : 30}
         expanded={radarExpanded}
         onLocate={locateMe}
         onReload={() => setReloadKey((value) => value + 1)}
