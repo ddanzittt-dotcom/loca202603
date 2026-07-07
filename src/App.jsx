@@ -35,6 +35,7 @@ import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
+import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
 import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord } from "./lib/mapService.write"
 import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlacements"
@@ -2093,18 +2094,13 @@ export default function App() {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             let photoUrl = null
             if (photoFile) {
+              // 원본을 그대로 저장하면 localStorage/업로드 한도를 넘겨 저장이 통째로 실패한다 → 반드시 압축
+              const blob = await compressImageFile(photoFile)
               if (cloudMode) {
-                const meta = await uploadMediaToCloud(createId("photo"), photoFile, "photos").catch(() => null)
+                const meta = await uploadMediaToCloud(createId("photo"), blob, "photos").catch(() => null)
                 if (meta?.publicUrl) photoUrl = meta.publicUrl
               }
-              if (!photoUrl) {
-                photoUrl = await new Promise((resolve, reject) => {
-                  const reader = new FileReader()
-                  reader.onload = () => resolve(reader.result)
-                  reader.onerror = reject
-                  reader.readAsDataURL(photoFile)
-                })
-              }
+              if (!photoUrl) photoUrl = await blobToDataUrl(blob)
             }
             if (cloudMode) {
               await addFeatureMemo(featureId, text, "", photoUrl ? [photoUrl] : [])
@@ -2116,22 +2112,19 @@ export default function App() {
           }}
           onSetPhoto={async (file) => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            // 원본을 그대로 저장하면 localStorage/업로드 한도를 넘겨 저장이 통째로 실패한다 → 반드시 압축
+            const blob = await compressImageFile(file)
             let url = null
             if (cloudMode) {
-              const meta = await uploadMediaToCloud(createId("photo"), file, "photos").catch(() => null)
+              const meta = await uploadMediaToCloud(createId("photo"), blob, "photos").catch(() => null)
               if (meta?.publicUrl) {
                 url = meta.publicUrl
                 await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url }).catch(() => {})
               }
             }
             if (!url) {
-              // 로컬 모드 또는 업로드 실패 — data URL 로 즉시 반영(로컬 저장에 유지)
-              url = await new Promise((resolve, reject) => {
-                const reader = new FileReader()
-                reader.onload = () => resolve(reader.result)
-                reader.onerror = reject
-                reader.readAsDataURL(file)
-              })
+              // 로컬 모드 또는 업로드 실패 — 압축된 data URL 로 즉시 반영(로컬 저장에 유지)
+              url = await blobToDataUrl(blob)
             }
             const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
