@@ -88,19 +88,6 @@ export async function signInWithMagicLink(email, options = {}) {
   return data
 }
 
-export function signInWithNaver() {
-  const redirectTo = getDefaultRedirectTo()
-  const naverAuthUrl = `/api/auth/naver?redirect_to=${encodeURIComponent(redirectTo)}`
-  window.location.href = naverAuthUrl
-}
-
-export async function signInAnonymously() {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.auth.signInAnonymously()
-  if (error) throw error
-  return data
-}
-
 export async function resetPasswordForEmail(email) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {

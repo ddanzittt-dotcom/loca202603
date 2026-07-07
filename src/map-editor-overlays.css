@@ -4363,12 +4363,6 @@
   flex-shrink: 0;
 }
 
-/* 네이버 */
-.auth-social-btn--naver {
-  background: #03C75A;
-  color: #fff;
-}
-
 /* 카카오 */
 .auth-social-btn--kakao {
   background: #FEE500;

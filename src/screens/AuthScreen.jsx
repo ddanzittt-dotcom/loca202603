@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithKakao, signInWithNaver } from "../lib/auth"
+import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithKakao } from "../lib/auth"
 
 function friendlyError(message = "") {
   const msg = message.toLowerCase()
@@ -46,7 +46,6 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
     try {
       if (provider === "google") await signInWithGoogle()
       else if (provider === "kakao") await signInWithKakao()
-      else if (provider === "naver") signInWithNaver()
     } catch (e) {
       setErrorMessage(friendlyError(e.message))
     } finally {
@@ -118,16 +117,6 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
           </div>
 
           <div className="auth-social-buttons">
-            <button
-              className="auth-social-btn auth-social-btn--naver"
-              type="button"
-              disabled={submitting}
-              onClick={() => handleOAuth("naver")}
-            >
-              <svg className="auth-social-btn__icon" viewBox="0 0 20 20" fill="none"><path d="M13.56 10.7L6.15 0H0v20h6.44V9.3L13.85 20H20V0h-6.44v10.7z" fill="currentColor"/></svg>
-              <span>네이버로 계속하기</span>
-            </button>
-
             <button
               className="auth-social-btn auth-social-btn--kakao"
               type="button"
