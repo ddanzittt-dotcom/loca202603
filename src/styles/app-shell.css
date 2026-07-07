@@ -5442,7 +5442,7 @@
 
 /* ═══════════ 도우미 고양이 "로카냥" + 튜토리얼 (2026-07-07) ═══════════ */
 
-/* 좌하단 상주 버튼 — 모바일: 하단 내비 위, 데스크톱(내비 상단 이동): 좌하단 구석 */
+/* 상주 버튼 — 모바일: 하단 내비 위 왼쪽, 데스크톱: 좌측 레일 하단 중앙 (원 없이 고양이 그대로) */
 .hcat {
   position: fixed;
   left: 10px;
@@ -5450,25 +5450,30 @@
   z-index: 52;
 }
 @media (min-width: 960px) {
-  .hcat { left: 20px; bottom: 20px; }
+  /* 레일: left 20px + width 240px → 가로 중앙 140px */
+  .hcat { left: 140px; bottom: 30px; transform: translateX(-50%); }
 }
 .hcat-btn {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: #FFF6E7;
-  border: 3px solid #1B1B18;
-  box-shadow: 3px 3px 0 rgba(27, 27, 24, 0.55);
+  background: transparent;
+  border: none;
+  padding: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   cursor: pointer;
-  padding: 0;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
-.hcat-btn:hover { transform: translateY(-2px); box-shadow: 4px 5px 0 rgba(27, 27, 24, 0.55); }
-.hcat-btn.is-open { background: #F5C41B; }
-.hcat-btn:focus-visible { outline: 2px solid var(--accent, #E8442E); outline-offset: 2px; }
+.hcat-btn:hover { transform: translateY(-3px); }
+.hcat-btn:focus-visible { outline: 2px solid var(--accent, #E8442E); outline-offset: 4px; border-radius: 10px; }
+.hcat-btn .hcat-svg {
+  width: 56px;
+  height: 78px;
+  filter: drop-shadow(3px 3px 0 rgba(27, 27, 24, 0.3));
+}
+@media (min-width: 960px) {
+  /* 데스크톱: 4배 크기 */
+  .hcat-btn .hcat-svg { width: 120px; height: 168px; }
+}
 
 /* 스프라이트 idle 애니메이션 — 몸 들썩 + 꼬리 살랑, 메뉴 열리면 팔 인사 */
 .hcat-svg { animation: hcatBob 1.2s steps(2, end) infinite; overflow: visible; }
@@ -5486,11 +5491,11 @@
 @keyframes hcatBlink { 0%, 92%, 100% { opacity: 1; } 93%, 97% { opacity: 0; } }
 @keyframes hcatWave { from { transform: rotate(0deg); } to { transform: rotate(-24deg); } }
 
-/* 말풍선 도움말 메뉴 */
+/* 말풍선 도움말 메뉴 — 고양이 머리 위 */
 .hcat-menu {
   position: absolute;
   left: 0;
-  bottom: 62px;
+  bottom: calc(100% + 12px);
   width: 210px;
   background: #FFFDF4;
   border: 3px solid #1B1B18;
@@ -5510,7 +5515,13 @@
   border: 6px solid transparent;
   border-top-color: #1B1B18;
 }
-@keyframes hcatMenuPop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (min-width: 960px) {
+  /* 데스크톱: 고양이가 레일 중앙이므로 말풍선·꼬리도 중앙 정렬 */
+  .hcat-menu { left: 50%; transform: translateX(-50%); }
+  .hcat-menu::after { left: 50%; margin-left: -6px; }
+}
+/* transform 키프레임 금지 — 데스크톱 중앙정렬 translateX(-50%) 를 덮어쓰지 않도록 opacity 만 */
+@keyframes hcatMenuPop { from { opacity: 0; } to { opacity: 1; } }
 .hcat-menu__title {
   font-family: "DungGeunMo", monospace;
   font-size: 11px;
