@@ -463,33 +463,31 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
       if (p.seen || reduce) {
         const sprite = p.item.sprite
         const mv = motionOffset(sprite?.motion, p.ph || 0, now)
-        // 선택 = 붉은 원형 파문
+        // 선택 = 붉은 원형 파문 (지면 중심)
         if (p === st.selected) {
           const sp = (now / 700) % 1
           ctx.strokeStyle = `rgba(229,73,58,${0.9 * (1 - sp)})`
           ctx.lineWidth = 2
           ctx.beginPath()
-          ctx.arc(p.x, p.y, half + 3 + sp * 9, 0, Math.PI * 2)
+          ctx.arc(p.x, p.y, half + 2 + sp * 9, 0, Math.PI * 2)
           ctx.stroke()
         }
-        // 점등 직후/선택 = 노란 광원
+        // 점등 직후/선택 = 노란 광원 (지면 중심)
         if (glow > 0.02 || p === st.selected) {
           ctx.fillStyle = `rgba(255,211,56,${Math.max(glow, p === st.selected ? 0.6 : 0)})`
           ctx.beginPath()
-          ctx.arc(p.x, p.y + 6, half + 3, 0, Math.PI * 2)
+          ctx.arc(p.x, p.y, half + 2, 0, Math.PI * 2)
           ctx.fill()
         }
-        // 발밑 그림자 — 지면에 붙는 느낌 (점프 시 작아짐)
-        const shR = half - 1 - mv.lift * 0.35
+        // 발밑 그림자 (점프 시 작아짐)
+        const shR = half - 3 - mv.lift * 0.4
         ctx.fillStyle = "rgba(31,26,18,0.22)"
         ctx.beginPath()
-        ctx.ellipse(p.x + mv.dx, p.y + half - 1, Math.max(3, shR), 2.4, 0, 0, Math.PI * 2)
+        ctx.ellipse(p.x + mv.dx, p.y + 8, Math.max(3, shR), 2.4, 0, 0, Math.PI * 2)
         ctx.fill()
-        // 도트 스프라이트 — 발밑 기준(anchor bottom)으로 그려 점프가 자연스럽게
+        // 도트 스프라이트 — 24px(2× 크리스프) 박스를 점 중심에 정렬, dy 로 점프
         if (sprite) {
-          const sx = p.x - half + mv.dx
-          const sy = p.y - TILE + 4 + mv.dy
-          drawPixelArtToCanvas(ctx, sprite, sx, sy, TILE)
+          drawPixelArtToCanvas(ctx, sprite, p.x - 12 + mv.dx, p.y - 12 + mv.dy, 24)
         }
       } else {
         // 미탐지 = 흐릿한 점

@@ -67,10 +67,16 @@ const GROUP_FALLBACK = {
   Reptilia: "lizard", Actinopterygii: "fish", Plantae: "tree",
 }
 
-// 공간 kind → 기존 카탈로그 도트 id
+// 공간 전용 오버월드 도트 — 카탈로그 흰색 액자(px-gallery)가 필드에서 안 읽혀서 새로 그림
+const SPACE = {
+  // 전시 — 컬러 그림 액자(파란 하늘+해+초록 언덕), 흰 네모로 안 보이게
+  exhibit: ["............", ".CCCCCCCCCC.", ".CiiiiiiiiC.", ".CiiiyyiiiC.", ".CiiyyyyiiC.", ".CigllllgiC.", ".CgGllllGgC.", ".CGGGGGGGGC.", ".CCCCCCCCCC.", "............", "............", "............"],
+}
+
+// 공간 kind → 도트 (SPACE 커스텀 우선, 없으면 기존 카탈로그 id)
 const PLACE_KIND_SPRITE = {
   nature: "px-mountain", history: "px-castle", park: "px-park",
-  exhibit: "px-gallery", cafe: "px-cafe", book: "px-book", market: "px-market",
+  cafe: "px-cafe", book: "px-book", market: "px-market",
 }
 
 function wildKey(title, group) {
@@ -86,6 +92,7 @@ function wildKey(title, group) {
 export function spriteForRadarItem(type, raw = {}) {
   if (type === "event") return { grid: EVENT_GRID, motion: "bounce" }
   if (type === "place") {
+    if (SPACE[raw.kind]) return { grid: SPACE[raw.kind], motion: "bob" }
     const art = findPixelArt(PLACE_KIND_SPRITE[raw.kind]) || findPixelArt("px-map")
     return { grid: art ? art.grid : EVENT_GRID, motion: "bob" }
   }
