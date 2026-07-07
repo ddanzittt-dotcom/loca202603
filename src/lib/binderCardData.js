@@ -1,13 +1,22 @@
 import { buildFeatureRecordGroups } from "./featureRecordGroups"
 import { getPlaceType } from "./placeTypes"
+import { resolveFeatureEmoji } from "../components/FeatureEmoji"
 
 // 바인더 카드가 쓰는 파생값 헬퍼 (컴포넌트와 분리 — react-refresh 규칙)
 
-// 대표 사진: 기록 사진 우선, 없으면 카드에 지정한 photo-kind 이모지
+// 대표 사진: 기록 사진 우선, 없으면 카드에 지정한 photo-kind 이모지.
+// 표지 사진은 저장 경로에 따라 여러 형태로 온다:
+//   1) 로컬/신 컬럼: emojiKind:"photo" + emojiPhotoUrl
+//   2) Supabase 레거시 왕복: emoji 문자열 "loca-emoji:photo:URL" (emojiKind 는 unicode 로 정규화됨)
+//   3) emoji 객체 { kind:"photo", value:URL }
+// 어떤 형태든 photo 서술자면 full-bleed 로 보이도록 URL 을 돌려준다.
+// (이걸 놓치면 재로그인 후 이모지 폴백으로 빠져 작은 원으로 렌더된다.)
 export function representativePhoto(feature) {
   const photos = getCardPhotos(feature)
   if (photos[0]) return photos[0]
   if (feature?.emojiKind === "photo" && feature?.emojiPhotoUrl) return feature.emojiPhotoUrl
+  const descriptor = resolveFeatureEmoji(feature)
+  if (descriptor?.kind === "photo" && descriptor.value) return descriptor.value
   return null
 }
 
