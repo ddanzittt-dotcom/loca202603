@@ -294,6 +294,27 @@ export async function createFeature(mapId, featureData) {
   return normalizeFeature(data)
 }
 
+/**
+ * 기존 카드 동네 백필 — region_name 없는 좌표 카드를 역지오코딩해 DB·로컬에 태깅.
+ * 지오코더 배려로 순차 처리 + 딜레이, max 개 상한. onTagged(id, regionName, regionCode) 콜백으로 로컬 반영.
+ */
+export async function backfillRegionNames(features, { onTagged, max = 30, delayMs = 220 } = {}) {
+  let supabase
+  try { supabase = requireSupabase() } catch { return 0 }
+  const targets = (Array.isArray(features) ? features : []).filter((f) => {
+    const lat = Number(f?.lat)
+    const lng = Number(f?.lng)
+    return f?.id && !f?.regionName && Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+  }).slice(0, max)
+  let tagged = 0
+  for (const f of targets) {
+    const res = await reverseGeocodeAndTag(supabase, f.id, Number(f.lat), Number(f.lng)).catch(() => null)
+    if (res?.regionName) { tagged += 1; onTagged?.(f.id, res.regionName, res.regionCode || null) }
+    if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+  return tagged
+}
+
 // 배치 테이블(050) 자체가 없는 환경만 하위호환으로 무시한다.
 // RLS 거부 등 나머지 에러는 호출부까지 올려 사용자에게 실패를 알린다.
 function isMissingPlacementsTable(error) {

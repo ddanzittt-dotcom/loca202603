@@ -33,7 +33,7 @@ import {
 } from "./lib/appUtils"
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
-import { addFeatureMemo, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
+import { addFeatureMemo, backfillRegionNames, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
@@ -511,6 +511,24 @@ export default function App() {
       setTutorial({ step: 0, auto: "authed" })
     }
   }, [authUser, cloudDataReady])
+
+  // 기존 카드 동네 백필 — 클라우드 로드 완료 후 사용자당 1회, region_name 없는 카드를 역지오코딩 태깅.
+  // 대시보드 "동네 도감"이 이 값을 쓴다. 지오코더 배려로 순차 처리(느리게), best-effort.
+  const regionBackfillRef = useRef(null)
+  const featuresRef = useRef(features)
+  featuresRef.current = features
+  useEffect(() => {
+    if (!cloudMode || !cloudDataReady || !cloudLoadedUserId) return
+    if (regionBackfillRef.current === cloudLoadedUserId) return
+    regionBackfillRef.current = cloudLoadedUserId
+    backfillRegionNames(featuresRef.current, {
+      onTagged: (id, regionName, regionCode) => {
+        setFeatures((current) => current.map((feature) => (
+          feature.id === id ? { ...feature, regionName, regionCode } : feature
+        )))
+      },
+    }).catch(() => {})
+  }, [cloudMode, cloudDataReady, cloudLoadedUserId, setFeatures])
   const hasStoredPersonalCacheForUser = Boolean(authUser?.id && storedCloudUserId === authUser.id)
   const isFirstCloudLoadForUser = cloudLoading && !cloudDataReady && cloudLoadedUserId !== authUser?.id && !hasStoredPersonalCacheForUser
   const requiresAuthForCurrentTab =

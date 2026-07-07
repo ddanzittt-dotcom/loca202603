@@ -345,7 +345,7 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
     } catch { /* 무시 */ }
   }
 
-  if (!regionName) return
+  if (!regionName) return null
 
   try {
     const { error } = await supabase
@@ -361,6 +361,7 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
   } catch {
     // Region tagging is best-effort and must never affect feature saves.
   }
+  return { regionName, regionCode }
 }
 
 export async function requireUser() {

@@ -66,6 +66,7 @@ export {
   removeCollaborator,
   respondCollaborationInvite,
   linkMapLineage,
+  backfillRegionNames,
 } from "./mapService.write"
 
 // ── Dormant collab/operator-note stubs ──
