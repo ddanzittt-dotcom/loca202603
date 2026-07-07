@@ -7,13 +7,23 @@ import { LocateFixed, Maximize2, RotateCw, X } from "lucide-react"
 // 명령형 캔버스 로직은 훅 밖 팩토리(createRadar)에 두고, React는 오버레이·팝오버만 관리한다.
 
 const CELL = 8
-const TERRAIN = ["#D6CFAF", "#C6D6B4", "#F4EEDA", "#AFC9E0"]
 const INK = "#1F1A12"
 const RED = "#E5493A"
 const YELLOW = "#FFD338"
 const PAPER = "#FFFDF4"
-const TILE = 20 // 이모지 도트 타일 크기(px)
-const EMOJI_FONT = '13px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+// 지도 문법 팔레트 — 종이 바탕 / 블록 / 도로 / 강 / 공원
+const BASE = "#EFE9D3"
+const BLOCK = "#E3DCC2"
+const ROAD = "#FFFDF4"
+const ROAD_EDGE = "#D8D0B4"
+const RIVER = "#AFC9E0"
+const RIVER_CORE = "#C4D8EC"
+const PARK = "#C6D6B4"
+const TILE = 20 // 이모지 마커 간격 기준(px)
+const EMOJI_FONT = '16px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+const LABEL_FONT = '9px "DungGeunMo", monospace'
+// 거리 링 후보 값(km) — 자동 줌 범위에 맞는 "예쁜 숫자"를 고른다
+const RING_STEPS = [0.5, 1, 2, 3, 5, 10, 15, 20, 30]
 const WEDGE = 0.72
 const MAX_LAPS = 2
 const HIT_RADIUS = 18
@@ -39,7 +49,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
   const ctx = canvas.getContext("2d")
   const reduce = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   const st = {
-    W: 0, H: 0, cx: 0, cy: 0, terrain: [], dots: [],
+    W: 0, H: 0, cx: 0, cy: 0, map: null, rings: [], dots: [],
     sweep: -Math.PI / 2, laps: 0, sweeping: false, last: 0, selected: null,
     items: [], location: null, seed: 7, count: -1, revealed: false, maxDots,
   }
@@ -57,23 +67,34 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     st.cx = Math.round(w / 2 / CELL) * CELL + CELL / 2
     st.cy = Math.round(h / 2 / CELL) * CELL + CELL / 2
 
-    const cols = Math.ceil(w / CELL)
-    const rows = Math.ceil(h / CELL)
+    // 지도 문법 배경 — 도로 그리드/블록/강/공원 (시드 결정적, 실제 지리는 아님)
     let s = st.seed
     const rand = () => { s = (s * 16807 + 11) % 2147483647; return s / 2147483647 }
-    const terrain = []
-    for (let y = 0; y < rows; y += 1) {
-      for (let x = 0; x < cols; x += 1) {
-        const v = rand()
-        let f = null
-        if (v < 0.10) f = TERRAIN[0]
-        else if (v < 0.17) f = TERRAIN[1]
-        else if (v < 0.205) f = TERRAIN[2]
-        else if (v < 0.225) f = TERRAIN[3]
-        if (f) terrain.push([x, y, f])
+    const hCount = 2 + Math.floor(rand() * 2)
+    const vCount = 2 + Math.floor(rand() * 2)
+    const hRoads = []
+    const vRoads = []
+    for (let i = 0; i < hCount; i += 1) hRoads.push(Math.round(((i + 0.5 + rand() * 0.55) / (hCount + 0.6)) * h))
+    for (let i = 0; i < vCount; i += 1) vRoads.push(Math.round(((i + 0.5 + rand() * 0.55) / (vCount + 0.6)) * w))
+    hRoads.sort((a, b) => a - b)
+    vRoads.sort((a, b) => a - b)
+    // 블록 음영 — 도로로 나뉜 칸 일부만 살짝 어둡게 (도시 블록 느낌)
+    const xs = [0, ...vRoads, w]
+    const ys = [0, ...hRoads, h]
+    const blocks = []
+    for (let yi = 0; yi < ys.length - 1; yi += 1) {
+      for (let xi = 0; xi < xs.length - 1; xi += 1) {
+        if (rand() < 0.42) blocks.push([xs[xi] + 5, ys[yi] + 5, xs[xi + 1] - xs[xi] - 10, ys[yi + 1] - ys[yi] - 10])
       }
     }
-    st.terrain = terrain
+    // 공원 1~2개
+    const parks = []
+    for (let i = 0; i < 2; i += 1) {
+      if (rand() < 0.75) parks.push([rand() * (w - 80) + 12, rand() * (h - 64) + 12, 42 + rand() * 46, 30 + rand() * 34])
+    }
+    // 강 — 코너 하나를 가로지르는 대각 밴드
+    const riverCorner = Math.floor(rand() * 4)
+    st.map = { hRoads, vRoads, blocks, parks, riverCorner, hasRiver: rand() < 0.85 }
 
     const loc = st.location || { lat: 37.5665, lng: 126.978 }
     const cosLat = Math.cos((loc.lat * Math.PI) / 180) || 1
@@ -85,6 +106,12 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     const dists = pool.map((i) => (Number.isFinite(i.distKm) ? i.distKm : null)).filter((v) => v != null)
     // 3~30km 범위로 자동 줌 — 아주 먼 행사 1개가 나머지를 중앙에 뭉치게 하지 않도록 상한 30km
     const maxDist = Math.min(30, Math.max(3, ...(dists.length ? dists : [5])))
+    // 거리 링 — 자동 줌 범위에 맞는 "예쁜 숫자" 2개 (안쪽/바깥쪽)
+    const rOf = (d) => Math.sqrt(Math.min(1, d / maxDist)) * 0.92 + 0.06
+    const pickStep = (target) => RING_STEPS.reduce((best, v) => (Math.abs(v - target) < Math.abs(best - target) ? v : best), RING_STEPS[0])
+    st.rings = [...new Set([pickStep(maxDist * 0.3), pickStep(maxDist * 0.85)])]
+      .filter((km) => km <= maxDist * 1.05)
+      .map((km) => ({ km, rx: spanX * rOf(km), ry: spanY * rOf(km) }))
     st.dots = pool.map((item) => {
       const east = (item.lng - loc.lng) * cosLat
       const north = item.lat - loc.lat
@@ -133,15 +160,106 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     if (seen !== st.count) { st.count = seen; onCount(seen) }
   }
 
+  function drawRiver(w, h, corner) {
+    // 코너를 가로지르는 대각 밴드 — 0:우상 1:우하 2:좌하 3:좌상
+    const mx = corner === 0 || corner === 1 ? 1 : -1
+    const my = corner === 0 || corner === 3 ? 1 : -1
+    const px = (v) => (mx > 0 ? v : w - v)
+    const py = (v) => (my > 0 ? v : h - v)
+    const band = (inset) => {
+      ctx.beginPath()
+      ctx.moveTo(px(w * 0.62 + inset), py(0))
+      ctx.lineTo(px(w * 0.88 - inset), py(0))
+      ctx.lineTo(px(w), py(h * 0.52 - inset * 1.4))
+      ctx.lineTo(px(w), py(h * 0.2 + inset * 1.4))
+      ctx.closePath()
+      ctx.fill()
+    }
+    ctx.fillStyle = RIVER
+    band(0)
+    ctx.fillStyle = RIVER_CORE
+    band(7)
+  }
+
   function draw(now) {
     const { W, H, cx, cy } = st
     ctx.clearRect(0, 0, W, H)
-    ctx.fillStyle = "#E7E0CA"
+    ctx.fillStyle = BASE
     ctx.fillRect(0, 0, W, H)
-    for (const t of st.terrain) {
-      ctx.fillStyle = t[2]
-      ctx.fillRect(t[0] * CELL, t[1] * CELL, CELL, CELL)
+    const map = st.map
+    if (map) {
+      // 블록 음영 → 공원 → 강 → 도로 순서
+      ctx.fillStyle = BLOCK
+      for (const b of map.blocks) ctx.fillRect(b[0], b[1], b[2], b[3])
+      ctx.fillStyle = PARK
+      for (const p of map.parks) ctx.fillRect(p[0], p[1], p[2], p[3])
+      if (map.hasRiver) drawRiver(W, H, map.riverCorner)
+      for (const y of map.hRoads) {
+        ctx.fillStyle = ROAD_EDGE
+        ctx.fillRect(0, y - 5, W, 10)
+        ctx.fillStyle = ROAD
+        ctx.fillRect(0, y - 4, W, 8)
+      }
+      for (const x of map.vRoads) {
+        ctx.fillStyle = ROAD_EDGE
+        ctx.fillRect(x - 5, 0, 10, H)
+        ctx.fillStyle = ROAD
+        ctx.fillRect(x - 4, 0, 8, H)
+      }
     }
+
+    // 거리 링 + km 라벨 — 축척 직관
+    ctx.setLineDash([4, 4])
+    ctx.strokeStyle = "rgba(31,26,18,0.32)"
+    ctx.lineWidth = 1.2
+    for (const ring of st.rings) {
+      ctx.beginPath()
+      ctx.ellipse(cx, cy, ring.rx, ring.ry, 0, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.setLineDash([])
+    ctx.font = LABEL_FONT
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+    for (const ring of st.rings) {
+      const label = `${ring.km}km`
+      const lx = cx + ring.rx * 0.72
+      const ly = cy - ring.ry * 0.72
+      ctx.strokeStyle = PAPER
+      ctx.lineWidth = 3
+      ctx.strokeText(label, lx, ly)
+      ctx.fillStyle = "#55523F"
+      ctx.fillText(label, lx, ly)
+    }
+
+    // 나침반 N (상단 중앙)
+    ctx.fillStyle = RED
+    ctx.beginPath()
+    ctx.moveTo(cx, 5)
+    ctx.lineTo(cx - 4, 13)
+    ctx.lineTo(cx + 4, 13)
+    ctx.closePath()
+    ctx.fill()
+    ctx.font = LABEL_FONT
+    ctx.textAlign = "center"
+    ctx.strokeStyle = PAPER
+    ctx.lineWidth = 3
+    ctx.strokeText("N", cx, 20)
+    ctx.fillStyle = INK
+    ctx.fillText("N", cx, 20)
+
+    // 내 위치 펄스 (DOM 고양이 발밑)
+    ctx.fillStyle = "rgba(255,211,56,0.4)"
+    ctx.beginPath()
+    ctx.arc(cx, cy, 13, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = RED
+    ctx.strokeStyle = INK
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.stroke()
 
     if (st.sweeping) {
       const cols = Math.ceil(W / CELL)
@@ -170,34 +288,37 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     ctx.textBaseline = "middle"
     for (const p of st.dots) {
       const half = TILE / 2
-      const tx = p.x - half
-      const ty = p.y - half
       const glow = p.hit ? Math.max(0, 1 - (now - p.hit) / 1100) : 0
       if (p.seen || reduce) {
-        // 선택/점등 하이라이트
+        // 선택 = 붉은 원형 파문
         if (p === st.selected) {
           const sp = (now / 700) % 1
           ctx.strokeStyle = `rgba(229,73,58,${0.9 * (1 - sp)})`
           ctx.lineWidth = 2
-          const sr = half + 3 + sp * 9
-          ctx.strokeRect(p.x - sr, p.y - sr, sr * 2, sr * 2)
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, half + 3 + sp * 9, 0, Math.PI * 2)
+          ctx.stroke()
         }
+        // 점등 직후/선택 = 노란 광원
         if (glow > 0.02 || p === st.selected) {
-          ctx.fillStyle = YELLOW
-          ctx.fillRect(tx - 2, ty - 2, TILE + 4, TILE + 4)
+          ctx.fillStyle = `rgba(255,211,56,${Math.max(glow, p === st.selected ? 0.6 : 0)})`
+          ctx.beginPath()
+          ctx.arc(p.x, p.y, half + 3, 0, Math.PI * 2)
+          ctx.fill()
         }
-        // 미니 카드 타일 + 이모지
-        ctx.fillStyle = PAPER
-        ctx.fillRect(tx, ty, TILE, TILE)
-        ctx.strokeStyle = INK
-        ctx.lineWidth = 1.6
-        ctx.strokeRect(tx, ty, TILE, TILE)
+        // 네모틀 없이 이모지를 지도 위에 바로 — 가독용 소프트 헤일로만
+        ctx.fillStyle = "rgba(255,253,244,0.66)"
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, half - 0.5, 0, Math.PI * 2)
+        ctx.fill()
         ctx.font = EMOJI_FONT
         ctx.fillText(p.item.emoji || "📍", p.x, p.y + 1)
       } else {
-        // 미탐지 = 흐릿한 빈 슬리브
-        ctx.fillStyle = "rgba(31,26,18,0.12)"
-        ctx.fillRect(tx + 3, ty + 3, TILE - 6, TILE - 6)
+        // 미탐지 = 흐릿한 점
+        ctx.fillStyle = "rgba(31,26,18,0.15)"
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2)
+        ctx.fill()
       }
     }
     // 중심(나)은 DOM 고양이가 표시한다 — 캔버스엔 그리지 않음
