@@ -11,14 +11,18 @@ const INK = "#1F1A12"
 const RED = "#E5493A"
 const YELLOW = "#FFD338"
 const PAPER = "#FFFDF4"
-// 지도 문법 팔레트 — 종이 바탕 / 블록 / 도로 / 강 / 공원
-const BASE = "#EFE9D3"
-const BLOCK = "#E3DCC2"
-const ROAD = "#FFFDF4"
-const ROAD_EDGE = "#D8D0B4"
-const RIVER = "#AFC9E0"
-const RIVER_CORE = "#C4D8EC"
-const PARK = "#C6D6B4"
+// 오버월드(포켓몬 필드맵) 팔레트 — 잔디 / 흙길 / 연못 / 나무 / 풀숲
+const GRASS = "#B7D690"
+const GRASS_ALT = "#AFCF87" // 깎은 잔디 결 (줄무늬)
+const FIELD = "#A9C981" // 밭/풀 패치 (구 블록 음영)
+const PATH = "#E4CFA0" // 흙길
+const PATH_EDGE = "#D6BE8C"
+const POND = "#8FC3E8"
+const POND_CORE = "#A8D2F0"
+const TREE_LEAF = "#4E7A46"
+const TREE_LEAF_HI = "#5C8C50"
+const TREE_TRUNK = "#7A5A38"
+const BUSH = "#93BE72" // 키큰 풀숲 바탕
 const TILE = 20 // 이모지 마커 간격 기준(px)
 const EMOJI_FONT = '16px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
 const LABEL_FONT = '9px "DungGeunMo", monospace'
@@ -67,34 +71,64 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     st.cx = Math.round(w / 2 / CELL) * CELL + CELL / 2
     st.cy = Math.round(h / 2 / CELL) * CELL + CELL / 2
 
-    // 지도 문법 배경 — 도로 그리드/블록/강/공원 (시드 결정적, 실제 지리는 아님)
+    // 오버월드 배경 — 흙길/풀 패치/풀숲/연못/나무 경계 (시드 결정적, 실제 지리는 아님)
     let s = st.seed
     const rand = () => { s = (s * 16807 + 11) % 2147483647; return s / 2147483647 }
-    const hCount = 2 + Math.floor(rand() * 2)
-    const vCount = 2 + Math.floor(rand() * 2)
+    const hCount = 1 + Math.floor(rand() * 2) // 흙길은 도로보다 성기게 (1~2개)
+    const vCount = 1 + Math.floor(rand() * 2)
     const hRoads = []
     const vRoads = []
     for (let i = 0; i < hCount; i += 1) hRoads.push(Math.round(((i + 0.5 + rand() * 0.55) / (hCount + 0.6)) * h))
     for (let i = 0; i < vCount; i += 1) vRoads.push(Math.round(((i + 0.5 + rand() * 0.55) / (vCount + 0.6)) * w))
     hRoads.sort((a, b) => a - b)
     vRoads.sort((a, b) => a - b)
-    // 블록 음영 — 도로로 나뉜 칸 일부만 살짝 어둡게 (도시 블록 느낌)
+    // 밭/풀 패치 — 길로 나뉜 칸 일부만 톤 다운 (경작지 느낌)
     const xs = [0, ...vRoads, w]
     const ys = [0, ...hRoads, h]
     const blocks = []
     for (let yi = 0; yi < ys.length - 1; yi += 1) {
       for (let xi = 0; xi < xs.length - 1; xi += 1) {
-        if (rand() < 0.42) blocks.push([xs[xi] + 5, ys[yi] + 5, xs[xi + 1] - xs[xi] - 10, ys[yi + 1] - ys[yi] - 10])
+        if (rand() < 0.3) blocks.push([xs[xi] + 8, ys[yi] + 8, xs[xi + 1] - xs[xi] - 16, ys[yi + 1] - ys[yi] - 16])
       }
     }
-    // 공원 1~2개
-    const parks = []
+    // 키큰 풀숲 1~2곳 (풀잎 삼각형 tuft 위치까지 미리 계산)
+    const bushes = []
     for (let i = 0; i < 2; i += 1) {
-      if (rand() < 0.75) parks.push([rand() * (w - 80) + 12, rand() * (h - 64) + 12, 42 + rand() * 46, 30 + rand() * 34])
+      if (rand() < 0.8) {
+        const bx = rand() * (w - 100) + 24
+        const by = rand() * (h - 80) + 24
+        const bw = 46 + rand() * 40
+        const bh = 30 + rand() * 24
+        const tufts = []
+        const n = 4 + Math.floor(rand() * 4)
+        for (let t = 0; t < n; t += 1) tufts.push([bx + 6 + rand() * (bw - 18), by + 4 + rand() * (bh - 14)])
+        bushes.push({ x: bx, y: by, w: bw, h: bh, tufts })
+      }
     }
-    // 강 — 코너 하나를 가로지르는 대각 밴드
-    const riverCorner = Math.floor(rand() * 4)
-    st.map = { hRoads, vRoads, blocks, parks, riverCorner, hasRiver: rand() < 0.85 }
+    // 연못 — 코너 하나에 둥근 물
+    const pondCorner = Math.floor(rand() * 4)
+    const pond = rand() < 0.85
+      ? {
+        w: Math.min(104, w * 0.24),
+        h: Math.min(72, h * 0.36),
+        corner: pondCorner,
+      }
+      : null
+    // 나무 경계 — 상/하단 줄 + 좌/우 기둥 (위치·크기 지터 고정)
+    const trees = []
+    for (let x = 4; x < w - 14; x += 20 + Math.floor(rand() * 6)) {
+      trees.push([x, 2 + rand() * 4])
+      trees.push([x + 8, h - 18 + rand() * 3])
+    }
+    for (let y = 24; y < h - 30; y += 26 + Math.floor(rand() * 8)) {
+      trees.push([2 + rand() * 3, y])
+      trees.push([w - 15 + rand() * 2, y])
+    }
+    // 꽃 포인트 2~4개
+    const flowers = []
+    const fn = 2 + Math.floor(rand() * 3)
+    for (let i = 0; i < fn; i += 1) flowers.push([20 + rand() * (w - 40), 24 + rand() * (h - 48), rand() < 0.5 ? "🌼" : "🌷"])
+    st.map = { hRoads, vRoads, blocks, bushes, pond, trees, flowers }
 
     const loc = st.location || { lat: 37.5665, lng: 126.978 }
     const cosLat = Math.cos((loc.lat * Math.PI) / 180) || 1
@@ -160,52 +194,89 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     if (seen !== st.count) { st.count = seen; onCount(seen) }
   }
 
-  function drawRiver(w, h, corner) {
-    // 코너를 가로지르는 대각 밴드 — 0:우상 1:우하 2:좌하 3:좌상
-    const mx = corner === 0 || corner === 1 ? 1 : -1
-    const my = corner === 0 || corner === 3 ? 1 : -1
-    const px = (v) => (mx > 0 ? v : w - v)
-    const py = (v) => (my > 0 ? v : h - v)
-    const band = (inset) => {
+  function drawTree(x, y) {
+    ctx.fillStyle = TREE_TRUNK
+    ctx.fillRect(x + 4, y + 10, 4, 5)
+    ctx.fillStyle = TREE_LEAF_HI
+    ctx.beginPath()
+    ctx.arc(x + 2.5, y + 8, 4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + 9.5, y + 8, 4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = TREE_LEAF
+    ctx.beginPath()
+    ctx.arc(x + 6, y + 5.5, 5.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  function drawPond(w, h, pond) {
+    // 코너 배치 — 0:우상 1:우하 2:좌하 3:좌상 (나무 경계 안쪽)
+    const m = 18
+    const px = pond.corner === 0 || pond.corner === 1 ? w - pond.w - m : m
+    const py = pond.corner === 0 || pond.corner === 3 ? m + 4 : h - pond.h - m
+    const rr = (x, y, rw, rh, r, fill) => {
+      ctx.fillStyle = fill
       ctx.beginPath()
-      ctx.moveTo(px(w * 0.62 + inset), py(0))
-      ctx.lineTo(px(w * 0.88 - inset), py(0))
-      ctx.lineTo(px(w), py(h * 0.52 - inset * 1.4))
-      ctx.lineTo(px(w), py(h * 0.2 + inset * 1.4))
+      ctx.moveTo(x + r, y)
+      ctx.arcTo(x + rw, y, x + rw, y + rh, r)
+      ctx.arcTo(x + rw, y + rh, x, y + rh, r)
+      ctx.arcTo(x, y + rh, x, y, r)
+      ctx.arcTo(x, y, x + rw, y, r)
       ctx.closePath()
       ctx.fill()
     }
-    ctx.fillStyle = RIVER
-    band(0)
-    ctx.fillStyle = RIVER_CORE
-    band(7)
+    rr(px, py, pond.w, pond.h, 14, POND)
+    rr(px + 8, py + 8, pond.w - 16, pond.h - 16, 10, POND_CORE)
+    ctx.fillStyle = "rgba(255,253,244,0.7)"
+    ctx.fillRect(px + pond.w * 0.24, py + pond.h * 0.3, 12, 3)
+    ctx.fillRect(px + pond.w * 0.55, py + pond.h * 0.58, 8, 3)
   }
 
   function draw(now) {
     const { W, H, cx, cy } = st
     ctx.clearRect(0, 0, W, H)
-    ctx.fillStyle = BASE
+    // 잔디 바탕 + 깎은 결 줄무늬
+    ctx.fillStyle = GRASS
     ctx.fillRect(0, 0, W, H)
+    ctx.fillStyle = GRASS_ALT
+    for (let y = 16; y < H; y += 32) ctx.fillRect(0, y, W, 16)
     const map = st.map
     if (map) {
-      // 블록 음영 → 공원 → 강 → 도로 순서
-      ctx.fillStyle = BLOCK
+      // 밭 패치 → 풀숲 → 연못 → 흙길 → 꽃 → 나무 경계 순서
+      ctx.fillStyle = FIELD
       for (const b of map.blocks) ctx.fillRect(b[0], b[1], b[2], b[3])
-      ctx.fillStyle = PARK
-      for (const p of map.parks) ctx.fillRect(p[0], p[1], p[2], p[3])
-      if (map.hasRiver) drawRiver(W, H, map.riverCorner)
+      for (const bush of map.bushes) {
+        ctx.fillStyle = BUSH
+        ctx.fillRect(bush.x, bush.y, bush.w, bush.h)
+        ctx.fillStyle = TREE_LEAF
+        for (const t of bush.tufts) {
+          ctx.beginPath()
+          ctx.moveTo(t[0], t[1] + 9)
+          ctx.lineTo(t[0] + 3, t[1])
+          ctx.lineTo(t[0] + 6, t[1] + 9)
+          ctx.closePath()
+          ctx.fill()
+        }
+      }
+      if (map.pond) drawPond(W, H, map.pond)
       for (const y of map.hRoads) {
-        ctx.fillStyle = ROAD_EDGE
+        ctx.fillStyle = PATH_EDGE
+        ctx.fillRect(0, y - 6, W, 12)
+        ctx.fillStyle = PATH
         ctx.fillRect(0, y - 5, W, 10)
-        ctx.fillStyle = ROAD
-        ctx.fillRect(0, y - 4, W, 8)
       }
       for (const x of map.vRoads) {
-        ctx.fillStyle = ROAD_EDGE
+        ctx.fillStyle = PATH_EDGE
+        ctx.fillRect(x - 6, 0, 12, H)
+        ctx.fillStyle = PATH
         ctx.fillRect(x - 5, 0, 10, H)
-        ctx.fillStyle = ROAD
-        ctx.fillRect(x - 4, 0, 8, H)
       }
+      ctx.font = '9px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'
+      ctx.textAlign = "center"
+      ctx.textBaseline = "middle"
+      for (const f of map.flowers) ctx.fillText(f[2], f[0], f[1])
+      for (const t of map.trees) drawTree(t[0], t[1])
     }
 
     // 거리 링 + km 라벨 — 축척 직관
