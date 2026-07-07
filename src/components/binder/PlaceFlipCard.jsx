@@ -2,45 +2,44 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
 import { getPlaceType } from "../../lib/placeTypes"
-import { cardRecordCount, formatDotDate, looksLikeAddress, neighborhoodWord, representativePhoto, cardArtFeature } from "../../lib/binderCardData"
+import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
 
-// 카드 바인더 리디자인 — 장소 카드 앞면 + 플립 상세(뒷면).
+// 카드 바인더 리디자인 — 장소 카드 앞면(슬리브 커버) + 플립 상세(뒷면).
 // 시각·인터랙션 레퍼런스: loca-binder-prototype.html
+// 앞면 = 타입 컬러 파스텔 풀아트 슬리브(수집·전시용). 정보 상세는 뒷면.
 
-// ── 앞면 (바인더 그리드 + 오버레이 앞면 공용) ──
-export function PlaceCardFront({ feature, dexNo, mapTitle, big = false }) {
+// ── 앞면 슬리브 커버 (바인더 그리드 + 오버레이 앞면 공용) ──
+export function PlaceCardFront({ feature, dexNo, big = false }) {
   const type = getPlaceType(feature)
   const photo = representativePhoto(feature)
-  const recCount = cardRecordCount(feature)
   const name = (feature.title || "").trim() || "이름 없는 장소"
-  const registered = formatDotDate(feature.createdAt || feature.updatedAt)
-  const hood = neighborhoodWord(feature, mapTitle)
   const isNewFind = (feature.tags || []).includes("새발견")
 
+  const coverStyle = {
+    "--sl-bg": mixHex(type.color, "#ffffff", 0.82),
+    "--sl-streak": mixHex(type.color, "#ffffff", 0.55),
+    "--sl-deep": mixHex(type.color, "#1b1b18", 0.2),
+  }
+
   return (
-    <>
-      <div className="bd-chead">
-        <span className="bd-cno">N.{dexNo || "000"}</span>
-        {isNewFind ? <span className="bd-newfind" aria-label="새발견">★</span> : null}
-        <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
+    <div
+      className={`bd-sleeve-cover${big ? " bd-sleeve-cover--big" : ""}${photo ? " has-photo" : ""}`}
+      style={coverStyle}
+    >
+      <div className="bd-sl-badges">
+        <span className="bd-sl-no">N.{dexNo || "000"}</span>
+        {isNewFind ? <span className="bd-sl-new" aria-label="새발견">★</span> : null}
+        <span className="bd-sl-type">{type.label}</span>
       </div>
-      <div className="bd-cart" style={{ backgroundColor: `${type.color}22` }}>
+      <div className="bd-sl-art">
         {photo ? (
           <img src={photo} alt="" loading="lazy" />
         ) : (
-          <FeatureEmoji feature={cardArtFeature(feature)} size={big ? 84 : 56} unicodeFontSize={big ? 56 : 36} />
+          <FeatureEmoji feature={cardArtFeature(feature)} className="bd-sl-emoji" size={big ? 128 : 88} />
         )}
-        {recCount > 0 ? <span className="bd-recchip">기록 {recCount}</span> : null}
       </div>
-      <div className="bd-cname">
-        <div className="bd-nm">{name}</div>
-        <div className="bd-sp">{type.label}{hood ? ` · ${hood}` : ""}</div>
-      </div>
-      <div className="bd-cstat">
-        <span>{registered ? `등록 ${registered}` : ""}</span>
-        <span>기록 {recCount}개</span>
-      </div>
-    </>
+      <div className="bd-sl-ribbon">{name}</div>
+    </div>
   )
 }
 

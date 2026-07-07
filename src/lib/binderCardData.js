@@ -101,6 +101,20 @@ export function cardRecordCount(feature) {
   return buildFeatureRecordGroups(feature).length
 }
 
+// 타입 컬러(hex) → 슬리브 커버용 파스텔/딥 톤 계산 (ratio = 섞을 색 비율 0~1)
+function parseHexColor(hex) {
+  const s = `${hex || ""}`.replace("#", "").trim()
+  if (s.length !== 6) return null
+  return { r: parseInt(s.slice(0, 2), 16), g: parseInt(s.slice(2, 4), 16), b: parseInt(s.slice(4, 6), 16) }
+}
+export function mixHex(hex, mixWith, ratio) {
+  const a = parseHexColor(hex)
+  const b = parseHexColor(mixWith)
+  if (!a || !b) return hex
+  const mix = (x, y) => Math.round(x + (y - x) * ratio)
+  return `#${[mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b)].map((n) => n.toString(16).padStart(2, "0")).join("")}`
+}
+
 export function formatDotDate(value) {
   const d = new Date(value || NaN)
   if (Number.isNaN(d.getTime())) return null

@@ -505,7 +505,7 @@ export default function App() {
     showToast, routeAtLoad,
   })
 
-  const needsAuthForPersonalArea = false // TEMP QA — 검증 후 원복
+  const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
   const hasStoredPersonalCacheForUser = Boolean(authUser?.id && storedCloudUserId === authUser.id)
   const isFirstCloudLoadForUser = cloudLoading && !cloudDataReady && cloudLoadedUserId !== authUser?.id && !hasStoredPersonalCacheForUser
   const requiresAuthForCurrentTab =
@@ -2078,7 +2078,7 @@ export default function App() {
       <BottomNavV2
         tab={bottomNavTab}
         onTabChange={handleBottomNavChange}
-        authed={true /* TEMP QA — 검증 후 원복 */}
+        authed={Boolean(authUser)}
       />
       )}
 

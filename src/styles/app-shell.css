@@ -3896,10 +3896,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bd-newfind {
-  color: #E8442E;
-  font-size: 12px;
-}
 .bd-cbadge {
   margin-left: auto;
   font-family: "DungGeunMo", monospace;
@@ -3911,58 +3907,112 @@
   letter-spacing: 1px;
   flex-shrink: 0;
 }
-.bd-cart {
-  height: 118px;
+/* ── 앞면 슬리브 커버 (타입 컬러 파스텔 풀아트) ── */
+.bd-sleeve-cover {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bd-sl-badges {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px;
+  pointer-events: none;
+}
+.bd-sl-no {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #FFFDF4;
+  background: #1B1B18;
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+.bd-sl-new {
+  color: #E8442E;
+  font-size: 12px;
+  text-shadow: 0 0 2px #fff;
+}
+.bd-sl-type {
+  margin-left: auto;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--sl-deep);
+  background: var(--sl-bg);
+  border: 1.5px solid var(--sl-deep);
+  border-radius: 12px;
+  padding: 2px 9px;
+}
+.bd-sl-art {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  border-bottom: 2.5px solid #1B1B18;
-  position: relative;
-  background-image: radial-gradient(rgba(27, 27, 24, 0.07) 1.4px, transparent 1.4px);
-  background-size: 12px 12px;
+  overflow: hidden;
+  background-color: var(--sl-bg);
+  background-image: radial-gradient(rgba(27, 27, 24, 0.06) 1.4px, transparent 1.4px);
+  background-size: 10px 10px;
 }
-.bd-cart img {
+/* 은은한 대각 에너지 스트릭 */
+.bd-sl-art::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 46%, var(--sl-streak) 50%, transparent 55%),
+    linear-gradient(115deg, transparent 70%, var(--sl-streak) 73%, transparent 77%);
+  opacity: 0.5;
+}
+/* 홀로 샤인 */
+.bd-sl-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 55%, rgba(255, 255, 255, 0.35) 62%, transparent 68%);
+}
+.bd-sl-art > img {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.bd-recchip {
-  position: absolute;
-  right: 8px;
-  bottom: 7px;
-  font-family: "DungGeunMo", monospace;
-  font-size: 10.5px;
-  background: #1B1B18;
-  color: #FFFDF4;
-  border-radius: 4px;
-  padding: 1px 7px;
+.bd-sl-emoji {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(2px 2px 0 rgba(27, 27, 24, 0.18));
+  image-rendering: pixelated;
 }
-.bd-cname { padding: 10px 12px 4px; }
-.bd-nm {
-  font-size: 15.5px;
-  font-weight: 800;
-  color: #1B1B18;
+.bd-sl-ribbon {
+  flex-shrink: 0;
+  background: var(--sl-deep);
+  border-top: 2.5px solid #1B1B18;
+  color: #FFFDF4;
+  font-family: "DungGeunMo", monospace;
+  text-align: center;
+  padding: 7px 10px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: Pretendard, sans-serif;
 }
-.bd-sp {
-  font-size: 11.5px;
-  color: #8A8574;
-  margin-top: 2px;
-}
-.bd-cstat {
-  margin-top: auto;
-  padding: 8px 12px 12px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #55523F;
-}
+.bd-sleeve-cover--big .bd-sl-badges { padding: 12px 13px; }
+.bd-sleeve-cover--big .bd-sl-no { font-size: 14px; padding: 3px 9px; }
+.bd-sleeve-cover--big .bd-sl-type { font-size: 12px; padding: 3px 11px; }
+.bd-sleeve-cover--big .bd-sl-ribbon { font-size: 20px; padding: 13px; }
 
 /* 플립 오버레이 */
 .bd-flipov {
@@ -4005,7 +4055,6 @@
   padding: 0;
   text-align: left;
 }
-.bd-face--front .bd-cart { height: 230px; }
 .bd-face--back {
   position: absolute;
   inset: 0;
