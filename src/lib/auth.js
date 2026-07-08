@@ -28,14 +28,18 @@ function getDefaultRedirectTo() {
   return ALLOWED_ORIGINS[0]
 }
 
-export async function signInWithEmail(email, password) {
+export async function signInWithEmail(email, password, captchaToken) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    ...(captchaToken ? { options: { captchaToken } } : {}),
+  })
   if (error) throw error
   return data
 }
 
-export async function signUpWithEmail(email, password, nickname) {
+export async function signUpWithEmail(email, password, nickname, captchaToken) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -44,6 +48,7 @@ export async function signUpWithEmail(email, password, nickname) {
       data: {
         name: nickname,
       },
+      ...(captchaToken ? { captchaToken } : {}),
     },
   })
   if (error) throw error
@@ -78,6 +83,7 @@ export async function signInWithMagicLink(email, options = {}) {
     options: {
       emailRedirectTo: options.redirectTo || getDefaultRedirectTo(),
       shouldCreateUser: true,
+      ...(options.captchaToken ? { captchaToken: options.captchaToken } : {}),
       data: {
         source_context: options.sourceContext || "public_saved_box_connect",
         ...(options.data || {}),
@@ -88,10 +94,11 @@ export async function signInWithMagicLink(email, options = {}) {
   return data
 }
 
-export async function resetPasswordForEmail(email) {
+export async function resetPasswordForEmail(email, captchaToken) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: getDefaultRedirectTo(),
+    ...(captchaToken ? { captchaToken } : {}),
   })
   if (error) throw error
   return data

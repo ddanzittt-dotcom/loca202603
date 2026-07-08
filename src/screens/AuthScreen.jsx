@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithKakao } from "../lib/auth"
+import { Turnstile } from "../components/Turnstile"
 
 function friendlyError(message = "") {
   const msg = message.toLowerCase()
@@ -7,6 +8,7 @@ function friendlyError(message = "") {
   if (msg.includes("email not confirmed")) return "이메일 인증이 필요해요. 메일함을 확인해주세요."
   if (msg.includes("user already registered")) return "이미 가입된 이메일이에요. 로그인을 시도해보세요."
   if (msg.includes("password") && msg.includes("6")) return "비밀번호는 6자 이상이어야 해요."
+  if (msg.includes("captcha") || msg.includes("verification")) return "보안 확인에 실패했어요. 잠시 후 다시 시도해주세요."
   if (msg.includes("rate limit") || msg.includes("too many")) return "요청이 너무 많아요. 잠시 후 다시 시도해주세요."
   if (msg.includes("network") || msg.includes("fetch")) return "네트워크 연결을 확인해주세요."
   return message || "알 수 없는 오류가 발생했어요."
@@ -19,6 +21,8 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [captchaToken, setCaptchaToken] = useState("")
+  const turnstileRef = useRef(null)
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -27,14 +31,17 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
 
     try {
       if (mode === "signup") {
-        await signUpWithEmail(email.trim(), password, nickname.trim())
+        await signUpWithEmail(email.trim(), password, nickname.trim(), captchaToken)
       } else {
-        await signInWithEmail(email.trim(), password)
+        await signInWithEmail(email.trim(), password, captchaToken)
       }
       setPassword("")
       onSuccess?.(mode)
     } catch (error) {
       setErrorMessage(friendlyError(error.message))
+      // Turnstile 토큰은 1회용 — 실패 시 새 토큰을 받도록 위젯 리셋
+      setCaptchaToken("")
+      turnstileRef.current?.reset()
     } finally {
       setSubmitting(false)
     }
@@ -105,6 +112,8 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
               <p>{errorMessage}</p>
             </article>
           ) : null}
+
+          <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
 
           <button className="button button--primary" type="submit" disabled={submitting}>
             {submitting ? "처리 중..." : mode === "signup" ? "계정 만들기" : "로그인"}
