@@ -77,15 +77,16 @@ body.loca-editor-open .map-list-bar {
   padding: 8px 10px !important;
   gap: 6px !important;
 }
-/* 헤더 줄: 왼쪽 토글 + 오른쪽에 필터칩 인라인 */
+/* 헤더 줄: 토글 바로 오른쪽에 필터칩 인라인 (왼쪽 정렬) */
 body.loca-editor-open .map-list-bar__head {
   padding: 0 !important;
   gap: 8px !important;
   flex-wrap: wrap !important;
+  justify-content: flex-start !important;
 }
-body.loca-editor-open .map-list-bar__toggle { min-height: 0 !important; padding: 2px 4px !important; }
+body.loca-editor-open .map-list-bar__toggle { min-height: 0 !important; padding: 2px 4px !important; flex: 0 0 auto !important; }
 body.loca-editor-open .map-list-bar__head .map-record-filters {
-  margin-left: auto !important;
+  margin-left: 14px !important;
   padding: 0 !important;
   gap: 5px !important;
   flex-wrap: wrap !important;

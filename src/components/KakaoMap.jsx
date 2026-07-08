@@ -47,7 +47,8 @@ const BASE_ZOOM = 15.5
 const PLACE_LABEL_MIN_ZOOM = 15
 const PLACE_MARKER_EMOJI_SIZE = 28
 const PUBLIC_CLUSTER_ONLY_MAX_ZOOM = 13
-const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = PLACE_LABEL_MIN_ZOOM
+// 개인 지도: 이 줌 미만에서만 공격적 클러스터(뭉침). 낮출수록 더 멀리 줌아웃해야 통합됨.
+const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = 11
 const VIEWPORT_CULL_FEATURE_THRESHOLD = 180
 const zoomScale = (zoom) => {
   const s = Math.pow(1.17, zoom - BASE_ZOOM)
@@ -517,7 +518,7 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
         : mapZoom < PERSONAL_CLUSTER_ONLY_MAX_ZOOM
       const clusterDist = shouldClusterOnly
         ? (isPublicPixelMap ? 110 : 96)
-        : [48, 34, 0][zoomLevel - 1]
+        : [40, 26, 0][zoomLevel - 1]
 
       let unclusteredFeatures = []
       let clusters = []

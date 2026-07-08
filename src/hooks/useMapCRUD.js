@@ -66,8 +66,10 @@ export function useMapCRUD({
     setActiveMapId(mapId)
     setMapsView("editor")
     resetEditorState()
+    // 초기 뷰를 마커가 가장 조밀한 지역으로 자동 fit — 이전 focusPoint 가 남아 있으면 우선돼 버려서 비운다.
+    setFocusPoint(null)
     setFitTrigger((value) => value + 1)
-  }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
+  }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setFocusPoint, setMapsView])
 
   const openDemoMap = useCallback((mapId) => {
     setActiveTab("maps")
@@ -75,8 +77,10 @@ export function useMapCRUD({
     setActiveMapId(mapId)
     setMapsView("editor")
     resetEditorState()
+    // 초기 뷰를 마커가 가장 조밀한 지역으로 자동 fit — 이전 focusPoint 가 남아 있으면 우선돼 버려서 비운다.
+    setFocusPoint(null)
     setFitTrigger((value) => value + 1)
-  }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
+  }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setFocusPoint, setMapsView])
 
   const openCommunityMapEditor = useCallback(() => {
     setActiveTab("maps")
