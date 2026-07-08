@@ -329,37 +329,6 @@ export function CollectSheet({
               </div>
             </div>
 
-            {candidates.length > 0 ? (
-              <div className="clt-candidates" role="radiogroup" aria-label="주변 등록 장소">
-                {candidates.slice(0, 4).map((candidate) => (
-                  <button
-                    key={`${candidate.name}-${candidate.lat}`}
-                    type="button"
-                    className={`clt-candidate${selectedSpot?.name === candidate.name ? " is-selected" : ""}`}
-                    onClick={() => {
-                      setSelectedSpot(candidate)
-                      setName(candidate.name)
-                      setPoint({ lat: candidate.lat, lng: candidate.lng })
-                    }}
-                  >
-                    <strong>{candidate.name}</strong>
-                    <span>{candidate.categoryName} · {candidate.distance}m</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className={`clt-candidate clt-candidate--new${isNewFind ? " is-selected" : ""}`}
-                  onClick={() => {
-                    setSelectedSpot(null)
-                    setName("")
-                  }}
-                >
-                  <strong>여기가 아니에요</strong>
-                  <span>내가 발견한 곳으로 직접 등록</span>
-                </button>
-              </div>
-            ) : null}
-
             <label className="clt-field">
               <span className="clt-field__label">이름</span>
               <input
@@ -405,6 +374,40 @@ export function CollectSheet({
                 />
               </div>
             </div>
+
+            {candidates.length > 0 ? (
+              <div className="clt-field">
+                <span className="clt-field__label">이 장소가 맞나요? (아니면 다시 선택)</span>
+                <div className="clt-candidates" role="radiogroup" aria-label="주변 등록 장소">
+                  {candidates.slice(0, 4).map((candidate) => (
+                    <button
+                      key={`${candidate.name}-${candidate.lat}`}
+                      type="button"
+                      className={`clt-candidate${selectedSpot?.name === candidate.name ? " is-selected" : ""}`}
+                      onClick={() => {
+                        setSelectedSpot(candidate)
+                        setName(candidate.name)
+                        setPoint({ lat: candidate.lat, lng: candidate.lng })
+                      }}
+                    >
+                      <strong>{candidate.name}</strong>
+                      <span>{candidate.categoryName} · {candidate.distance}m</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`clt-candidate clt-candidate--new${isNewFind ? " is-selected" : ""}`}
+                    onClick={() => {
+                      setSelectedSpot(null)
+                      setName("")
+                    }}
+                  >
+                    <strong>여기가 아니에요</strong>
+                    <span>내가 발견한 곳으로 직접 등록</span>
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="clt-actions">
               <button type="button" className="clt-ghost" onClick={() => setStep("pick")}>위치 다시 고르기</button>
