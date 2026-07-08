@@ -2216,6 +2216,14 @@ export default function App() {
         currentUserId={authUser?.id || viewerProfile.id}
         myLocation={myLocation}
         showToast={showToast}
+        onRegionTagged={(featureId, { regionName, updatedAt } = {}) => {
+          if (!updatedAt) return
+          setFeatures((current) => current.map((feature) => (
+            feature.id === featureId
+              ? { ...feature, updatedAt, regionName: regionName || feature.regionName }
+              : feature
+          )))
+        }}
         onCollected={(collected, { isNewFind } = {}) => {
           setFeatures((current) => [collected, ...current])
           setCollectSheetOpen(false)

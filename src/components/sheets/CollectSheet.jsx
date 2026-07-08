@@ -27,6 +27,7 @@ export function CollectSheet({
   currentUserId,
   myLocation,
   onCollected,
+  onRegionTagged, // region 태깅 완료 시 로컬 캐시 updatedAt 동기화 (가짜 저장충돌 방지)
   showToast,
   prefill = null, // 탐색 큐레이션 → {name, category, categoryName, tagLabel, address, lat, lng}
 }) {
@@ -186,7 +187,7 @@ export function CollectSheet({
 
       let collected = null
       if (cloudMode) {
-        collected = await createFeature(null, { ...base, createdBy: currentUserId })
+        collected = await createFeature(null, { ...base, createdBy: currentUserId }, { onRegionTagged })
       } else {
         collected = {
           id: createId("feat"),

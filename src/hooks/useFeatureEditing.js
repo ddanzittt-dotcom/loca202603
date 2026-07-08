@@ -818,6 +818,20 @@ export function useFeatureEditing({
     createFeatureRecord(activeMapId, {
       ...draftFeature,
       mapId: activeMapId,
+    }, {
+      // region 태깅으로 DB updated_at 이 바뀌면 로컬 캐시도 맞춰, 방금 만든 카드
+      // 편집이 가짜 저장충돌("다른 사용자가 먼저 수정")로 막히지 않게 한다.
+      onRegionTagged: (featureId, { regionName, updatedAt } = {}) => {
+        if (!updatedAt) return
+        setPool((current) => current.map((feature) => (
+          feature.id === featureId
+            ? { ...feature, updatedAt, regionName: regionName || feature.regionName }
+            : feature
+        )))
+        setFeatureSheet((current) => (
+          current && current.id === featureId ? { ...current, updatedAt } : current
+        ))
+      },
     })
       .then((savedFeature) => {
         const displayFeature = preserveDraftFeatureFields(savedFeature, draftFeature)

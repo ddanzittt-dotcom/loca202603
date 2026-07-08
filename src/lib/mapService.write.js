@@ -236,7 +236,7 @@ export async function deleteMap(mapId) {
 
 // ─── Feature CRUD ───
 
-export async function createFeature(mapId, featureData) {
+export async function createFeature(mapId, featureData, { onRegionTagged } = {}) {
   const user = await requireUser()
   const supabase = requireSupabase()
   let featurePayload = {
@@ -287,7 +287,14 @@ export async function createFeature(mapId, featureData) {
   const gcLat = Number(data?.lat)
   const gcLng = Number(data?.lng)
   if (data?.id && Number.isFinite(gcLat) && Number.isFinite(gcLng) && (gcLat !== 0 || gcLng !== 0)) {
-    reverseGeocodeAndTag(supabase, data.id, gcLat, gcLng).catch(() => {})
+    // region 쓰기가 트리거로 updated_at 을 갱신하므로, 갱신값을 콜백으로 돌려줘
+    // 로컬 캐시의 updatedAt 을 맞춘다. 안 맞추면 방금 만든 카드를 바로 편집할 때
+    // 낙관적 잠금에 걸려 "다른 사용자가 먼저 수정했어요" 로 오판된다.
+    reverseGeocodeAndTag(supabase, data.id, gcLat, gcLng)
+      .then((res) => {
+        if (res?.regionName) onRegionTagged?.(data.id, res)
+      })
+      .catch(() => {})
   }
 
   await touchMapRecord(mapId)
