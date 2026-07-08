@@ -702,3 +702,20 @@
 .map-editor--v2 .map-locate-button {
   color: #1B1B18;
 }
+
+/* 도구 알약(장소/길/영역) 활성 = 공통 오렌지 → 타입색 (장소 빨강 / 길 초록 / 영역 코코아) */
+.map-editor--v2 .me-fab--pin.is-active {
+  background: #E5493A !important;
+  border-color: #E5493A !important;
+  color: #fff !important;
+}
+.map-editor--v2 .me-fab--route.is-active {
+  background: #12B981 !important;
+  border-color: #12B981 !important;
+  color: #fff !important;
+}
+.map-editor--v2 .me-fab--area.is-active {
+  background: #8E5A2C !important;
+  border-color: #8E5A2C !important;
+  color: #fff !important;
+}
