@@ -2684,9 +2684,8 @@
 .app-shell--soft-social .res-sheet {
   background: #FFFDF4;
   border: 3px solid #1F1A12;
-  border-bottom: none;
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -4px 26px rgba(31, 26, 18, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(31, 26, 18, 0.28);
 }
 
 .app-shell--soft-social .res-handle {

@@ -780,22 +780,39 @@
  * MapEditorScreen.jsx 에서 {selectedFeatureSummary ? <div class="map-feature-summary-wrap">} 로 렌더.
  * 기존 .map-feature-summary 포지셔닝을 popup v8로 넘겨받는다 (7c5d5f8 커밋에서 누락된 규칙 보충).
  */
+/* 상세 카드 backdrop — 편집/기록 시트와 동일한 dim 처리 */
+.map-feature-summary-backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: rgba(20, 12, 5, 0.5);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  z-index: 515;
+  animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
+}
+
+/* 중앙 고정폭 모달 — 편집/기록 시트와 동일 규격 (하단·전체폭 폐기) */
 .map-feature-summary-wrap {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: max(66px, calc(env(safe-area-inset-bottom, 0px) + 50px));
+  position: fixed;
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(calc(100vw - 32px), 520px);
   z-index: 520;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: min(calc(100dvh - 92px), 680px);
+  max-height: min(88dvh, 720px);
 }
 .map-feature-summary-wrap > .fpc {
   width: 100%;
   flex: 0 1 auto;
-  max-height: min(calc(100dvh - 96px), 620px);
+  max-height: min(calc(88dvh - 60px), 620px);
   overflow: hidden;
 }
 
@@ -7296,13 +7313,13 @@ img.collab-item__avatar {
 }
 
 .map-editor--summary-open .map-feature-summary-wrap {
-  left: 12px;
-  right: 14px;
-  bottom: max(54px, calc(env(safe-area-inset-bottom, 0px) + 38px));
+  left: 50%;
+  right: auto;
+  bottom: auto;
 }
 
 .map-editor--summary-open .map-feature-summary-wrap > .fpc {
-  max-height: min(calc(100dvh - 88px), 620px);
+  max-height: min(calc(88dvh - 60px), 620px);
 }
 
 .map-editor--summary-open .map-feature-summary-wrap--comments > .fpc {
@@ -7361,16 +7378,12 @@ img.collab-item__avatar {
     right: 10px;
   }
 
-  .map-feature-summary-wrap {
-    left: 10px;
-    right: 10px;
-    bottom: max(60px, calc(env(safe-area-inset-bottom, 0px) + 44px));
-  }
-
+  .map-feature-summary-wrap,
   .map-editor--summary-open .map-feature-summary-wrap {
-    left: 8px;
-    right: 10px;
-    bottom: max(48px, calc(env(safe-area-inset-bottom, 0px) + 32px));
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: calc(100vw - 24px);
   }
 
 }

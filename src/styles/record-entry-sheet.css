@@ -14,31 +14,32 @@
   animation: loca-backdrop-in var(--duration-fast, 0.15s) ease-out both;
 }
 
+/* 중앙 고정폭 모달 — 편집 시트(.fes-sheet--v2)와 동일 규격으로 통일 (하단 시트 폐기) */
 .res-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-width: 520px;
-  margin: 0 auto;
-  max-height: 94vh;
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(calc(100vw - 32px), 520px);
+  max-width: none;
+  margin: 0;
+  max-height: min(88dvh, 720px);
   background: var(--bg);
-  border-radius: 22px 22px 0 0;
-  box-shadow: var(--shadow-sheet);
+  border-radius: 22px;
+  box-shadow: var(--shadow-float);
   display: flex;
   flex-direction: column;
   z-index: 1411;
   font-family: var(--font-sans);
   color: var(--ink);
-  animation: loca-sheet-in var(--duration-sheet, 0.25s) var(--ease-out, cubic-bezier(0.2, 0.7, 0.3, 1)) both;
+  animation: fes-modal-pop 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/* 하단 시트 잔재(드래그 핸들) 제거 */
 .res-handle {
-  width: 36px;
-  height: 4px;
-  background: var(--ink-faint);
-  border-radius: 2px;
-  margin: 8px auto 6px;
+  display: none;
 }
 
 /* ---------- 헤더 ---------- */

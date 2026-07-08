@@ -794,6 +794,13 @@ export function MapEditorScreen({
           </div>
         ) : null}
         {selectedFeatureSummary ? (
+          <>
+          <button
+            type="button"
+            className="map-feature-summary-backdrop"
+            aria-label="닫기"
+            onClick={() => { voicePlayback.stop(); closeSummaryRecord(); onCloseFeatureSummary?.() }}
+          />
           <div className={`map-feature-summary-wrap${showCommunityRecordComments ? " map-feature-summary-wrap--comments" : ""}`}>
             <FeaturePopupCard
               feature={selectedFeatureSummary}
@@ -872,6 +879,7 @@ export function MapEditorScreen({
               />
             ) : null}
           </div>
+          </>
         ) : null}
         {summaryRecordOpen && selectedFeatureSummary ? (
           <RecordEntrySheet
