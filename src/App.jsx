@@ -890,10 +890,10 @@ export default function App() {
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
-  const handleCreatePinAtLocation = useCallback(async ({ lat, lng }) => {
+  const handleCreatePinAtLocation = useCallback(async ({ lat, lng, title, note } = {}) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
     setDraftPoints([])
-    return createHandleMapTap("pin")({ lat, lng })
+    return createHandleMapTap("pin")({ lat, lng, title, note })
   }, [createHandleMapTap])
 
   const openCollaboratorsForMap = useCallback((mapId) => {

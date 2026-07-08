@@ -838,7 +838,7 @@ export function useFeatureEditing({
     showToast,
   ])
 
-  const createHandleMapTap = (editorMode) => async ({ lat, lng }) => {
+  const createHandleMapTap = (editorMode) => async ({ lat, lng, title, note } = {}) => {
     if (!activeMapId) return
     const sc = sanitizeCoord(lat, lng)
 
@@ -912,13 +912,13 @@ export function useFeatureEditing({
         id: createId("feat"),
         mapId: activeMapId,
         type: "pin",
-        title: "새 장소",
+        title: `${title || ""}`.trim() || "새 장소",
         emoji: "\uD83D\uDCCD",
         style: getDefaultFeatureStyle("pin"),
         lat: sc.lat,
         lng: sc.lng,
         tags: [],
-        note: "",
+        note: `${note || ""}`.trim(),
         highlight: false,
         updatedAt: new Date().toISOString(),
         ...(activeMapSource === "community"

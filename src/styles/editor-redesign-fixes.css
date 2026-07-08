@@ -49,21 +49,36 @@ body.loca-editor-open .map-editor--summary-open .map-list-bar {
   pointer-events: auto !important;
   transform: none !important;
 }
-/* 트레이 펼침 높이 반으로 — 항목 1줄 + 여백 축소 */
-body.loca-editor-open .map-list-bar { bottom: 12px !important; }
-body.loca-editor-open .map-list-bar__head { padding: 4px 12px !important; }
-body.loca-editor-open .map-record-filters { padding: 3px 12px 2px !important; gap: 5px !important; }
-body.loca-editor-open .map-filter-chip--record {
+/* 트레이 펼침: 확실히 얇게 — 고정 58px 해제 + 항목 1줄 + 여백 최소 */
+body.loca-editor-open .map-list-bar {
+  bottom: 12px !important;
+  padding: 8px 10px !important;
+  gap: 6px !important;
+}
+body.loca-editor-open .map-list-bar__head { padding: 0 !important; }
+body.loca-editor-open .map-list-bar__toggle { min-height: 0 !important; padding: 2px 4px !important; }
+body.loca-editor-open .map-record-filters { padding: 0 !important; gap: 5px !important; }
+body.loca-editor-open .map-list-bar .map-filter-chip--record {
   min-height: 0 !important;
-  padding: 2px 9px !important;
+  padding: 3px 10px !important;
   font-size: 10.5px !important;
 }
-body.loca-editor-open .map-place-strip { padding: 5px 12px !important; }
-body.loca-editor-open .map-place-card {
-  padding: 3px 9px !important;
-  min-width: 0 !important;
-  max-width: 200px !important;
+/* strip 고정 높이(58px)·예약 크기 해제 → 내용에 맞춰 얇아짐 */
+body.loca-editor-open .map-list-bar .map-place-strip {
+  height: auto !important;
+  padding: 0 !important;
   gap: 7px !important;
+}
+body.loca-editor-open .map-list-bar .map-place-card {
+  min-width: 0 !important;
+  max-width: 190px !important;
+  padding: 4px 10px !important;
+  gap: 7px !important;
+  border-width: 2px !important;
+  border-radius: 9px !important;
+  box-shadow: 2px 2px 0 #1B1B18 !important;
+  content-visibility: visible !important;
+  contain-intrinsic-size: auto !important;
 }
 /* 이름 + 종류 를 한 줄로 (2줄 → 1줄) */
 body.loca-editor-open .me-strip-info {
@@ -73,6 +88,14 @@ body.loca-editor-open .me-strip-info {
   flex: 1 !important;
   min-width: 0 !important;
 }
-body.loca-editor-open .me-strip-info strong { font-size: 12px !important; min-width: 0 !important; flex: 0 1 auto !important; }
+body.loca-editor-open .me-strip-info strong {
+  font-size: 12px !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
 body.loca-editor-open .me-strip-kind { font-size: 10px !important; flex-shrink: 0 !important; }
+body.loca-editor-open .me-strip-dot { width: 9px !important; height: 9px !important; }
 body.loca-editor-open .me-strip-rec { padding: 0 5px !important; }

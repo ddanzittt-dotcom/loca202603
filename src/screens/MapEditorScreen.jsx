@@ -11,6 +11,7 @@ import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { createId } from "../lib/appUtils"
+import { fetchPlaceMatch } from "../lib/placeMatch"
 import { buildFeatureRecordGroups, recordEntryId, summarizeRecordGroup } from "../lib/featureRecordGroups"
 
 // 길 길이(km) — 위경도 배열의 haversine 합산
@@ -328,13 +329,15 @@ export function MapEditorScreen({
     const lat = Number(result?.lat)
     const lng = Number(result?.lng)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-    const locationLabel = result?.roadAddress || result?.jibunAddress || "선택한 위치"
+    const placeName = (result?.name || "").trim()
+    const locationLabel = placeName || result?.address || "선택한 위치"
     onSearchLocation?.({ lat, lng, zoom: 16 })
     setExternalSearchQuery(locationLabel)
     setSearchOpen(false)
     setSearching(false)
     if (canMapPinFromSearch) {
-      setPendingSearchPin({ lat, lng, label: locationLabel })
+      // 상호명은 새 핀 제목으로, 주소는 메모로 넘겨 등록 경험을 내 장소 등록과 맞춘다
+      setPendingSearchPin({ lat, lng, label: locationLabel, title: placeName || null, note: result?.address || "" })
     } else {
       setPendingSearchPin(null)
     }
@@ -344,7 +347,12 @@ export function MapEditorScreen({
     if (!canMapPinFromSearch || !pendingSearchPin || mappingSearchPin) return
     setMappingSearchPin(true)
     try {
-      await onCreatePinAtLocation?.({ lat: pendingSearchPin.lat, lng: pendingSearchPin.lng })
+      await onCreatePinAtLocation?.({
+        lat: pendingSearchPin.lat,
+        lng: pendingSearchPin.lng,
+        title: pendingSearchPin.title,
+        note: pendingSearchPin.note,
+      })
       setPendingSearchPin(null)
     } finally {
       setMappingSearchPin(false)
@@ -454,82 +462,42 @@ export function MapEditorScreen({
   }, [showExternalPlaceSearch])
 
   useEffect(() => {
-    if (!showExternalPlaceSearch || !trimmedExternalSearchQuery) return undefined
+    if (!showExternalPlaceSearch || trimmedExternalSearchQuery.length < 2) return undefined
 
-    const controller = new AbortController()
     let cancelled = false
+    const query = trimmedExternalSearchQuery
+    const bias = mapCenter || myLocation || DEFAULT_MAP_CENTER
     const timeoutId = window.setTimeout(() => {
-      const query = trimmedExternalSearchQuery
       setSearching(true)
-
-      // 한국어 검색어는 Naver geocode를 우선 사용
-      const tryNaver = () =>
-        new Promise((resolve) => {
-          const naverMaps = window.naver?.maps
-          if (!naverMaps?.Service) { resolve([]); return }
-          naverMaps.Service.geocode({ query }, (status, response) => {
-            if (status !== naverMaps.Service.Status.OK || !response.v2) { resolve([]); return }
-            resolve(
-              (response.v2.addresses || []).slice(0, 5).map((addr, i) => ({
-                id: `naver-${i}`,
-                roadAddress: addr.roadAddress || "",
-                jibunAddress: addr.jibunAddress || "",
-                lat: Number(addr.y),
-                lng: Number(addr.x),
-              })),
-            )
-          })
+      // 내 장소 등록과 같은 매커니즘 — 카카오 로컬(상호+주소) 검색. 지도 중심을 거리 정렬 기준으로 쓴다.
+      fetchPlaceMatch({ lat: bias.lat, lng: bias.lng, q: query })
+        .then((candidates) => {
+          if (cancelled) return
+          setSearchResults(candidates.slice(0, 7).map((candidate, i) => ({
+            id: `place-${i}-${candidate.lat}-${candidate.lng}`,
+            name: candidate.name || "",
+            categoryName: candidate.categoryName || "",
+            address: candidate.address || "",
+            lat: Number(candidate.lat),
+            lng: Number(candidate.lng),
+          })))
+          setSearchOpen(true)
         })
-
-      // Google geocode는 보조 결과로 병합
-      const tryGoogle = () =>
-        new Promise((resolve) => {
-          const googleKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
-          if (!googleKey) { resolve([]); return }
-          fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${googleKey}&language=ko`,
-            { signal: controller.signal },
-          )
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.status !== "OK" || !data.results) { resolve([]); return }
-              resolve(
-                data.results.slice(0, 5).map((r, i) => ({
-                  id: `google-${i}`,
-                  roadAddress: r.formatted_address?.split(",")[0] || "",
-                  jibunAddress: r.formatted_address || "",
-                  lat: r.geometry.location.lat,
-                  lng: r.geometry.location.lng,
-                })),
-              )
-            })
-            .catch(() => resolve([]))
+        .catch(() => {
+          if (cancelled) return
+          setSearchResults([])
+          setSearchOpen(true)
         })
-
-      Promise.all([tryNaver(), tryGoogle()]).then(([naverResults, googleResults]) => {
-        if (cancelled || controller.signal.aborted) return
-        // 검색어 언어에 따라 기본 소스를 선택하고 보조 소스를 병합
-        const hasKorean = /[\uAC00-\uD7A3]/.test(query)
-        const primary = hasKorean ? naverResults : googleResults
-        const secondary = hasKorean ? googleResults : naverResults
-        // 좌표가 거의 같은 결과는 중복 제거
-        const merged = [...primary]
-        for (const s of secondary) {
-          const isDuplicate = merged.some((p) => Math.abs(p.lat - s.lat) < 0.001 && Math.abs(p.lng - s.lng) < 0.001)
-          if (!isDuplicate) merged.push(s)
-        }
-        setSearchResults(merged.slice(0, 7))
-        setSearchOpen(true)
-        setSearching(false)
-      })
+        .finally(() => {
+          if (!cancelled) setSearching(false)
+        })
     }, 320)
 
     return () => {
       cancelled = true
-      controller.abort()
       window.clearTimeout(timeoutId)
     }
-  }, [showExternalPlaceSearch, trimmedExternalSearchQuery])
+  }, [showExternalPlaceSearch, trimmedExternalSearchQuery, mapCenter, myLocation])
 
   return (
     <section className={`map-editor map-editor--v2${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}`}>
@@ -676,8 +644,10 @@ export function MapEditorScreen({
                     type="button"
                     onClick={() => handleSearchResultSelect(result)}
                   >
-                    <strong>{result.roadAddress || result.jibunAddress}</strong>
-                    {result.roadAddress && result.jibunAddress ? <span>{result.jibunAddress}</span> : null}
+                    <strong>{result.name || result.address}</strong>
+                    {(result.categoryName || result.address) ? (
+                      <span>{[result.categoryName, result.address].filter(Boolean).join(" · ")}</span>
+                    ) : null}
                   </button>
                 ))}
               </div>
