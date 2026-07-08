@@ -719,3 +719,15 @@
   border-color: #8E5A2C !important;
   color: #fff !important;
 }
+
+/* 3단계: 크롬 페이퍼 톤 = 차가운 흰색 → 도감 크림 + 옅은 잉크 테두리 (은은) */
+.map-editor--v2 .me-bar__card,
+.map-editor--v2 .map-list-bar,
+.map-editor--v2 .map-place-card {
+  background: #FFFDF4;
+  border-color: rgba(27, 27, 24, 0.14);
+}
+.map-editor--v2 .me-fab--tool {
+  background: #FFFDF4 !important;
+  border-color: rgba(27, 27, 24, 0.14) !important;
+}
