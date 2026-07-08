@@ -1,18 +1,18 @@
 import { FeatureEmoji } from "../FeatureEmoji"
 import { getPlaceType } from "../../lib/placeTypes"
-import { representativePhoto, cardArtFeature, looksLikeAddress, formatDotDate } from "../../lib/binderCardData"
+import { representativePhoto, cardArtFeature, looksLikeAddress, formatDotDate, regionLabel } from "../../lib/binderCardData"
 
 // 인스타 공유용 홀로 컬렉터 카드 — 1080×1350 (피드 4:5).
 // 화면 밖에서 렌더되어 html2canvas 로 캡처된다(사용자에겐 안 보임).
 // 포일 프레임 + 타입 젬 + 아트 + 설명(flavor) + 스탯(지역/수집일) + loca.im.
-export function PlaceSharePoster({ feature, dexNo, mapTitle, innerRef }) {
+export function PlaceSharePoster({ feature, dexNo, innerRef }) {
   const type = getPlaceType(feature || {})
   const photo = representativePhoto(feature)
   const name = (feature?.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature?.createdAt || feature?.updatedAt)
   const note = `${feature?.note || ""}`.trim()
   const desc = looksLikeAddress(note) ? "" : note
-  const region = (mapTitle || "").trim()
+  const region = regionLabel(feature)
 
   return (
     <div className="cardshare-poster" ref={innerRef} style={{ "--pt": type.color }}>

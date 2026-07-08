@@ -676,3 +676,29 @@
   padding: 0 16px;
   white-space: nowrap;
 }
+
+/* ============================================================
+ * 도감 톤 통일 (은은) — 지도 편집 크롬 액센트: 오렌지/그린 → 도감 옐로우
+ * 색만 맞추고 하드섀도·픽셀폰트는 절제. 타입색(장소/길/영역)은 유지.
+ * ============================================================ */
+
+/* 활성 필터칩(전체·기록있음) + 이름표시 토글 → 도감 옐로우 + 잉크
+ * (장소/길/영역 타입칩은 자기 타입색 유지 — 여기서 타깃 안 함) */
+.map-editor--v2 .map-list-bar .map-filter-chip--record.is-active[data-type="all"],
+.map-editor--v2 .map-list-bar .map-filter-chip--record.is-active[data-type="record"],
+.map-editor--v2 .me-bar__label-toggle.is-active {
+  background: #F5C41B;
+  border-color: #D9A81A;
+  color: #1B1B18;
+}
+
+/* 선택된 장소 카드 → 옐로우 링 (오렌지 대체) */
+.map-editor--v2 .map-place-card.is-active {
+  border-color: #D9A81A;
+  box-shadow: 0 0 0 2px #FDECB6, 0 8px 20px rgba(30, 20, 10, 0.1);
+}
+
+/* 내 위치 버튼 아이콘 오렌지 → 잉크 */
+.map-editor--v2 .map-locate-button {
+  color: #1B1B18;
+}

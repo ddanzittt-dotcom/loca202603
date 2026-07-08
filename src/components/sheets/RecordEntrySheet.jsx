@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Mic, Plus, Square, Trash2, X } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
 import { PhotoViewer } from "../visuals/PhotoViewer"
 
@@ -8,13 +8,6 @@ const DAY_OF_WEEK_KO = ["일", "월", "화", "수", "목", "금", "토"]
 function formatTodayBadge() {
   const d = new Date()
   return `오늘 · ${d.getMonth() + 1}월 ${d.getDate()}일 ${DAY_OF_WEEK_KO[d.getDay()]}요일`
-}
-
-function formatTime(sec) {
-  const n = Math.max(0, Math.round(sec || 0))
-  const m = Math.floor(n / 60)
-  const s = n % 60
-  return `${m}:${String(s).padStart(2, "0")}`
 }
 
 function RecordPhotoThumb({ photo, onDelete, onOpen }) {
@@ -54,11 +47,6 @@ export function RecordEntrySheet({
   voices = [],
   onPhotoSelected,
   onDeletePhoto,
-  onStartRecording,
-  onStopRecording,
-  onDeleteVoice,
-  isRecording = false,
-  recordingSeconds = 0,
   photoInputRef,
 }) {
   const [text, setText] = useState("")
@@ -78,10 +66,6 @@ export function RecordEntrySheet({
 
   if (!open) return null
 
-  const bars = Array.from({ length: 14 }, (_, index) => {
-    const seed = (index * 19 + Math.floor((recordingSeconds || 0) * 13)) % 100
-    return isRecording ? 28 + (seed % 58) : 22 + ((index * 7) % 26)
-  })
   const canSave = text.trim().length > 0 || photos.length > 0 || voices.length > 0
   const isEditMode = mode === "edit"
   const closeWithoutSave = () => onClose?.({ saved: false })
@@ -99,7 +83,7 @@ export function RecordEntrySheet({
               <span className="res-title__name">{featureTitle || "장소"}</span>
               <span className="res-title__rest">{isEditMode ? " 기록 수정" : " 기록하기"}</span>
             </h2>
-            <p className="res-sub">{isEditMode ? "남겨둔 장면을 다시 정돈해요." : "사진, 음성, 메모를 오늘의 한 장면으로 묶어 저장해요."}</p>
+            <p className="res-sub">{isEditMode ? "남겨둔 장면을 다시 정돈해요." : "사진과 메모를 오늘의 한 장면으로 묶어 저장해요."}</p>
           </div>
           <button type="button" className="res-close" onClick={closeWithoutSave} aria-label="닫기">
             <X size={13} />
@@ -145,61 +129,20 @@ export function RecordEntrySheet({
               </button>
             </div>
           </section>
-
-          <section className="res-section">
-            <div className="res-section-label">
-              <span>음성</span>
-              {voices.length > 0 ? <span className="res-count">{voices.length}</span> : null}
-            </div>
-            <div className="res-voice-card">
-              <button
-                type="button"
-                className={`res-voice-mic${isRecording ? " is-recording" : ""}`}
-                onClick={() => { if (isRecording) onStopRecording?.(); else onStartRecording?.({ recordId }) }}
-                aria-label={isRecording ? "녹음 정지" : "음성 녹음 시작"}
-              >
-                {isRecording ? <Square size={17} fill="currentColor" /> : <Mic size={20} />}
-              </button>
-              <div className="res-voice-wave" aria-hidden="true">
-                {bars.map((height, index) => (
-                  <span key={index} style={{ height: `${height}%`, opacity: isRecording ? 1 : 0.36 }} />
-                ))}
-              </div>
-              <div className="res-voice-meta">
-                {isRecording ? <span className="res-voice-time">{formatTime(recordingSeconds)}</span> : <span className="res-voice-hint">탭해서 녹음</span>}
-              </div>
-            </div>
-
-            {voices.length > 0 ? (
-              <div className="res-voice-list">
-                {voices.map((voice, index) => (
-                  <span key={voice.id || voice.localId || `voice-${index}`} className="res-voice-chip">
-                    <Mic size={11} strokeWidth={2} />
-                    <span className="loca-v2-num">{formatTime(voice.duration || 0)}</span>
-                    {onDeleteVoice ? (
-                      <button type="button" className="res-voice-chip-rm" aria-label="음성 삭제" onClick={() => onDeleteVoice(voice.id || voice.localId)}>
-                        <Trash2 size={9} />
-                      </button>
-                    ) : null}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </section>
         </div>
 
         <div className="res-action">
           <button
             type="button"
             className="res-save"
-            disabled={!canSave || isRecording || text.length > maxChars}
+            disabled={!canSave || text.length > maxChars}
             onClick={async () => {
               await onSave?.(text.trim(), { recordId, mode })
               setText("")
               onClose?.({ saved: true })
             }}
           >
-            {isRecording ? "녹음을 멈춘 뒤 저장하세요" : (saveLabel || (isEditMode ? "수정 저장" : "오늘의 기록 저장"))}
+            {saveLabel || (isEditMode ? "수정 저장" : "오늘의 기록 저장")}
           </button>
         </div>
 

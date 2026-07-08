@@ -137,6 +137,25 @@ export function looksLikeAddress(text) {
   return /(로|길)\s?\d|(동|리)\s?\d|번길|[가-힣]+(시|군)\s[가-힣]/.test(t)
 }
 
+// 공유 카드 "지역" 표시용 — 역지오코딩 regionName 에서 "시/군 + 읍/면/동"만 뽑는다.
+// 예) "충청남도 천안시 동남구 목천읍" → "천안시 목천읍" / "경상북도 경주시 황남동" → "경주시 황남동"
+// regionName 이 없으면 주소성 note 에서 시/군·동 어절을 시도, 그래도 없으면 빈 문자열.
+export function regionLabel(feature) {
+  const pick = (words) => {
+    const city = words.find((w) => /(시|군)$/.test(w))
+    const gu = words.find((w) => /구$/.test(w))
+    const dong = words.find((w) => /(동|읍|면)$/.test(w))
+    const head = city || gu || ""
+    if (head && dong) return `${head} ${dong}`
+    return dong || head || ""
+  }
+  const region = `${feature?.regionName || ""}`.trim()
+  if (region) return pick(region.split(/\s+/))
+  const note = `${feature?.note || ""}`.trim()
+  if (looksLikeAddress(note)) return pick(note.split(/\s+/))
+  return ""
+}
+
 export function neighborhoodWord(feature, mapTitle) {
   const note = `${feature?.note || ""}`.trim()
   if (looksLikeAddress(note)) {
