@@ -117,6 +117,71 @@
 .admin-stat__value { font-size: 24px; font-weight: 800; color: var(--ink-strong); line-height: 1.1; }
 .admin-stat__sub { font-size: 11px; color: var(--ink-faint); }
 
+/* 표 (동네 랭킹 · 주간 추이) */
+.admin-table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 12.5px;
+}
+.admin-table th, .admin-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.admin-table th {
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  font-size: 11px;
+  font-weight: 800;
+}
+.admin-table td { color: var(--ink-soft); }
+.admin-table td:first-child { font-weight: 700; color: var(--ink); }
+.admin-table tr:last-child td { border-bottom: 0; }
+.admin-table--tight { display: block; overflow-x: auto; white-space: nowrap; }
+
+.admin-empty-note { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+/* 태그 칩 */
+.admin-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.admin-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+.admin-chip em { font-style: normal; color: var(--accent-deep); font-weight: 800; margin-left: 2px; }
+
+/* 세로 바 차트 (주간 추이) */
+.admin-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 12px 8px;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.admin-bar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.admin-bar__count { font-size: 10.5px; font-weight: 800; color: var(--ink-mute); }
+.admin-bar__fill { width: 100%; max-width: 34px; border-radius: 5px 5px 2px 2px; background: var(--accent); }
+.admin-bar__label { font-size: 10px; color: var(--ink-faint); }
+
+/* 가로 바 (유입 소스) */
+.admin-hbars { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+.admin-hbar { display: flex; align-items: center; gap: 8px; }
+.admin-hbar__label { flex: 0 0 64px; font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+.admin-hbar__track { flex: 1; height: 12px; border-radius: var(--radius-pill); background: var(--bg-deep); overflow: hidden; }
+.admin-hbar__fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--accent); }
+.admin-hbar__count { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: var(--ink-mute); }
+
 /* 목록 */
 .admin-list { display: flex; flex-direction: column; gap: 10px; }
 

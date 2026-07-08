@@ -5,6 +5,7 @@ import {
   MODERATION_ACTIONS,
   MODERATION_TABS,
   checkPlatformAdmin,
+  getAdminInsights,
   getAdminOverview,
   listModerationRecords,
   updateModerationStatus,
@@ -50,6 +51,8 @@ export function AdminScreen() {
   const [actioningId, setActioningId] = useState(null)
   const [overview, setOverview] = useState(null)
   const [overviewLoading, setOverviewLoading] = useState(false)
+  const [insights, setInsights] = useState(null)
+  const [insightsError, setInsightsError] = useState("")
   const [toast, setToast] = useState("")
   const toastTimer = useRef(null)
 
@@ -100,10 +103,17 @@ export function AdminScreen() {
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true)
+    setInsightsError("")
     try {
       setOverview(await getAdminOverview())
     } catch {
       setOverview(null)
+    }
+    try {
+      setInsights(await getAdminInsights())
+    } catch (error) {
+      setInsights(null)
+      setInsightsError(error?.message || "인사이트를 불러오지 못했어요.")
     } finally {
       setOverviewLoading(false)
     }
@@ -198,6 +208,144 @@ export function AdminScreen() {
           </div>
         )}
       </section>
+
+      {insightsError ? (
+        <p className="admin-error">{insightsError} (057 마이그레이션 적용 여부를 확인해 주세요)</p>
+      ) : null}
+
+      {insights ? (
+        <>
+          {/* ── 지역 자산 ── */}
+          <section className="admin-overview" aria-label="지역 자산">
+            <h2 className="admin-section-title">지역 자산</h2>
+            <div className="admin-stats">
+              <StatCard label="NEW FIND (지도에 없던 곳)" value={num(insights.new_find_total)} sub={`최근 7일 +${num(insights.new_find_7d)}`} />
+              <StatCard
+                label="동네 태깅률"
+                value={insights.features_geo_total ? `${Math.round((insights.features_region_tagged / insights.features_geo_total) * 100)}%` : "–"}
+                sub={`${num(insights.features_region_tagged)} / ${num(insights.features_geo_total)} 카드`}
+              />
+              <StatCard label="기록된 동네 수" value={num((insights.region_top || []).length >= 15 ? "15+" : (insights.region_top || []).length)} sub="카드가 있는 법정동" />
+            </div>
+            {(insights.region_top || []).length ? (
+              <table className="admin-table">
+                <thead>
+                  <tr><th>동네</th><th>카드</th><th>7일</th><th>새발견</th></tr>
+                </thead>
+                <tbody>
+                  {insights.region_top.map((row) => (
+                    <tr key={row.region}>
+                      <td>{row.region}</td>
+                      <td>{num(row.total)}</td>
+                      <td>{row.d7 ? `+${num(row.d7)}` : "–"}</td>
+                      <td>{num(row.new_finds)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="admin-empty-note">아직 동네 태깅된 카드가 없어요.</p>
+            )}
+            {(insights.top_tags || []).length ? (
+              <div className="admin-chips" aria-label="인기 태그">
+                {insights.top_tags.map((t) => (
+                  <span key={t.tag} className="admin-chip">#{t.tag} <em>{num(t.cnt)}</em></span>
+                ))}
+              </div>
+            ) : null}
+          </section>
+
+          {/* ── 주간 추이 ── */}
+          <section className="admin-overview" aria-label="주간 추이">
+            <h2 className="admin-section-title">주간 추이 (최근 8주)</h2>
+            {(() => {
+              const weeks = insights.weekly || []
+              const max = Math.max(1, ...weeks.map((w) => Number(w.features) || 0))
+              return (
+                <div className="admin-bars" role="img" aria-label="주별 새 카드 수">
+                  {weeks.map((w) => (
+                    <div key={w.week_start} className="admin-bar">
+                      <span className="admin-bar__count">{num(w.features)}</span>
+                      <span className="admin-bar__fill" style={{ height: `${Math.max(4, Math.round((Number(w.features) / max) * 72))}px` }} />
+                      <span className="admin-bar__label">{`${w.week_start}`.slice(5).replace("-", "/")}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+            <table className="admin-table admin-table--tight">
+              <thead>
+                <tr><th>주</th>{(insights.weekly || []).map((w) => <th key={w.week_start}>{`${w.week_start}`.slice(5).replace("-", "/")}</th>)}</tr>
+              </thead>
+              <tbody>
+                <tr><td>기록</td>{(insights.weekly || []).map((w) => <td key={w.week_start}>{num(w.memos)}</td>)}</tr>
+                <tr><td>가입</td>{(insights.weekly || []).map((w) => <td key={w.week_start}>{num(w.users)}</td>)}</tr>
+              </tbody>
+            </table>
+          </section>
+
+          {/* ── 협업 현황 ── */}
+          <section className="admin-overview" aria-label="협업 현황">
+            <h2 className="admin-section-title">협업 (함께 만들기)</h2>
+            {insights.collab ? (
+              <div className="admin-stats">
+                <StatCard label="협업 중인 지도" value={num(insights.collab.maps_with_collab)} sub={`참여자 ${num(insights.collab.collaborating_users)}명`} />
+                <StatCard
+                  label="초대 수락률"
+                  value={(() => {
+                    const a = Number(insights.collab.invites_accepted) || 0
+                    const r = Number(insights.collab.invites_rejected) || 0
+                    return a + r ? `${Math.round((a / (a + r)) * 100)}%` : "–"
+                  })()}
+                  sub={`수락 ${num(insights.collab.invites_accepted)} · 거절 ${num(insights.collab.invites_rejected)} · 대기 ${num(insights.collab.invites_pending)}`}
+                />
+                <StatCard label="협업으로 만든 카드" value={num(insights.collab.collab_features)} sub="지도 주인이 아닌 참여자가 등록" />
+              </div>
+            ) : (
+              <p className="admin-empty-note">협업 데이터를 집계할 수 없어요.</p>
+            )}
+          </section>
+
+          {/* ── 품질·건전성 ── */}
+          <section className="admin-overview" aria-label="데이터 품질">
+            <h2 className="admin-section-title">품질 · 건전성</h2>
+            <div className="admin-stats">
+              <StatCard label="7일 활성 채집자" value={num(insights.active_creators_7d)} sub="최근 7일 카드 등록 유저" />
+              <StatCard
+                label="유저당 평균 카드"
+                value={overview?.users_total ? (Number(insights.features_geo_total || overview.features_total) / Number(overview.users_total)).toFixed(1) : "–"}
+                sub="자산 생산 속도"
+              />
+              <StatCard label="반복 기록 카드" value={num(insights.repeat_record_features)} sub="기록 2회 이상 (단골 신호)" />
+              <StatCard label="사진 있는 카드" value={num(insights.features_with_media)} sub={`첨부 미디어 ${num(insights.media_total)}개`} />
+              <StatCard label="사진 포함 기록" value={num(insights.memo_photo_count)} sub="photo 첨부된 메모" />
+            </div>
+          </section>
+
+          {/* ── 유통·소비 ── */}
+          <section className="admin-overview" aria-label="유통과 소비">
+            <h2 className="admin-section-title">유통 · 소비</h2>
+            <div className="admin-stats">
+              <StatCard label="지도 저장" value={num(insights.saves_total)} sub="다른 사람 지도 보관" />
+              <StatCard label="좋아요 누적" value={num(insights.likes_total)} sub="발행 지도 기준" />
+            </div>
+            {(insights.sources || []).length ? (
+              <div className="admin-hbars" aria-label="유입 소스 분포">
+                {(() => {
+                  const max = Math.max(1, ...insights.sources.map((s) => Number(s.cnt) || 0))
+                  return insights.sources.map((s) => (
+                    <div key={s.source} className="admin-hbar">
+                      <span className="admin-hbar__label">{s.source}</span>
+                      <span className="admin-hbar__track"><span className="admin-hbar__fill" style={{ width: `${Math.max(3, Math.round((Number(s.cnt) / max) * 100))}%` }} /></span>
+                      <span className="admin-hbar__count">{num(s.cnt)}</span>
+                    </div>
+                  ))
+                })()}
+              </div>
+            ) : null}
+          </section>
+        </>
+      ) : null}
 
       <h2 className="admin-section-title">커뮤니티 검수</h2>
       <nav className="admin-tabs" aria-label="상태 필터">

@@ -69,6 +69,18 @@ export async function getAdminOverview() {
   return parseRpcJson(data) || {}
 }
 
+// 종합 데이터 인사이트 (get_admin_insights RPC) — platform_admin 전용
+export async function getAdminInsights() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_insights")
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
 export async function updateModerationStatus(recordId, status) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc("update_community_moderation_status", {
