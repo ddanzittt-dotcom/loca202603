@@ -116,13 +116,13 @@ export default async function handler(req, res) {
 
     if (query) {
       // 검색은 상호(keyword)와 주소(address)를 병행한다 — 사용자가 "성수 카페" 든 "성정로 75" 든 다 잡히게.
-      // 위치를 기준점으로 두되 상호 검색 반경은 카카오 최대치(20km)까지 넓힌다(기존 300m 는 사실상 검색 불가).
+      // 반경(radius)은 걸지 않는다 — x/y 는 거리 정렬 기준으로만 쓰고 전국에서 찾는다.
+      //   (반경을 20km 로 걸면 서울 기준점에서 천안 '쌍용역'·'왕천파닭' 같은 상호가 잘려 검색이 안 됨)
       const [keywordDocs, addressDocs] = await Promise.all([
         kakaoSearch("keyword.json", {
           query,
           x: lng.toFixed(6),
           y: lat.toFixed(6),
-          radius: "20000",
           sort: "distance",
           size: "15",
         }, key).catch(() => []),

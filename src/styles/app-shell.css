@@ -2315,6 +2315,15 @@
   text-align: center;
 }
 
+.clt-hint--picked {
+  color: #5C513B;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 12px;
+}
+
 .clt-primary {
   width: 100%;
   font-family: "DungGeunMo", Pretendard, sans-serif;

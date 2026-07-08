@@ -27,6 +27,30 @@ async function fetchPlaceMatch({ lat, lng, q }) {
   return Array.isArray(data.candidates) ? data.candidates : []
 }
 
+// 지도에서 콕 찍은 좌표 → 도로명/지번 주소 (카카오 지오코더, best-effort).
+// services 라이브러리가 안 떠 있거나 실패하면 빈 문자열.
+function reverseGeocodePoint(lat, lng) {
+  return new Promise((resolve) => {
+    const geocoder = window.kakao?.maps?.services?.Geocoder
+    if (!geocoder) {
+      resolve("")
+      return
+    }
+    try {
+      new geocoder().coord2Address(lng, lat, (result, status) => {
+        if (status !== window.kakao.maps.services.Status.OK || !result?.length) {
+          resolve("")
+          return
+        }
+        const item = result[0]
+        resolve(item.road_address?.address_name || item.address?.address_name || "")
+      })
+    } catch {
+      resolve("")
+    }
+  })
+}
+
 export function CollectSheet({
   open,
   onClose,
@@ -39,6 +63,7 @@ export function CollectSheet({
 }) {
   const [step, setStep] = useState("pick") // pick → confirm
   const [point, setPoint] = useState(null)
+  const [pickedAddress, setPickedAddress] = useState("") // 지도에서 콕 찍은 위치의 주소
   const [query, setQuery] = useState("")
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
@@ -53,6 +78,7 @@ export function CollectSheet({
     if (open) return
     setStep("pick")
     setPoint(null)
+    setPickedAddress("")
     setQuery("")
     setSearchResults([])
     setCandidates([])
@@ -118,9 +144,24 @@ export function CollectSheet({
       ? { lat: myLocation.lat, lng: myLocation.lng, zoom: 14 }
       : SEOUL_CENTER
 
+  // 지도에서 콕 찍기 → 좌표 저장 + 주소 역지오코딩 표시
+  const handleMapPick = (tapped) => {
+    if (!tapped || !Number.isFinite(tapped.lat)) return
+    setPoint({ lat: tapped.lat, lng: tapped.lng })
+    setPickedAddress("")
+    reverseGeocodePoint(tapped.lat, tapped.lng).then((address) => {
+      // 그 사이 다른 곳을 다시 찍었으면 무시
+      setPoint((current) => {
+        if (current && current.lat === tapped.lat && current.lng === tapped.lng) setPickedAddress(address)
+        return current
+      })
+    })
+  }
+
   // 검색 결과에서 바로 선택 → SPOT 확정 단계로
   const pickSearchResult = (candidate) => {
     setPoint({ lat: candidate.lat, lng: candidate.lng })
+    setPickedAddress("")
     setCandidates([candidate])
     setSelectedSpot(candidate)
     setName(candidate.name)
@@ -169,7 +210,7 @@ export function CollectSheet({
         emojiKind: "pixel",
         emojiPixelId: isNewFind ? "px-star" : pixelId,
         tags,
-        note: selectedSpot?.address || "",
+        note: selectedSpot?.address || pickedAddress || "",
         lat: point.lat,
         lng: point.lng,
       }
@@ -249,14 +290,18 @@ export function CollectSheet({
                 draftMode="pin"
                 focusPoint={focusPoint}
                 fitTrigger={0}
-                onMapTap={(tapped) => {
-                  if (tapped && Number.isFinite(tapped.lat)) setPoint({ lat: tapped.lat, lng: tapped.lng })
-                }}
+                onMapTap={handleMapPick}
                 onFeatureTap={() => {}}
                 showLabels={false}
               />
             </div>
-            <p className="clt-hint">지도를 눌러 위치를 고르거나, 위에서 검색하세요.</p>
+            {point ? (
+              <p className="clt-hint clt-hint--picked">
+                📍 {pickedAddress || "찍은 위치"}
+              </p>
+            ) : (
+              <p className="clt-hint">지도를 눌러 위치를 고르거나, 위에서 검색하세요.</p>
+            )}
 
             <button
               type="button"
