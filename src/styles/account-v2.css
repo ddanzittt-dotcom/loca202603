@@ -403,3 +403,108 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ── 회원탈퇴 ── */
+.acct-card--danger {
+  border-color: color-mix(in srgb, #ef4444 35%, var(--line-strong));
+}
+
+.acct-withdraw-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-mute);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acct-withdraw-toggle svg:last-child {
+  margin-left: auto;
+}
+
+.acct-withdraw {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.acct-withdraw__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #dc2626;
+}
+
+.acct-withdraw__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--ink-soft);
+}
+
+.acct-withdraw__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-mute);
+}
+
+.acct-withdraw__agree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.acct-withdraw__agree input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #dc2626;
+  cursor: pointer;
+}
+
+.acct-withdraw__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.acct-withdraw__cancel {
+  flex: 1;
+  padding: 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-big);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acct-withdraw__confirm {
+  flex: 1;
+  padding: 11px;
+  border: 1px solid #dc2626;
+  border-radius: var(--radius-big);
+  background: #dc2626;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.acct-withdraw__confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

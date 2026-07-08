@@ -37,6 +37,7 @@
     "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@sentry/react": "^10.64.0",
     "@supabase/supabase-js": "^2.99.2",
     "@vis.gl/react-google-maps": "^1.8.2",
     "fflate": "^0.8.2",

@@ -1,4 +1,5 @@
 import { Component } from "react"
+import { captureError } from "../lib/monitoring"
 
 export class MapErrorBoundary extends Component {
   constructor(props) {
@@ -10,8 +11,9 @@ export class MapErrorBoundary extends Component {
     return { hasError: true }
   }
 
-  componentDidCatch(error) {
+  componentDidCatch(error, info) {
     console.warn("지도 컴포넌트 에러:", error)
+    captureError(error, { boundary: "MapErrorBoundary", componentStack: info?.componentStack })
   }
 
   render() {

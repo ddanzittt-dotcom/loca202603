@@ -110,6 +110,19 @@ export async function signOut() {
   if (error) throw error
 }
 
+// 회원탈퇴 — migration 053 delete_my_account() RPC 호출.
+// 서버에서 auth 계정+데이터가 삭제되면 세션은 이미 무효라 signOut 실패는 무시한다.
+export async function deleteMyAccount() {
+  const supabase = requireSupabase()
+  const { error } = await supabase.rpc("delete_my_account")
+  if (error) throw error
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    // 세션이 서버에서 먼저 무효화된 경우 — 로컬 토큰만 정리되면 충분
+  }
+}
+
 export async function getCurrentUser() {
   const supabase = requireSupabase()
   const {

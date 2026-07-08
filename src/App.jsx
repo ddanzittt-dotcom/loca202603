@@ -33,6 +33,7 @@ import {
 } from "./lib/appUtils"
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
+import { captureError } from "./lib/monitoring"
 import { addFeatureMemo, backfillRegionNames, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
@@ -123,8 +124,9 @@ class AppErrorBoundary extends Component {
     return { error }
   }
 
-  componentDidCatch(error) {
+  componentDidCatch(error, info) {
     console.error("LOCA 화면 렌더링 오류", error)
+    captureError(error, { boundary: "AppErrorBoundary", componentStack: info?.componentStack })
   }
 
   render() {
@@ -491,7 +493,7 @@ export default function App() {
   const {
     authReady, authUser, cloudMode, cloudLoading, cloudDataReady, cloudLoadedUserId,
     readLocalImportData,
-    reloadCloudData, handleSignOut, importLocalDataToCloud,
+    reloadCloudData, handleSignOut, handleDeleteAccount, importLocalDataToCloud,
   } = useAppSession({
     setMaps, setFeatures, setShares, setFollowed, setViewerProfile,
     setCollaborationInvites, setPlacements: setPlacementsByMap,
@@ -2076,6 +2078,7 @@ export default function App() {
               onImportLocalData={importLocalDataToCloud}
               onUpdateProfile={handleUpdateProfile}
               onSignOut={cloudMode ? handleSignOut : null}
+              onDeleteAccount={cloudMode ? handleDeleteAccount : null}
               onViewPublicProfile={() => {
                 setSelectedUserProfile(viewerProfile)
                 setSelectedUserId(viewerProfile.id)

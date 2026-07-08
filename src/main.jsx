@@ -40,6 +40,10 @@ import {
   getRecommendSearchOgMeta,
 } from "./lib/publicOgMeta"
 import { registerServiceWorker } from "./registerServiceWorker"
+import { initMonitoring } from "./lib/monitoring"
+
+// 에러 추적 초기화 (VITE_SENTRY_DSN 있을 때만 활성화, 없으면 no-op)
+initMonitoring()
 
 // 네이버 지도 API 키를 환경변수에서 주입 (index.html의 loadNaverMap에서 참조)
 if (import.meta.env.VITE_NAVER_MAP_KEY) {

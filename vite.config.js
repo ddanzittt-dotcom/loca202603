@@ -15,6 +15,8 @@ export default defineConfig({
     }),
   ],
   build: {
+    // 프로덕션 번들에 소스맵 미포함 — 원본 소스 역추출 방지
+    sourcemap: false,
     rolldownOptions: {
       output: {
         manualChunks(id) {
@@ -23,6 +25,9 @@ export default defineConfig({
           }
           if (id.includes('node_modules/@supabase')) {
             return 'vendor-supabase'
+          }
+          if (id.includes('node_modules/@sentry')) {
+            return 'vendor-sentry'
           }
           if (id.includes('node_modules/fflate') || id.includes('node_modules/qrcode')) {
             return 'vendor-utils'

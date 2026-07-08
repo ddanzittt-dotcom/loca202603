@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { hasSupabaseEnv } from "../lib/supabase"
-import { getCurrentSession, onAuthStateChange, signOut } from "../lib/auth"
+import { deleteMyAccount, getCurrentSession, onAuthStateChange, signOut } from "../lib/auth"
+import { setMonitoringUser } from "../lib/monitoring"
 import {
   createFeature as createFeatureRecord,
   createMap as createMapRecord,
@@ -202,6 +203,7 @@ export function useAppSession({
         const user = session?.user ?? null
         const appUser = isAnonymousAuthUser(user) ? null : user
         setAuthUser(appUser)
+        setMonitoringUser(appUser?.id || null)
         setAuthReady(true)
         if (appUser) {
           claimPublicSavedItemsForCurrentUser().catch((error) => {
@@ -219,6 +221,7 @@ export function useAppSession({
       if (!isMounted) return
       const appUser = isAnonymousAuthUser(user) ? null : user
       setAuthUser(appUser)
+      setMonitoringUser(appUser?.id || null)
       setAuthReady(true)
       if (appUser) {
         claimPublicSavedItemsForCurrentUser().catch((error) => {
@@ -244,6 +247,20 @@ export function useAppSession({
     } catch (error) {
       console.error("Failed to sign out", error)
       showToast("로그아웃하지 못했어요.")
+    }
+  }, [resetToLoggedOut, showToast])
+
+  // 회원탈퇴 — 서버 계정/데이터 삭제 후 로그아웃과 동일하게 상태 초기화
+  const handleDeleteAccount = useCallback(async () => {
+    try {
+      await deleteMyAccount()
+      resetToLoggedOut()
+      showToast("탈퇴가 완료됐어요. 그동안 함께해 주셔서 감사했어요.")
+      return true
+    } catch (error) {
+      console.error("Failed to delete account", error)
+      showToast("탈퇴 처리에 실패했어요. 잠시 후 다시 시도해 주세요.")
+      return false
     }
   }, [resetToLoggedOut, showToast])
 
@@ -325,6 +342,7 @@ export function useAppSession({
     resetToLoggedOut,
     reloadCloudData,
     handleSignOut,
+    handleDeleteAccount,
     importLocalDataToCloud,
   }
 }

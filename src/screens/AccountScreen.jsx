@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Bell, BellOff, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2 } from "lucide-react"
+import { AlertTriangle, Bell, BellOff, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2, UserX } from "lucide-react"
 import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { updatePassword } from "../lib/auth"
 import { PixelAvatar, avatarCharOf, avatarCharSentinel } from "../components/PixelAvatar"
@@ -67,6 +67,7 @@ export function AccountScreen({
   onImportLocalData,
   onUpdateProfile,
   onSignOut,
+  onDeleteAccount,
   onViewPublicProfile,
   onResetCoachmark,
   showToast,
@@ -168,6 +169,22 @@ export function AccountScreen({
     const next = { ...appSettings, [key]: value }
     setAppSettings(next)
     localStorage.setItem("loca.appSettings", JSON.stringify(next))
+  }
+
+  // ── 회원탈퇴 ──
+  const [withdrawOpen, setWithdrawOpen] = useState(false)
+  const [withdrawAgreed, setWithdrawAgreed] = useState(false)
+  const [withdrawing, setWithdrawing] = useState(false)
+
+  const confirmWithdraw = async () => {
+    if (!withdrawAgreed || withdrawing) return
+    if (!confirm("정말 탈퇴할까요? 지도·장소·기록·사진이 모두 삭제되며 되돌릴 수 없어요.")) return
+    setWithdrawing(true)
+    try {
+      await onDeleteAccount?.()
+    } finally {
+      setWithdrawing(false)
+    }
   }
 
   // ── 데이터 ──
@@ -328,6 +345,50 @@ export function AccountScreen({
             <LogOut size={15} aria-hidden="true" />
             로그아웃
           </button>
+        ) : null}
+
+        {onDeleteAccount ? (
+          <article className="acct-card acct-card--danger" aria-label="회원탈퇴">
+            {!withdrawOpen ? (
+              <button type="button" className="acct-withdraw-toggle" onClick={() => setWithdrawOpen(true)}>
+                <UserX size={14} aria-hidden="true" />
+                회원탈퇴
+                <ChevronRight size={14} aria-hidden="true" />
+              </button>
+            ) : (
+              <div className="acct-withdraw">
+                <p className="acct-withdraw__title">
+                  <AlertTriangle size={15} aria-hidden="true" />
+                  탈퇴하면 아래 데이터가 즉시 삭제되고 복구할 수 없어요
+                </p>
+                <ul className="acct-withdraw__list">
+                  <li>내가 만든 지도와 발행된 공유 링크</li>
+                  <li>모든 장소 카드와 기록, 사진·음성</li>
+                  <li>팔로우 관계, 저장한 지도, 계정 정보</li>
+                </ul>
+                <p className="acct-withdraw__note">
+                  커뮤니티(모두의 지도)에 공개한 기록은 작성자 정보가 지워진 채 남을 수 있어요.
+                  기록을 보관하고 싶다면 먼저 위의 "데이터 내보내기"를 이용해 주세요.
+                </p>
+                <label className="acct-withdraw__agree">
+                  <input
+                    type="checkbox"
+                    checked={withdrawAgreed}
+                    onChange={(event) => setWithdrawAgreed(event.target.checked)}
+                  />
+                  안내를 확인했고, 모든 데이터 삭제에 동의합니다.
+                </label>
+                <div className="acct-withdraw__actions">
+                  <button type="button" className="acct-withdraw__cancel" onClick={() => { setWithdrawOpen(false); setWithdrawAgreed(false) }}>
+                    취소
+                  </button>
+                  <button type="button" className="acct-withdraw__confirm" disabled={!withdrawAgreed || withdrawing} onClick={confirmWithdraw}>
+                    {withdrawing ? "탈퇴 처리 중..." : "탈퇴하기"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </article>
         ) : null}
       </div>
     </section>
