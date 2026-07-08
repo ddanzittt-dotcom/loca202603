@@ -4493,18 +4493,14 @@
 .csp-foot {
   margin-top: 26px;
   display: flex;
-  align-items: baseline;
-  gap: 14px;
+  justify-content: center;
 }
 .csp-brand {
   font-family: Georgia, "Times New Roman", serif;
   font-style: italic;
   font-size: 42px;
+  letter-spacing: 0.04em;
   color: #EBD79A;
-}
-.csp-tag {
-  font-size: 24px;
-  color: #8f886f;
 }
 .bd-flipclose {
   position: absolute;

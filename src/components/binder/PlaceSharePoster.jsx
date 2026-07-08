@@ -50,8 +50,7 @@ export function PlaceSharePoster({ feature, dexNo, mapTitle, innerRef }) {
           </div>
 
           <div className="csp-foot">
-            <span className="csp-brand">loca.im</span>
-            <span className="csp-tag">내 동네를 기록하는 지도</span>
+            <span className="csp-brand">loca</span>
           </div>
         </div>
       </div>
