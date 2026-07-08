@@ -5,7 +5,21 @@ import { getPlaceType } from "../../lib/placeTypes"
 import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
 import { PlaceSharePoster } from "./PlaceSharePoster"
 import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
+import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { logEvent } from "../../lib/analytics"
+
+// 카드에 표시할 대표 좌표 — 핀은 lat/lng, 경로/영역은 첫 좌표
+function featurePoint(feature) {
+  if (Number.isFinite(feature?.lat) && Number.isFinite(feature?.lng)) {
+    return { lat: feature.lat, lng: feature.lng }
+  }
+  const first = feature?.coordinates?.[0] || feature?.path?.[0] || feature?.points?.[0]
+  if (Array.isArray(first) && first.length >= 2) {
+    // [lng, lat] 순서 저장 규약
+    return { lat: Number(first[1]), lng: Number(first[0]) }
+  }
+  return null
+}
 
 // 카드 바인더 리디자인 — 장소 카드 앞면(슬리브 커버) + 플립 상세(뒷면).
 // 시각·인터랙션 레퍼런스: loca-binder-prototype.html
@@ -132,6 +146,27 @@ export function PlaceFlipCard({
   const note = `${feature?.note || ""}`.trim()
   const noteIsAddress = looksLikeAddress(note)
   const descText = noteIsAddress ? "" : note
+
+  // 주소 자동 표시 — note 가 주소 형태가 아니면 좌표로 역지오코딩해서 채운다.
+  // (지도에서 찍어 만든 핀은 note 가 비어 늘 "미입력" 이던 문제 해결)
+  const [autoAddress, setAutoAddress] = useState(null) // null=조회 안함/전, ""=실패, "..."=주소
+  useEffect(() => {
+    if (noteIsAddress) { setAutoAddress(null); return undefined }
+    const spot = featurePoint(feature)
+    if (!spot) { setAutoAddress(""); return undefined }
+    let alive = true
+    setAutoAddress(null)
+    reverseGeocodeAddress(spot.lat, spot.lng).then((address) => {
+      if (alive) setAutoAddress(address || "")
+    })
+    return () => { alive = false }
+  }, [feature, noteIsAddress])
+
+  const addressText = noteIsAddress
+    ? note
+    : autoAddress === null
+      ? "주소 확인 중…"
+      : autoAddress || "주소 미입력"
   const [typedDesc, completeTyping] = useTypewriter(
     descText || "아직 설명이 없어요. 기록을 남겨보세요.",
     flipped,
@@ -323,7 +358,7 @@ export function PlaceFlipCard({
 
               <div className="bd-spec">
                 <div><span>등록일</span><b>{registered || "—"}</b></div>
-                <div><span>주소</span><b>{noteIsAddress ? note : "주소 미입력"}</b></div>
+                <div><span>주소</span><b>{addressText}</b></div>
               </div>
 
               <div className="bd-tl">

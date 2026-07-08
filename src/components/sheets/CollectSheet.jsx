@@ -3,6 +3,7 @@ import { Search as SearchIcon, X } from "lucide-react"
 import { KoreaMap } from "../koreaMap"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { createFeature } from "../../lib/mapService"
+import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { createId } from "../../lib/appUtils"
 import { PLACE_CATEGORIES, getDefaultPixelIdForCategory } from "../../lib/placeCategories"
 
@@ -25,30 +26,6 @@ async function fetchPlaceMatch({ lat, lng, q }) {
   if (!response.ok) throw new Error("place-match failed")
   const data = await response.json()
   return Array.isArray(data.candidates) ? data.candidates : []
-}
-
-// 지도에서 콕 찍은 좌표 → 도로명/지번 주소 (카카오 지오코더, best-effort).
-// services 라이브러리가 안 떠 있거나 실패하면 빈 문자열.
-function reverseGeocodePoint(lat, lng) {
-  return new Promise((resolve) => {
-    const geocoder = window.kakao?.maps?.services?.Geocoder
-    if (!geocoder) {
-      resolve("")
-      return
-    }
-    try {
-      new geocoder().coord2Address(lng, lat, (result, status) => {
-        if (status !== window.kakao.maps.services.Status.OK || !result?.length) {
-          resolve("")
-          return
-        }
-        const item = result[0]
-        resolve(item.road_address?.address_name || item.address?.address_name || "")
-      })
-    } catch {
-      resolve("")
-    }
-  })
 }
 
 export function CollectSheet({
@@ -149,7 +126,7 @@ export function CollectSheet({
     if (!tapped || !Number.isFinite(tapped.lat)) return
     setPoint({ lat: tapped.lat, lng: tapped.lng })
     setPickedAddress("")
-    reverseGeocodePoint(tapped.lat, tapped.lng).then((address) => {
+    reverseGeocodeAddress(tapped.lat, tapped.lng).then((address) => {
       // 그 사이 다른 곳을 다시 찍었으면 무시
       setPoint((current) => {
         if (current && current.lat === tapped.lat && current.lng === tapped.lng) setPickedAddress(address)

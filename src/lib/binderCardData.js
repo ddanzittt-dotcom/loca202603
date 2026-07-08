@@ -71,9 +71,9 @@ const AREA_KEYWORD_ICONS = [
   [/숲|정원|수목|garden/i, "px-garden"],
   [/광장|놀이터|playground/i, "px-playground"],
 ]
+// 타입(지오메트리)별 기본 도트 아이콘 — 사진/키워드 매칭이 없을 때 폴백
 const TYPE_DEFAULT_ICON = {
-  cafe: "px-cafe", food: "px-restaurant", beer: "px-beer", bread: "px-bread",
-  nature: "px-tree", walk: "px-route", area: "px-map", home: "px-house", heart: "px-heart",
+  place: "px-pin", walk: "px-route", area: "px-map",
 }
 
 function matchKeyword(list, text, fallback) {
