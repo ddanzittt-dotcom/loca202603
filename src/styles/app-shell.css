@@ -4334,9 +4334,86 @@
 .bd-btn--dark { background: #1B1B18; color: #FFFDF4; }
 .bd-btn--paper { background: #FFFDF4; color: #1B1B18; }
 .bd-btn:disabled { opacity: 0.55; cursor: default; }
-/* 푸터: 공유/다운로드 한 줄 + 지도에서 보기 한 줄 */
-.bd-backfoot { flex-direction: column; }
-.bd-footrow { display: flex; gap: 9px; }
+
+/* 카드 상단 공유 버튼 */
+.bd-shareico {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #FBF0C8;
+  background: #1B1B18;
+  border: 1.5px solid #1B1B18;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bd-shareico:active { transform: translateY(1px); }
+
+/* 공유 미리보기 오버레이 — 실제 카드(시안) + 공유/다운로드 */
+.csp-share-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(12, 12, 10, 0.84);
+}
+.csp-share-panel {
+  position: relative;
+  width: min(90vw, 400px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.csp-share-close {
+  position: absolute;
+  top: -16px;
+  right: -8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 3px solid #1B1B18;
+  background: #FBF0C8;
+  color: #1B1B18;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 2;
+}
+.csp-share-imgwrap {
+  aspect-ratio: 4 / 5;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #14140f;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.csp-share-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.csp-share-spin {
+  color: #b9b19a;
+  font-size: 14px;
+}
+.csp-share-acts {
+  display: flex;
+  gap: 10px;
+}
+.csp-share-acts .bd-btn {
+  min-height: 48px;
+  font-size: 14px;
+}
 
 /* ── 인스타 공유용 포스터 (1080×1350, 화면 밖 캡처 전용) ── */
 .cardshare-hidden {
@@ -4363,10 +4440,17 @@
   flex: 1;
   min-width: 0;
   border-radius: 44px;
-  padding: 32px;
+  padding: 34px;
   display: flex;
-  background: linear-gradient(150deg, #4a3d1c 0%, #caa64e 22%, #8a6f2e 46%, #e9d79a 62%, #7d6428 84%, #3e3316 100%);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12) inset, 0 24px 60px rgba(0, 0, 0, 0.5);
+  /* 금박 패싯 — 단일 다중스톱 그라데이션(html2canvas 호환). 밝은 하이라이트 6줄로 메탈릭 반짝임 */
+  background: linear-gradient(118deg,
+    #3a2f14 0%, #caa64e 6%, #f7ecc8 8%, #caa64e 10%, #6b551f 16%,
+    #caa64e 22%, #f7ecc8 24%, #caa64e 26%, #6b551f 32%,
+    #caa64e 38%, #f7ecc8 40%, #caa64e 42%, #6b551f 48%,
+    #caa64e 55%, #f7ecc8 57%, #caa64e 59%, #6b551f 65%,
+    #caa64e 71%, #f7ecc8 73%, #caa64e 75%, #6b551f 81%,
+    #caa64e 87%, #f7ecc8 89%, #caa64e 91%, #3a2f14 98%);
+  box-shadow: 0 0 0 2px rgba(255, 240, 190, 0.22) inset, 0 24px 60px rgba(0, 0, 0, 0.55);
 }
 .csp-inner {
   position: relative;
@@ -4383,7 +4467,7 @@
   position: absolute;
   width: 54px;
   height: 54px;
-  border: 5px solid rgba(233, 215, 154, 0.85);
+  border: 5px solid #f0dfa0;
   z-index: 3;
 }
 .csp-corner--tl { top: 20px; left: 20px; border-right: 0; border-bottom: 0; border-radius: 12px 0 0 0; }
@@ -4438,8 +4522,9 @@
 .csp-holo {
   position: absolute;
   inset: 0;
-  mix-blend-mode: screen;
-  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.14) 46%, rgba(170, 220, 255, 0.12) 54%, transparent 68%);
+  background:
+    linear-gradient(118deg, transparent 42%, rgba(255, 255, 255, 0.3) 48%, rgba(210, 235, 255, 0.14) 52%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 20%);
 }
 .csp-name {
   margin: 30px 0 0;
@@ -4454,9 +4539,9 @@
 .csp-desc {
   margin-top: 22px;
   padding: 20px 24px;
-  border: 2px solid rgba(201, 162, 75, 0.32);
+  border: 2px solid rgba(201, 162, 75, 0.5);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(201, 162, 75, 0.08);
 }
 .csp-desc__k {
   display: block;

@@ -124,6 +124,9 @@ export function PlaceFlipCard({
   const flipRafRef = useRef(0)
   const posterRef = useRef(null)
   const [imgBusy, setImgBusy] = useState(null) // "share" | "download" | null
+  const [share, setShare] = useState(null) // null | { loading: true } | { blob, url }
+  const shareRef = useRef(null)
+  shareRef.current = share
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
@@ -142,11 +145,18 @@ export function PlaceFlipCard({
 
   useEffect(() => {
     const handleKey = (event) => {
-      if (event.key === "Escape") onClose?.()
+      if (event.key !== "Escape") return
+      if (shareRef.current) closeSharePreview()
+      else onClose?.()
     }
     window.addEventListener("keydown", handleKey)
     return () => window.removeEventListener("keydown", handleKey)
   }, [onClose])
+
+  // 언마운트 시 미리보기 이미지 URL 정리 (메모리 누수 방지)
+  useEffect(() => () => {
+    if (shareRef.current?.url) URL.revokeObjectURL(shareRef.current.url)
+  }, [])
 
   if (!feature) return null
 
@@ -205,13 +215,33 @@ export function PlaceFlipCard({
     }
   }
 
-  const handleShareImage = async () => {
-    if (imgBusy) return
-    setImgBusy("share")
+  // 상단 공유 버튼 → 카드(시안) 이미지를 만들어 미리보기를 연다
+  const openSharePreview = async () => {
+    if (share) return
+    setShare({ loading: true })
     try {
       const blob = await capturePosterBlob(posterRef.current)
       if (!blob) throw new Error("capture failed")
-      const result = await shareImage(blob, {
+      setShare({ blob, url: URL.createObjectURL(blob) })
+    } catch {
+      setShare(null)
+      showToast?.("카드 이미지를 만들지 못했어요. 잠시 후 다시 시도해주세요.")
+    }
+  }
+
+  const closeSharePreview = () => {
+    setShare((current) => {
+      if (current?.url) URL.revokeObjectURL(current.url)
+      return null
+    })
+  }
+
+  // 미리보기 아래 공유하기 — 이미 만든 이미지를 그대로 공유
+  const handleShareNow = async () => {
+    if (!share?.blob || imgBusy) return
+    setImgBusy("share")
+    try {
+      const result = await shareImage(share.blob, {
         filename: sanitizeCardFilename(name),
         title: `${name} · LOCA`,
         text: `${name} — 내 동네를 기록하는 지도 LOCA`,
@@ -221,19 +251,17 @@ export function PlaceFlipCard({
       }
       if (result === "downloaded") showToast?.("이미지를 저장했어요. 인스타에 올려보세요!")
     } catch {
-      showToast?.("이미지를 만들지 못했어요. 잠시 후 다시 시도해주세요.")
+      showToast?.("공유에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setImgBusy(null)
     }
   }
 
-  const handleDownloadImage = async () => {
-    if (imgBusy) return
+  const handleDownloadNow = () => {
+    if (!share?.blob || imgBusy) return
     setImgBusy("download")
     try {
-      const blob = await capturePosterBlob(posterRef.current)
-      if (!blob) throw new Error("capture failed")
-      downloadImage(blob, sanitizeCardFilename(name))
+      downloadImage(share.blob, sanitizeCardFilename(name))
       logEvent("place_card_share", { meta: { feature_id: feature?.id, method: "download", surface: "place_card" } })
       showToast?.("카드를 저장했어요")
     } catch {
@@ -244,6 +272,7 @@ export function PlaceFlipCard({
   }
 
   return (
+    <>
     <div className="bd-flipov" onClick={onClose} role="presentation">
       <div className="bd-stage" onClick={(event) => event.stopPropagation()}>
         <button type="button" className="bd-flipclose" onClick={onClose} aria-label="닫기">✕</button>
@@ -257,6 +286,7 @@ export function PlaceFlipCard({
           <div className="bd-face bd-face--back" role="dialog" aria-modal="true" aria-label={`${name} 상세`}>
             <div className="bd-chead">
               <span className="bd-cno">N.{dexNo || "000"} · {name}</span>
+              <button type="button" className="bd-shareico" onClick={openSharePreview} aria-label="공유 카드 만들기">📤 공유</button>
               <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
             </div>
 
@@ -342,24 +372,6 @@ export function PlaceFlipCard({
             </div>
 
             <div className="bd-backfoot">
-              <div className="bd-footrow">
-                <button
-                  type="button"
-                  className="bd-btn bd-btn--dark"
-                  onClick={handleShareImage}
-                  disabled={Boolean(imgBusy)}
-                >
-                  {imgBusy === "share" ? "준비 중…" : "📤 공유하기"}
-                </button>
-                <button
-                  type="button"
-                  className="bd-btn bd-btn--paper"
-                  onClick={handleDownloadImage}
-                  disabled={Boolean(imgBusy)}
-                >
-                  {imgBusy === "download" ? "저장 중…" : "⬇ 다운로드"}
-                </button>
-              </div>
               <button
                 type="button"
                 className="bd-btn bd-btn--red"
@@ -380,5 +392,38 @@ export function PlaceFlipCard({
         <PlaceSharePoster feature={feature} dexNo={dexNo} mapTitle={mapTitle} innerRef={posterRef} />
       </div>
     </div>
+
+    {/* 공유 미리보기 — 상단 공유 버튼을 누르면 실제 카드(시안)를 보여주고 그 아래에서 공유/저장 */}
+    {share ? (
+      <div className="csp-share-ov" onClick={closeSharePreview} role="presentation">
+        <div className="csp-share-panel" onClick={(event) => event.stopPropagation()}>
+          <button type="button" className="csp-share-close" onClick={closeSharePreview} aria-label="닫기">✕</button>
+          <div className="csp-share-imgwrap">
+            {share.loading
+              ? <span className="csp-share-spin">공유 카드 만드는 중…</span>
+              : <img className="csp-share-img" src={share.url} alt={`${name} 공유 카드`} />}
+          </div>
+          <div className="csp-share-acts">
+            <button
+              type="button"
+              className="bd-btn bd-btn--dark"
+              onClick={handleShareNow}
+              disabled={share.loading || Boolean(imgBusy)}
+            >
+              {imgBusy === "share" ? "준비 중…" : "📤 공유하기"}
+            </button>
+            <button
+              type="button"
+              className="bd-btn bd-btn--paper"
+              onClick={handleDownloadNow}
+              disabled={share.loading || Boolean(imgBusy)}
+            >
+              {imgBusy === "download" ? "저장 중…" : "⬇ 다운로드"}
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   )
 }
