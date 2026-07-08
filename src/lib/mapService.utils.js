@@ -347,21 +347,29 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
 
   if (!regionName) return null
 
+  // region 쓰기는 트리거로 updated_at 을 갱신한다. 갱신된 값을 함께 돌려줘야
+  // 호출부(App)가 클라이언트 캐시의 updatedAt 을 맞춰, 이후 편집 저장이
+  // 낙관적 잠금에 걸려 "다른 사용자가 먼저 수정했어요" 로 오판되지 않는다.
+  let updatedAt = null
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("map_features")
       .update({ region_name: regionName, region_code: regionCode })
       .eq("id", featureId)
+      .select("updated_at")
+      .maybeSingle()
     if (error) {
       const msg = `${error.message || ""}`.toLowerCase()
       if (!msg.includes("region_name") && !msg.includes("region_code") && error.code !== "42703" && error.code !== "PGRST204") {
         throw error
       }
+    } else {
+      updatedAt = data?.updated_at || null
     }
   } catch {
     // Region tagging is best-effort and must never affect feature saves.
   }
-  return { regionName, regionCode }
+  return { regionName, regionCode, updatedAt }
 }
 
 export async function requireUser() {

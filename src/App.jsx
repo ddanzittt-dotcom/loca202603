@@ -531,13 +531,18 @@ export default function App() {
     if (regionBackfillRef.current === cloudLoadedUserId) return
     regionBackfillRef.current = cloudLoadedUserId
     backfillRegionNames(featuresRef.current, {
-      onTagged: (id, regionName, regionCode) => {
+      onTagged: (id, regionName, regionCode, updatedAt) => {
+        const patch = updatedAt ? { regionName, regionCode, updatedAt } : { regionName, regionCode }
         setFeatures((current) => current.map((feature) => (
-          feature.id === id ? { ...feature, regionName, regionCode } : feature
+          feature.id === id ? { ...feature, ...patch } : feature
         )))
+        // 편집 중인 시트가 이 카드면 updatedAt 도 맞춰줘야 저장이 가짜 충돌로 막히지 않는다.
+        if (updatedAt) {
+          setFeatureSheet((sheet) => (sheet && sheet.id === id ? { ...sheet, updatedAt } : sheet))
+        }
       },
     }).catch(() => {})
-  }, [cloudMode, cloudDataReady, cloudLoadedUserId, setFeatures])
+  }, [cloudMode, cloudDataReady, cloudLoadedUserId, setFeatures, setFeatureSheet])
   const hasStoredPersonalCacheForUser = Boolean(authUser?.id && storedCloudUserId === authUser.id)
   const isFirstCloudLoadForUser = cloudLoading && !cloudDataReady && cloudLoadedUserId !== authUser?.id && !hasStoredPersonalCacheForUser
   const requiresAuthForCurrentTab =

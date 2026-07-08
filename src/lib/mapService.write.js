@@ -309,7 +309,7 @@ export async function backfillRegionNames(features, { onTagged, max = 30, delayM
   let tagged = 0
   for (const f of targets) {
     const res = await reverseGeocodeAndTag(supabase, f.id, Number(f.lat), Number(f.lng)).catch(() => null)
-    if (res?.regionName) { tagged += 1; onTagged?.(f.id, res.regionName, res.regionCode || null) }
+    if (res?.regionName) { tagged += 1; onTagged?.(f.id, res.regionName, res.regionCode || null, res.updatedAt || null) }
     if (delayMs) await new Promise((resolve) => setTimeout(resolve, delayMs))
   }
   return tagged
