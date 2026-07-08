@@ -1,0 +1,61 @@
+/* ============================================================
+ * 지도 편집 리디자인 후속 조정 (스크린샷 피드백) — 마지막 로드
+ * 스코프: body.loca-editor-open
+ * ============================================================ */
+
+/* ── 1) 우측 툴 레일: 최대한 작게 + 내위치와 최대 간격 ──
+ * 트레이(record-panel) 열려도 툴이 중앙으로 안 올라오게 clamp 규칙 무력화. */
+body.loca-editor-open .map-locate-button {
+  width: 46px !important;
+  padding: 6px 0 !important;
+  gap: 2px !important;
+  top: 150px !important;
+  bottom: auto !important;
+}
+body.loca-editor-open .map-locate-button svg { width: 16px !important; height: 16px !important; }
+body.loca-editor-open .map-locate-button__label { font-size: 9.5px !important; }
+
+body.loca-editor-open .me-fabs,
+body.loca-editor-open .map-editor--record-panel-open .me-fabs {
+  bottom: 150px !important;
+  top: auto !important;
+  gap: 8px !important;
+}
+body.loca-editor-open .me-fab--tool {
+  width: 46px !important;
+  padding: 6px 0 !important;
+  gap: 2px !important;
+}
+body.loca-editor-open .me-fab--tool svg { width: 15px !important; height: 15px !important; }
+body.loca-editor-open .me-fab--tool span { font-size: 9.5px !important; }
+
+/* ── 2) 편집 배너 세로 스크롤 (도크 높이 초과 시 잘림 방지) ── */
+body.loca-editor-open .fes-sheet--v2 {
+  overflow-y: auto !important;
+}
+
+/* ── 3) 기록 배너 저장 버튼 상하 여백 정리 ── */
+body.loca-editor-open .res-action {
+  padding: 12px 16px 14px !important;
+}
+body.loca-editor-open .res-save {
+  padding: 12px 14px !important;
+  min-height: 0 !important;
+}
+
+/* ── 4) 마커 배너 떠도 '지도 안 기록' 유지 + 최소 자리 ── */
+body.loca-editor-open .map-editor--summary-open .map-list-bar {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+/* 트레이 컴팩트화 */
+body.loca-editor-open .map-list-bar__head { padding: 6px 12px !important; }
+body.loca-editor-open .map-record-filters { padding: 6px 12px 4px !important; }
+body.loca-editor-open .map-place-strip { padding: 8px 12px !important; }
+body.loca-editor-open .map-place-card {
+  padding: 5px 9px !important;
+  min-width: 124px !important;
+  max-width: 180px !important;
+}
+body.loca-editor-open .map-list-bar { bottom: 12px !important; }
