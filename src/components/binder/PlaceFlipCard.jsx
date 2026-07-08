@@ -216,6 +216,7 @@ export function PlaceFlipCard({
   const heroPhoto = representativePhoto(feature)
   const name = (feature.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature.createdAt || feature.updatedAt)
+  const cardTags = (feature.tags || []).map((tag) => `${tag || ""}`.trim()).filter(Boolean)
 
   const handlePhotoFile = async (event) => {
     const file = event.target.files?.[0]
@@ -387,6 +388,14 @@ export function PlaceFlipCard({
                 <span className="bd-tblabel">설명</span>
                 <span>{typedDesc}</span>
               </div>
+
+              {cardTags.length > 0 ? (
+                <div className="bd-tags" aria-label="태그">
+                  {cardTags.map((tag) => (
+                    <span key={tag} className="bd-tag">#{tag}</span>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="bd-spec">
                 <div><span>등록일</span><b>{registered || "—"}</b></div>

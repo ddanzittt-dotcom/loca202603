@@ -41,6 +41,9 @@ export function CollectSheet({
   const [checkingNearby, setCheckingNearby] = useState(false)
   const [selectedSpot, setSelectedSpot] = useState(null) // null = NEW FIND
   const [name, setName] = useState("")
+  const [desc, setDesc] = useState("") // 한줄 설명
+  const [tagList, setTagList] = useState([]) // 사용자 태그
+  const [tagInput, setTagInput] = useState("")
   const [saving, setSaving] = useState(false)
   const searchTimerRef = useRef(null)
 
@@ -54,6 +57,9 @@ export function CollectSheet({
     setCandidates([])
     setSelectedSpot(null)
     setName("")
+    setDesc("")
+    setTagList([])
+    setTagInput("")
     setSaving(false)
   }, [open])
 
@@ -163,6 +169,25 @@ export function CollectSheet({
   const categoryId = selectedSpot?.category || "etc"
   const pixelId = getDefaultPixelIdForCategory(isNewFind ? "etc" : categoryId)
 
+  // 태그 입력 — 쉼표/엔터로 칩 추가, 중복·빈값 제거, 최대 6개
+  const addTag = (raw) => {
+    const value = `${raw || ""}`.trim().replace(/^#/, "")
+    if (!value) return
+    setTagList((current) => (
+      current.includes(value) || current.length >= 6 ? current : [...current, value]
+    ))
+    setTagInput("")
+  }
+  const handleTagKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault()
+      addTag(tagInput)
+    } else if (event.key === "Backspace" && !tagInput && tagList.length) {
+      setTagList((current) => current.slice(0, -1))
+    }
+  }
+  const removeTag = (tag) => setTagList((current) => current.filter((item) => item !== tag))
+
   const handleSave = async () => {
     const trimmedName = name.trim()
     if (!point || !trimmedName) {
@@ -171,16 +196,22 @@ export function CollectSheet({
     }
     setSaving(true)
     try {
-      const tags = isNewFind
+      // 자동 태그(카테고리/새발견) + 사용자가 적은 태그 병합 (중복 제거)
+      const autoTags = isNewFind
         ? ["새발견", ...(prefill?.asNewFind && prefill?.tagLabel ? [prefill.tagLabel] : [])]
         : [selectedSpot?.tagLabel || categoryLabel(categoryId)].filter(Boolean)
+      const pendingTag = tagInput.trim().replace(/^#/, "")
+      const userTags = [...tagList, ...(pendingTag ? [pendingTag] : [])]
+      const tags = [...new Set([...autoTags, ...userTags])]
+      // 한줄 설명을 적었으면 note = 설명(카드 설명줄에 노출), 안 적었으면 주소를 note 로 유지
+      const trimmedDesc = desc.trim()
       const base = {
         type: "pin",
         title: trimmedName,
         emojiKind: "pixel",
         emojiPixelId: isNewFind ? "px-star" : pixelId,
         tags,
-        note: selectedSpot?.address || pickedAddress || "",
+        note: trimmedDesc || selectedSpot?.address || pickedAddress || "",
         lat: point.lat,
         lng: point.lng,
       }
@@ -329,14 +360,51 @@ export function CollectSheet({
               </div>
             ) : null}
 
-            <input
-              className="clt-name"
-              type="text"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={isNewFind ? "이 곳에 이름을 붙여주세요" : "장소 이름"}
-              maxLength={40}
-            />
+            <label className="clt-field">
+              <span className="clt-field__label">이름</span>
+              <input
+                className="clt-name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={isNewFind ? "이 곳에 이름을 붙여주세요" : "장소 이름"}
+                maxLength={40}
+              />
+            </label>
+
+            <label className="clt-field">
+              <span className="clt-field__label">한줄 설명</span>
+              <input
+                className="clt-desc"
+                type="text"
+                value={desc}
+                onChange={(event) => setDesc(event.target.value)}
+                placeholder="이곳은 어떤 곳인가요? (선택)"
+                maxLength={60}
+              />
+            </label>
+
+            <div className="clt-field">
+              <span className="clt-field__label">태그</span>
+              <div className="clt-tags">
+                {tagList.map((tag) => (
+                  <button key={tag} type="button" className="clt-tag" onClick={() => removeTag(tag)}>
+                    #{tag}<i aria-hidden="true">✕</i>
+                  </button>
+                ))}
+                <input
+                  className="clt-taginput"
+                  type="text"
+                  value={tagInput}
+                  onChange={(event) => setTagInput(event.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  onBlur={() => addTag(tagInput)}
+                  placeholder={tagList.length ? "" : "예: 조용함, 데이트 (엔터로 추가)"}
+                  maxLength={12}
+                  disabled={tagList.length >= 6}
+                />
+              </div>
+            </div>
 
             <div className="clt-actions">
               <button type="button" className="clt-ghost" onClick={() => setStep("pick")}>위치 다시 고르기</button>

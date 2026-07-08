@@ -2448,7 +2448,66 @@
   font-size: 15px;
   color: #1F1A12;
   padding: 11px 12px;
+  outline: none;
+}
+
+/* 등록 입력 필드 (이름 · 한줄 설명 · 태그) */
+.clt-field {
+  display: block;
   margin-bottom: 12px;
+}
+.clt-field__label {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #8A8574;
+  margin-bottom: 5px;
+}
+.clt-desc {
+  width: 100%;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 14px;
+  color: #1F1A12;
+  padding: 10px 12px;
+  outline: none;
+}
+.clt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  padding: 8px 10px;
+  min-height: 42px;
+}
+.clt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  color: #1F1A12;
+  background: #F5C41B;
+  border: 1.5px solid #1F1A12;
+  border-radius: 999px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.clt-tag i { font-style: normal; font-size: 10px; opacity: 0.7; }
+.clt-taginput {
+  flex: 1;
+  min-width: 90px;
+  border: none;
+  background: transparent;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 13px;
+  color: #1F1A12;
+  padding: 3px 2px;
   outline: none;
 }
 
@@ -4265,6 +4324,23 @@
   display: block;
   margin-bottom: 4px;
 }
+/* 카드 태그 칩 (설명 아래) */
+.bd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.bd-tag {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: #1B1B18;
+  background: #F5C41B;
+  border: 1.5px solid #1B1B18;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
 .bd-spec {
   display: flex;
   flex-direction: column;
