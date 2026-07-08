@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -793,7 +794,7 @@ export function MapEditorScreen({
             </button>
           </div>
         ) : null}
-        {selectedFeatureSummary ? (
+        {selectedFeatureSummary ? createPortal(
           <>
           <button
             type="button"
@@ -879,7 +880,8 @@ export function MapEditorScreen({
               />
             ) : null}
           </div>
-          </>
+          </>,
+          document.body,
         ) : null}
         {summaryRecordOpen && selectedFeatureSummary ? (
           <RecordEntrySheet

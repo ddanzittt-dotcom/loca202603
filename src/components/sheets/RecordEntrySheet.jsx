@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Plus, X } from "lucide-react"
 import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
 import { PhotoViewer } from "../visuals/PhotoViewer"
@@ -70,7 +71,8 @@ export function RecordEntrySheet({
   const isEditMode = mode === "edit"
   const closeWithoutSave = () => onClose?.({ saved: false })
 
-  return (
+  // 포털 — 지도 편집기 등 transform 걸린 조상 안에서 렌더돼도 뷰포트 기준 중앙에 뜨게.
+  return createPortal(
     <>
       <div className="res-backdrop" onClick={closeWithoutSave} />
       <section className="res-sheet" role="dialog" aria-modal="true" aria-label="오늘의 기록 남기기">
@@ -166,6 +168,7 @@ export function RecordEntrySheet({
           onClose={() => setViewerIndex(null)}
         />
       </section>
-    </>
+    </>,
+    document.body,
   )
 }
