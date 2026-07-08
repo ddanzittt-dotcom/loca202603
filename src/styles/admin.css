@@ -86,6 +86,37 @@
   color: #fff;
 }
 
+/* 섹션 제목 */
+.admin-section-title {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  letter-spacing: 0.02em;
+}
+
+/* 운영 통계 */
+.admin-overview { margin-bottom: 20px; }
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 9px;
+}
+
+.admin-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-big);
+  background: var(--card);
+}
+.admin-stat__label { font-size: 12px; font-weight: 700; color: var(--ink-mute); }
+.admin-stat__value { font-size: 24px; font-weight: 800; color: var(--ink-strong); line-height: 1.1; }
+.admin-stat__sub { font-size: 11px; color: var(--ink-faint); }
+
 /* 목록 */
 .admin-list { display: flex; flex-direction: column; gap: 10px; }
 

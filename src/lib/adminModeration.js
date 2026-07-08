@@ -57,6 +57,18 @@ export async function listModerationRecords(status = "pending", limit = 80) {
   return Array.isArray(parsed?.records) ? parsed.records : []
 }
 
+// 운영 통계 개요 (get_admin_overview RPC) — platform_admin 전용
+export async function getAdminOverview() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_overview")
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
 export async function updateModerationStatus(recordId, status) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc("update_community_moderation_status", {

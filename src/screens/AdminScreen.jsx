@@ -5,6 +5,7 @@ import {
   MODERATION_ACTIONS,
   MODERATION_TABS,
   checkPlatformAdmin,
+  getAdminOverview,
   listModerationRecords,
   updateModerationStatus,
 } from "../lib/adminModeration"
@@ -14,6 +15,10 @@ import {
 // 신고/대기 커뮤니티 기록을 승인/반려/숨김 처리한다.
 
 const ACTION_ICON = { approved: CheckCircle2, rejected: XCircle, hidden: EyeOff }
+
+function num(value) {
+  return value === null || value === undefined ? "–" : Number(value).toLocaleString("ko-KR")
+}
 
 function formatDate(value) {
   if (!value) return ""
@@ -25,6 +30,16 @@ function formatDate(value) {
   }
 }
 
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="admin-stat">
+      <span className="admin-stat__label">{label}</span>
+      <span className="admin-stat__value">{value}</span>
+      {sub ? <span className="admin-stat__sub">{sub}</span> : null}
+    </div>
+  )
+}
+
 export function AdminScreen() {
   // phase: 'loading' | 'anon' | 'forbidden' | 'ready'
   const [phase, setPhase] = useState("loading")
@@ -33,6 +48,8 @@ export function AdminScreen() {
   const [listLoading, setListLoading] = useState(false)
   const [listError, setListError] = useState("")
   const [actioningId, setActioningId] = useState(null)
+  const [overview, setOverview] = useState(null)
+  const [overviewLoading, setOverviewLoading] = useState(false)
   const [toast, setToast] = useState("")
   const toastTimer = useRef(null)
 
@@ -80,6 +97,21 @@ export function AdminScreen() {
       setListLoading(false)
     }
   }, [])
+
+  const loadOverview = useCallback(async () => {
+    setOverviewLoading(true)
+    try {
+      setOverview(await getAdminOverview())
+    } catch {
+      setOverview(null)
+    } finally {
+      setOverviewLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (phase === "ready") loadOverview()
+  }, [phase, loadOverview])
 
   useEffect(() => {
     if (phase === "ready") loadList(activeTab)
@@ -140,12 +172,34 @@ export function AdminScreen() {
           <ShieldCheck size={18} aria-hidden="true" />
           <span>커뮤니티 관리</span>
         </div>
-        <button type="button" className="admin-refresh" onClick={() => loadList(activeTab)} disabled={listLoading}>
-          <RefreshCw size={14} aria-hidden="true" className={listLoading ? "admin-spin" : ""} />
+        <button type="button" className="admin-refresh" onClick={() => { loadOverview(); loadList(activeTab) }} disabled={listLoading || overviewLoading}>
+          <RefreshCw size={14} aria-hidden="true" className={(listLoading || overviewLoading) ? "admin-spin" : ""} />
           새로고침
         </button>
       </header>
 
+      <section className="admin-overview" aria-label="운영 통계">
+        <h2 className="admin-section-title">운영 현황</h2>
+        {overviewLoading && !overview ? (
+          <div className="admin-center admin-center--pad"><Loader2 className="admin-spin" size={18} aria-hidden="true" /></div>
+        ) : !overview ? (
+          <p className="admin-error">통계를 불러오지 못했어요. 056 마이그레이션이 적용됐는지 확인해 주세요.</p>
+        ) : (
+          <div className="admin-stats">
+            <StatCard label="전체 가입자" value={num(overview.users_total)} sub={`최근 7일 +${num(overview.users_7d)} · 30일 +${num(overview.users_30d)}`} />
+            <StatCard label="전체 지도" value={num(overview.maps_total)} sub={`발행 ${num(overview.maps_published)} · 7일 +${num(overview.maps_7d)}`} />
+            <StatCard label="장소·기록" value={num(overview.features_total)} sub={`장소 ${num(overview.features_pin)} · 길 ${num(overview.features_route)} · 영역 ${num(overview.features_area)}`} />
+            <StatCard label="기록(메모)" value={num(overview.memos_total)} sub={`팔로우 ${num(overview.follows_total)}건`} />
+            <StatCard label="누적 조회수" value={num(overview.views_total)} sub={`최근 7일 ${num(overview.views_7d)}`} />
+            <StatCard label="순 방문자(30일)" value={num(overview.visitors_30d)} sub={overview.visitors_30d === null ? "집계 불가" : "고유 세션 기준"} />
+            {overview.community_total !== null ? (
+              <StatCard label="커뮤니티 기록" value={num(overview.community_total)} sub={`승인 대기 ${num(overview.community_pending)}`} />
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      <h2 className="admin-section-title">커뮤니티 검수</h2>
       <nav className="admin-tabs" aria-label="상태 필터">
         {MODERATION_TABS.map((tab) => (
           <button
