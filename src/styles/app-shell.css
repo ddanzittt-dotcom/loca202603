@@ -625,15 +625,21 @@
     var(--card);
 }
 
-.app-shell--soft-social .web-auth-workspace__intro {
-  border-color: rgba(23, 24, 23, 0.08);
-  border-radius: 12px;
+/* 로그인 화면 배경 통일 — 고양이 카드 배경을 전체 화면 배경으로 */
+.app-shell--soft-social .web-auth-screen {
   background:
-    radial-gradient(circle at 18% 20%, rgba(255, 224, 208, 0.95), transparent 30%),
-    radial-gradient(circle at 78% 78%, rgba(221, 245, 232, 0.9), transparent 34%),
+    radial-gradient(circle at 18% 22%, rgba(255, 224, 208, 0.9), transparent 30%),
+    radial-gradient(circle at 82% 78%, rgba(221, 245, 232, 0.85), transparent 32%),
     linear-gradient(90deg, rgba(23, 24, 23, 0.035) 1px, transparent 1px) 0 0 / 54px 54px,
     linear-gradient(0deg, rgba(23, 24, 23, 0.03) 1px, transparent 1px) 0 0 / 54px 54px,
-    rgba(255, 255, 255, 0.76);
+    #FAF6EC;
+}
+
+/* 고양이 카드는 전체 배경 위에 경계 없이 얹힘 */
+.app-shell--soft-social .web-auth-workspace__intro {
+  border-color: transparent;
+  border-radius: 12px;
+  background: transparent;
 }
 
 .web-auth-workspace__intro h1 {

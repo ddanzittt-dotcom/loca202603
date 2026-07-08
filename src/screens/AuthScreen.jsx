@@ -1,5 +1,5 @@
 import { useRef, useState } from "react"
-import { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithKakao } from "../lib/auth"
+import { signInWithEmail, signUpWithEmail } from "../lib/auth"
 import { Turnstile } from "../components/Turnstile"
 
 function friendlyError(message = "") {
@@ -42,19 +42,6 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
       // Turnstile 토큰은 1회용 — 실패 시 새 토큰을 받도록 위젯 리셋
       setCaptchaToken("")
       turnstileRef.current?.reset()
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleOAuth = async (provider) => {
-    setErrorMessage("")
-    setSubmitting(true)
-    try {
-      if (provider === "google") await signInWithGoogle()
-      else if (provider === "kakao") await signInWithKakao()
-    } catch (e) {
-      setErrorMessage(friendlyError(e.message))
     } finally {
       setSubmitting(false)
     }
@@ -118,34 +105,6 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
           <button className="button button--primary" type="submit" disabled={submitting}>
             {submitting ? "처리 중..." : mode === "signup" ? "계정 만들기" : "로그인"}
           </button>
-
-          <div className="auth-divider">
-            <hr />
-            <span>간편 로그인</span>
-            <hr />
-          </div>
-
-          <div className="auth-social-buttons">
-            <button
-              className="auth-social-btn auth-social-btn--kakao"
-              type="button"
-              disabled={submitting}
-              onClick={() => handleOAuth("kakao")}
-            >
-              <svg className="auth-social-btn__icon" viewBox="0 0 20 20" fill="none"><path d="M10 1C4.48 1 0 4.45 0 8.68c0 2.74 1.86 5.15 4.66 6.51-.16.57-.58 2.09-.66 2.42-.1.4.15.4.31.29.13-.08 2.04-1.36 2.86-1.92.6.09 1.22.13 1.83.13 5.52 0 10-3.45 10-7.68S15.52 1 10 1z" fill="currentColor"/></svg>
-              <span>카카오로 계속하기</span>
-            </button>
-
-            <button
-              className="auth-social-btn auth-social-btn--google"
-              type="button"
-              disabled={submitting}
-              onClick={() => handleOAuth("google")}
-            >
-              <svg className="auth-social-btn__icon" viewBox="0 0 20 20"><path d="M19.6 10.23c0-.68-.06-1.36-.17-2.02H10v3.83h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.33z" fill="#4285F4"/><path d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.76-5.58-4.12H1.07v2.58A9.99 9.99 0 0010 20z" fill="#34A853"/><path d="M4.42 11.89A6.01 6.01 0 014.1 10c0-.66.11-1.3.32-1.89V5.53H1.07A9.99 9.99 0 000 10c0 1.61.39 3.14 1.07 4.47l3.35-2.58z" fill="#FBBC05"/><path d="M10 3.96c1.47 0 2.78.5 3.82 1.5l2.86-2.87C14.96.99 12.7 0 10 0A9.99 9.99 0 001.07 5.53l3.35 2.58C5.2 5.72 7.4 3.96 10 3.96z" fill="#EA4335"/></svg>
-              <span>Google로 계속하기</span>
-            </button>
-          </div>
         </form>
       </div>
     </section>
