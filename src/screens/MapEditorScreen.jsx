@@ -895,10 +895,7 @@ export function MapEditorScreen({
                 지도 안 기록 <span className="map-list-bar__count">{nearbyVisibleFeatures.length}/{features.length}</span>
                 <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▼" : "▲"}</span>
               </button>
-            </div>
-            {stripOpen ? (
-              <>
-
+              {stripOpen ? (
                 <div className="map-record-filters" aria-label="지도 안 기록 필터">
                   {RECORD_FILTERS.map((filterItem) => (
                     <button
@@ -912,7 +909,10 @@ export function MapEditorScreen({
                     </button>
                   ))}
                 </div>
-
+              ) : null}
+            </div>
+            {stripOpen ? (
+              <>
                 {nearbyVisibleFeatures.length === 0 ? (
                   <div className="map-list-empty">
                     <strong>조건에 맞는 기록이 없어요</strong>
