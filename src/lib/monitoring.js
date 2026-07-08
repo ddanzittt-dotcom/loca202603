@@ -1,12 +1,14 @@
 import * as Sentry from "@sentry/react"
 
 // 에러 추적(Sentry) 래퍼.
-// VITE_SENTRY_DSN 이 설정된 경우에만 활성화되고, 없으면 완전 no-op 이라
-// 로컬/데모 환경이나 DSN 미설정 상태에서도 앱 동작에 영향을 주지 않는다.
+// DSN 은 클라이언트에 공개되도록 설계된 값(비밀 아님)이라 기본값을 코드에 둔다.
+// env(VITE_SENTRY_DSN)가 있으면 그걸 우선 사용. 활성화 조건은 initMonitoring 참조.
 
 let enabled = false
 
-const DSN = import.meta.env.VITE_SENTRY_DSN
+// 프로덕션 기본 DSN (LOCA Sentry 프로젝트). env 로 덮어쓸 수 있음.
+const FALLBACK_DSN = "https://bdf0ddaf5448c2e5e9bb048a8b6437e1@o4511700656848896.ingest.us.sentry.io/4511700666351616"
+const DSN = import.meta.env.VITE_SENTRY_DSN || FALLBACK_DSN
 
 // 로그/리포트에서 걸러낼 민감 정보 키 (개인정보 최소 수집 원칙)
 function scrubEvent(event) {
@@ -37,12 +39,15 @@ const IGNORED_MESSAGES = [
 
 export function initMonitoring() {
   if (enabled || !DSN) return
+  // 명시적 env 없이 기본 DSN 만 있을 땐 프로덕션 빌드에서만 활성화한다.
+  // (로컬 dev 에러가 Sentry 로 쏟아지는 것 방지 — env 를 직접 넣으면 dev 에서도 켤 수 있음)
+  if (!import.meta.env.VITE_SENTRY_DSN && !import.meta.env.PROD) return
   try {
     Sentry.init({
       dsn: DSN,
       environment: import.meta.env.MODE,
-      // 성능 추적은 소량만 샘플링 (비용/개인정보 최소화)
-      tracesSampleRate: 0.1,
+      // 성능 추적은 사용 안 함 (Tracing 제품 미사용, 무료 한도 보호)
+      tracesSampleRate: 0,
       // 세션 리플레이(화면 녹화)는 개인정보 보호를 위해 사용하지 않음
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
