@@ -1,0 +1,88 @@
+/* ============================================================
+ * 지도 안 기록 하단 가로 바 하드룩 (개발지시서 §3-3, §6) — Phase 6
+ * 스코프: body.loca-editor-open
+ * 항목: 앞 아이콘 제거 → 종류색 점 + 이름 + 종류 + (장소)기록 수 배지
+ * ============================================================ */
+
+body.loca-editor-open .map-list-bar {
+  background: #FFFDF4 !important;
+  border: 2.5px solid #1B1B18 !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 0 #1B1B18 !important;
+  overflow: hidden !important;
+}
+body.loca-editor-open .map-list-bar__head {
+  background: #FBF3D9 !important;
+  border-bottom: 2.5px solid #1B1B18 !important;
+}
+body.loca-editor-open .map-list-bar__toggle {
+  font-family: "DungGeunMo", "Pretendard", monospace !important;
+  color: #1B1B18 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+body.loca-editor-open .map-list-bar__count { color: #E8442E !important; }
+
+/* 필터 칩 */
+body.loca-editor-open .map-filter-chip--record {
+  border: 1.5px solid #1B1B18 !important;
+  border-radius: 99px !important;
+  background: #FFFDF4 !important;
+  color: #1B1B18 !important;
+  font-weight: 600 !important;
+}
+body.loca-editor-open .map-filter-chip--record.is-active {
+  background: #1B1B18 !important;
+  color: #FFFDF4 !important;
+}
+
+/* 항목 카드 */
+body.loca-editor-open .map-place-card {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  border: 2px solid #1B1B18 !important;
+  border-radius: 10px !important;
+  background: #FFFDF4 !important;
+  box-shadow: 2.5px 2.5px 0 #1B1B18 !important;
+  padding: 7px 11px !important;
+}
+body.loca-editor-open .map-place-card.is-active { background: #FBF3D9 !important; }
+
+/* 종류색 점 */
+body.loca-editor-open .me-strip-dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #1B1B18;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+body.loca-editor-open .me-strip-dot--pin { background: #E8442E; }
+body.loca-editor-open .me-strip-dot--route { background: #5FA97E; }
+body.loca-editor-open .me-strip-dot--area { background: #7F77DD; }
+
+body.loca-editor-open .me-strip-info { min-width: 0; flex: 1; }
+body.loca-editor-open .me-strip-info strong {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #1B1B18 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+body.loca-editor-open .me-strip-kind {
+  font-size: 11px !important;
+  color: #8A8574 !important;
+}
+body.loca-editor-open .me-strip-rec {
+  font-family: "DungGeunMo", "Pretendard", monospace !important;
+  font-size: 10px !important;
+  color: #8A8574 !important;
+  background: #FBF3D9 !important;
+  border: 1.5px solid #1B1B18 !important;
+  border-radius: 5px !important;
+  padding: 1px 5px !important;
+  flex-shrink: 0;
+}

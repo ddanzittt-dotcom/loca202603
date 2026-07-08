@@ -9,7 +9,6 @@ import { ShareSheet } from "../components/sheets/ShareSheet"
 import { RecordEntrySheet } from "../components/sheets/RecordEntrySheet"
 import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
-import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { createId } from "../lib/appUtils"
 import { buildFeatureRecordGroups, recordEntryId, summarizeRecordGroup } from "../lib/featureRecordGroups"
@@ -992,28 +991,17 @@ export function MapEditorScreen({
                         onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                         onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                       >
-                        <div className={`me-strip-icon me-strip-icon--${feature.type}`}>
-                          {feature.type === "pin" ? (
-                            <FeatureEmoji
-                              emoji={resolvePlaceMarkerEmoji(feature)}
-                              size={22}
-                              unicodeFontSize={17}
-                              className="me-strip-icon__emoji"
-                            />
-                          ) : feature.type === "route" ? (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
-                          ) : (
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#854F0B" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
-                          )}
-                        </div>
+                        {/* §1: 앞 핀 아이콘 제거 → 종류색 점 + 이름 + 종류 + (장소)기록 수 */}
+                        <span className={`me-strip-dot me-strip-dot--${feature.type}`} aria-hidden="true" />
                         <div className="me-strip-info">
                           <strong>{feature.title}</strong>
-                          <span>
-                            {feature.type === "pin"
-                              ? `기록 ${buildFeatureRecordGroups(feature).length}`
-                              : (feature.note || (feature.tags || []).join(" · ") || (feature.type === "route" ? "길" : "영역"))}
+                          <span className="me-strip-kind">
+                            {feature.type === "pin" ? "장소" : feature.type === "route" ? "길" : "영역"}
                           </span>
                         </div>
+                        {feature.type === "pin" ? (
+                          <span className="me-strip-rec">기록 {buildFeatureRecordGroups(feature).length}</span>
+                        ) : null}
                       </div>
                     ))}
                   </div>
