@@ -4307,6 +4307,7 @@
   min-height: 0;
 }
 .bd-textbox {
+  position: relative;
   background: #FFFDF4;
   border: 2.5px solid #1B1B18;
   border-radius: 8px;
@@ -4317,6 +4318,24 @@
   line-height: 1.75;
   color: #1B1B18;
 }
+/* 설명 박스 오른쪽 위 편집 버튼 */
+.bd-editbtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  line-height: 1;
+  color: #1B1B18;
+  background: #FFFDF4;
+  border: 1.5px solid #1B1B18;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  box-shadow: 1px 1px 0 rgba(27, 27, 24, 0.3);
+}
+.bd-editbtn:hover { background: #F5C41B; }
 .bd-tblabel {
   font-family: "DungGeunMo", monospace;
   font-size: 10.5px;

@@ -405,9 +405,6 @@ export function PlaceFlipCard({
             <div className="bd-chead">
               <span className="bd-cno">N.{dexNo || "000"} · {name}</span>
               <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
-              {onUpdateCard && !editing ? (
-                <button type="button" className="bd-shareico" onClick={openEdit} aria-label="카드 편집">✎ 편집</button>
-              ) : null}
               <button type="button" className="bd-shareico" onClick={openSharePreview} aria-label="공유 카드 만들기">📤 공유</button>
               <button type="button" className="bd-headclose" onClick={onClose} aria-label="닫기">✕</button>
             </div>
@@ -494,6 +491,16 @@ export function PlaceFlipCard({
                 <>
                   <div className="bd-textbox" onClick={completeTyping} role="presentation">
                     <span className="bd-tblabel">설명</span>
+                    {onUpdateCard ? (
+                      <button
+                        type="button"
+                        className="bd-editbtn"
+                        onClick={(event) => { event.stopPropagation(); openEdit() }}
+                        aria-label="카드 편집"
+                      >
+                        ✎ 편집
+                      </button>
+                    ) : null}
                     <span>{typedDesc}</span>
                   </div>
 
