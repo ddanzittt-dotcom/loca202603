@@ -1767,6 +1767,77 @@
   text-overflow: ellipsis;
 }
 
+/* ── 빈 상태 픽셀 스킨 — 내 지도 / 내 장소 ──
+   빈 슬롯(bd-sleeve)과 같은 점선 잉크 프레임 + 픽셀 타이포 + 레트로 버튼 */
+
+.app-shell--soft-social .web-section--maps .empty-state-card {
+  border: 2.5px dashed rgba(31, 26, 18, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 253, 244, 0.5);
+  padding: 52px 20px 48px;
+  gap: 8px;
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card strong,
+.app-shell--soft-social .web-section--places .pl-empty__title {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  color: var(--px-ink, #1F1A12);
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card p,
+.app-shell--soft-social .web-section--places .pl-empty__desc {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 13px;
+  color: #8B7F63;
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card__icon {
+  border-radius: 8px;
+  border: 2px solid var(--px-ink, #1F1A12);
+  background: var(--px-yellow, #FFD338);
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.85);
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card .button.button--primary,
+.app-shell--soft-social .web-section--places .pl-empty__action {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  border: 2px solid var(--px-ink, #1F1A12);
+  border-radius: 8px;
+  background: var(--px-red, #E5493A);
+  color: #FFF6E8;
+  box-shadow: 3px 3px 0 var(--px-ink, #1F1A12);
+  padding: 9px 18px;
+  margin-top: 14px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card .button.button--primary:hover,
+.app-shell--soft-social .web-section--places .pl-empty__action:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--px-ink, #1F1A12);
+}
+
+.app-shell--soft-social .web-section--maps .empty-state-card .button.button--primary:active,
+.app-shell--soft-social .web-section--places .pl-empty__action:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--px-ink, #1F1A12);
+}
+
+.app-shell--soft-social .web-section--places .pl-empty {
+  border: 2.5px dashed rgba(31, 26, 18, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 253, 244, 0.5);
+  margin-top: 20px;
+  padding: 52px 20px 48px;
+  gap: 8px;
+}
+
 /* ── 좌레일 픽셀 스킨 (데스크톱) ── */
 
 @media (min-width: 960px) {
@@ -3799,21 +3870,21 @@
 .bd-search {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  height: 46px;
   background: #FFFDF4;
   border: 2px solid #1B1B18;
-  border-radius: 10px;
-  box-shadow: 4px 4px 0 #1B1B18;
-  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #1B1B18;
+  padding: 0 14px;
   margin: 18px 0 0;
-  max-width: 620px;
   color: #8A8574;
 }
 .bd-search input {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 15px;
+  font-size: 13px;
   flex: 1;
   color: #1B1B18;
   font-family: Pretendard, sans-serif;
