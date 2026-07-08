@@ -4,6 +4,7 @@ import { KoreaMap } from "../koreaMap"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { createFeature } from "../../lib/mapService"
 import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
+import { fetchPlaceMatch } from "../../lib/placeMatch"
 import { createId } from "../../lib/appUtils"
 import { PLACE_CATEGORIES, getDefaultPixelIdForCategory } from "../../lib/placeCategories"
 
@@ -17,15 +18,6 @@ const SEOUL_CENTER = { lat: 37.5665, lng: 126.978, zoom: 13 }
 
 function categoryLabel(categoryId) {
   return PLACE_CATEGORIES.find((category) => category.id === categoryId)?.label || "그 외"
-}
-
-async function fetchPlaceMatch({ lat, lng, q }) {
-  const params = new URLSearchParams({ lat: lat.toFixed(5), lng: lng.toFixed(5) })
-  if (q) params.set("q", q)
-  const response = await fetch(`/api/place-match?${params.toString()}`)
-  if (!response.ok) throw new Error("place-match failed")
-  const data = await response.json()
-  return Array.isArray(data.candidates) ? data.candidates : []
 }
 
 export function CollectSheet({

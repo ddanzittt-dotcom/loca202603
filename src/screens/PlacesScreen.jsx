@@ -69,7 +69,8 @@ export function PlacesScreen({
     return sorted.filter((feature) => {
       const memoTexts = (feature.memos || []).map((memo) => memo.text || "")
       const typeLabel = getPlaceType(feature)?.label || ""
-      const haystack = [feature.title, feature.note, typeLabel, ...(feature.tags || []), ...memoTexts]
+      // regionName(동네 태그)도 검색 대상 — 대시보드 "동네 도감" 타일 클릭이 동네명으로 진입한다
+      const haystack = [feature.title, feature.note, feature.regionName, typeLabel, ...(feature.tags || []), ...memoTexts]
         .join(" ")
         .toLowerCase()
       return haystack.includes(normalized)

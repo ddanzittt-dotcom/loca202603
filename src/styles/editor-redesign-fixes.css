@@ -3,31 +3,31 @@
  * 스코프: body.loca-editor-open
  * ============================================================ */
 
-/* ── 1) 우측 툴 레일: 최대한 작게 + 내위치와 최대 간격 ──
+/* ── 1) 우측 툴 레일: 버튼 반으로 축소 + 내위치 맨 위 ──
  * 트레이(record-panel) 열려도 툴이 중앙으로 안 올라오게 clamp 규칙 무력화. */
 body.loca-editor-open .map-locate-button {
-  width: 46px !important;
-  padding: 6px 0 !important;
-  gap: 2px !important;
-  top: 150px !important;
+  width: 36px !important;
+  padding: 4px 0 !important;
+  gap: 1px !important;
+  top: 138px !important;
   bottom: auto !important;
 }
-body.loca-editor-open .map-locate-button svg { width: 16px !important; height: 16px !important; }
-body.loca-editor-open .map-locate-button__label { font-size: 9.5px !important; }
+body.loca-editor-open .map-locate-button svg { width: 13px !important; height: 13px !important; }
+body.loca-editor-open .map-locate-button__label { font-size: 8px !important; }
 
 body.loca-editor-open .me-fabs,
 body.loca-editor-open .map-editor--record-panel-open .me-fabs {
   bottom: 150px !important;
   top: auto !important;
-  gap: 8px !important;
+  gap: 6px !important;
 }
 body.loca-editor-open .me-fab--tool {
-  width: 46px !important;
-  padding: 6px 0 !important;
-  gap: 2px !important;
+  width: 36px !important;
+  padding: 4px 0 !important;
+  gap: 1px !important;
 }
-body.loca-editor-open .me-fab--tool svg { width: 15px !important; height: 15px !important; }
-body.loca-editor-open .me-fab--tool span { font-size: 9.5px !important; }
+body.loca-editor-open .me-fab--tool svg { width: 12px !important; height: 12px !important; }
+body.loca-editor-open .me-fab--tool span { font-size: 8px !important; }
 
 /* ── 2) 편집 배너 세로 스크롤 (도크 높이 초과 시 잘림 방지) ── */
 body.loca-editor-open .fes-sheet--v2 {
@@ -49,13 +49,30 @@ body.loca-editor-open .map-editor--summary-open .map-list-bar {
   pointer-events: auto !important;
   transform: none !important;
 }
-/* 트레이 컴팩트화 */
-body.loca-editor-open .map-list-bar__head { padding: 6px 12px !important; }
-body.loca-editor-open .map-record-filters { padding: 6px 12px 4px !important; }
-body.loca-editor-open .map-place-strip { padding: 8px 12px !important; }
-body.loca-editor-open .map-place-card {
-  padding: 5px 9px !important;
-  min-width: 124px !important;
-  max-width: 180px !important;
-}
+/* 트레이 펼침 높이 반으로 — 항목 1줄 + 여백 축소 */
 body.loca-editor-open .map-list-bar { bottom: 12px !important; }
+body.loca-editor-open .map-list-bar__head { padding: 4px 12px !important; }
+body.loca-editor-open .map-record-filters { padding: 3px 12px 2px !important; gap: 5px !important; }
+body.loca-editor-open .map-filter-chip--record {
+  min-height: 0 !important;
+  padding: 2px 9px !important;
+  font-size: 10.5px !important;
+}
+body.loca-editor-open .map-place-strip { padding: 5px 12px !important; }
+body.loca-editor-open .map-place-card {
+  padding: 3px 9px !important;
+  min-width: 0 !important;
+  max-width: 200px !important;
+  gap: 7px !important;
+}
+/* 이름 + 종류 를 한 줄로 (2줄 → 1줄) */
+body.loca-editor-open .me-strip-info {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 5px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+body.loca-editor-open .me-strip-info strong { font-size: 12px !important; min-width: 0 !important; flex: 0 1 auto !important; }
+body.loca-editor-open .me-strip-kind { font-size: 10px !important; flex-shrink: 0 !important; }
+body.loca-editor-open .me-strip-rec { padding: 0 5px !important; }
