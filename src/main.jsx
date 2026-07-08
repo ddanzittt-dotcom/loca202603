@@ -35,8 +35,10 @@ import "./styles/editor-chrome-hard.css"
 import "./styles/editor-banner-hard.css"
 import "./styles/editor-tray-hard.css"
 import "./styles/editor-redesign-fixes.css"
+import "./styles/admin.css"
 import App from "./App"
 import { PublicCommunityPage } from "./screens/PublicCommunityPage"
+import { AdminScreen } from "./screens/AdminScreen"
 import { publicRecommendMaps } from "./data/publicRecommendMaps"
 import {
   applyPublicOgMeta,
@@ -94,7 +96,9 @@ const publicPage = recommendMatch
   ? <PublicCommunityPage page="search" />
   : publicPath === "/community-web"
     ? <PublicCommunityPage page="community" />
-    : <App />
+    : publicPath === "/admin"
+      ? <AdminScreen />
+      : <App />
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
