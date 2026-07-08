@@ -275,7 +275,6 @@ export function PlaceFlipCard({
     <>
     <div className="bd-flipov" onClick={onClose} role="presentation">
       <div className="bd-stage" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="bd-flipclose" onClick={onClose} aria-label="닫기">✕</button>
         <div className={`bd-3d${flipped ? " is-flipped" : ""}`}>
           {/* 앞면 — 회전 표면으로만 남김 (열리면 자동으로 뒷면으로 뒤집힘) */}
           <div className="bd-face bd-face--front bd-card" aria-hidden="true">
@@ -286,8 +285,9 @@ export function PlaceFlipCard({
           <div className="bd-face bd-face--back" role="dialog" aria-modal="true" aria-label={`${name} 상세`}>
             <div className="bd-chead">
               <span className="bd-cno">N.{dexNo || "000"} · {name}</span>
-              <button type="button" className="bd-shareico" onClick={openSharePreview} aria-label="공유 카드 만들기">📤 공유</button>
               <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
+              <button type="button" className="bd-shareico" onClick={openSharePreview} aria-label="공유 카드 만들기">📤 공유</button>
+              <button type="button" className="bd-headclose" onClick={onClose} aria-label="닫기">✕</button>
             </div>
 
             <div className="bd-backhero" style={{ backgroundColor: `${type.color}22` }}>
