@@ -331,16 +331,16 @@ export async function reverseGeocodeAndTag(supabase, featureId, lat, lng) {
   } catch { /* 네이버 실패 시 Nominatim fallback */ }
 
   if (!regionName) {
+    // 카카오/네이버 클라이언트 지오코더가 안 되면 서버 프록시(/api/reverse-geocode)로.
+    // 브라우저에서 nominatim 을 직접 부르면 CORS + 429 가 나므로 서버에서 카카오 REST 로 조회한다.
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ko&zoom=16`,
-        { headers: { "User-Agent": "LOCA-App/1.0" } },
-      )
+      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`)
       if (res.ok) {
         const json = await res.json()
-        const addr = json.address || {}
-        regionName = [addr.city || addr.state, addr.borough || addr.county, addr.suburb || addr.neighbourhood || addr.quarter]
-          .filter(Boolean).join(" ")
+        if (json?.regionName) {
+          regionName = json.regionName
+          regionCode = regionCode || json.regionCode || null
+        }
       }
     } catch { /* 무시 */ }
   }
