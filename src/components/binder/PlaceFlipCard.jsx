@@ -61,7 +61,7 @@ export function PlaceCardFront({ feature, dexNo, big = false }) {
 }
 
 // ── 뒷면 기록 아이템 ──
-function RecordItem({ group }) {
+function RecordItem({ group, onPromoteCover, isCover }) {
   const text = (group.memos || [])
     .map((memo) => `${memo?.text || memo?.memo || memo?.content || ""}`.trim())
     .filter(Boolean)
@@ -75,7 +75,24 @@ function RecordItem({ group }) {
         <time>{formatRecordDate(group.dateValue)}</time>
         {text ? <p>{text}</p> : <p className="bd-rec__only">사진 기록</p>}
       </div>
-      {photoSrc ? <img className="bd-rec__photo" src={photoSrc} alt="기록 사진" /> : null}
+      {photoSrc ? (
+        <div className="bd-rec__photowrap">
+          <img className="bd-rec__photo" src={photoSrc} alt="기록 사진" />
+          {onPromoteCover ? (
+            isCover ? (
+              <span className="bd-rec__coverflag" aria-label="현재 표지">표지</span>
+            ) : (
+              <button
+                type="button"
+                className="bd-rec__cover"
+                onClick={() => onPromoteCover(photoSrc)}
+              >
+                표지로
+              </button>
+            )
+          ) : null}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -116,6 +133,7 @@ export function PlaceFlipCard({
   onOpenOnMap,
   onAddRecord,
   onSetPhoto,
+  onSetCoverUrl,
   showToast,
 }) {
   const [flipped, setFlipped] = useState(false)
@@ -209,6 +227,20 @@ export function PlaceFlipCard({
       showToast?.("사진을 바꿨어요")
     } catch {
       showToast?.("사진 등록에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
+  // 기록 사진을 표지로 승격 — 이미 저장된 URL 이라 재업로드 없이 표지만 바꾼다
+  const handlePromoteCover = async (url) => {
+    if (!onSetCoverUrl || !url || photoBusy) return
+    setPhotoBusy(true)
+    try {
+      await onSetCoverUrl(url)
+      showToast?.("이 사진을 표지로 정했어요")
+    } catch {
+      showToast?.("표지 변경에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setPhotoBusy(false)
     }
@@ -399,7 +431,17 @@ export function PlaceFlipCard({
                 ) : null}
 
                 {recordGroups.length > 0 ? (
-                  recordGroups.slice(0, 8).map((group) => <RecordItem key={group.id} group={group} />)
+                  recordGroups.slice(0, 8).map((group) => (
+                    <RecordItem
+                      key={group.id}
+                      group={group}
+                      onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
+                      isCover={Boolean(heroPhoto) && (group.photos || []).some((photo) => {
+                        const src = typeof photo === "string" ? photo : photo?.url || photo?.src || photo?.cloudUrl || ""
+                        return src && src === heroPhoto
+                      })}
+                    />
+                  ))
                 ) : (
                   <p className="bd-tlempty">아직 기록이 없어요. 첫 기록을 남겨보세요.</p>
                 )}

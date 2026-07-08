@@ -4329,14 +4329,53 @@
 }
 .bd-rec__body p { margin: 0; white-space: pre-wrap; color: #1B1B18; }
 .bd-rec__only { color: #8A8574; }
+.bd-rec__photowrap {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 46px;
+}
 .bd-rec__photo {
   width: 46px;
   height: 46px;
   border: 2px solid #1B1B18;
   border-radius: 6px;
   object-fit: cover;
-  flex-shrink: 0;
-  margin-left: auto;
+  display: block;
+}
+/* 기록 사진 → 표지로 승격 버튼 (사진 위 오버레이) */
+.bd-rec__cover {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "DungGeunMo", monospace;
+  font-size: 9px;
+  line-height: 1;
+  padding: 3px 6px;
+  color: #1B1B18;
+  background: #F5C41B;
+  border: 1.5px solid #1B1B18;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 1px 1px 0 rgba(27, 27, 24, 0.35);
+}
+.bd-rec__cover:hover { background: #ffd747; }
+.bd-rec__coverflag {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: "DungGeunMo", monospace;
+  font-size: 9px;
+  line-height: 1;
+  padding: 3px 6px;
+  color: #FBF7EC;
+  background: #1B1B18;
+  border: 1.5px solid #1B1B18;
+  border-radius: 999px;
 }
 .bd-recform {
   border: 2px dashed rgba(27, 27, 24, 0.35);

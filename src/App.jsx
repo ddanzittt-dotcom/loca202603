@@ -2188,6 +2188,17 @@ export default function App() {
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
             setPlaceCardFeature((current) => (current ? patch(current) : current))
           }}
+          onSetCoverUrl={async (url) => {
+            // 기록 사진(이미 저장된 URL)을 표지로 승격 — 재업로드 없이 표지 필드만 바꾼다
+            if (!url) return
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            if (cloudMode) {
+              await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url }).catch(() => {})
+            }
+            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url })
+            setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
+            setPlaceCardFeature((current) => (current ? patch(current) : current))
+          }}
           onOpenOnMap={(placeCardFeature.mapId || placeCardFeature.map_id) ? () => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             setPlaceCardFeature(null)
