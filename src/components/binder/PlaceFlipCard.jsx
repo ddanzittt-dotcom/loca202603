@@ -134,6 +134,7 @@ export function PlaceFlipCard({
   onAddRecord,
   onSetPhoto,
   onSetCoverUrl,
+  onUpdateCard,
   showToast,
 }) {
   const [flipped, setFlipped] = useState(false)
@@ -151,6 +152,13 @@ export function PlaceFlipCard({
   const [recPhoto, setRecPhoto] = useState(null) // { file, preview }
   const [saving, setSaving] = useState(false)
   const [photoBusy, setPhotoBusy] = useState(false)
+  // 카드 편집(이름·설명·태그)
+  const [editing, setEditing] = useState(false)
+  const [edName, setEdName] = useState("")
+  const [edDesc, setEdDesc] = useState("")
+  const [edTags, setEdTags] = useState([])
+  const [edTagInput, setEdTagInput] = useState("")
+  const [edSaving, setEdSaving] = useState(false)
   const fileInputRef = useRef(null)
   const recFileInputRef = useRef(null)
   const flipRafRef = useRef(0)
@@ -244,6 +252,49 @@ export function PlaceFlipCard({
       showToast?.("표지 변경에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setPhotoBusy(false)
+    }
+  }
+
+  // ── 카드 편집 ──
+  const openEdit = () => {
+    setEdName(feature.title || "")
+    // note 가 주소면 설명은 비워둔다 (설명과 주소는 분리 — 주소는 하단 스펙에 자동 표시)
+    setEdDesc(looksLikeAddress(feature.note) ? "" : `${feature.note || ""}`)
+    setEdTags((feature.tags || []).map((tag) => `${tag || ""}`.trim()).filter(Boolean))
+    setEdTagInput("")
+    setEditing(true)
+  }
+  const addEdTag = (raw) => {
+    const value = `${raw || ""}`.trim().replace(/^#/, "")
+    if (!value) return
+    setEdTags((current) => (current.includes(value) || current.length >= 6 ? current : [...current, value]))
+    setEdTagInput("")
+  }
+  const handleEdTagKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault()
+      addEdTag(edTagInput)
+    } else if (event.key === "Backspace" && !edTagInput && edTags.length) {
+      setEdTags((current) => current.slice(0, -1))
+    }
+  }
+  const saveEdit = async () => {
+    const title = edName.trim()
+    if (!title) { showToast?.("이름을 적어주세요."); return }
+    const pending = edTagInput.trim().replace(/^#/, "")
+    const tags = [...new Set([...edTags, ...(pending ? [pending] : [])])]
+    const trimmedDesc = edDesc.trim()
+    // 설명을 적었으면 note=설명, 비웠고 원래 note 가 주소였으면 그대로 유지
+    const note = trimmedDesc || (looksLikeAddress(feature.note) ? feature.note : "")
+    setEdSaving(true)
+    try {
+      await onUpdateCard?.({ title, note, tags })
+      setEditing(false)
+      showToast?.("카드를 수정했어요")
+    } catch {
+      showToast?.("수정에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setEdSaving(false)
     }
   }
 
@@ -354,6 +405,9 @@ export function PlaceFlipCard({
             <div className="bd-chead">
               <span className="bd-cno">N.{dexNo || "000"} · {name}</span>
               <span className="bd-cbadge" style={{ background: type.color }}>{type.label}</span>
+              {onUpdateCard && !editing ? (
+                <button type="button" className="bd-shareico" onClick={openEdit} aria-label="카드 편집">✎ 편집</button>
+              ) : null}
               <button type="button" className="bd-shareico" onClick={openSharePreview} aria-label="공유 카드 만들기">📤 공유</button>
               <button type="button" className="bd-headclose" onClick={onClose} aria-label="닫기">✕</button>
             </div>
@@ -384,18 +438,74 @@ export function PlaceFlipCard({
             </div>
 
             <div className="bd-backbody">
-              <div className="bd-textbox" onClick={completeTyping} role="presentation">
-                <span className="bd-tblabel">설명</span>
-                <span>{typedDesc}</span>
-              </div>
-
-              {cardTags.length > 0 ? (
-                <div className="bd-tags" aria-label="태그">
-                  {cardTags.map((tag) => (
-                    <span key={tag} className="bd-tag">#{tag}</span>
-                  ))}
+              {editing ? (
+                <div className="bd-editform">
+                  <label className="bd-editfield">
+                    <span className="bd-editfield__label">이름</span>
+                    <input
+                      className="bd-editinput"
+                      type="text"
+                      value={edName}
+                      onChange={(event) => setEdName(event.target.value)}
+                      maxLength={40}
+                      autoFocus
+                    />
+                  </label>
+                  <label className="bd-editfield">
+                    <span className="bd-editfield__label">설명</span>
+                    <textarea
+                      className="bd-editinput"
+                      value={edDesc}
+                      onChange={(event) => setEdDesc(event.target.value)}
+                      rows={3}
+                      maxLength={200}
+                      placeholder="이곳은 어떤 곳인가요?"
+                    />
+                  </label>
+                  <div className="bd-editfield">
+                    <span className="bd-editfield__label">태그</span>
+                    <div className="clt-tags">
+                      {edTags.map((tag) => (
+                        <button key={tag} type="button" className="clt-tag" onClick={() => setEdTags((current) => current.filter((item) => item !== tag))}>
+                          #{tag}<i aria-hidden="true">✕</i>
+                        </button>
+                      ))}
+                      <input
+                        className="clt-taginput"
+                        type="text"
+                        value={edTagInput}
+                        onChange={(event) => setEdTagInput(event.target.value)}
+                        onKeyDown={handleEdTagKeyDown}
+                        onBlur={() => addEdTag(edTagInput)}
+                        placeholder={edTags.length ? "" : "엔터로 추가"}
+                        maxLength={12}
+                        disabled={edTags.length >= 6}
+                      />
+                    </div>
+                  </div>
+                  <div className="bd-editactions">
+                    <button type="button" className="bd-mini" onClick={() => setEditing(false)}>취소</button>
+                    <button type="button" className="bd-mini bd-mini--red" disabled={edSaving} onClick={saveEdit}>
+                      {edSaving ? "저장 중…" : "저장"}
+                    </button>
+                  </div>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <div className="bd-textbox" onClick={completeTyping} role="presentation">
+                    <span className="bd-tblabel">설명</span>
+                    <span>{typedDesc}</span>
+                  </div>
+
+                  {cardTags.length > 0 ? (
+                    <div className="bd-tags" aria-label="태그">
+                      {cardTags.map((tag) => (
+                        <span key={tag} className="bd-tag">#{tag}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              )}
 
               <div className="bd-spec">
                 <div><span>등록일</span><b>{registered || "—"}</b></div>

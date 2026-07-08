@@ -2199,6 +2199,16 @@ export default function App() {
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
             setPlaceCardFeature((current) => (current ? patch(current) : current))
           }}
+          onUpdateCard={async ({ title, note, tags }) => {
+            // 카드 이름·설명·태그 편집 — 본인 장소 단독 편집이라 낙관적 잠금(lastKnownUpdatedAt) 생략
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            if (cloudMode) {
+              await updateFeature(featureId, { title, note, tags })
+            }
+            const patch = (feature) => ({ ...feature, title, note, tags, updatedAt: new Date().toISOString() })
+            setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
+            setPlaceCardFeature((current) => (current ? patch(current) : current))
+          }}
           onOpenOnMap={(placeCardFeature.mapId || placeCardFeature.map_id) ? () => {
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             setPlaceCardFeature(null)

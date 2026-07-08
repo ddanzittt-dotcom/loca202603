@@ -4341,6 +4341,42 @@
   padding: 4px 8px;
 }
 
+/* 카드 편집 폼 (이름·설명·태그) */
+.bd-editform {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 2px dashed rgba(27, 27, 24, 0.35);
+  border-radius: 8px;
+  padding: 12px;
+}
+.bd-editfield { display: block; }
+.bd-editfield__label {
+  display: block;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  color: #8A8574;
+  margin-bottom: 4px;
+}
+.bd-editinput {
+  width: 100%;
+  border: 2px solid #1B1B18;
+  border-radius: 6px;
+  background: #FFFDF4;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 14px;
+  color: #1B1B18;
+  padding: 8px 10px;
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.bd-editactions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .bd-spec {
   display: flex;
   flex-direction: column;
