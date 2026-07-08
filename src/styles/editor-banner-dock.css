@@ -1,0 +1,57 @@
+/* ============================================================
+ * 지도 편집 배너 도크 (개발지시서 §5, §8) — Phase 1
+ * 마커·편집·기록 배너를 우측 고정 도크로 통일한다.
+ *   - 백드롭 없음 (지도·마커 항상 보임)
+ *   - 상호배타 (항상 한 곳에 하나만) — :has()
+ *   - 하드룩: paper #FFFDF4 + ink 3px 테두리 + 하드섀도(블러 없음) + dockIn
+ * 스코프: body.loca-editor-open (편집기 활성 시에만 — 공유 뷰어 FeatureDetailSheet 미영향)
+ * 우측 툴 FAB(right:10)을 피해 right:72 에 배치. (툴 레일 이전은 Phase 2)
+ * ============================================================ */
+
+@keyframes dockIn {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* 백드롭 제거 — 지도가 항상 보이게 */
+body.loca-editor-open .res-backdrop,
+body.loca-editor-open .fes-backdrop,
+body.loca-editor-open .map-feature-summary-backdrop {
+  display: none !important;
+}
+
+/* 우측 도크 위치 (세 배너 공통) */
+body.loca-editor-open .map-feature-summary-wrap,
+body.loca-editor-open .res-sheet,
+body.loca-editor-open .fes-sheet--v2 {
+  position: fixed !important;
+  left: auto !important;
+  right: 92px !important;
+  top: 150px !important;
+  bottom: 100px !important;
+  transform: none !important;
+  width: min(360px, calc(100vw - 360px)) !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  animation: dockIn 0.26s cubic-bezier(0.2, 1.4, 0.4, 1) both !important;
+}
+
+/* 카드 하드룩 (실제 카드 표면) */
+body.loca-editor-open .map-feature-summary-wrap > .fpc,
+body.loca-editor-open .res-sheet,
+body.loca-editor-open .fes-sheet--v2 {
+  background: #FFFDF4 !important;
+  border: 3px solid #1B1B18 !important;
+  border-radius: 14px !important;
+  box-shadow: 6px 8px 0 rgba(27, 27, 24, 0.4) !important;
+  overflow: hidden !important;
+  max-height: 100% !important;
+}
+
+/* 상호배타 — 기록 > 편집 > 마커 우선, 한 번에 하나만 (포털은 body 직속) */
+body.loca-editor-open:has(.res-sheet) .map-feature-summary-wrap,
+body.loca-editor-open:has(.res-sheet) .fes-sheet--v2,
+body.loca-editor-open:has(.fes-sheet--v2) .map-feature-summary-wrap {
+  display: none !important;
+}

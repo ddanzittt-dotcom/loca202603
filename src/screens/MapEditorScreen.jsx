@@ -705,6 +705,7 @@ export function MapEditorScreen({
 
         <button className="map-locate-button" type="button" onClick={onLocate} aria-label="내 위치로 이동">
           <Navigation size={18} />
+          <span className="map-locate-button__label">내 위치</span>
         </button>
 
         {pendingSearchPin && canMapPinFromSearch && showExternalPlaceSearch ? (

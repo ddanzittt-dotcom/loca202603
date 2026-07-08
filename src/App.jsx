@@ -466,6 +466,13 @@ export default function App() {
     }
   }, [mapsView, activeTab])
 
+  // 지도 편집 배너 도크 스코프 — 편집기 활성일 때만 body 클래스 (공유 뷰어 미영향)
+  useEffect(() => {
+    const active = mapsView === "editor" && activeTab === "maps"
+    document.body.classList.toggle("loca-editor-open", active)
+    return () => document.body.classList.remove("loca-editor-open")
+  }, [mapsView, activeTab])
+
   // 코치마크 3: FeatureDetailSheet 처음 열릴 때 (코치마크 진행 중이었으면)
   useEffect(() => {
     if (featureSheet && !isCoachmarkSeen() && coachmarkStep === 0) {
