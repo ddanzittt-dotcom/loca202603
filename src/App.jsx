@@ -34,7 +34,7 @@ import {
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { captureError } from "./lib/monitoring"
-import { addFeatureMemo, backfillRegionNames, ensureCommunityMap, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
+import { addFeatureMemo, backfillRegionNames, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
@@ -1597,9 +1597,6 @@ export default function App() {
 
     const hydrateCommunityMap = async () => {
       try {
-        if (authUser) {
-          await ensureCommunityMap()
-        }
         const bundle = await getCommunityMapBundle()
         if (cancelled || !bundle?.map) return
 
