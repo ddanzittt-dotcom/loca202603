@@ -302,6 +302,9 @@
 }
 
 .town-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   border: 2.5px solid var(--px-ink);
   border-radius: 10px;
   background: var(--px-paper);
