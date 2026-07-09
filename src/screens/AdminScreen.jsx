@@ -5,11 +5,13 @@ import {
   MODERATION_ACTIONS,
   MODERATION_TABS,
   checkPlatformAdmin,
+  getAdminDemographics,
   getAdminInsights,
   getAdminOverview,
   listModerationRecords,
   updateModerationStatus,
 } from "../lib/adminModeration"
+import { ageBandLabel } from "../lib/demographics"
 
 // 커뮤니티(모두의 지도) 관리 화면 — /admin.
 // platform_admin 만 접근 가능(서버 RPC 게이트 + 클라이언트 선판별).
@@ -53,6 +55,7 @@ export function AdminScreen() {
   const [overviewLoading, setOverviewLoading] = useState(false)
   const [insights, setInsights] = useState(null)
   const [insightsError, setInsightsError] = useState("")
+  const [demographics, setDemographics] = useState(null)
   const [toast, setToast] = useState("")
   const toastTimer = useRef(null)
 
@@ -114,6 +117,11 @@ export function AdminScreen() {
     } catch (error) {
       setInsights(null)
       setInsightsError(error?.message || "인사이트를 불러오지 못했어요.")
+    }
+    try {
+      setDemographics(await getAdminDemographics())
+    } catch {
+      setDemographics(null)
     } finally {
       setOverviewLoading(false)
     }
@@ -345,6 +353,85 @@ export function AdminScreen() {
             ) : null}
           </section>
         </>
+      ) : null}
+
+      {demographics ? (
+        <section className="admin-overview" aria-label="인구통계 집계">
+          <h2 className="admin-section-title">인구통계 · 판매 데이터 기반</h2>
+          <p className="admin-empty-note">
+            개인 식별 없는 집계치예요. 표본이 <b>{num(demographics.k_threshold)}명</b> 미만인 항목은
+            재식별 방지를 위해 자동으로 가려집니다(k-익명).
+          </p>
+
+          {demographics.coverage ? (
+            <div className="admin-stats">
+              <StatCard
+                label="연령대 입력률"
+                value={demographics.coverage.profiles_total ? `${Math.round((demographics.coverage.with_age / demographics.coverage.profiles_total) * 100)}%` : "–"}
+                sub={`${num(demographics.coverage.with_age)} / ${num(demographics.coverage.profiles_total)}명`}
+              />
+              <StatCard
+                label="지역 입력률"
+                value={demographics.coverage.profiles_total ? `${Math.round((demographics.coverage.with_region / demographics.coverage.profiles_total) * 100)}%` : "–"}
+                sub={`${num(demographics.coverage.with_region)} / ${num(demographics.coverage.profiles_total)}명`}
+              />
+              <StatCard label="둘 다 입력" value={num(demographics.coverage.with_both)} sub="교차분석 가능 표본" />
+            </div>
+          ) : null}
+
+          {/* 연령대 분포 */}
+          {(demographics.age_distribution || []).length ? (
+            <div className="admin-hbars" aria-label="연령대 분포">
+              {(() => {
+                const rows = demographics.age_distribution
+                const max = Math.max(1, ...rows.map((r) => Number(r.users) || 0))
+                return rows.map((r) => (
+                  <div key={r.age_band} className="admin-hbar">
+                    <span className="admin-hbar__label">{ageBandLabel(r.age_band) || r.age_band}</span>
+                    <span className="admin-hbar__track"><span className="admin-hbar__fill" style={{ width: `${Math.max(3, Math.round((Number(r.users) / max) * 100))}%` }} /></span>
+                    <span className="admin-hbar__count">{num(r.users)}</span>
+                  </div>
+                ))
+              })()}
+            </div>
+          ) : (
+            <p className="admin-empty-note">아직 공개할 만큼(표본 {num(demographics.k_threshold)}명 이상) 연령대 데이터가 쌓이지 않았어요.</p>
+          )}
+          {demographics.age_suppressed ? <p className="admin-empty-note">· 표본 부족으로 가려진 연령대 {num(demographics.age_suppressed)}개</p> : null}
+
+          {/* 시도 분포 */}
+          {(demographics.region_distribution || []).length ? (
+            <div className="admin-chips" aria-label="지역 분포">
+              {demographics.region_distribution.map((r) => (
+                <span key={r.region_sido} className="admin-chip">{r.region_sido} <em>{num(r.users)}</em></span>
+              ))}
+            </div>
+          ) : null}
+          {demographics.region_suppressed ? <p className="admin-empty-note">· 표본 부족으로 가려진 지역 {num(demographics.region_suppressed)}개</p> : null}
+
+          {/* 연령대 × 동네 (행동 × 인구통계) */}
+          {(demographics.age_x_neighborhood || []).length ? (
+            <>
+              <h3 className="admin-subtitle">연령대별 활동 동네 (TOP)</h3>
+              <table className="admin-table">
+                <thead>
+                  <tr><th>연령대</th><th>동네</th><th>이용자</th><th>카드</th></tr>
+                </thead>
+                <tbody>
+                  {demographics.age_x_neighborhood.map((r, i) => (
+                    <tr key={`${r.age_band}-${r.region}-${i}`}>
+                      <td>{ageBandLabel(r.age_band) || r.age_band}</td>
+                      <td>{r.region}</td>
+                      <td>{num(r.users)}</td>
+                      <td>{num(r.cards)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : null}
+          {demographics.age_x_neighborhood_suppressed ? <p className="admin-empty-note">· 표본 부족으로 가려진 동네×연령대 셀 {num(demographics.age_x_neighborhood_suppressed)}개</p> : null}
+        </section>
       ) : null}
 
       <h2 className="admin-section-title">커뮤니티 검수</h2>

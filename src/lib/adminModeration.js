@@ -81,6 +81,18 @@ export async function getAdminInsights() {
   return parseRpcJson(data) || {}
 }
 
+// 인구통계 교차 집계 (get_admin_demographics RPC) — platform_admin 전용, k-익명 가드
+export async function getAdminDemographics() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_demographics")
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
 export async function updateModerationStatus(recordId, status) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc("update_community_moderation_status", {
