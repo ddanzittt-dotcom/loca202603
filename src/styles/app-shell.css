@@ -1079,6 +1079,70 @@
     line-height: 1.35;
   }
 
+  /* ── 탐색 탭 전용: 좌측 레일 nav → 상단 가로 알약.
+     왼쪽 280px 예약을 없애 지도(레이더)+피드가 화면을 넓게 쓰게 한다. ── */
+  .app-shell--tab-explore:not(.app-shell--map-editor) .content {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav {
+    top: 16px;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: max-content;
+    max-width: calc(100% - 40px);
+    height: 60px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    transform: translateX(-50%);
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav__brand {
+    padding: 0 14px 0 6px;
+    margin-right: 2px;
+    border-right: 1px solid var(--line);
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav__brand strong {
+    font-size: 20px;
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav__items {
+    flex-direction: row;
+    flex: 0 0 auto;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav__tab {
+    min-height: 44px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: 999px;
+  }
+
+  .app-shell--tab-explore .loca-v2-bottomnav__tab span {
+    align-items: center;
+    text-align: center;
+  }
+
+  /* 상단 알약이 콘텐츠를 가리지 않게 탐색 화면 상단 여백 확보 + sticky 지도 오프셋 */
+  .app-shell--tab-explore .web-section--explore.screen--scroll {
+    padding-top: 92px;
+  }
+
+  .app-shell--tab-explore .xc-view__map {
+    top: 92px;
+  }
+
   .web-section.maps-library-screen--v2 .maps-v3-view,
   .web-section.maps-library-screen--v2 .pl-screen,
   .web-section.maps-library-screen--v2 .pl-screen--embedded {
