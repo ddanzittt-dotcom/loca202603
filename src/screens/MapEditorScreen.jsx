@@ -7,7 +7,6 @@ import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { ShareSheet } from "../components/sheets/ShareSheet"
 import { RecordEntrySheet } from "../components/sheets/RecordEntrySheet"
-import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { createId } from "../lib/appUtils"
@@ -119,8 +118,6 @@ export function MapEditorScreen({
   fitTrigger,
   onRemoveFeatureFromMap,
   readOnly = false,
-  hideCount = false,
-  communityMode = false,
   currentUserId = "me",
   showLabels = true,
   myLocation = null,
@@ -153,10 +150,6 @@ export function MapEditorScreen({
   onDeleteVoice,
   onBeginFeatureRecord,
   onEndFeatureRecord,
-  importedCommunityFeatureIds,
-  onImportCommunityFeature,
-  onUnimportCommunityFeature,
-  onRequestCommunityUpdateFromSummary,
   onOpenShareEditor,
   onStripFeatureTap,
   showToast,
@@ -177,7 +170,7 @@ export function MapEditorScreen({
   const [mappingSearchPin, setMappingSearchPin] = useState(false)
   const [activeFilter, setActiveFilter] = useState("all")
   const stripTouchedRef = useRef(false)
-  const [stripOpen, setStripOpen] = useState(() => !(communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD))
+  const [stripOpen, setStripOpen] = useState(() => !(features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD))
   const [shareOpen, setShareOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState(map.title)
@@ -198,23 +191,13 @@ export function MapEditorScreen({
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
   const trimmedExternalSearchQuery = externalSearchQuery.trim()
   const summaryOpen = Boolean(selectedFeatureSummary)
-  const isSummaryCreator = Boolean(selectedFeatureSummary?.createdBy) && selectedFeatureSummary?.createdBy === currentUserId
-  const isPublicCommunityRecord = selectedFeatureSummary?.sourceContext === "public_community_records"
-  // 내 지도(personal)는 본인 지도이므로 항상 작성자. 커뮤니티는 createdBy 로 판정.
+  // 내 지도(personal)는 본인 지도이므로 항상 작성자.
   // 데모/공유 등 readOnly 환경에서는 작성자 권한을 주지 않는다.
-  const isSummaryAuthor = readOnly ? false : (communityMode ? isSummaryCreator : true)
-  const canEditSummary = !readOnly && typeof onOpenFeatureEdit === "function" && (communityMode ? isSummaryCreator : true)
-  const canRequestSummaryEdit = (
-    communityMode
-    && !readOnly
-    && !isPublicCommunityRecord
-    && !isSummaryCreator
-    && typeof onRequestCommunityUpdateFromSummary === "function"
-  )
-  const showCommunityRecordComments = communityMode && !readOnly && Boolean(selectedFeatureSummary)
+  const isSummaryAuthor = !readOnly
+  const canEditSummary = !readOnly && typeof onOpenFeatureEdit === "function"
   const canMapPinFromSearch = !readOnly && typeof onCreatePinAtLocation === "function"
   const showExternalPlaceSearch = !readOnly
-  const canWriteSummaryRecord = !communityMode && isSummaryAuthor && typeof onAddMemo === "function"
+  const canWriteSummaryRecord = isSummaryAuthor && typeof onAddMemo === "function"
   const summaryRecordGroups = useMemo(() => (
     selectedFeatureSummary ? buildFeatureRecordGroups(selectedFeatureSummary) : []
   ), [selectedFeatureSummary])
@@ -311,19 +294,6 @@ export function MapEditorScreen({
     }
     return (selectedFeatureSummary?.voices || []).filter((voice) => recordEntryId(voice) === summaryRecordDraft.id)
   }, [selectedFeatureSummary?.voices, summaryRecordDraft?.groupId, summaryRecordDraft?.id, summaryRecordGroups])
-
-  const handleSummaryRequestEdit = useCallback(async () => {
-    if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
-    const requestMessage = window.prompt("수정 제안 메시지를 남겨주세요. 작성자에게 전달돼요. (선택)")
-    if (requestMessage === null) return
-    const requested = await onRequestCommunityUpdateFromSummary?.(selectedFeatureSummary.id, requestMessage)
-    if (requested) onCloseFeatureSummary?.()
-  }, [
-    canRequestSummaryEdit,
-    onCloseFeatureSummary,
-    onRequestCommunityUpdateFromSummary,
-    selectedFeatureSummary?.id,
-  ])
 
   const handleSearchResultSelect = useCallback((result) => {
     const lat = Number(result?.lat)
@@ -441,10 +411,10 @@ export function MapEditorScreen({
 
   useEffect(() => {
     if (stripTouchedRef.current || stripOpen === false) return
-    if (communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD) {
+    if (features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD) {
       setStripOpen(false)
     }
-  }, [communityMode, features.length, stripOpen])
+  }, [features.length, stripOpen])
 
   const toggleStripOpen = useCallback(() => {
     stripTouchedRef.current = true
@@ -538,58 +508,52 @@ export function MapEditorScreen({
                 ) : (
                   <span className="me-bar__name">{map.title}</span>
                 )}
-                {!hideCount ? (
-                  <div className="me-bar__counters" aria-label="지도 기록 수">
-                    <span className="me-bar__counter me-bar__counter--pin">
-                      <span className="me-bar__counter-dot" aria-hidden="true" />
-                      <span className="me-bar__counter-label">장소</span>
-                      <strong className="loca-v2-num">{pinCount}</strong>
-                    </span>
-                    <span className="me-bar__counter me-bar__counter--route">
-                      <span className="me-bar__counter-dot" aria-hidden="true" />
-                      <span className="me-bar__counter-label">길</span>
-                      <strong className="loca-v2-num">{routeCount}</strong>
-                    </span>
-                    <span className="me-bar__counter me-bar__counter--area">
-                      <span className="me-bar__counter-dot" aria-hidden="true" />
-                      <span className="me-bar__counter-label">영역</span>
-                      <strong className="loca-v2-num">{areaCount}</strong>
-                    </span>
-                  </div>
-                ) : null}
+                <div className="me-bar__counters" aria-label="지도 기록 수">
+                  <span className="me-bar__counter me-bar__counter--pin">
+                    <span className="me-bar__counter-dot" aria-hidden="true" />
+                    <span className="me-bar__counter-label">장소</span>
+                    <strong className="loca-v2-num">{pinCount}</strong>
+                  </span>
+                  <span className="me-bar__counter me-bar__counter--route">
+                    <span className="me-bar__counter-dot" aria-hidden="true" />
+                    <span className="me-bar__counter-label">길</span>
+                    <strong className="loca-v2-num">{routeCount}</strong>
+                  </span>
+                  <span className="me-bar__counter me-bar__counter--area">
+                    <span className="me-bar__counter-dot" aria-hidden="true" />
+                    <span className="me-bar__counter-label">영역</span>
+                    <strong className="loca-v2-num">{areaCount}</strong>
+                  </span>
+                </div>
               </div>
             </div>
             <div className="me-bar__right">
-              {!communityMode ? (
-                <>
-                  {onAddCards && !readOnly ? (
-                    <button
-                      className="me-bar__addcards"
-                      type="button"
-                      onClick={onAddCards}
-                      aria-label="카드 추가"
-                    >
-                      + 카드 추가
-                    </button>
-                  ) : null}
-                  <button
-                    className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
-                    type="button"
-                    onClick={onToggleLabels}
-                    aria-pressed={showLabels}
-                    aria-label="이름 표시 전환"
-                  >
-                    이름 {showLabels ? "ON" : "OFF"}
-                  </button>
-                  <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
-                    <Link2 size={16} color="#2D4A3E" />
-                  </button>
-                  {typeof onOpenCollaborators === "function" ? (
-                    <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
-                      <Users size={16} color="#2D4A3E" />
-                    </button>
-                  ) : null}
-                </>
+              {onAddCards && !readOnly ? (
+                <button
+                  className="me-bar__addcards"
+                  type="button"
+                  onClick={onAddCards}
+                  aria-label="카드 추가"
+                >
+                  + 카드 추가
+                </button>
+              ) : null}
+              <button
+                className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
+                type="button"
+                onClick={onToggleLabels}
+                aria-pressed={showLabels}
+                aria-label="이름 표시 전환"
+              >
+                이름 {showLabels ? "ON" : "OFF"}
+              </button>
+              <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
+                <Link2 size={16} color="#2D4A3E" />
+              </button>
+              {typeof onOpenCollaborators === "function" ? (
+                <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
+                  <Users size={16} color="#2D4A3E" />
+                </button>
               ) : null}
             </div>
           </div>
@@ -772,10 +736,10 @@ export function MapEditorScreen({
             aria-label="닫기"
             onClick={() => { voicePlayback.stop(); closeSummaryRecord(); onCloseFeatureSummary?.() }}
           />
-          <div className={`map-feature-summary-wrap${showCommunityRecordComments ? " map-feature-summary-wrap--comments" : ""}`}>
+          <div className="map-feature-summary-wrap">
             <FeaturePopupCard
               feature={selectedFeatureSummary}
-              mapMode={communityMode ? "community" : "personal"}
+              mapMode="personal"
               isAuthor={isSummaryAuthor}
               currentUserId={currentUserId}
               routeLengthKm={
@@ -807,34 +771,8 @@ export function MapEditorScreen({
               onRemoveFromMap={
                 typeof onRemoveFeatureFromMap === "function"
                   && isSummaryAuthor
-                  && !communityMode
                   && selectedFeatureSummary.type === "pin"
                   ? () => onRemoveFeatureFromMap(selectedFeatureSummary.id)
-                  : undefined
-              }
-              onRequestEdit={canRequestSummaryEdit ? handleSummaryRequestEdit : undefined}
-              onAddMemo={
-                communityMode && !readOnly && !isPublicCommunityRecord && typeof onAddMemo === "function"
-                  ? (text, files) => onAddMemo(selectedFeatureSummary.id, text, files)
-                  : undefined
-              }
-              imported={
-                communityMode && importedCommunityFeatureIds
-                  ? importedCommunityFeatureIds.has(selectedFeatureSummary.id)
-                  : false
-              }
-              onImport={
-                communityMode && typeof onImportCommunityFeature === "function"
-                  ? () => onImportCommunityFeature(selectedFeatureSummary.id)
-                  : undefined
-              }
-              onUnimport={
-                communityMode && typeof onUnimportCommunityFeature === "function"
-                  ? () => {
-                      if (window.confirm("가져오기를 취소할까요?\n내 지도에서 이 항목이 삭제돼요.")) {
-                        onUnimportCommunityFeature(selectedFeatureSummary.id)
-                      }
-                    }
                   : undefined
               }
               currentPlayingVoiceId={voicePlayback.playingId}
@@ -843,12 +781,6 @@ export function MapEditorScreen({
                 voicePlayback.toggle(voice, key)
               }}
             />
-            {showCommunityRecordComments ? (
-              <CommunityRecordComments
-                feature={selectedFeatureSummary}
-                className="public-record-comments--app"
-              />
-            ) : null}
           </div>
           </>,
           document.body,

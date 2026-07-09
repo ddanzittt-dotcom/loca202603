@@ -44,7 +44,6 @@ export function useMapCRUD({
   publishSheet,
   setPublishSheet,
   setSelectedPostRef,
-  communityMapId = "community-map",
 }) {
   const touchMap = useCallback((mapId) => {
     setMaps((current) =>
@@ -81,15 +80,6 @@ export function useMapCRUD({
     setFocusPoint(null)
     setFitTrigger((value) => value + 1)
   }, [resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setFocusPoint, setMapsView])
-
-  const openCommunityMapEditor = useCallback(() => {
-    setActiveTab("maps")
-    setActiveMapSource("community")
-    setActiveMapId(communityMapId || "community-map")
-    setMapsView("editor")
-    resetEditorState()
-    setFitTrigger((value) => value + 1)
-  }, [communityMapId, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
 
   const saveMapSheet = useCallback(async () => {
     if (!mapSheet?.title.trim()) return showToast("지도 이름을 입력하세요.")
@@ -483,7 +473,6 @@ export function useMapCRUD({
     resetEditorState,
     openMapEditor,
     openDemoMap,
-    openCommunityMapEditor,
     saveMapSheet,
     deleteMap,
     reorderMaps,

@@ -8,7 +8,6 @@ import { CollectSheet } from "./components/sheets/CollectSheet"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
-  communityMapFeaturesSeed,
   communityPostsSeed,
   demoFeatures,
   demoMaps,
@@ -34,14 +33,12 @@ import {
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { logEvent } from "./lib/analytics"
 import { captureError } from "./lib/monitoring"
-import { addFeatureMemo, backfillRegionNames, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
+import { addFeatureMemo, backfillRegionNames, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
-import { listFeatureChangeRequests } from "./lib/mapService.read"
 import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord, updateProfile } from "./lib/mapService.write"
 import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlacements"
 import { createId } from "./lib/appUtils"
-import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 // 탐색 = 위치 기반 행사/공간 큐레이션. 공개 지도 검색(ExplorePublicScreen)은
@@ -64,7 +61,6 @@ import { useSocialProfile } from "./hooks/useSocialProfile"
 import { cleanupOrphanedMedia } from "./lib/mediaStore"
 import { FeatureDetailSheet } from "./components/sheets/FeatureDetailSheet"
 import { FeatureEditSheet } from "./components/sheets/FeatureEditSheet"
-import { ImportTargetMapSheet } from "./components/sheets/ImportTargetMapSheet"
 import { MapFormSheet } from "./components/sheets/MapFormSheet"
 import { MapBuilderSheet } from "./components/sheets/MapBuilderSheet"
 import { AddRecordSheet } from "./components/sheets/AddRecordSheet"
@@ -320,7 +316,6 @@ function SignedInScreen({ user, onOpenMaps, onOpenProfile, onSignOut }) {
 
 const resolveStoredMapTarget = (mapId, maps) => {
   if (!mapId) return null
-  if (mapId === "community-map") return { source: "community", mapId }
   if (demoMaps.some((map) => map.id === mapId)) return { source: "demo", mapId }
   if (maps.some((map) => map.id === mapId)) return { source: "local", mapId }
   return null
@@ -336,8 +331,6 @@ export default function App() {
   const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", [])
   const [communityPosts, setCommunityPosts] = useLocalStorageState("loca.mobile.communityPosts", communityPostsSeed)
   const [likedPosts, setLikedPosts] = useLocalStorageState("loca.mobile.likedPosts", [])
-  const [communityMapFeatures, setCommunityMapFeatures] = useState(communityMapFeaturesSeed)
-  const [communityMapId, setCommunityMapId] = useState("community-map")
   const [viewerProfile, setViewerProfile] = useLocalStorageState("loca.mobile.viewerProfile", me)
 
   const routeAtLoad = useMemo(() => {
@@ -378,9 +371,6 @@ export default function App() {
   const [featureSheet, setFeatureSheet] = useState(null)
   const [inlineRecordFeatureId, setInlineRecordFeatureId] = useState(null)
   const [featureSheetMode, setFeatureSheetMode] = useState("detail")
-  // 모두의 지도 → 내 지도 가져오기 타겟 선택 시트
-  const [importTargetSheet, setImportTargetSheet] = useState(null) // { featureId } | null
-  const [importTargetBusy, setImportTargetBusy] = useState(false)
   const [publishSheet, setPublishSheet] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedUserProfile, setSelectedUserProfile] = useState(null)
@@ -402,7 +392,6 @@ export default function App() {
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [coachmarkStep, setCoachmarkStep] = useState(0) // 0=off, 1~3=active step
   const [firstPinHintVisible, setFirstPinHintVisible] = useState(false)
-  const [communityPendingRequests, setCommunityPendingRequests] = useState([])
   const [collaborationInvites, setCollaborationInvites] = useState([])
   const [storedCloudUserId] = useState(() => {
     try { return window.localStorage?.getItem("loca.mobile.cloudUserId") || "" } catch { return "" }
@@ -460,7 +449,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    cleanupOrphanedMedia([...features, ...communityMapFeatures])
+    cleanupOrphanedMedia([...features])
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- 온보딩: 편집기 코치마크 트리거 ---
@@ -635,7 +624,6 @@ export default function App() {
     markRead: notiMarkRead,
     markAllRead: notiMarkAllRead,
     removeItem: notiRemove,
-    refresh: notiRefresh,
   } = useNotifications()
 
   // --- Derived data ---
@@ -644,46 +632,20 @@ export default function App() {
     const mergedUsers = viewerProfile.id === me.id ? users : [viewerProfile, ...users]
     return Object.fromEntries(mergedUsers.map((user) => [user.id, user]))
   }, [viewerProfile])
-  const canEditCommunityMap = !(hasSupabaseEnv && authReady && !authUser)
-  const importedCommunityFeatureIds = useMemo(() => {
-    const set = new Set()
-    for (const f of features) {
-      if (f?.sourceFeatureId) set.add(f.sourceFeatureId)
-    }
-    return set
-  }, [features])
-  const communityMapMeta = useMemo(() => [{
-    id: communityMapId,
-    title: "모두의 지도",
-    description: "모두가 함께 만드는 지도",
-    theme: "#4F46E5",
-    updatedAt: communityMapFeatures[0]?.updatedAt || new Date().toISOString(),
-    canEditFeatures: canEditCommunityMap,
-  }], [canEditCommunityMap, communityMapFeatures, communityMapId])
   const sharedMapPool = useMemo(() => (sharedMapData ? [sharedMapData.map] : []), [sharedMapData])
   const sharedFeaturePool = useMemo(() => sharedMapData?.features || [], [sharedMapData])
-  const activeMapPool = activeMapSource === "community"
-    ? communityMapMeta
-    : activeMapSource === "demo"
-      ? demoMaps
-      : activeMapSource === "shared"
-        ? sharedMapPool
-        : maps
-  const activeFeaturePool = activeMapSource === "community"
-    ? communityMapFeatures
-    : activeMapSource === "demo"
-      ? demoFeatures
-      : activeMapSource === "shared"
-        ? sharedFeaturePool
-        : features
-  const effectiveActiveMapId = activeMapSource === "community"
-    && activeMapId === "community-map"
-    && communityMapId
-    && communityMapId !== "community-map"
-    ? communityMapId
-    : activeMapId
-  const activeMap = activeMapPool.find((map) => map.id === effectiveActiveMapId)
-    || (activeMapSource === "community" ? activeMapPool[0] || null : null)
+  const activeMapPool = activeMapSource === "demo"
+    ? demoMaps
+    : activeMapSource === "shared"
+      ? sharedMapPool
+      : maps
+  const activeFeaturePool = activeMapSource === "demo"
+    ? demoFeatures
+    : activeMapSource === "shared"
+      ? sharedFeaturePool
+      : features
+  const effectiveActiveMapId = activeMapId
+  const activeMap = activeMapPool.find((map) => map.id === effectiveActiveMapId) || null
   // 카드가 지도에 담겼는지: 스칼라 홈 지도(mapId) 또는 M:N 배치(placements) 중 하나라도 해당하면 true
   const isFeatureInMap = useCallback(
     (feature, mapId) => featureInMap(placementsByMap, feature, mapId),
@@ -693,11 +655,6 @@ export default function App() {
     () => (effectiveActiveMapId ? activeFeaturePool.filter((feature) => isFeatureInMap(feature, effectiveActiveMapId)) : []),
     [activeFeaturePool, effectiveActiveMapId, isFeatureInMap],
   )
-  useEffect(() => {
-    if (activeMapSource !== "community" || activeMapId !== "community-map") return
-    if (!communityMapId || communityMapId === "community-map") return
-    setActiveMapId(communityMapId)
-  }, [activeMapId, activeMapSource, communityMapId, setActiveMapId])
   const b2cMaps = maps
   const b2cMapIds = useMemo(
     () => new Set(b2cMaps.map((mapItem) => mapItem.id)),
@@ -736,7 +693,6 @@ export default function App() {
             return synced ? { ...feature, photos: synced.photos, voices: synced.voices } : feature
           }
           setFeatures((current) => current.map(applySyncedMedia))
-          setCommunityMapFeatures((current) => current.map(applySyncedMedia))
           setFeatureSheet((current) => (current ? applySyncedMedia(current) : current))
         }
         if (result.failedCount > 0 || result.missingCount > 0) {
@@ -759,7 +715,6 @@ export default function App() {
     cloudMode,
     pendingMediaSyncFeatures,
     pendingMediaSyncSignature,
-    setCommunityMapFeatures,
     setFeatureSheet,
     setFeatures,
     showToast,
@@ -773,40 +728,6 @@ export default function App() {
   )
   const ownPosts = useMemo(() => buildOwnPosts(shares, maps, features, viewerProfile), [features, maps, shares, viewerProfile])
   const communityFeed = useMemo(() => buildCommunityPosts(communityPosts, usersById), [communityPosts, usersById])
-  const communityRequestSummary = useMemo(() => {
-    const currentUserId = viewerProfile?.id || me.id
-    const featureById = new Map(communityMapFeatures.map((feature) => [feature.id, feature]))
-    const myFeatureIds = new Set(
-      communityMapFeatures
-        .filter((feature) => (feature.createdBy || null) === currentUserId)
-        .map((feature) => feature.id),
-    )
-    const mine = []
-    const incoming = []
-    for (const request of communityPendingRequests) {
-      if (!request || request.status !== "pending") continue
-      const featureId = request.featureId || null
-      const feature = featureId ? featureById.get(featureId) : null
-      const title = request.payload?.title || feature?.title || "장소"
-      const item = {
-        ...request,
-        featureTitle: title,
-        requestedAtLabel: new Date(request.createdAt).toLocaleString("ko-KR"),
-      }
-      if (request.requestedBy === currentUserId) {
-        mine.push(item)
-      }
-      if (featureId && myFeatureIds.has(featureId) && request.requestedBy !== currentUserId) {
-        incoming.push(item)
-      }
-    }
-    return {
-      mine,
-      incoming,
-      mineCount: mine.length,
-      incomingCount: incoming.length,
-    }
-  }, [communityMapFeatures, communityPendingRequests, viewerProfile?.id])
 
   const selectedUser = selectedUserProfile?.id === selectedUserId
     ? selectedUserProfile
@@ -864,7 +785,7 @@ export default function App() {
 
   // --- Hooks ---
 
-  const { updateFeatures } = useFeaturePool(activeMapSource, setFeatures, setCommunityMapFeatures)
+  const { updateFeatures } = useFeaturePool(setFeatures)
 
   const {
     photoInputRef, isRecording, recordingSeconds,
@@ -887,37 +808,24 @@ export default function App() {
     setEditorMode, setDraftPoints, setFitTrigger, setFocusPoint,
     showToast, sharedMapData, setSharedMapData,
     publishSheet, setPublishSheet, setSelectedPostRef,
-    communityMapId,
   })
-
-  const refreshCommunityPendingRequests = useCallback(async () => {
-    if (!hasSupabaseEnv || !authUser || !communityMapId || communityMapId === "community-map") return
-    try {
-      const requests = await listFeatureChangeRequests(communityMapId, "pending")
-      setCommunityPendingRequests(requests)
-    } catch (error) {
-      console.error("Failed to refresh community feature requests", error)
-    }
-  }, [authUser, communityMapId])
 
   const {
     focusFeature, focusFeatureOnly, openFeatureDetail,
-    saveFeatureSheet, requestCommunityFeatureUpdate, requestCommunityFeatureUpdateById, deleteFeature,
+    saveFeatureSheet, deleteFeature,
     addMemo, updateMemo, deleteMemo, createHandleMapTap, completeRoute, completeArea,
-    startRelocatePin, importCommunityFeatureToMine, unimportCommunityFeature,
+    startRelocatePin,
   } = useFeatureEditing({
     activeMapId, activeMapSource, cloudMode,
-    activeMapRole: activeMap?.userRole || "owner",
     setFeatures, featureSheet, setFeatureSheet,
     selectedFeatureSummaryId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
     setEditorMode, setDraftPoints, setMemoText,
-    activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,
+    activeFeaturePool,
     touchMap, showToast, setMaps,
-    maps, features, myLocation, setFocusPoint,
+    setFocusPoint,
     currentUserId: viewerProfile.id,
     currentUserName: viewerProfile.name,
-    onCommunityRequestSubmitted: refreshCommunityPendingRequests,
   })
 
   const handleMapTap = useMemo(() => createHandleMapTap(editorMode), [createHandleMapTap, editorMode])
@@ -962,62 +870,6 @@ export default function App() {
       showToast(error?.message || "초대를 처리하지 못했어요.")
     }
   }, [reloadCloudData, showToast])
-
-  // --- 모두의 지도 가져오기: 지도 선택 시트 트리거 + 핸들러 ---
-  // 팝업의 [가져오기] 탭 → 타겟 지도 선택 시트 열기.
-  // 사용자가 기존 지도를 고르거나 '새 지도 만들기'로 신규 지도를 만들고 바로 import 한다.
-  const handleImportCommunityFeatureRequest = useCallback((sourceFeatureId) => {
-    if (!sourceFeatureId) return
-    setImportTargetSheet({ featureId: sourceFeatureId })
-  }, [])
-
-  const handleImportPickMap = useCallback(async (targetMapId) => {
-    const featureId = importTargetSheet?.featureId
-    if (!targetMapId || !featureId) return
-    const ok = importCommunityFeatureToMine(featureId, targetMapId)
-    if (ok) setImportTargetSheet(null)
-  }, [importTargetSheet, importCommunityFeatureToMine])
-
-  const handleImportCreateMap = useCallback(async (title) => {
-    const featureId = importTargetSheet?.featureId
-    const trimmed = `${title || ""}`.trim()
-    if (!featureId || !trimmed) return
-    setImportTargetBusy(true)
-    try {
-      let nextMap
-      if (cloudMode) {
-        nextMap = await createMapRecord({
-          title: trimmed,
-          description: "",
-          theme: "pastel",
-          category: "personal",
-          config: {},
-        })
-      } else {
-        nextMap = {
-          id: createId("map"),
-          title: trimmed,
-          description: "",
-          theme: "pastel",
-          category: "personal",
-          config: {},
-          updatedAt: new Date().toISOString(),
-        }
-      }
-      setMaps((current) => [nextMap, ...current])
-      // maps state 업데이트 이전에도 import 할 수 있도록 map 객체를 그대로 전달.
-      const ok = importCommunityFeatureToMine(featureId, nextMap)
-      if (ok) {
-        showToast(`'${trimmed}' 지도를 만들고 저장했어요.`)
-        setImportTargetSheet(null)
-      }
-    } catch (error) {
-      console.error("Failed to create map for import", error)
-      showToast("지도를 만들지 못했어요.")
-    } finally {
-      setImportTargetBusy(false)
-    }
-  }, [cloudMode, importTargetSheet, setMaps, importCommunityFeatureToMine, showToast])
 
   // C단계 빌더: 채집한 카드를 골라 새 지도로 묶는다
   // 편집기 [+ 카드 추가] — 값이 있으면 빌더가 '기존 지도에 추가' 모드
@@ -1145,7 +997,6 @@ export default function App() {
   const mapEditorReadOnly = activeMapSource === "demo"
     || activeMapSource === "shared"
     || (activeMapSource === "local" && activeMap?.canEditFeatures === false)
-    || (activeMapSource === "community" && !canEditCommunityMap)
 
   const hasUnsavedEditorDraft = activeTab === "maps"
     && mapsView === "editor"
@@ -1159,10 +1010,8 @@ export default function App() {
 
   const handleMapEditorBack = useCallback(() => {
     if (!confirmDiscardEditorDraft()) return
-    if (activeMapSource === "community" || activeMapSource === "shared") {
-      setActiveTab("maps")
-    }
     if (activeMapSource === "shared") {
+      setActiveTab("maps")
       setSharedMapData(null)
       setActiveMapId(maps[0]?.id ?? null)
     }
@@ -1462,8 +1311,8 @@ export default function App() {
     if (activeTab !== "maps" || mapsView !== "editor") return
     if (activeMapSource === "shared" || activeMapSource === "demo") return
 
-    const mapId = activeMapSource === "community" ? communityMapId : activeMapId
-    if (!mapId || mapId === "community-map") return
+    const mapId = activeMapId
+    if (!mapId) return
 
     const featureIds = new Set(
       activeFeaturePool
@@ -1479,22 +1328,6 @@ export default function App() {
       if (cancelled || syncRunning) return
       syncRunning = true
       try {
-        if (activeMapSource === "community") {
-          const bundle = await getCommunityMapBundle()
-          if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
-
-          setCommunityMapId(bundle.map.id)
-          setCommunityMapFeatures((current) => (
-            mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
-          ))
-          setActiveMapId((current) => (
-            current === "community-map" || current === mapId
-              ? bundle.map.id
-              : current
-          ))
-          return
-        }
-
         const bundle = await getMapBundle(mapId)
         if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
 
@@ -1534,34 +1367,26 @@ export default function App() {
         scheduleSync,
       )
 
-    if (activeMapSource === "community") {
-      channel = channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "community_records" },
-        scheduleSync,
-      )
-    } else {
-      channel = channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "feature_memos" },
-        (payload) => {
-          const featureId = payload?.new?.feature_id || payload?.old?.feature_id
-          if (featureId && featureIds.has(featureId)) {
-            scheduleSync()
-          }
-        },
-      )
-      channel = channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "feature_media" },
-        (payload) => {
-          const featureId = payload?.new?.feature_id || payload?.old?.feature_id
-          if (featureId && featureIds.has(featureId)) {
-            scheduleSync()
-          }
-        },
-      )
-    }
+    channel = channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "feature_memos" },
+      (payload) => {
+        const featureId = payload?.new?.feature_id || payload?.old?.feature_id
+        if (featureId && featureIds.has(featureId)) {
+          scheduleSync()
+        }
+      },
+    )
+    channel = channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "feature_media" },
+      (payload) => {
+        const featureId = payload?.new?.feature_id || payload?.old?.feature_id
+        if (featureId && featureIds.has(featureId)) {
+          scheduleSync()
+        }
+      },
+    )
 
     channel.subscribe((status) => {
       if (status === "CHANNEL_ERROR") {
@@ -1580,94 +1405,12 @@ export default function App() {
     activeMapSource,
     activeTab,
     cloudMode,
-    communityMapId,
     mapsView,
-    setActiveMapId,
-    setCommunityMapId,
-    setCommunityMapFeatures,
     setFeatures,
     setMaps,
   ])
 
   // --- Route effects ---
-
-  useEffect(() => {
-    if (!hasSupabaseEnv || !authReady) return
-    let cancelled = false
-
-    const hydrateCommunityMap = async () => {
-      try {
-        const bundle = await getCommunityMapBundle()
-        if (cancelled || !bundle?.map) return
-
-        setCommunityMapId(bundle.map.id)
-        setCommunityMapFeatures((current) => (
-          mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
-        ))
-        setActiveMapId((current) => (current === "community-map" ? bundle.map.id : current))
-
-        if (routeAtLoad?.type === "map" && (routeAtLoad.mapId === "community-map" || routeAtLoad.mapId === bundle.map.id)) {
-          setActiveTab("maps")
-          setMapsView("editor")
-          setActiveMapSource("community")
-          setActiveMapId(bundle.map.id)
-        }
-      } catch (error) {
-        console.error("Failed to hydrate community map", error)
-      }
-    }
-
-    hydrateCommunityMap()
-    return () => { cancelled = true }
-  }, [authReady, authUser, routeAtLoad, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView, setCommunityMapFeatures])
-
-  useEffect(() => {
-    if (!hasSupabaseEnv || !authReady || !authUser || !communityMapId || communityMapId === "community-map") {
-      setCommunityPendingRequests([])
-      return undefined
-    }
-    let cancelled = false
-    const fetchRequests = async () => {
-      try {
-        const requests = await listFeatureChangeRequests(communityMapId, "pending")
-        if (!cancelled) {
-          setCommunityPendingRequests(requests)
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to load community feature requests", error)
-        }
-      }
-    }
-    fetchRequests()
-    const timer = window.setInterval(fetchRequests, 45000)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
-    }
-  }, [authReady, authUser, communityMapId])
-
-  useEffect(() => {
-    if (!authUser || communityRequestSummary.incoming.length === 0) return
-    let added = false
-    for (const request of communityRequestSummary.incoming) {
-      const next = addNotification({
-        type: NOTI_TYPES.FEATURE_UPDATE_REQUEST,
-        mapId: request.mapId,
-        title: `${request.featureTitle || "장소"} 수정 요청`,
-        body: `${request.requestedByName || "사용자"}님이 변경을 제안했어요.`,
-        meta: {
-          dedup: `community-feature-request:${request.id}`,
-          requestId: request.id,
-          featureId: request.featureId,
-        },
-      })
-      if (next) added = true
-    }
-    if (added) {
-      notiRefresh()
-    }
-  }, [authUser, communityRequestSummary.incoming, notiRefresh])
 
   useEffect(() => {
     if (routeAtLoad?.type === "invalid-shared") {
@@ -1676,13 +1419,11 @@ export default function App() {
     if (
       routeAtLoad?.type === "map"
       && !initialStoredTarget
-      && routeAtLoad.mapId !== "community-map"
-      && routeAtLoad.mapId !== communityMapId
-      && (!hasSupabaseEnv || (authReady && communityMapId !== "community-map"))
+      && (!hasSupabaseEnv || authReady)
     ) {
       showToast("이 기기에서 찾을 수 없는 지도예요.")
     }
-  }, [authReady, communityMapId, initialStoredTarget, routeAtLoad, showToast])
+  }, [authReady, initialStoredTarget, routeAtLoad, showToast])
 
   // 슬러그 기반 공유 URL 로딩 (/s/:slug)
   useEffect(() => {
@@ -1726,7 +1467,7 @@ export default function App() {
         : buildMapSharePath(sharedMapData.map, sharedMapData.features)
       : null
 
-    const routeMapId = activeMapSource === "community" ? "community-map" : activeMapId
+    const routeMapId = activeMapId
     const nextPath = activeTab === "maps" && mapsView === "editor" && routeMapId
       ? sharedMapPath ?? buildMapRoutePath(routeMapId)
       : "/"
@@ -1962,8 +1703,6 @@ export default function App() {
             myLocation={myLocation}
             currentUserId={viewerProfile.id}
             readOnly={mapEditorReadOnly}
-            hideCount={activeMapSource === "community"}
-            communityMode={activeMapSource === "community"}
             shareUrl={shareUrl}
             showLabels={showMapLabels}
             onBack={handleMapEditorBack}
@@ -2019,10 +1758,6 @@ export default function App() {
             onDeleteVoice={handleDeleteVoice}
             onBeginFeatureRecord={(featureId) => setInlineRecordFeatureId(featureId)}
             onEndFeatureRecord={() => setInlineRecordFeatureId(null)}
-            importedCommunityFeatureIds={importedCommunityFeatureIds}
-            onImportCommunityFeature={handleImportCommunityFeatureRequest}
-            onUnimportCommunityFeature={unimportCommunityFeature}
-            onRequestCommunityUpdateFromSummary={requestCommunityFeatureUpdateById}
             onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
             onUpdateMemo={updateMemo}
             onDeleteMemo={deleteMemo}
@@ -2337,20 +2072,15 @@ export default function App() {
       />
       {(() => {
         // 시안 v5 신규 편집 시트 (FeatureEditSheet)는 '작성자 편집 전용'.
-        // 비작성자의 커뮤니티 수정 요청은 기존 FeatureDetailSheet가 담당.
         if (!featureSheet) return null
-        const isCommunityFeature = activeMapSource === "community"
-        const canDirectlyEdit = !mapEditorReadOnly && (
-          activeMapSource === "local"
-          || (isCommunityFeature && (featureSheet.createdBy || null) === viewerProfile.id)
-        )
+        const canDirectlyEdit = !mapEditorReadOnly && activeMapSource === "local"
         const shouldShowEditor = canDirectlyEdit && (featureSheetMode === "edit" || isDraftFeatureSheet || featureSheet?._focusName)
         if (shouldShowEditor) {
           return (
             <FeatureEditSheet
               featureSheet={featureSheet}
               setFeatureSheet={setFeatureSheet}
-              mapMode={isCommunityFeature ? "community" : "personal"}
+              mapMode="personal"
               mapTitle={activeMap?.title || ""}
               readOnly={mapEditorReadOnly}
               onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null); setFeatureSheetMode("detail") }}
@@ -2383,19 +2113,9 @@ export default function App() {
             onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
             onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
             memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo} onUpdateMemo={updateMemo}
-            onRequestCommunityUpdate={requestCommunityFeatureUpdate}
           />
         )
       })()}
-      <ImportTargetMapSheet
-        open={Boolean(importTargetSheet)}
-        maps={b2cMaps}
-        features={b2cFeatures}
-        busy={importTargetBusy}
-        onPick={handleImportPickMap}
-        onCreate={handleImportCreateMap}
-        onClose={() => { if (!importTargetBusy) setImportTargetSheet(null) }}
-      />
       {coachmarkStep === 3 ? (
         <CoachMark
           step={3}

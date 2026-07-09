@@ -1,13 +1,9 @@
 import { useCallback } from "react"
 
-export function useFeaturePool(activeMapSource, setFeatures, setCommunityMapFeatures) {
+export function useFeaturePool(setFeatures) {
   const updateFeatures = useCallback((updaterFn) => {
-    if (activeMapSource === "community") {
-      setCommunityMapFeatures(updaterFn)
-    } else {
-      setFeatures(updaterFn)
-    }
-  }, [activeMapSource, setCommunityMapFeatures, setFeatures])
+    setFeatures(updaterFn)
+  }, [setFeatures])
 
   return { updateFeatures }
 }

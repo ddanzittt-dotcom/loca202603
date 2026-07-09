@@ -123,7 +123,6 @@ export function FeatureDetailSheet({
   featureSheet,
   activeMapSource,
   readOnly = false,
-  currentUserId = "me",
   onClose,
   onEdit,
   photoInputRef,
@@ -136,17 +135,11 @@ export function FeatureDetailSheet({
   onDeleteVoice,
   onAddMemo,
   onUpdateMemo,
-  onRequestCommunityUpdate,
 }) {
   const [recordOpen, setRecordOpen] = useState(false)
   const [activeRecord, setActiveRecord] = useState(null)
-  const [requestingEdit, setRequestingEdit] = useState(false)
-  const [requestMessage, setRequestMessage] = useState("")
   const feature = featureSheet
-  const isCommunity = activeMapSource === "community"
-  const isPublicCommunityRecord = feature?.sourceContext === "public_community_records"
-  const canEdit = !readOnly && (activeMapSource === "local" || (isCommunity && feature?.createdBy === currentUserId))
-  const canRequestEdit = isCommunity && !readOnly && !isPublicCommunityRecord && !canEdit && typeof onRequestCommunityUpdate === "function"
+  const canEdit = !readOnly && activeMapSource === "local"
 
   const recordGroups = useMemo(() => {
     if (!feature) return []
@@ -165,14 +158,6 @@ export function FeatureDetailSheet({
   const copy = typeCopy(feature.type)
   const TypeIcon = copy.Icon
   const tags = Array.isArray(feature.tags) ? feature.tags : []
-
-  const handleRequestEdit = async () => {
-    const ok = await onRequestCommunityUpdate?.(requestMessage)
-    if (ok) {
-      setRequestingEdit(false)
-      setRequestMessage("")
-    }
-  }
 
   const openNewRecord = () => {
     setActiveRecord({
@@ -254,7 +239,6 @@ export function FeatureDetailSheet({
       <BottomSheet
         open={Boolean(feature)}
         title={copy.title}
-        subtitle={isCommunity && feature.createdByName ? `작성자 · ${feature.createdByName}` : undefined}
         onClose={onClose}
         fullscreen
       >
@@ -296,27 +280,7 @@ export function FeatureDetailSheet({
                   <Edit3 size={14} /> 편집
                 </button>
               ) : null}
-              {canRequestEdit ? (
-                <button type="button" className="fd-detail__action" onClick={() => setRequestingEdit((value) => !value)}>
-                  <Edit3 size={14} /> 수정 제안
-                </button>
-              ) : null}
             </div>
-
-            {requestingEdit ? (
-              <div className="fd-detail__request">
-                <textarea
-                  value={requestMessage}
-                  onChange={(event) => setRequestMessage(event.target.value)}
-                  placeholder="수정이 필요한 이유를 간단히 적어주세요."
-                  rows={3}
-                />
-                <div>
-                  <button type="button" onClick={() => { setRequestingEdit(false); setRequestMessage("") }}>취소</button>
-                  <button type="button" onClick={handleRequestEdit}>보내기</button>
-                </div>
-              </div>
-            ) : null}
           </section>
 
           <section className="fd-detail__records">
