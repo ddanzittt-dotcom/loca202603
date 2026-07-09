@@ -401,21 +401,26 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   return (
     <div className="xc-view">
-      <PixelRadar
-        items={radarItems}
-        location={effectiveLocation}
-        terrain={terrain}
-        label={effectiveLocation.label}
-        hasLocation={Boolean(location)}
-        locating={locating}
-        maxDots={radarExpanded ? 110 : 30}
-        expanded={radarExpanded}
-        onLocate={locateMe}
-        onReload={() => setReloadKey((value) => value + 1)}
-        onSelect={handleRadarSelect}
-        onExpand={() => setRadarExpanded((value) => !value)}
-      />
+      {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 고정, 오른쪽 피드만 스크롤 */}
+      <div className="xc-view__map">
+        <PixelRadar
+          items={radarItems}
+          location={effectiveLocation}
+          terrain={terrain}
+          label={effectiveLocation.label}
+          hasLocation={Boolean(location)}
+          locating={locating}
+          maxDots={radarExpanded ? 110 : 30}
+          expanded={radarExpanded}
+          onLocate={locateMe}
+          onReload={() => setReloadKey((value) => value + 1)}
+          onSelect={handleRadarSelect}
+          onExpand={() => setRadarExpanded((value) => !value)}
+        />
+      </div>
 
+      {/* 오른쪽: 축제·공간·생물 피드 */}
+      <div className="xc-view__feed">
       <section className="xc-section" aria-label="지금 열린 행사">
         <header className="xc-section__head">
           <strong>지금 열린 행사</strong>
@@ -527,6 +532,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           </CardRail>
         )}
       </section>
+      </div>
 
       {detailItem ? (
         <CurationDetailSheet

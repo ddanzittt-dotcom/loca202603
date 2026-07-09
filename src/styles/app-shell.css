@@ -710,6 +710,132 @@
   width: 100%;
 }
 
+/* 회원가입 약관 동의 블록 */
+.auth-consent {
+  border: 1px solid rgba(45, 74, 62, 0.16);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(45, 74, 62, 0.03);
+}
+.auth-consent__legend {
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #667085;
+}
+.auth-consent__all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.auth-consent__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(45, 74, 62, 0.16);
+}
+.auth-consent__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #344054;
+  cursor: pointer;
+}
+.auth-consent input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: #2d4a3e;
+  cursor: pointer;
+}
+.auth-consent__req { color: #c0442b; font-weight: 700; }
+.auth-consent__opt { color: #667085; font-weight: 700; }
+.auth-consent__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #2d4a3e;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.auth-consent__note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-style: normal;
+  color: #8a94a0;
+}
+
+/* soft-social(크림 페이퍼/픽셀) 스킨 대응 */
+.app-shell--soft-social .auth-consent {
+  border: 2px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.12);
+}
+.app-shell--soft-social .auth-consent__legend,
+.app-shell--soft-social .auth-consent__note {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+.app-shell--soft-social .auth-consent input[type="checkbox"] {
+  accent-color: #1F1A12;
+}
+.app-shell--soft-social .auth-consent__link { color: #1F1A12; }
+.app-shell--soft-social .auth-consent__list {
+  border-top-color: rgba(31, 26, 18, 0.2);
+}
+
+/* 가입 직후 연령대·지역 온보딩 시트 */
+.chips-row--wrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+  margin-bottom: 0;
+}
+.profile-onboard {
+  padding: 4px 2px 8px;
+}
+.profile-onboard__note {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #8a94a0;
+}
+.profile-onboard__note b {
+  color: #2d4a3e;
+  font-weight: 700;
+}
+.profile-onboard__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.profile-onboard__actions .button--ghost {
+  flex: 0 0 auto;
+  min-width: 96px;
+}
+.profile-onboard__actions .button--primary {
+  flex: 1;
+}
+.app-shell--soft-social .profile-onboard__note b {
+  color: #1F1A12;
+}
+
 @media (max-width: 959px) {
   .app-shell--map-editor .loca-v2-bottomnav {
     display: none;
@@ -5144,6 +5270,48 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+/* 데스크톱: 왼쪽=지도(레이더) / 오른쪽=축제·공간·생물 피드 2단.
+   지도는 sticky로 고정하고 오른쪽 피드만 스크롤한다. 모바일은 위 세로 스택 유지. */
+.xc-view__feed {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+@media (min-width: 1080px) {
+  .xc-view {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 26px;
+  }
+
+  .xc-view__map {
+    position: sticky;
+    top: 20px;
+    flex: 0 0 clamp(360px, 38%, 520px);
+    align-self: stretch;
+    transition: flex-basis 0.24s ease;
+  }
+
+  .xc-view__map .xradar__canvas {
+    height: clamp(440px, calc(100dvh - 210px), 680px);
+  }
+
+  /* 확대(⤢) 시 지도 열을 더 넓고 크게 — 오른쪽 피드는 그만큼 좁아진다 */
+  .xc-view:has(.xradar--expanded) .xc-view__map {
+    flex-basis: clamp(520px, 58%, 820px);
+  }
+
+  .xc-view__map .xradar--expanded .xradar__canvas {
+    height: clamp(520px, calc(100dvh - 120px), 900px);
+  }
+
+  .xc-view__feed {
+    flex: 1 1 auto;
+  }
 }
 
 .xc-locbar {
