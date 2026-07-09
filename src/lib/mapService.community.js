@@ -182,14 +182,25 @@ async function getCommunityMapRow(supabase) {
 }
 
 async function listCommunityMapFeatureRows(supabase, mapId) {
-  const { data, error } = await supabase
-    .from("map_features")
-    .select("*")
-    .eq("map_id", mapId)
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: true })
+  // PostgREST 기본 1000행 상한 대비 — 핀 1000개 넘는 인기 지도도 안 잘리게 페이지네이션
+  const PAGE = 1000
+  const rows = []
+  let error = null
+  for (let from = 0; ; from += PAGE) {
+    const res = await supabase
+      .from("map_features")
+      .select("*")
+      .eq("map_id", mapId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
+      .range(from, from + PAGE - 1)
+    if (res.error) { error = res.error; break }
+    const batch = res.data || []
+    rows.push(...batch)
+    if (batch.length < PAGE) break
+  }
 
-  if (!error) return data || []
+  if (!error) return rows
 
   if (!canIgnoreCommunityRead(error, "map_features")) {
     console.warn("[community-map] failed to load map feature samples; using bundled sample fallback", error)

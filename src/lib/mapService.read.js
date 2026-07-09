@@ -22,6 +22,22 @@ function chunkArray(items, size = SUPABASE_IN_FILTER_CHUNK_SIZE) {
   return chunks
 }
 
+// PostgREST 는 limit 없는 select 를 기본 1000행에서 잘라버린다.
+// 기록이 1000개를 넘는 사용자는 초과분이 조용히 사라지므로 .range() 로 끝까지 페이지네이션한다.
+// buildQuery(from, to): from~to 범위가 걸린 새 쿼리를 반환하는 함수.
+const PAGE_SIZE = 1000
+async function fetchAllPaged(buildQuery, pageSize = PAGE_SIZE) {
+  const rows = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery(from, from + pageSize - 1)
+    if (error) return { data: null, error }
+    const batch = data || []
+    rows.push(...batch)
+    if (batch.length < pageSize) break // 마지막 페이지
+  }
+  return { data: rows, error: null }
+}
+
 // ─── 내부 batch 조회 ───
 
 function isMissingDbObject(error, objectName) {
@@ -351,12 +367,13 @@ export async function listFeaturesForMapIds(mapIds) {
   const rows = []
 
   for (const chunk of chunkArray(mapIds)) {
-    const { data, error } = await supabase
+    const { data, error } = await fetchAllPaged((from, to) => supabase
       .from("map_features")
       .select("*")
       .in("map_id", chunk)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true })
+      .range(from, to))
 
     if (error) {
       if (canIgnoreOptionalTableRead(error, "map_features")) return []
@@ -583,12 +600,13 @@ export async function getMyAppData() {
       console.error("Failed to load personal map features", error)
       return []
     }),
-    // 채집-우선 구조(050): 지도에 아직 안 묶인 내 기록도 도감에 포함
-    supabase
+    // 채집-우선 구조(050): 지도에 아직 안 묶인 내 기록도 도감에 포함 (1000개 초과 대비 페이지네이션)
+    fetchAllPaged((from, to) => supabase
       .from("map_features")
       .select("*")
       .is("map_id", null)
       .eq("created_by", user.id)
+      .range(from, to))
       .then((res) => (res.error ? [] : res.data || []))
       .catch(() => []),
     listPublicationsForMapIds(mapIds),
@@ -837,16 +855,20 @@ export async function getFeatureMemos(featureId) {
   return (data || []).map((row) => normalizeMemo(row))
 }
 
+// 공개 프로필 컬럼만 조회 — 관리자 플래그(dashboard_role 등)는 migration 058 로 API 차단됨.
+// select('*') 를 쓰면 회수된 컬럼 때문에 permission denied 가 나므로 명시 컬럼만 조회한다.
+const PROFILE_PUBLIC_COLUMNS = "id, nickname, avatar_url, bio, slug, link, is_public, created_at, updated_at"
+
 export async function getProfile(userId) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single()
+  const { data, error } = await supabase.from("profiles").select(PROFILE_PUBLIC_COLUMNS).eq("id", userId).single()
   if (error) throw error
   return data
 }
 
 export async function getProfileBySlug(slug) {
   const supabase = requireSupabase()
-  const { data, error } = await supabase.from("profiles").select("*").eq("slug", slug).single()
+  const { data, error } = await supabase.from("profiles").select(PROFILE_PUBLIC_COLUMNS).eq("slug", slug).single()
   if (error) throw error
   return data
 }

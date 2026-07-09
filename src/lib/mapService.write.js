@@ -737,11 +737,13 @@ export async function updateProfile(userId, updates = {}) {
   let error = null
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
+    // RETURNING 도 공개 컬럼만 — migration 058 로 관리자 컬럼 SELECT 이 회수돼
+    // select('*') 는 permission denied 가 난다.
     ;({ data, error } = await supabase
       .from("profiles")
       .update(payload)
       .eq("id", userId)
-      .select("*")
+      .select("id, nickname, avatar_url, bio, slug, link, is_public, created_at, updated_at")
       .single())
 
     if (!error) break
