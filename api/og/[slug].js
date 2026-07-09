@@ -61,8 +61,9 @@ export default async function handler(req, res) {
     : `${pinCount > 0 ? `${pinCount}개의 장소가 등록된 ` : ""}${category === "event" ? "이벤트 " : ""}지도를 확인해보세요.`
   const canonicalUrl = `https://${req.headers.host}/s/${encodeURIComponent(slug)}`
 
-  // OG 이미지: 별도 엔드포인트에서 SVG 제공
-  const ogImageUrl = `https://${req.headers.host}/api/og-image/${encodeURIComponent(slug)}`
+  // OG 이미지: 카카오톡/페이스북은 SVG 를 렌더하지 못하므로 정적 PNG 를 쓴다.
+  // (제목·설명은 아래 메타에서 지도별로 동적 표기 → 카드 텍스트는 지도마다 다르게 뜬다)
+  const ogImageUrl = `https://${req.headers.host}/og-image.png`
 
   const html = `<!DOCTYPE html>
 <html lang="ko">
@@ -74,11 +75,14 @@ export default async function handler(req, res) {
   <meta property="og:description" content="${escapeHtml(ogDescription)}" />
   <meta property="og:url" content="${canonicalUrl}" />
   <meta property="og:image" content="${ogImageUrl}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:site_name" content="LOCA" />
   <meta property="og:locale" content="ko_KR" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(ogDescription)}" />
+  <meta name="twitter:image" content="${ogImageUrl}" />
 </head>
 <body></body>
 </html>`

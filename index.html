@@ -13,12 +13,57 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <title>LOCA · 내 동네를 기록하는 로컬 지도</title>
+    <meta name="description" content="가고 싶은 곳, 다녀온 곳을 지도에 핀으로 모아 나만의 지도를 만들고 공유하세요. 장소 기록·경로·영역부터 발행·공유·커뮤니티까지 — LOCA." />
+    <link rel="canonical" href="https://loca.im/" />
+
+    <!-- Open Graph (카카오톡·페이스북·라인 공유 카드) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LOCA - 웹 지도 작업 공간" />
-    <meta property="og:description" content="지도 제작, 장소 기록, 프로필 공개를 한 화면에서 관리하세요." />
     <meta property="og:site_name" content="LOCA" />
+    <meta property="og:title" content="LOCA · 내 동네를 기록하는 로컬 지도" />
+    <meta property="og:description" content="가고 싶은 곳, 다녀온 곳을 지도에 핀으로 모아 나만의 지도를 만들고 공유하세요." />
+    <meta property="og:url" content="https://loca.im/" />
+    <meta property="og:image" content="https://loca.im/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="LOCA — 내 동네를 수집하는 로컬 지도" />
     <meta property="og:locale" content="ko_KR" />
-    <title>LOCA | 웹 지도 작업 공간</title>
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="LOCA · 내 동네를 기록하는 로컬 지도" />
+    <meta name="twitter:description" content="가고 싶은 곳, 다녀온 곳을 지도에 핀으로 모아 나만의 지도를 만들고 공유하세요." />
+    <meta name="twitter:image" content="https://loca.im/og-image.png" />
+
+    <!-- 구조화 데이터 (SEO 리치결과 · GEO/AI 검색 대응) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://loca.im/#website",
+          "url": "https://loca.im/",
+          "name": "LOCA",
+          "alternateName": "로카",
+          "description": "내 동네를 기록하는 로컬 큐레이션 지도",
+          "inLanguage": "ko-KR"
+        },
+        {
+          "@type": "WebApplication",
+          "name": "LOCA",
+          "url": "https://loca.im/",
+          "applicationCategory": "LifestyleApplication",
+          "operatingSystem": "Web, iOS, Android",
+          "inLanguage": "ko-KR",
+          "browserRequirements": "Requires JavaScript",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+          "description": "가고 싶은 곳, 다녀온 곳을 지도에 핀으로 모아 나만의 지도를 만들고 발행·공유하는 로컬 큐레이션 지도 서비스."
+        }
+      ]
+    }
+    </script>
     <script>
       // Suppress Naver Maps SDK cross-origin errors from crashing React.
       window.onerror = function(message, source) {

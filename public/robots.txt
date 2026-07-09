@@ -1,0 +1,9 @@
+# LOCA — https://loca.im
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /account
+Disallow: /api/
+
+# 검색엔진 사이트맵
+Sitemap: https://loca.im/sitemap.xml
