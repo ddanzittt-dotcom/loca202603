@@ -133,14 +133,18 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
 
     const loc = st.location || { lat: 37.5665, lng: 126.978 }
     const cosLat = Math.cos((loc.lat * Math.PI) / 180) || 1
-    const spanX = w * 0.44
-    const spanY = h * 0.42
+    const spanX = w * 0.49
+    const spanY = h * 0.47
     const pool = st.items.slice(0, st.maxDots)
-    // 자동 줌 — 가장 먼 도트를 기준으로 정규화해 행사·공간·생물이 거리와 무관하게 모두 보이게.
+    // 자동 줌 — 도트를 기준으로 정규화해 행사·공간·생물이 거리와 무관하게 모두 보이게.
     // sqrt 스케일로 가까운 것들도 중앙에 뭉치지 않고 퍼진다.
     const dists = pool.map((i) => (Number.isFinite(i.distKm) ? i.distKm : null)).filter((v) => v != null)
-    // 3~30km 범위로 자동 줌 — 아주 먼 행사 1개가 나머지를 중앙에 뭉치게 하지 않도록 상한 30km
-    const maxDist = Math.min(30, Math.max(3, ...(dists.length ? dists : [5])))
+    // 자동 줌 기준거리 — 가장 먼 도트가 아니라 상위 ~75퍼센타일을 쓴다.
+    // (먼 아웃라이어 1~2개가 링·마커 전체를 중앙에 뭉치게 하면 10km 원이 너무 작아 보임 → 원을 키워 간격 확보)
+    const sorted = dists.slice().sort((a, b) => a - b)
+    const p75 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.round((sorted.length - 1) * 0.75))] : 5
+    // 3~18km 범위로 자동 줌 — 상한을 낮춰 흔한 근거리 도트들이 레이더를 넓게 채우도록
+    const maxDist = Math.min(18, Math.max(3, p75))
     // 실지형 모드 = 선형 축척(지형·마커·링이 같은 자리), 폴백 = sqrt 스케일(퍼짐 우선)
     const real = st.terrain
     const rOf = real
@@ -182,7 +186,7 @@ function createRadar(canvas, { onCount, onDot, maxDots = 30 }) {
     })
 
     // 이모지 타일이 겹치지 않게 살짝 밀어내기 (n≤18, 몇 번만)
-    const minGap = TILE + 4
+    const minGap = TILE + 10
     const dots = st.dots
     for (let pass = 0; pass < 6; pass += 1) {
       for (let i = 0; i < dots.length; i += 1) {
