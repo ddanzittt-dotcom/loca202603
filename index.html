@@ -64,6 +64,38 @@
       ]
     }
     </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         📊 트래킹 / 검색등록 코드 자리 (아래 주석을 지우고 ID만 바꿔 넣으세요)
+         CSP 허용은 이미 열려 있어 붙여넣으면 바로 동작합니다.
+         ═══════════════════════════════════════════════════════════════ -->
+
+    <!-- ① Google Analytics 4 — G-XXXXXXXXXX 를 본인 측정 ID 로 교체
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    -->
+
+    <!-- ② Google Search Console(구글 서치콘솔) 소유확인 — content 값만 교체
+    <meta name="google-site-verification" content="여기에_인증코드" />
+    -->
+
+    <!-- ③ 네이버 서치어드바이저(웹마스터도구) 소유확인 — content 값만 교체
+    <meta name="naver-site-verification" content="여기에_인증코드" />
+    -->
+
+    <!-- ④ (선택) Microsoft Clarity 히트맵/세션리플레이 — CLARITY_ID 교체
+    <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","CLARITY_ID");
+    </script>
+    -->
+
     <script>
       // Suppress Naver Maps SDK cross-origin errors from crashing React.
       window.onerror = function(message, source) {
