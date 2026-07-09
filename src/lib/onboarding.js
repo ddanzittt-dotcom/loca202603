@@ -6,6 +6,7 @@ const KEYS = {
   welcomeSeen: "loca.onboarding_welcome_seen",
   coachmarkSeen: "loca.onboarding_editor_coachmark_seen",
   firstPinCelebrated: "loca.onboarding_first_pin_celebrated",
+  profileSeen: "loca.onboarding_profile_seen",
   version: "loca.onboarding_version",
 }
 
@@ -46,6 +47,15 @@ export function isTutorialSeen(mode) {
 }
 export function markTutorialSeen(mode) {
   write(`loca.tutorial_seen_${mode}`, ONBOARDING_VERSION)
+}
+
+// 가입 직후 프로필(연령대·지역) 온보딩 1스텝 — 저장/건너뛰기 모두 1회로 종료.
+// 인구통계 컬럼은 비공개(058/060)라 API 로 되읽을 수 없어 localStorage 플래그로 게이트한다.
+export function isProfileOnboardSeen() {
+  return read(KEYS.profileSeen) === "true"
+}
+export function markProfileOnboardSeen() {
+  write(KEYS.profileSeen, "true")
 }
 
 // 첫 핀 축하

@@ -1,5 +1,10 @@
 import { requireSupabase } from "./supabase"
 
+// 현재 시행 중인 약관/개인정보 처리방침 버전.
+// privacy.html / terms.html 시행일과 반드시 일치시킨다.
+// 방침 내용이 실질적으로 바뀌면 이 값을 올리고 재동의 흐름을 검토할 것.
+export const CONSENT_VERSION = "2026-07-09"
+
 const ALLOWED_ORIGINS = [
   "https://loca.im",
   "http://localhost:5173",
@@ -39,7 +44,7 @@ export async function signInWithEmail(email, password, captchaToken) {
   return data
 }
 
-export async function signUpWithEmail(email, password, nickname, captchaToken) {
+export async function signUpWithEmail(email, password, nickname, captchaToken, consent = {}) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -47,6 +52,11 @@ export async function signUpWithEmail(email, password, nickname, captchaToken) {
     options: {
       data: {
         name: nickname,
+        // 동의 기록 — handle_new_user() 트리거(059)가 profiles 로 복사한다.
+        terms_agreed: Boolean(consent.terms),
+        privacy_agreed: Boolean(consent.privacy),
+        marketing_consent: Boolean(consent.marketing),
+        consent_version: CONSENT_VERSION,
       },
       ...(captchaToken ? { captchaToken } : {}),
     },

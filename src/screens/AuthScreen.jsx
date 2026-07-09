@@ -1,6 +1,11 @@
 import { useRef, useState } from "react"
 import { signInWithEmail, signUpWithEmail } from "../lib/auth"
+import { buildLegalDocumentUrl } from "../lib/appUtils"
 import { Turnstile } from "../components/Turnstile"
+
+function openLegal(kind) {
+  window.open(buildLegalDocumentUrl(kind), "_blank", "noopener,noreferrer")
+}
 
 function friendlyError(message = "") {
   const msg = message.toLowerCase()
@@ -22,7 +27,18 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
   const [captchaToken, setCaptchaToken] = useState("")
+  const [agreeTerms, setAgreeTerms] = useState(false)
+  const [agreePrivacy, setAgreePrivacy] = useState(false)
+  const [agreeMarketing, setAgreeMarketing] = useState(false)
   const turnstileRef = useRef(null)
+
+  const requiredAgreed = agreeTerms && agreePrivacy
+  const allAgreed = agreeTerms && agreePrivacy && agreeMarketing
+  const toggleAll = (checked) => {
+    setAgreeTerms(checked)
+    setAgreePrivacy(checked)
+    setAgreeMarketing(checked)
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -31,7 +47,11 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
 
     try {
       if (mode === "signup") {
-        await signUpWithEmail(email.trim(), password, nickname.trim(), captchaToken)
+        await signUpWithEmail(email.trim(), password, nickname.trim(), captchaToken, {
+          terms: agreeTerms,
+          privacy: agreePrivacy,
+          marketing: agreeMarketing,
+        })
       } else {
         await signInWithEmail(email.trim(), password, captchaToken)
       }
@@ -94,6 +114,39 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="6자 이상" minLength={6} required />
           </label>
 
+          {mode === "signup" ? (
+            <fieldset className="auth-consent">
+              <legend className="auth-consent__legend">약관 동의</legend>
+              <label className="auth-consent__all">
+                <input type="checkbox" checked={allAgreed} onChange={(event) => toggleAll(event.target.checked)} />
+                <span>전체 동의</span>
+              </label>
+              <div className="auth-consent__list">
+                <label className="auth-consent__row">
+                  <input type="checkbox" checked={agreeTerms} onChange={(event) => setAgreeTerms(event.target.checked)} />
+                  <span>
+                    <b className="auth-consent__req">[필수]</b>{" "}
+                    <button type="button" className="auth-consent__link" onClick={() => openLegal("terms")}>이용약관</button> 동의
+                  </span>
+                </label>
+                <label className="auth-consent__row">
+                  <input type="checkbox" checked={agreePrivacy} onChange={(event) => setAgreePrivacy(event.target.checked)} />
+                  <span>
+                    <b className="auth-consent__req">[필수]</b>{" "}
+                    <button type="button" className="auth-consent__link" onClick={() => openLegal("privacy")}>개인정보 처리방침</button> 동의
+                    <em className="auth-consent__note">가명·익명 통계 작성 및 제공 목적 포함</em>
+                  </span>
+                </label>
+                <label className="auth-consent__row">
+                  <input type="checkbox" checked={agreeMarketing} onChange={(event) => setAgreeMarketing(event.target.checked)} />
+                  <span>
+                    <b className="auth-consent__opt">[선택]</b> 마케팅 정보 수신 동의
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+          ) : null}
+
           {errorMessage ? (
             <article className="settings-card settings-card--danger">
               <p>{errorMessage}</p>
@@ -102,7 +155,11 @@ export function AuthScreen({ title = "로그인", subtitle = "", onSuccess }) {
 
           <Turnstile ref={turnstileRef} onToken={setCaptchaToken} />
 
-          <button className="button button--primary" type="submit" disabled={submitting}>
+          <button
+            className="button button--primary"
+            type="submit"
+            disabled={submitting || (mode === "signup" && !requiredAgreed)}
+          >
             {submitting ? "처리 중..." : mode === "signup" ? "계정 만들기" : "로그인"}
           </button>
         </form>

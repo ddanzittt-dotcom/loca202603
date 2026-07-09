@@ -38,7 +38,7 @@ import { addFeatureMemo, backfillRegionNames, ensureCommunityMap, getCommunityMa
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
-import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord } from "./lib/mapService.write"
+import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord, updateProfile } from "./lib/mapService.write"
 import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlacements"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
@@ -74,8 +74,9 @@ import { PostDetailSheet } from "./components/sheets/PostDetailSheet"
 import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
 import { CollaboratorsSheet } from "./components/sheets/CollaboratorsSheet"
+import { ProfileOnboardingSheet } from "./components/sheets/ProfileOnboardingSheet"
 import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
-import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated, isTutorialSeen, markTutorialSeen } from "./lib/onboarding"
+import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated, isTutorialSeen, markTutorialSeen, isProfileOnboardSeen, markProfileOnboardSeen } from "./lib/onboarding"
 import { HelperCat, TuxCatSprite } from "./components/helper/HelperCat"
 import { TutorialDialog } from "./components/helper/TutorialDialog"
 import { CoachMark } from "./components/CoachMark"
@@ -359,6 +360,9 @@ export default function App() {
   ))
   // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
   const [tutorial, setTutorial] = useState(null)
+  // 가입 직후 연령대·지역 온보딩 시트
+  const [profileOnboardOpen, setProfileOnboardOpen] = useState(false)
+  const [profileOnboardSaving, setProfileOnboardSaving] = useState(false)
   const [mapsView, setMapsView] = useState(initialSharedMapData || initialStoredTarget ? "editor" : "list")
   const [activeMapId, setActiveMapId] = useState(initialSharedMapData?.map.id ?? initialStoredTarget?.mapId ?? maps[0]?.id ?? null)
   const [activeMapSource, setActiveMapSource] = useState(initialSharedMapData ? "shared" : initialStoredTarget?.source ?? "local")
@@ -562,7 +566,34 @@ export default function App() {
     setActiveTab("maps")
     setMapsView("list")
     setActiveMapSource("local")
+    // 신규 가입자에게만 연령대·지역 온보딩 1회 노출
+    if (mode === "signup" && !isProfileOnboardSeen()) setProfileOnboardOpen(true)
   }, [setActiveMapSource, setActiveTab, setMapsView, showToast])
+
+  const closeProfileOnboard = useCallback(() => {
+    markProfileOnboardSeen()
+    setProfileOnboardOpen(false)
+  }, [])
+
+  const handleProfileOnboardSave = useCallback(async ({ age_band, region_sido }) => {
+    // 둘 다 비었으면(=나중에) DB 호출 없이 종료
+    if (!age_band && !region_sido) {
+      closeProfileOnboard()
+      return
+    }
+    setProfileOnboardSaving(true)
+    try {
+      if (cloudMode && authUser?.id) {
+        await updateProfile(authUser.id, { age_band, region_sido })
+      }
+      showToast("고마워요! 더 잘 추천해드릴게요.")
+    } catch {
+      // 저장 실패해도 온보딩은 막지 않는다(선택 정보) — 조용히 넘어감
+    } finally {
+      setProfileOnboardSaving(false)
+      closeProfileOnboard()
+    }
+  }, [authUser, cloudMode, closeProfileOnboard, showToast])
 
   useEffect(() => {
     if (!showPersonalGate) return
@@ -2140,6 +2171,14 @@ export default function App() {
           }}
         />
       ) : null}
+
+      {/* 가입 직후 연령대·지역 온보딩 */}
+      <ProfileOnboardingSheet
+        open={profileOnboardOpen}
+        saving={profileOnboardSaving}
+        onSkip={closeProfileOnboard}
+        onSave={handleProfileOnboardSave}
+      />
 
       {placeCardFeature ? (
         <PlaceFlipCard
