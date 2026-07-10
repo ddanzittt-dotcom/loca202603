@@ -169,11 +169,12 @@ export async function diagnoseCulture(location) {
     try {
       const resp = await fetch(url)
       const text = await resp.text()
+      const recs = extractRecords(text)
       probes.push({
         baseUrl,
         status: resp.status,
-        records: extractRecords(text).length,
-        bodyHead: text.slice(0, 300),
+        records: recs.length,
+        firstRecord: recs[0] || text.slice(0, 300),
       })
     } catch (error) {
       probes.push({ baseUrl, error: `${error.name}: ${error.message}` })
