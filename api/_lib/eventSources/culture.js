@@ -5,12 +5,16 @@
 // 인증키: CULTURE_API_KEY (data.go.kr, 없으면 TOUR_API_KEY 재사용 시도).
 // 실패는 전부 조용히 [] 반환(fail-soft) — 이 소스가 죽어도 TourAPI 결과는 유지.
 //
-// 엔드포인트: https://apis.data.go.kr/B553457/cultureinfo/period2
+// 엔드포인트: B553457(한국문화정보원) — 가이드 개정으로 신/구 URL이 혼재해 순서대로 시도.
 //   from,to(YYYYMMDD) · gpsxfrom/gpsyfrom/gpsxto/gpsyto(경도/위도 사각형) · rows · cPage · serviceKey
+// 인증키 신청: data.go.kr "한국문화정보원_한눈에보는문화정보조회서비스" (자동승인)
 
 import { normalizeDateStr, toNumber } from "../eventNormalize.js"
 
-const CULTURE_BASE_URL = "https://apis.data.go.kr/B553457/cultureinfo/period2"
+const CULTURE_ENDPOINTS = [
+  "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period", // 신 가이드
+  "https://apis.data.go.kr/B553457/cultureinfo/period2", // 구 가이드 (병행 운영 가능성)
+]
 const BBOX_DELTA_DEG = 0.7 // 위치 기준 약 ±60~70km 사각형 (하류 거리필터가 최종 반경 컷)
 const ROWS_PER_PAGE = 100
 const PAGE_COUNT = 2
@@ -85,9 +89,9 @@ function normalizeCulture(block) {
   }
 }
 
-async function fetchPage(apiKey, params, pageNo) {
+async function fetchPage(baseUrl, apiKey, params, pageNo) {
   const query = new URLSearchParams({ ...params, cPage: String(pageNo), rows: String(ROWS_PER_PAGE) })
-  const url = `${CULTURE_BASE_URL}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
+  const url = `${baseUrl}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
   let resp
   try {
     resp = await fetch(url)
@@ -116,7 +120,12 @@ export async function fetchCultureEvents(location) {
     sortStdr: "1",
   }
 
+  // 신/구 엔드포인트를 순서대로 시도 — 레코드가 나오는 첫 엔드포인트를 사용
   const pages = Array.from({ length: PAGE_COUNT }, (_, index) => index + 1)
-  const settled = await Promise.allSettled(pages.map((pageNo) => fetchPage(apiKey, params, pageNo)))
-  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+  for (const baseUrl of CULTURE_ENDPOINTS) {
+    const settled = await Promise.allSettled(pages.map((pageNo) => fetchPage(baseUrl, apiKey, params, pageNo)))
+    const items = settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+    if (items.length) return items
+  }
+  return []
 }
