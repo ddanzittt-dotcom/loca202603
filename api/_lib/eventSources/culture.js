@@ -12,13 +12,11 @@
 import { normalizeDateStr, toNumber } from "../eventNormalize.js"
 
 // End Point: data.go.kr 15138937(한눈에보는문화정보조회서비스) 상세 = /B553457/cultureinfo
-// 기간+GPS 조회 오퍼레이션은 period2.
-const CULTURE_ENDPOINTS = [
-  "https://apis.data.go.kr/B553457/cultureinfo/period2",
-]
+// period2=기간+GPS 사각형, area2=지역(시도)별. 둘 다 <item>에 gpsX/gpsY 포함.
+const CULTURE_BASE = "https://apis.data.go.kr/B553457/cultureinfo"
 const BBOX_DELTA_DEG = 0.7 // 위치 기준 약 ±60~70km 사각형 (하류 거리필터가 최종 반경 컷)
 const ROWS_PER_PAGE = 100
-const PAGE_COUNT = 2
+const PAGE_COUNT = 3
 const PAST_DAYS = 90 // 이미 시작한 진행중 행사도 잡히게 과거로 넉넉히
 const FUTURE_DAYS = 180
 
@@ -89,14 +87,15 @@ function normalizeCulture(block) {
     endDate: normalizeDateStr(pick(block, ["endDate"])),
     tel: "",
     contentTypeId: 15,
+    category: pick(block, ["realmName"]), // 분야(연극/전시/뮤지컬 등)
     eventPlace: place,
     sourceUrl: "",
   }
 }
 
-async function fetchPage(baseUrl, apiKey, params, pageNo) {
+async function fetchPage(operation, apiKey, params, pageNo) {
   const query = new URLSearchParams({ ...params, cPage: String(pageNo), rows: String(ROWS_PER_PAGE) })
-  const url = `${baseUrl}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
+  const url = `${CULTURE_BASE}/${operation}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
   let resp
   try {
     resp = await fetch(url)
@@ -105,32 +104,41 @@ async function fetchPage(baseUrl, apiKey, params, pageNo) {
   }
   if (!resp.ok) return []
   const text = await resp.text()
-  // data.go.kr 공통 에러(인증/트래픽)는 XML/JSON 어느 쪽이든 레코드가 없으므로 []로 흡수
+  // data.go.kr 공통 에러(인증/트래픽)는 레코드가 없으므로 []로 흡수
   return extractRecords(text).map(normalizeCulture)
 }
 
+async function fetchOperation(operation, apiKey, params) {
+  const pages = Array.from({ length: PAGE_COUNT }, (_, index) => index + 1)
+  const settled = await Promise.allSettled(pages.map((pageNo) => fetchPage(operation, apiKey, params, pageNo)))
+  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
+}
+
 // 위치 주변 문화행사(정규화 완료)를 반환. 위치가 없으면 소규모 지역행사 취지상 건너뜀.
-export async function fetchCultureEvents(location) {
+// period2(GPS 사각형)에 더해, 시도를 알면 area2(지역별)로 커버리지를 넓힌다.
+// 두 오퍼레이션 결과는 events.js 의 dedupeEvents(제목+주소)로 병합·중복제거된다.
+export async function fetchCultureEvents(location, region) {
   const apiKey = cultureApiKey()
   if (!apiKey || !location) return []
 
   const today = new Date()
-  const params = {
+  const dateRange = {
     from: ymd(shiftDate(today, -PAST_DAYS)),
     to: ymd(shiftDate(today, FUTURE_DAYS)),
+    sortStdr: "1",
+  }
+  const periodParams = {
+    ...dateRange,
     gpsxfrom: String(location.lng - BBOX_DELTA_DEG),
     gpsxto: String(location.lng + BBOX_DELTA_DEG),
     gpsyfrom: String(location.lat - BBOX_DELTA_DEG),
     gpsyto: String(location.lat + BBOX_DELTA_DEG),
-    sortStdr: "1",
   }
 
-  // 신/구 엔드포인트를 순서대로 시도 — 레코드가 나오는 첫 엔드포인트를 사용
-  const pages = Array.from({ length: PAGE_COUNT }, (_, index) => index + 1)
-  for (const baseUrl of CULTURE_ENDPOINTS) {
-    const settled = await Promise.allSettled(pages.map((pageNo) => fetchPage(baseUrl, apiKey, params, pageNo)))
-    const items = settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
-    if (items.length) return items
+  const jobs = [fetchOperation("period2", apiKey, periodParams)]
+  if (region?.sido) {
+    jobs.push(fetchOperation("area2", apiKey, { ...dateRange, sido: region.sido }))
   }
-  return []
+  const settled = await Promise.allSettled(jobs)
+  return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))
 }

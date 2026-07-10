@@ -1,8 +1,9 @@
-// 한국관광공사 TourAPI + 문화포털 - 축제/행사 조회 (탐색 탭 큐레이션)
-// 환경변수: TOUR_API_KEY (data.go.kr 발급), CULTURE_API_KEY (선택, 없으면 TOUR_API_KEY 재사용)
+// 한국관광공사 TourAPI + 문화포털 + KOPIS - 축제/행사 조회 (탐색 탭 큐레이션)
+// 환경변수: TOUR_API_KEY (data.go.kr), CULTURE_API_KEY (선택, 없으면 TOUR_API_KEY 재사용),
+//          KOPIS_API_KEY (선택, 소극장 공연), KAKAO_REST_KEY (KOPIS 좌표 지오코딩)
 // 2026-07 탐색 큐레이션 개편으로 복원 — isAppRequest 가드 추가 (오픈 프록시 차단)
 // 2026-07 소규모 행사 커버리지 — 정규화/집계는 _lib/eventNormalize 공용 모듈로 추출,
-//          문화포털(공연전시 period2)을 소스로 병합. 소스별 어댑터는 정규화된 공통 스키마를 반환.
+//          문화포털(period2+area2)·KOPIS(공연목록)를 소스로 병합. 어댑터는 정규화된 공통 스키마 반환.
 
 import { isAppRequest } from "./_lib/appRequest.js"
 import {
@@ -13,7 +14,9 @@ import {
   toNumber,
   toYYYYMMDD,
 } from "./_lib/eventNormalize.js"
+import { resolveRegion } from "./_lib/geocode.js"
 import { fetchCultureEvents } from "./_lib/eventSources/culture.js"
+import { fetchKopisEvents } from "./_lib/eventSources/kopis.js"
 
 const TOUR_BASE_URL = "https://apis.data.go.kr/B551011/KorService2"
 const FESTIVAL_ROWS_PER_PAGE = 200
@@ -164,19 +167,23 @@ export default async function handler(req, res) {
   const startDateStr = toYYYYMMDD(threeMonthsAgo)
 
   try {
+    // 문화포털 area2 / KOPIS signgucode 는 시도(지역)를 필요로 하므로 한 번만 역지오코딩.
+    const region = location ? await resolveRegion(location) : null
+
     // 소스별 어댑터는 각자 정규화된 공통 스키마를 돌려준다.
-    // 문화포털은 fail-soft(키 없음/에러 시 [])라 프로덕션(키 미설정)에서도 기존 동작 유지.
-    const [festivalRaw, nearbyRaw, cultureItems] = await Promise.all([
+    // 문화포털·KOPIS는 fail-soft(키 없음/에러 시 [])라 프로덕션(키 미설정)에서도 기존 동작 유지.
+    const [festivalRaw, nearbyRaw, cultureItems, kopisItems] = await Promise.all([
       fetchFestivalPages(apiKey, startDateStr),
       fetchNearbyEventCandidates(apiKey, location),
-      fetchCultureEvents(location),
+      fetchCultureEvents(location, region),
+      fetchKopisEvents(location, region),
     ])
 
     const tourItems = [...festivalRaw, ...nearbyRaw]
       .filter((item) => item?.title)
       .map(normalizeTourItem)
 
-    const active = dedupeEvents([...tourItems, ...cultureItems])
+    const active = dedupeEvents([...tourItems, ...cultureItems, ...kopisItems])
       .filter((item) => isActiveEvent(item, todayStr))
       .filter((item) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng))
 
@@ -184,6 +191,7 @@ export default async function handler(req, res) {
       festival: festivalRaw.length,
       nearby: nearbyRaw.length,
       culture: cultureItems.length,
+      kopis: kopisItems.length,
     }
 
     if (location) {
