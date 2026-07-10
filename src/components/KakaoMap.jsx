@@ -3,7 +3,11 @@ import { getDefaultFeatureStyle, getFeatureStyleColor, getFeatureStyleLineStyle 
 import { triggerSelectionFeedback } from "../lib/haptics"
 import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
 import { getPublicMarkerDescriptor } from "../utils/publicMapMarkers"
-import { getDefaultMarkerEmojiForFeature, resolvePlaceMarkerEmoji } from "./FeatureEmoji"
+import {
+  createBadgePlaceMarkerContent,
+  createFeatureTagContent,
+  createRouteEndpointContent,
+} from "./mapMarkerContent"
 
 // ============================================================
 // KakaoMap — NaverMap 의 카카오맵 SDK 이식본.
@@ -26,26 +30,8 @@ const escapeHtml = (str) => {
   return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 }
 
-const isEmojiCodePoint = (codePoint) => (
-  (codePoint >= 0x1F000 && codePoint <= 0x1FAFF) ||
-  (codePoint >= 0x2600 && codePoint <= 0x27BF)
-)
-
-const stripEmojiFromLabel = (value, fallback = "이름 없음") => {
-  let stripped = ""
-  for (const char of String(value || "")) {
-    const codePoint = char.codePointAt(0)
-    if (codePoint === 0x200D || codePoint === 0xFE0E || codePoint === 0xFE0F) continue
-    if (isEmojiCodePoint(codePoint)) continue
-    stripped += char
-  }
-  const text = stripped.replace(/\s+/g, " ").trim()
-  return text || fallback
-}
-
 const BASE_ZOOM = 15.5
 const PLACE_LABEL_MIN_ZOOM = 15
-const PLACE_MARKER_EMOJI_SIZE = 28
 const PUBLIC_CLUSTER_ONLY_MAX_ZOOM = 13
 // 개인 지도: 이 줌 미만에서만 공격적 클러스터(뭉침). 낮출수록 더 멀리 줌아웃해야 통합됨.
 const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = 11
@@ -53,27 +39,6 @@ const VIEWPORT_CULL_FEATURE_THRESHOLD = 180
 const zoomScale = (zoom) => {
   const s = Math.pow(1.17, zoom - BASE_ZOOM)
   return Math.max(0.34, Math.min(s, 1.04))
-}
-
-const getPixelArtHtml = (pixelId, fallbackEmoji) => {
-  const art = findPixelArt(pixelId)
-  return art
-    ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
-    : `<span class="loca-place-marker__unicode">${escapeHtml(fallbackEmoji || getDefaultMarkerEmojiForFeature())}</span>`
-}
-
-const getPlaceMarkerEmojiHtml = (feature) => {
-  const descriptor = resolvePlaceMarkerEmoji(feature)
-  if (descriptor.kind === "pixel") {
-    return getPixelArtHtml(descriptor.value, getDefaultMarkerEmojiForFeature(feature))
-  }
-  if (descriptor.kind === "photo") {
-    const safeUrl = escapeHtml(descriptor.value || "")
-    return safeUrl
-      ? `<img class="loca-place-marker__photo" src="${safeUrl}" width="${PLACE_MARKER_EMOJI_SIZE}" height="${PLACE_MARKER_EMOJI_SIZE}" alt=""/>`
-      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultMarkerEmojiForFeature(feature))}</span>`
-  }
-  return `<span class="loca-place-marker__unicode">${escapeHtml(descriptor.value || getDefaultMarkerEmojiForFeature(feature))}</span>`
 }
 
 const createPublicPixelMarkerContent = ({ feature, isSelected, shouldShowLabel, showRouteBadge }) => {
@@ -125,45 +90,15 @@ const createClusterMarkerContent = ({ count, publicStyle = false }) => {
   }
 }
 
-const createRouteLabelContent = ({ feature, color, isSelected = false }) => (
-  `<div class="loca-map-label-anchor">`
-    + `<div class="loca-route-label ${isSelected ? "is-selected" : ""}">`
-      + `<span style="color:${color}">${escapeHtml(stripEmojiFromLabel(feature.title, "길"))}</span>`
-    + `</div>`
-  + `</div>`
-)
-
-const createAreaLabelContent = ({ feature, color }) => (
-  `<div class="loca-map-label-anchor">`
-    + `<div class="loca-area-label ${feature.id ? "" : ""}">`
-      + `<span style="color:${color}">${escapeHtml(stripEmojiFromLabel(feature.title, "영역"))}</span>`
-    + `</div>`
-  + `</div>`
-)
-
 const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel, markerStyle, showRouteBadge }) => {
   if (markerStyle === "pixel") {
     return createPublicPixelMarkerContent({ feature, isSelected, shouldShowLabel, showRouteBadge })
   }
-  const classNames = [
-    "loca-place-marker",
-    isSelected ? "loca-place-marker--selected" : "",
-    shouldShowLabel ? "" : "loca-place-marker--label-hidden",
-  ].filter(Boolean).join(" ")
-  const title = escapeHtml(feature.title || "장소")
-
-  return (
-    `<div class="loca-place-marker-anchor">`
-      + `<div class="${classNames}" role="button" aria-label="${title}">`
-        + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
-        + `<div class="loca-place-marker__label">${title}</div>`
-      + `</div>`
-    + `</div>`
-  )
+  return createBadgePlaceMarkerContent({ feature, isSelected, shouldShowLabel })
 }
 
 const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
-const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230A5A46' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
+const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%239C7BC8' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
 const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
 const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
@@ -588,7 +523,8 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
           pushOverlay({
             lat: feature.lat, lng: feature.lng,
             html: markerContent, onClick: makeSelectHandler(feature.id),
-            xAnchor: 0.5, yAnchor: 1, zIndex: isSelected ? 300 : 40,
+            // 배지 핀은 꼬리표 없이 좌표 중심 앵커, 픽셀 마커는 기존 하단 앵커 유지
+            xAnchor: 0.5, yAnchor: isPublicPixelMap ? 1 : 0.5, zIndex: isSelected ? 300 : 40,
           })
         } else if (feature.type === "route") {
           const routeColor = getFeatureStyleColor(feature, "route")
@@ -599,22 +535,47 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
             const isSelected = feature.id === selectedFeatureId
             pushOverlay({
               lat: routeRepresentative.lat, lng: routeRepresentative.lng,
-              html: createRouteLabelContent({ feature, color: routeColor, isSelected }),
+              html: createFeatureTagContent({ feature, type: "route", color: routeColor, isSelected }),
               onClick: makeSelectHandler(feature.id),
               xAnchor: 0.5, yAnchor: 1, zIndex: isSelected ? 260 : 60,
             })
             return
           }
+          const isRouteSelected = feature.id === selectedFeatureId
+          // 흰 케이싱을 먼저 깔아 지도 도로와 구분되는 "그려진 선"으로 만든다
+          const routeCasing = new kakaoMaps.Polyline({
+            path: pointsToPath(routePoints),
+            strokeColor: "#FFFFFF",
+            strokeWeight: isRouteSelected ? 10 : 9,
+            strokeOpacity: 0.85,
+            strokeStyle: "solid",
+          })
+          routeCasing.setMap(map)
+          bindShapeSelection(routeCasing, feature.id)
+          layersRef.current.push(routeCasing)
           const polyline = new kakaoMaps.Polyline({
             path: pointsToPath(routePoints),
             strokeColor: routeColor,
-            strokeWeight: feature.id === selectedFeatureId ? 4.5 : 3.5,
-            strokeOpacity: feature.id === selectedFeatureId ? 0.78 : 0.66,
+            strokeWeight: isRouteSelected ? 6 : 5,
+            strokeOpacity: isRouteSelected ? 0.98 : 0.92,
             strokeStyle: routeLineStyle,
           })
           polyline.setMap(map)
           bindShapeSelection(polyline, feature.id)
           layersRef.current.push(polyline)
+          // 시작점(흰 채움)·끝점(색 채움) 마커 — DESIGN.md §0.5
+          const [startLng, startLat] = routePoints[0]
+          const [endLng, endLat] = routePoints[routePoints.length - 1]
+          pushOverlay({
+            lat: startLat, lng: startLng,
+            html: createRouteEndpointContent({ color: routeColor, kind: "start" }),
+            xAnchor: 0.5, yAnchor: 0.5, zIndex: 45,
+          })
+          pushOverlay({
+            lat: endLat, lng: endLng,
+            html: createRouteEndpointContent({ color: routeColor, kind: "end" }),
+            xAnchor: 0.5, yAnchor: 0.5, zIndex: 45,
+          })
           const hitArea = new kakaoMaps.Polyline({
             path: pointsToPath(feature.points),
             strokeColor: routeColor, strokeWeight: 24, strokeOpacity: 0.05,
@@ -640,25 +601,38 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
 
           const routeLabelPoint = getPointsCenter(routePoints)
           if (showLabels && routeLabelPoint) {
-            const isSelected = feature.id === selectedFeatureId
             pushOverlay({
               lat: routeLabelPoint.lat, lng: routeLabelPoint.lng,
-              html: createRouteLabelContent({ feature, color: routeColor, isSelected }),
+              html: createFeatureTagContent({ feature, type: "route", color: routeColor, isSelected: isRouteSelected }),
               onClick: makeSelectHandler(feature.id),
-              xAnchor: 0.5, yAnchor: 1, zIndex: isSelected ? 250 : 55,
+              xAnchor: 0.5, yAnchor: 1, zIndex: isRouteSelected ? 250 : 55,
             })
           }
         } else if (feature.type === "area") {
           const areaColor = getFeatureStyleColor(feature, "area")
           const areaLineStyle = getFeatureStyleLineStyle(feature, "area")
+          const isAreaSelected = feature.id === selectedFeatureId
+          // 흰 케이싱 폴리곤을 먼저 깔고 그 위에 본 테두리를 그린다
+          const areaCasing = new kakaoMaps.Polygon({
+            path: pointsToPath(feature.points),
+            strokeColor: "#FFFFFF",
+            strokeWeight: 5.5,
+            strokeOpacity: 0.85,
+            strokeStyle: "solid",
+            fillColor: areaColor,
+            fillOpacity: 0,
+          })
+          areaCasing.setMap(map)
+          bindShapeSelection(areaCasing, feature.id)
+          layersRef.current.push(areaCasing)
           const polygon = new kakaoMaps.Polygon({
             path: pointsToPath(feature.points),
             strokeColor: areaColor,
-            strokeWeight: feature.id === selectedFeatureId ? 3.5 : 2.5,
-            strokeOpacity: feature.id === selectedFeatureId ? 0.86 : 0.62,
+            strokeWeight: isAreaSelected ? 3.5 : 2.5,
+            strokeOpacity: isAreaSelected ? 1 : 0.9,
             strokeStyle: areaLineStyle,
             fillColor: areaColor,
-            fillOpacity: feature.id === selectedFeatureId ? 0.24 : 0.14,
+            fillOpacity: isAreaSelected ? 0.28 : 0.18,
           })
           polygon.setMap(map)
           bindShapeSelection(polygon, feature.id)
@@ -675,9 +649,9 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
           if (showLabels && areaLabelPoint) {
             pushOverlay({
               lat: areaLabelPoint.lat, lng: areaLabelPoint.lng,
-              html: createAreaLabelContent({ feature, color: areaColor }),
+              html: createFeatureTagContent({ feature, type: "area", color: areaColor, isSelected: isAreaSelected }),
               onClick: makeSelectHandler(feature.id),
-              xAnchor: 0.5, yAnchor: 1,
+              xAnchor: 0.5, yAnchor: 1, zIndex: isAreaSelected ? 250 : 50,
             })
           }
         }

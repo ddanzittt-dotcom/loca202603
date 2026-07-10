@@ -1,33 +1,35 @@
 /* ============================================================
- * 지도 편집 리디자인 후속 조정 (스크린샷 피드백) — 마지막 로드
+ * 지도 편집 리디자인 후속 조정 — 마지막 로드
+ * (2026-07 Cream & Ember 리디자인 반영: 색상은 v2 토큰 계열,
+ *  레이아웃 규칙은 기존 유지 — 우측 레일 폭/위치, 트레이 슬림화)
  * 스코프: body.loca-editor-open
  * ============================================================ */
 
-/* ── 1) 우측 툴 레일: 4개 버튼 가로폭 동일 + 각기 다른 색 + 내위치 맨 위 ── */
+/* ── 1) 우측 툴 레일: 4개 버튼 가로폭 동일 + 내위치 맨 위 ── */
 body.loca-editor-open .map-locate-button,
 body.loca-editor-open .me-fab--tool {
   width: 48px !important;
   min-width: 48px !important;
   max-width: 48px !important;
-  padding: 5px 0 !important;
-  gap: 1px !important;
-  border-width: 2px !important;
-  box-shadow: 2.5px 2.5px 0 #1B1B18 !important;
+  padding: 6px 0 !important;
+  gap: 2px !important;
+  border-width: 1px !important;
+  box-shadow: 0 4px 10px rgba(20, 12, 0, 0.12) !important;
 }
 body.loca-editor-open .map-locate-button svg,
 body.loca-editor-open .me-fab--tool svg { width: 14px !important; height: 14px !important; }
 body.loca-editor-open .map-locate-button__label,
 body.loca-editor-open .me-fab--tool span { font-size: 9px !important; }
 
-/* 내 위치 — 맨 위, 노랑 */
+/* 내 위치 — 맨 위, 화이트 + 잉크 */
 body.loca-editor-open .map-locate-button {
   top: 138px !important;
   bottom: auto !important;
-  background: #FBEFC2 !important;
-  border-color: #C99A0B !important;
-  color: #6B5312 !important;
+  background: #fff !important;
+  border-color: rgba(20, 12, 0, 0.12) !important;
+  color: #3F3A33 !important;
 }
-body.loca-editor-open .map-locate-button svg { stroke: #6B5312 !important; color: #6B5312 !important; }
+body.loca-editor-open .map-locate-button svg { stroke: #3F3A33 !important; color: #3F3A33 !important; }
 
 /* 도구 그룹 하단 고정 (트레이 열려도 중앙으로 안 올라오게) + 가운데 정렬 */
 body.loca-editor-open .me-fabs,
@@ -37,19 +39,25 @@ body.loca-editor-open .map-editor--record-panel-open .me-fabs {
   gap: 7px !important;
   align-items: center !important;
 }
-/* 장소=빨강 / 길=초록 / 영역=보라 (비활성=연한 틴트, 활성=진한색+흰글자) */
+/* 비활성 = 화이트 바탕 + 타입색 아이콘/라벨, 활성 = 타입색 보더 + soft 배경 (DESIGN.md §5.6) */
 body.loca-editor-open .me-fab--pin {
-  background: #FCEBE7 !important; border-color: #E8442E !important; color: #B92E1B !important;
+  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #C2380B !important;
 }
-body.loca-editor-open .me-fab--pin.is-active { background: #E8442E !important; color: #fff !important; }
+body.loca-editor-open .me-fab--pin.is-active {
+  background: #FFEBE0 !important; border: 1.5px solid #FF4D1A !important; color: #C2380B !important;
+}
 body.loca-editor-open .me-fab--route {
-  background: #E9F0E0 !important; border-color: #4E8A55 !important; color: #356B3B !important;
+  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #5B3E85 !important;
 }
-body.loca-editor-open .me-fab--route.is-active { background: #4E8A55 !important; color: #fff !important; }
+body.loca-editor-open .me-fab--route.is-active {
+  background: #E8DEF5 !important; border: 1.5px solid #9C7BC8 !important; color: #5B3E85 !important;
+}
 body.loca-editor-open .me-fab--area {
-  background: #ECEAF9 !important; border-color: #7F77DD !important; color: #574FB0 !important;
+  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #6B4116 !important;
 }
-body.loca-editor-open .me-fab--area.is-active { background: #7F77DD !important; color: #fff !important; }
+body.loca-editor-open .me-fab--area.is-active {
+  background: #F0DDC4 !important; border: 1.5px solid #8E5A2C !important; color: #6B4116 !important;
+}
 
 /* ── 2) 편집 배너 세로 스크롤 (도크 높이 초과 시 잘림 방지) ── */
 body.loca-editor-open .fes-sheet--v2 {
@@ -74,7 +82,7 @@ body.loca-editor-open .map-editor--summary-open .map-list-bar {
 /* 트레이 펼침: 확실히 얇게 — 고정 58px 해제 + 항목 1줄 + 여백 최소 */
 body.loca-editor-open .map-list-bar {
   bottom: 12px !important;
-  padding: 8px 10px !important;
+  padding: 9px 11px !important;
   gap: 6px !important;
 }
 /* 헤더 줄: 토글 바로 오른쪽에 필터칩 인라인 (왼쪽 정렬) */
@@ -96,29 +104,26 @@ body.loca-editor-open .map-list-bar .map-filter-chip--record {
   padding: 3px 10px !important;
   font-size: 10.5px !important;
 }
-/* 활성 필터칩: 검정 대신 종류색 (전체·기록있음=웜브라운) */
+/* 활성 필터칩: 종류색 (전체·기록있음=잉크) */
 body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active {
-  background: #5C4102 !important;
+  background: #161616 !important;
   color: #fff !important;
-  border-color: #1B1B18 !important;
+  border-color: #161616 !important;
 }
-body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="pin"] { background: #E8442E !important; }
-body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="route"] { background: #4E8A55 !important; }
-body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="area"] { background: #7F77DD !important; }
+body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="pin"] { background: #FF4D1A !important; border-color: #FF4D1A !important; }
+body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="route"] { background: #9C7BC8 !important; border-color: #9C7BC8 !important; }
+body.loca-editor-open .map-list-bar .map-filter-chip--record.is-active[data-type="area"] { background: #8E5A2C !important; border-color: #8E5A2C !important; }
 /* strip 고정 높이(58px)·예약 크기 해제 → 내용에 맞춰 얇아짐 */
 body.loca-editor-open .map-list-bar .map-place-strip {
   height: auto !important;
   padding: 0 !important;
-  gap: 7px !important;
+  gap: 8px !important;
 }
 body.loca-editor-open .map-list-bar .map-place-card {
   min-width: 0 !important;
-  max-width: 190px !important;
-  padding: 4px 10px !important;
-  gap: 7px !important;
-  border-width: 2px !important;
-  border-radius: 9px !important;
-  box-shadow: 2px 2px 0 #1B1B18 !important;
+  max-width: 200px !important;
+  padding: 5px 11px 5px 5px !important;
+  gap: 8px !important;
   content-visibility: visible !important;
   contain-intrinsic-size: auto !important;
 }
@@ -139,5 +144,4 @@ body.loca-editor-open .me-strip-info strong {
   white-space: nowrap !important;
 }
 body.loca-editor-open .me-strip-kind { font-size: 10px !important; flex-shrink: 0 !important; }
-body.loca-editor-open .me-strip-dot { width: 9px !important; height: 9px !important; }
-body.loca-editor-open .me-strip-rec { padding: 0 5px !important; }
+body.loca-editor-open .me-strip-rec { padding: 1px 7px !important; }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
+import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
@@ -961,8 +962,10 @@ export function MapEditorScreen({
                         onClick={() => { if (!stripDragRef.current.dragging) (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                         onKeyDown={(e) => { if (e.key === "Enter") (onStripFeatureTap || onFeatureTap)?.(feature.id) }}
                       >
-                        {/* §1: 앞 핀 아이콘 제거 → 종류색 점 + 이름 + 종류 + (장소)기록 수 */}
-                        <span className={`me-strip-dot me-strip-dot--${feature.type}`} aria-hidden="true" />
+                        {/* 종류색 이모지 썸네일 + 이름 + 종류 + (장소)기록 수 */}
+                        <span className={`me-strip-thumb me-strip-thumb--${feature.type}`} aria-hidden="true">
+                          <FeatureEmoji emoji={resolvePlaceMarkerEmoji(feature)} size={16} />
+                        </span>
                         <div className="me-strip-info">
                           <strong>{feature.title}</strong>
                           <span className="me-strip-kind">

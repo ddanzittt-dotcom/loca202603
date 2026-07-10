@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo, useRef } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { ArrowLeft, Share2 } from "lucide-react"
-import { getPinIcon, emojiToCategory } from "../data/pinIcons"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
+import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapRenderer as NaverMap } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
@@ -37,8 +37,8 @@ function computeRouteLengthKm(points) {
 // Pin SVG icon for save button
 function PinSvg() {
   return (
-    <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
-      <path d="M5 0C2.24 0 0 2.24 0 5c0 3.5 5 7 5 7s5-3.5 5-7c0-2.76-2.24-5-5-5zm0 6.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="#FF6B35"/>
+    <svg width="12" height="14" viewBox="0 0 10 12" fill="none" aria-hidden="true">
+      <path d="M5 0C2.24 0 0 2.24 0 5c0 3.5 5 7 5 7s5-3.5 5-7c0-2.76-2.24-5-5-5zm0 6.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="currentColor"/>
     </svg>
   )
 }
@@ -53,11 +53,22 @@ function SaveButton({ onClick, loading = false }) {
   )
 }
 
-// Get region text from feature (note or tags)
-function getRegionText(feature) {
-  const parts = []
-  if (feature.tags?.length) parts.push(`#${feature.tags[0]}`)
-  return parts.join(" ") || ""
+// 피처 카드 보조 텍스트: 제작자의 한 줄 메모 우선, 없으면 첫 태그
+function getFeatureCardNote(feature) {
+  const note = String(feature.note || "").trim()
+  if (note) return note
+  if (feature.tags?.length) return `#${feature.tags[0]}`
+  return ""
+}
+
+const FEATURE_TYPE_META = {
+  pin: { label: "장소", modifier: "pin" },
+  route: { label: "길", modifier: "route" },
+  area: { label: "영역", modifier: "area" },
+}
+
+function getFeatureTypeMeta(feature) {
+  return FEATURE_TYPE_META[feature.type] || FEATURE_TYPE_META.pin
 }
 
 export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToApp = false }) {
@@ -65,6 +76,19 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   const [fitTrigger] = useState(1)
   const [focusPoint, setFocusPoint] = useState(null)
   const [sheetExpanded, setSheetExpanded] = useState(false)
+  // 진입 연출: 첫 2초 동안만 핀 드롭/라벨 페이드인 (이후 재렌더에는 미적용)
+  const [introPlaying, setIntroPlaying] = useState(true)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIntroPlaying(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [])
+  const featureCounts = useMemo(() => {
+    const counts = { pin: 0, route: 0, area: 0 }
+    features.forEach((f) => {
+      if (counts[f.type] !== undefined) counts[f.type] += 1
+    })
+    return counts
+  }, [features])
   const featureViewStart = useRef(null)
   const prevSelectedId = useRef(null)
   const voicePlayback = useVoicePlayback()
@@ -206,12 +230,8 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           <div className="lw-ci-logo">
             {orgName.slice(0, 2)}
           </div>
-          <div className="lw-ci-info">
-            <span className="lw-ci-title">{map.title}</span>
-            {map.description ? <span className="lw-ci-org">{map.description}</span> : null}
-          </div>
+          <span className="lw-ci-kicker">공유된 지도</span>
           <div className="lw-ci-actions">
-            {onSaveToApp ? <SaveButton onClick={handleSave} loading={savingToApp} /> : null}
             <button
               className="lw-noti-btn"
               type="button"
@@ -240,10 +260,27 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
           )}
         </div>
 
+        {/* Hero head — 지도가 자기소개를 하는 영역 */}
+        <div className="lw-hero__head">
+          <h1 className="lw-hero__big-title">{map.title}</h1>
+          {map.description ? <p className="lw-hero__big-desc">{map.description}</p> : null}
+          <div className="lw-hero__counts">
+            {featureCounts.pin > 0 ? (
+              <span className="lw-count-chip lw-count-chip--pin"><i />장소 {featureCounts.pin}</span>
+            ) : null}
+            {featureCounts.route > 0 ? (
+              <span className="lw-count-chip lw-count-chip--route"><i />길 {featureCounts.route}</span>
+            ) : null}
+            {featureCounts.area > 0 ? (
+              <span className="lw-count-chip lw-count-chip--area"><i />영역 {featureCounts.area}</span>
+            ) : null}
+          </div>
+        </div>
+
         {/* Inner content area */}
         <div className="lw-ci-inner">
           {/* Map area */}
-          <div className="lw-event-map">
+          <div className={`lw-event-map${introPlaying ? " lw-map-intro" : ""}`}>
             <MapErrorBoundary>
               <NaverMap
                 features={features}
@@ -287,26 +324,28 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                 {!sheetExpanded ? (
                   <div className="lw-sheet__scroll">
                     {features.map((f) => {
-                      const catId = f.category || emojiToCategory(f.emoji)
-                      const ic = getPinIcon(catId)
+                      const meta = getFeatureTypeMeta(f)
+                      const note = getFeatureCardNote(f)
                       return (
                         <button key={f.id} className="lw-sheet__card" type="button" onClick={() => handleSpotTap(f)}>
-                          <span className="lw-sheet__card-icon" style={{ background: ic.bg }}>
-                            <img src={`/icons/pins/${catId}.svg`} width="10" height="10" alt="" />
+                          <span className={`lw-sheet__card-emoji lw-sheet__card-emoji--${meta.modifier}`} aria-hidden="true">
+                            <FeatureEmoji emoji={resolvePlaceMarkerEmoji(f)} size={18} />
                           </span>
-                          <span className="lw-sheet__card-name">{f.title}</span>
-                          <span className="lw-sheet__card-sub">{getRegionText(f)}</span>
+                          <span className="lw-sheet__card-main">
+                            <span className="lw-sheet__card-name">{f.title}</span>
+                            <span className="lw-sheet__card-sub">{note || meta.label}</span>
+                          </span>
                         </button>
                       )
                     })}
                   </div>
                 ) : (
                   <>
-                    <div className="lw-sheet__header">장소 목록 ({features.length}곳)</div>
+                    <div className="lw-sheet__header">기록 목록 ({features.length}곳)</div>
                     <div className="lw-sheet__list">
                       {features.map((f) => {
-                        const catId = f.category || emojiToCategory(f.emoji)
-                        const ic = getPinIcon(catId)
+                        const meta = getFeatureTypeMeta(f)
+                        const note = getFeatureCardNote(f)
                         return (
                           <button
                             key={f.id}
@@ -314,13 +353,14 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                             type="button"
                             onClick={() => handleSpotTap(f)}
                           >
-                            <span className="lw-sheet__row-icon" style={{ background: ic.bg }}>
-                              <img src={`/icons/pins/${catId}.svg`} width="18" height="18" alt="" />
+                            <span className={`lw-sheet__row-icon lw-sheet__card-emoji--${meta.modifier}`} aria-hidden="true">
+                              <FeatureEmoji emoji={resolvePlaceMarkerEmoji(f)} size={20} />
                             </span>
                             <span className="lw-sheet__row-info">
                               <span className="lw-sheet__row-name">{f.title}</span>
-                              <span className="lw-sheet__row-sub">{getRegionText(f)}</span>
+                              <span className="lw-sheet__row-sub">{note || meta.label}</span>
                             </span>
+                            <span className={`lw-sheet__row-badge lw-sheet__row-badge--${meta.modifier}`}>{meta.label}</span>
                           </button>
                         )
                       })}
@@ -331,6 +371,13 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
             ) : null}
           </div>
         </div>
+
+        {/* Save CTA — 뷰어의 유일한 강조 버튼 */}
+        {onSaveToApp ? (
+          <div className="lw-cta-row">
+            <SaveButton onClick={handleSave} loading={savingToApp} />
+          </div>
+        ) : null}
 
         {/* Bottom frame */}
         <div className="lw-ci-bottom">

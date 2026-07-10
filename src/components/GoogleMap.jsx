@@ -1,15 +1,13 @@
 ﻿import { useEffect, useRef, forwardRef, useImperativeHandle, useState } from "react"
 import { FEATURE_LINE_STYLE_SOLID, getDefaultFeatureStyle, getFeatureStyleColor, getFeatureStyleLineStyle, getGoogleDashIcons } from "../lib/featureStyle"
 import { triggerSelectionFeedback } from "../lib/haptics"
-import { findPixelArt, pixelArtToSvgString } from "../lib/pixelEmojiCatalog"
-import { getDefaultMarkerEmojiForFeature, resolvePlaceMarkerEmoji } from "./FeatureEmoji"
+import { createBadgePlaceMarkerContent, createRouteEndpointContent } from "./mapMarkerContent"
 
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || ""
 const PLACE_LABEL_MIN_ZOOM = 15
-const PLACE_MARKER_EMOJI_SIZE = 28
 
 const PIN_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF6B35' d='M12 2C8.13 2 5 5.13 5 9c0 5.2 6.2 11.7 6.5 12a.7.7 0 0 0 1 0C12.8 20.7 19 14.2 19 9c0-3.87-3.13-7-7-7z'/%3E%3Ccircle cx='12' cy='9' r='2.5' fill='%23FFF4EB'/%3E%3C/svg%3E\") 12 22, crosshair"
-const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%230A5A46' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
+const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3' fill='%239C7BC8' stroke='%23FFFFFF' stroke-width='1'/%3E%3C/svg%3E\") 8 8, crosshair"
 const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
 const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
@@ -28,51 +26,6 @@ function loadGoogleMaps() {
   return loadPromise
 }
 
-const escapeHtml = (str) => {
-  if (!str) return ""
-  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-}
-
-const getPixelArtHtml = (pixelId, fallbackEmoji) => {
-  const art = findPixelArt(pixelId)
-  return art
-    ? `<span class="loca-place-marker__pixel">${pixelArtToSvgString(art, PLACE_MARKER_EMOJI_SIZE)}</span>`
-    : `<span class="loca-place-marker__unicode">${escapeHtml(fallbackEmoji || getDefaultMarkerEmojiForFeature())}</span>`
-}
-
-const getPlaceMarkerEmojiHtml = (feature) => {
-  const descriptor = resolvePlaceMarkerEmoji(feature)
-  if (descriptor.kind === "pixel") {
-    return getPixelArtHtml(descriptor.value, getDefaultMarkerEmojiForFeature(feature))
-  }
-  if (descriptor.kind === "photo") {
-    const safeUrl = escapeHtml(descriptor.value || "")
-    return safeUrl
-      ? `<img class="loca-place-marker__photo" src="${safeUrl}" width="${PLACE_MARKER_EMOJI_SIZE}" height="${PLACE_MARKER_EMOJI_SIZE}" alt=""/>`
-      : `<span class="loca-place-marker__unicode">${escapeHtml(getDefaultMarkerEmojiForFeature(feature))}</span>`
-  }
-
-  return `<span class="loca-place-marker__unicode">${escapeHtml(descriptor.value || getDefaultMarkerEmojiForFeature(feature))}</span>`
-}
-
-const createPlaceMarkerContent = ({ feature, isSelected, shouldShowLabel }) => {
-  const classNames = [
-    "loca-place-marker",
-    isSelected ? "loca-place-marker--selected" : "",
-    shouldShowLabel ? "" : "loca-place-marker--label-hidden",
-  ].filter(Boolean).join(" ")
-  const title = escapeHtml(feature.title || "장소")
-
-  return (
-    `<div class="loca-place-marker-anchor">`
-      + `<div class="${classNames}" role="button" aria-label="${title}">`
-        + `<div class="loca-place-marker__emoji" aria-hidden="true">${getPlaceMarkerEmojiHtml(feature)}</div>`
-        + `<div class="loca-place-marker__label">${title}</div>`
-      + `</div>`
-    + `</div>`
-  )
-}
-
 const createGooglePlaceMarkerOverlay = ({ googleMaps, position, content, map, zIndex, onClick }) => {
   class PlaceMarkerOverlay extends googleMaps.OverlayView {
     constructor() {
@@ -86,6 +39,8 @@ const createGooglePlaceMarkerOverlay = ({ googleMaps, position, content, map, zI
       const container = document.createElement("div")
       container.style.position = "absolute"
       container.style.zIndex = String(zIndex)
+      // 콘텐츠(배지/엔드포인트) 중심이 좌표에 오도록 정렬
+      container.style.transform = "translate(-50%, -50%)"
       container.innerHTML = content
       this.handleClick = (event) => {
         event.preventDefault()
@@ -276,7 +231,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
       const marker = createGooglePlaceMarkerOverlay({
         googleMaps: window.google.maps,
         position: { lat: pin.lat, lng: pin.lng },
-        content: createPlaceMarkerContent({
+        content: createBadgePlaceMarkerContent({
           feature: pin,
           isSelected,
           shouldShowLabel: shouldShowPlaceLabel,
@@ -288,23 +243,48 @@ export const GoogleMap = forwardRef(function GoogleMap({
       markersRef.current.push(marker)
     })
 
-    // 寃쎈줈 ?대━?쇱씤
+    // 경로 폴리라인 — 흰 케이싱 + 본선 + 시작/끝점 마커
     routes.forEach((route) => {
       const path = route.points.map(([lng, lat]) => ({ lat, lng }))
       const isSelected = route.id === selectedFeatureId
       const routeColor = getFeatureStyleColor(route, "route")
       const routeLineStyle = getFeatureStyleLineStyle(route, "route")
       const routeDashIcons = getGoogleDashIcons(routeLineStyle, routeColor)
+      const casing = new window.google.maps.Polyline({
+        path,
+        map,
+        strokeColor: "#FFFFFF",
+        strokeOpacity: 0.85,
+        strokeWeight: isSelected ? 10 : 9,
+      })
+      casing.addListener("click", () => handleFeatureTap(route.id))
+      polylinesRef.current.push(casing)
       const polyline = new window.google.maps.Polyline({
         path,
         map,
         strokeColor: routeColor,
-        strokeOpacity: routeDashIcons ? 0 : (isSelected ? 0.98 : 0.88),
-        strokeWeight: isSelected ? 4 : 3,
+        strokeOpacity: routeDashIcons ? 0 : (isSelected ? 0.98 : 0.92),
+        strokeWeight: isSelected ? 6 : 5,
         icons: routeDashIcons || undefined,
       })
       polyline.addListener("click", () => handleFeatureTap(route.id))
       polylinesRef.current.push(polyline)
+      const [startLng, startLat] = route.points[0]
+      const [endLng, endLat] = route.points[route.points.length - 1]
+      markersRef.current.push(createGooglePlaceMarkerOverlay({
+        googleMaps: window.google.maps,
+        position: { lat: startLat, lng: startLng },
+        content: createRouteEndpointContent({ color: routeColor, kind: "start" }),
+        map,
+        zIndex: 45,
+      }))
+      markersRef.current.push(createGooglePlaceMarkerOverlay({
+        googleMaps: window.google.maps,
+        position: { lat: endLat, lng: endLng },
+        content: createRouteEndpointContent({ color: routeColor, kind: "end" }),
+        map,
+        zIndex: 45,
+      }))
     })
 
     // 영역 폴리곤
@@ -315,14 +295,23 @@ export const GoogleMap = forwardRef(function GoogleMap({
       const areaColor = getFeatureStyleColor(area, "area")
       const areaLineStyle = getFeatureStyleLineStyle(area, "area")
       const areaDashIcons = getGoogleDashIcons(areaLineStyle, areaColor)
+      const areaCasing = new window.google.maps.Polyline({
+        path: closedPath,
+        map,
+        strokeColor: "#FFFFFF",
+        strokeOpacity: 0.85,
+        strokeWeight: 5.5,
+      })
+      areaCasing.addListener("click", () => handleFeatureTap(area.id))
+      polylinesRef.current.push(areaCasing)
       const polygon = new window.google.maps.Polygon({
         paths: path,
         map,
         strokeColor: areaColor,
-        strokeOpacity: areaLineStyle === FEATURE_LINE_STYLE_SOLID ? (isSelected ? 0.94 : 0.78) : 0,
-        strokeWeight: 2,
+        strokeOpacity: areaLineStyle === FEATURE_LINE_STYLE_SOLID ? (isSelected ? 1 : 0.9) : 0,
+        strokeWeight: 2.5,
         fillColor: areaColor,
-        fillOpacity: isSelected ? 0.3 : 0.16,
+        fillOpacity: isSelected ? 0.28 : 0.18,
       })
       polygon.addListener("click", () => handleFeatureTap(area.id))
       polygonsRef.current.push(polygon)

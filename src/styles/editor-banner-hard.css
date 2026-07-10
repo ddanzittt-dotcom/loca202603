@@ -1,37 +1,41 @@
 /* ============================================================
- * 지도 편집 배너 내부 하드룩 (개발지시서 §5) — Phase 5
- * 마커(fpc)·편집(fes)·기록(res) 배너 내부를 프로토타입 하드룩으로 통일.
+ * 지도 편집 배너 내부 — Cream & Ember (2026-07 리디자인)
+ * 마커(fpc)·편집(fes)·기록(res) 배너 내부를 v2 토큰 톤으로 통일.
+ * 구 하드룩(검정 보더 + 오프셋 섀도 + 노랑 헤더 + 둥근모)을 제거.
  * 스코프: body.loca-editor-open
- * 토큰: paper #FFFDF4 · ink #1B1B18 · yellow #F5C41B/#5C4102 · tint #FBF3D9
- *       red #E8442E/#C4351F · khaki #8A8574 · 하드섀도(블러 없음)
+ * 토큰: card #FFF · line rgba(20,12,0,.1) · soft #FAF8F2 · deep #EFE9D8
+ *       accent #FF4D1A/#C2380B · danger #E24B4A · mute #807668
  * ============================================================ */
 
-/* ---------- 공통 하드 버튼 ---------- */
+/* ---------- 공통 버튼 ---------- */
 body.loca-editor-open .fpc-diary-cta,
 body.loca-editor-open .fes-btn,
 body.loca-editor-open .res-save {
-  border: 2.5px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  box-shadow: 3px 3px 0 #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
   font-weight: 800 !important;
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  background: #fff !important;
+  color: #161616 !important;
 }
 body.loca-editor-open .fpc-diary-cta:active,
 body.loca-editor-open .fes-btn:active,
 body.loca-editor-open .res-save:active {
-  transform: translate(2px, 2px) !important;
-  box-shadow: 1px 1px 0 #1B1B18 !important;
+  transform: translateY(1px) !important;
+  box-shadow: none !important;
 }
 body.loca-editor-open .fpc-diary-cta--record,
 body.loca-editor-open .fes-btn--primary,
 body.loca-editor-open .res-save {
-  background: #E8442E !important;
+  background: #FF4D1A !important;
   color: #fff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(255, 77, 26, 0.3) !important;
 }
 body.loca-editor-open .fes-btn--danger {
-  background: #C4351F !important;
+  background: #E24B4A !important;
   color: #fff !important;
+  border: none !important;
 }
 body.loca-editor-open .res-save:disabled {
   opacity: 0.45 !important;
@@ -39,116 +43,119 @@ body.loca-editor-open .res-save:disabled {
 
 /* ---------- 마커 배너 (fpc) ---------- */
 body.loca-editor-open .fpc-diary-icon {
-  border: 2.5px solid #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.08) !important;
   border-radius: 11px !important;
-  box-shadow: 2.5px 2.5px 0 #1B1B18 !important;
+  box-shadow: 0 2px 6px rgba(20, 12, 0, 0.08) !important;
 }
-body.loca-editor-open .fpc-diary-type { color: #C4351F !important; font-weight: 700 !important; }
+body.loca-editor-open .fpc-diary-type { color: #C2380B !important; font-weight: 800 !important; }
 body.loca-editor-open .fpc-diary-icon-btn,
 body.loca-editor-open .fpc-diary-edit-banner {
-  border: 2px solid #1B1B18 !important;
-  box-shadow: 2px 2px 0 #1B1B18 !important;
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
 }
 body.loca-editor-open .fpc-diary-icon-btn { border-radius: 50% !important; }
 body.loca-editor-open .fpc-diary-tags span {
-  background: #FBF3D9 !important;
-  border: 1.5px solid #1B1B18 !important;
-  border-radius: 5px !important;
-  color: #1B1B18 !important;
+  background: #EFE9D8 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #3F3A33 !important;
   font-weight: 700 !important;
 }
 body.loca-editor-open .fpc-diary-records .fpc-diary-rec,
 body.loca-editor-open .fpc-diary-record-item {
-  background: #FBF3D9 !important;
-  border: 2px solid #1B1B18 !important;
-  border-radius: 9px !important;
+  background: #FAF8F2 !important;
+  border: 1px solid rgba(20, 12, 0, 0.08) !important;
+  border-radius: 10px !important;
 }
 body.loca-editor-open .fpc-diary-foot {
-  background: #FBF3D9 !important;
-  border-top: 2.5px solid #1B1B18 !important;
+  background: #FAF8F2 !important;
+  border-top: 1px solid rgba(20, 12, 0, 0.08) !important;
 }
 body.loca-editor-open .fpc-diary-cta--remove {
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  background: #fff !important;
+  color: #807668 !important;
 }
 
 /* ---------- 편집 배너 (fes) ---------- */
 body.loca-editor-open .fes-head {
-  background: #F5C41B !important;
-  border-bottom: 2.5px solid #1B1B18 !important;
+  background: #fff !important;
+  border-bottom: 1px solid rgba(20, 12, 0, 0.08) !important;
 }
 body.loca-editor-open .fes-title {
-  font-family: "DungGeunMo", "Pretendard", monospace !important;
-  color: #5C4102 !important;
+  font-family: var(--font-sans, "Pretendard", sans-serif) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: #0A0A0A !important;
 }
-body.loca-editor-open .fes-meta { color: #6B5A16 !important; }
+body.loca-editor-open .fes-meta { color: #807668 !important; }
 body.loca-editor-open .fes-close,
 body.loca-editor-open .fes-head-relocate {
-  border: 2px solid #1B1B18 !important;
-  box-shadow: 2px 2px 0 #1B1B18 !important;
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
 }
 body.loca-editor-open .fes-input,
 body.loca-editor-open .fes-textarea,
 body.loca-editor-open .fes-tag-field {
-  border: 2.5px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  background: #FFFDF4 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  border-radius: 10px !important;
+  background: #FAF8F2 !important;
 }
 body.loca-editor-open .fes-tag-chip {
-  background: #FBF3D9 !important;
-  border: 1.5px solid #1B1B18 !important;
-  border-radius: 5px !important;
-  color: #1B1B18 !important;
+  background: #EFE9D8 !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #3F3A33 !important;
 }
 body.loca-editor-open .fes-emoji-btn {
-  border: 2.5px solid #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
   border-radius: 10px !important;
-  background: #FFFDF4 !important;
+  background: #fff !important;
 }
 body.loca-editor-open .fes-action {
-  background: #FBF3D9 !important;
-  border-top: 2.5px solid #1B1B18 !important;
+  background: #FAF8F2 !important;
+  border-top: 1px solid rgba(20, 12, 0, 0.08) !important;
 }
 body.loca-editor-open .fes-btn--ghost {
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
 }
 
 /* ---------- 기록 배너 (res) ---------- */
 body.loca-editor-open .res-today {
-  font-family: "DungGeunMo", "Pretendard", monospace !important;
-  background: #E8442E !important;
-  color: #fff !important;
-  border: 2px solid #1B1B18 !important;
+  font-family: var(--font-sans, "Pretendard", sans-serif) !important;
+  font-weight: 800 !important;
+  background: #FFEBE0 !important;
+  color: #C2380B !important;
+  border: none !important;
   border-radius: 6px !important;
 }
 body.loca-editor-open .res-close {
-  border: 2px solid #1B1B18 !important;
-  box-shadow: 2px 2px 0 #1B1B18 !important;
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  box-shadow: none !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
 }
 body.loca-editor-open .res-textarea {
-  border: 2.5px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  background: #FFFDF4 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  border-radius: 10px !important;
+  background: #FAF8F2 !important;
 }
 body.loca-editor-open .res-photo-add {
-  border: 2.5px dashed rgba(27, 27, 24, 0.5) !important;
-  background: #FBF3D9 !important;
-  color: #55523F !important;
+  border: 1.5px dashed rgba(20, 12, 0, 0.2) !important;
+  background: #FAF8F2 !important;
+  color: #807668 !important;
   border-radius: 10px !important;
 }
 body.loca-editor-open .res-photo-thumb,
 body.loca-editor-open .res-photo-view {
-  border: 2.5px solid #1B1B18 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
   border-radius: 10px !important;
 }
 body.loca-editor-open .res-action {
-  background: #FBF3D9 !important;
-  border-top: 2.5px solid #1B1B18 !important;
+  background: #FAF8F2 !important;
+  border-top: 1px solid rgba(20, 12, 0, 0.08) !important;
 }

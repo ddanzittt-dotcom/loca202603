@@ -1,69 +1,100 @@
 /* ============================================================
- * 지도 편집 크롬 하드룩 (개발지시서 §3-1 상단 툴바 · §3-2 우측 툴바) — Phase 2·3
+ * 지도 편집 크롬 — Cream & Ember (2026-07 리디자인)
+ * 구 하드룩(검정 보더 + 오프셋 섀도 + 노랑 필)을 걷어내고
+ * v2 토큰 톤(화이트 카드 + 은은한 보더 + 엠버 단일 강조)으로 교체.
  * 스코프: body.loca-editor-open (편집기 전용)
- * 토큰: paper #FFFDF4 · ink #1B1B18 · yellow #F5C41B/#5C4102 · red #E8442E
- *       길 #5FA97E · 영역 #7F77DD · 하드섀도(블러 없음) · 누름 translate(2px,2px)
+ * 강조 위계: "+ 카드 추가" 하나만 accent 필. 나머지는 조용한 버튼.
+ * !important 는 하위 레이어(app-shell soft-social 등) 오버라이드용으로 유지.
  * ============================================================ */
 
-/* ===== §3-1 상단 툴바 ===== */
+/* ===== 상단 툴바 ===== */
 body.loca-editor-open .me-bar__card {
-  background: #FFFDF4 !important;
-  border: 2.5px solid #1B1B18 !important;
-  border-radius: 12px !important;
-  box-shadow: 4px 4px 0 #1B1B18 !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  border: 1px solid rgba(20, 12, 0, 0.09) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 10px rgba(20, 12, 0, 0.08) !important;
 }
 body.loca-editor-open .me-bar__back {
-  background: #FFFDF4 !important;
-  border: 2px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  box-shadow: 2px 2px 0 #1B1B18 !important;
-  color: #1B1B18 !important;
+  background: #FAF8F2 !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  color: #161616 !important;
 }
 body.loca-editor-open .me-bar__name,
 body.loca-editor-open .me-bar__name--editable,
 body.loca-editor-open .me-bar__name-input {
-  font-family: "DungGeunMo", "Pretendard", monospace !important;
-  color: #1B1B18 !important;
+  font-family: var(--font-sans, "Pretendard", sans-serif) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  color: #0A0A0A !important;
 }
 body.loca-editor-open .me-bar__counter-dot {
-  border: 1.5px solid #1B1B18 !important;
+  border: none !important;
 }
-body.loca-editor-open .me-bar__counter--pin .me-bar__counter-dot { background: #E8442E !important; }
-body.loca-editor-open .me-bar__counter--route .me-bar__counter-dot { background: #5FA97E !important; }
-body.loca-editor-open .me-bar__counter--area .me-bar__counter-dot { background: #7F77DD !important; }
+body.loca-editor-open .me-bar__counter--pin .me-bar__counter-dot { background: #FF4D1A !important; }
+body.loca-editor-open .me-bar__counter--route .me-bar__counter-dot { background: #9C7BC8 !important; }
+body.loca-editor-open .me-bar__counter--area .me-bar__counter-dot { background: #8E5A2C !important; }
 
+/* 유일한 강조 버튼 */
 body.loca-editor-open .me-bar__addcards {
-  background: #F5C41B !important;
-  color: #5C4102 !important;
-  border: 2px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  box-shadow: 2.5px 2.5px 0 #1B1B18 !important;
+  background: #FF4D1A !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 999px !important;
+  box-shadow: 0 4px 12px rgba(255, 77, 26, 0.3) !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.01em !important;
+}
+body.loca-editor-open .me-bar__label-toggle {
+  background: #EFE9D8 !important;
+  border: 1px solid rgba(20, 12, 0, 0.08) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  color: #3F3A33 !important;
   font-weight: 700 !important;
 }
-body.loca-editor-open .me-bar__label-toggle,
-body.loca-editor-open .me-bar__share {
-  background: #FFFDF4 !important;
-  border: 2px solid #1B1B18 !important;
-  border-radius: 9px !important;
-  box-shadow: 2.5px 2.5px 0 #1B1B18 !important;
-  color: #1B1B18 !important;
-}
 body.loca-editor-open .me-bar__label-toggle.is-active {
-  background: #F5C41B !important;
-  color: #5C4102 !important;
+  background: #FFEBE0 !important;
+  color: #C2380B !important;
+  font-weight: 800 !important;
 }
-body.loca-editor-open .me-bar__share svg { color: #1B1B18 !important; stroke: #1B1B18 !important; }
+body.loca-editor-open .me-bar__share {
+  background: #fff !important;
+  border: 1px solid rgba(20, 12, 0, 0.1) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  color: #3F3A33 !important;
+}
+body.loca-editor-open .me-bar__share svg { color: #3F3A33 !important; stroke: #3F3A33 !important; }
 
 body.loca-editor-open .me-bar__back:active,
 body.loca-editor-open .me-bar__addcards:active,
 body.loca-editor-open .me-bar__label-toggle:active,
 body.loca-editor-open .me-bar__share:active {
-  transform: translate(2px, 2px) !important;
+  transform: translateY(1px) !important;
   box-shadow: none !important;
 }
 
-/* ===== §3-2 우측 툴바 2그룹 ===== */
-/* 상단 그룹 — 내 위치 (액션, 노란 틴트) */
+/* ===== 지도 위 검색 — 화이트 카드 (DESIGN.md §5.4) ===== */
+body.loca-editor-open .map-search-box__bar {
+  border: 1px solid rgba(20, 12, 0, 0.08) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 5px 16px rgba(20, 12, 0, 0.07) !important;
+}
+body.loca-editor-open .map-search-box__bar input {
+  font-family: var(--font-sans, "Pretendard", sans-serif) !important;
+}
+body.loca-editor-open .map-search-box__results {
+  border: 1px solid rgba(20, 12, 0, 0.08) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow: 0 8px 20px rgba(20, 12, 0, 0.09) !important;
+}
+
+/* ===== 우측 툴바 2그룹 ===== */
+/* 상단 그룹 — 내 위치 */
 body.loca-editor-open .map-locate-button {
   position: absolute !important;
   right: 16px !important;
@@ -72,11 +103,11 @@ body.loca-editor-open .map-locate-button {
   bottom: auto !important;
   width: 60px !important;
   height: auto !important;
-  border-radius: 12px !important;
-  border: 2.5px solid #1B1B18 !important;
-  background: #FBF3D9 !important;
-  color: #1B1B18 !important;
-  box-shadow: 3px 3px 0 #1B1B18 !important;
+  border-radius: 13px !important;
+  border: 1px solid rgba(20, 12, 0, 0.12) !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
+  box-shadow: 0 4px 10px rgba(20, 12, 0, 0.12) !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -86,11 +117,11 @@ body.loca-editor-open .map-locate-button {
 body.loca-editor-open .map-locate-button__label {
   font-size: 11.5px;
   font-weight: 800;
-  color: #1B1B18;
+  color: inherit;
 }
 body.loca-editor-open .map-locate-button:active {
-  transform: translate(2px, 2px) !important;
-  box-shadow: 1px 1px 0 #1B1B18 !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 6px rgba(20, 12, 0, 0.12) !important;
 }
 
 /* 하단 그룹 — 장소·길·영역 (도구) */
@@ -104,11 +135,11 @@ body.loca-editor-open .me-fabs {
 body.loca-editor-open .me-fab--tool {
   width: 60px !important;
   height: auto !important;
-  border-radius: 12px !important;
-  border: 2.5px solid #1B1B18 !important;
-  background: #FFFDF4 !important;
-  color: #1B1B18 !important;
-  box-shadow: 3px 3px 0 #1B1B18 !important;
+  border-radius: 13px !important;
+  border: 1px solid rgba(20, 12, 0, 0.12) !important;
+  background: #fff !important;
+  color: #3F3A33 !important;
+  box-shadow: 0 4px 10px rgba(20, 12, 0, 0.12) !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -120,11 +151,7 @@ body.loca-editor-open .me-fab--tool span {
   font-weight: 800 !important;
   color: inherit !important;
 }
-body.loca-editor-open .me-fab--tool.is-active {
-  background: #E8442E !important;
-  color: #fff !important;
-}
 body.loca-editor-open .me-fab--tool:active {
-  transform: translate(2px, 2px) !important;
-  box-shadow: 1px 1px 0 #1B1B18 !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 2px 6px rgba(20, 12, 0, 0.12) !important;
 }

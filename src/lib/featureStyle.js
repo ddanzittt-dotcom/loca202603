@@ -11,16 +11,19 @@ export const FEATURE_LINE_STYLE_ITEMS = [
 const HEX_COLOR_RE = /^#[0-9A-F]{6}$/i
 const ALLOWED_LINE_STYLE_SET = new Set(FEATURE_LINE_STYLE_ITEMS.map((item) => item.value))
 
+// 2026-07 피처 가시성 리디자인: 기본색을 tokens-v2 와 정렬.
+// 길 #0A5A46(짙은 녹색)은 지도 녹지·도로와 겹쳐 lilac 으로 교체 (DESIGN.md §0.4).
+// 사용자가 직접 고른 색(style.color)은 언제나 우선한다.
 const DEFAULT_STYLE_BY_TYPE = {
-  pin: { color: "#FF6B35", lineStyle: FEATURE_LINE_STYLE_SOLID },
-  route: { color: "#0A5A46", lineStyle: FEATURE_LINE_STYLE_SOLID },
-  area: { color: "#70430E", lineStyle: FEATURE_LINE_STYLE_SHORT_DASH },
+  pin: { color: "#FF4D1A", lineStyle: FEATURE_LINE_STYLE_SOLID },
+  route: { color: "#9C7BC8", lineStyle: FEATURE_LINE_STYLE_SOLID },
+  area: { color: "#8E5A2C", lineStyle: FEATURE_LINE_STYLE_SHORT_DASH },
 }
 
 const COLOR_PRESET_BY_TYPE = {
-  pin: ["#FF6B35", "#2D4A3E", "#2F80ED", "#E24B4A", "#8B5CF6", "#0EA5A4"],
-  route: ["#0A5A46", "#244236", "#1D5DB8", "#C2380B", "#70430E", "#6D3FC8"],
-  area: ["#70430E", "#244236", "#1D5DB8", "#C2380B", "#0A5A46", "#6D3FC8"],
+  pin: ["#FF4D1A", "#2D4A3E", "#2F80ED", "#E24B4A", "#8B5CF6", "#0EA5A4"],
+  route: ["#9C7BC8", "#0A5A46", "#1D5DB8", "#C2380B", "#70430E", "#244236"],
+  area: ["#8E5A2C", "#244236", "#1D5DB8", "#C2380B", "#0A5A46", "#6D3FC8"],
 }
 
 export function getFeatureColorPresets(type = "pin") {

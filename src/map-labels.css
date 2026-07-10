@@ -23,6 +23,201 @@
   color: #666;
 }
 
+/* ── 베이스맵 톤다운 (2026-07 피처 가시성 리디자인) ──
+   지도 타일 이미지에만 필터를 걸어 기본 POI를 한 톤 눌러준다.
+   마커/오버레이(HTML)와 사용자 사진은 타일 호스트가 아니므로 영향 없음. */
+.map-canvas img[src*="daumcdn.net"] {
+  filter: saturate(0.62) contrast(0.97) brightness(1.03) sepia(0.05);
+}
+.map-canvas img[src*="googleapis.com/maps/vt"],
+.map-canvas img[src*="khms"] {
+  filter: saturate(0.62) contrast(0.97) brightness(1.03) sepia(0.05);
+}
+
+/* ── 장소 배지 핀 (v3) — 꼬리표 없이 좌표 중심 앵커 ── */
+.loca-badge-anchor {
+  position: relative;
+  width: 39px;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.loca-badge-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--map-scale, 1));
+  transform-origin: center center;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+}
+
+.loca-badge-marker__badge {
+  box-sizing: border-box;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFF6EF;
+  border: 2.5px solid #fff;
+  box-shadow:
+    0 0 0 2px var(--pin-c, #FF4D1A),
+    0 4px 10px rgba(20, 10, 0, 0.28);
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  overflow: hidden;
+}
+
+.loca-badge-marker__emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.loca-badge-marker__pixel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+.loca-badge-marker__pixel svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  shape-rendering: crispEdges;
+}
+
+.loca-badge-marker__photo {
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.loca-badge-marker__label {
+  box-sizing: border-box;
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--pin-c, #C2380B);
+  font-family: var(--font-sans, "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 4px rgba(20, 10, 0, 0.18);
+}
+
+.loca-badge-marker--label-hidden .loca-badge-marker__label {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loca-badge-marker--selected.loca-badge-marker--label-hidden .loca-badge-marker__label {
+  visibility: visible;
+  opacity: 1;
+}
+
+.loca-badge-marker--selected {
+  z-index: 10;
+}
+
+.loca-badge-marker--selected .loca-badge-marker__badge {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 2px var(--pin-c, #FF4D1A),
+    0 6px 14px rgba(20, 10, 0, 0.3);
+  box-shadow:
+    0 0 0 2px var(--pin-c, #FF4D1A),
+    0 0 0 8px color-mix(in srgb, var(--pin-c, #FF4D1A) 22%, transparent),
+    0 6px 14px rgba(20, 10, 0, 0.3);
+  animation: loca-marker-tap-vibe 0.34s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+}
+
+.loca-badge-marker--selected .loca-badge-marker__label {
+  box-shadow:
+    0 6px 18px rgba(255, 90, 45, 0.18),
+    0 1px 4px rgba(20, 10, 0, 0.18);
+}
+
+/* ── 길/영역 이름 태그 (v3) — 피처색 배지 필 ── */
+.loca-feature-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--tag-c, #9C7BC8);
+  color: #fff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 118px;
+  font-family: var(--font-sans, "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.85),
+    0 1px 4px rgba(20, 10, 0, 0.22);
+  transform: scale(var(--map-scale, 1));
+  transform-origin: center bottom;
+  transition: transform 0.15s ease-out;
+}
+
+.loca-feature-tag span {
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loca-feature-tag.is-selected {
+  animation: loca-label-tap-vibe 0.34s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.95),
+    0 6px 18px rgba(20, 10, 0, 0.26);
+}
+
+/* ── 길 시작/끝점 마커 (v3) — 시작=흰 채움, 끝=색 채움 ── */
+.loca-route-endpoint {
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transform: scale(var(--map-scale, 1));
+  transform-origin: center center;
+  box-shadow: 0 1px 3px rgba(20, 10, 0, 0.25);
+  pointer-events: none;
+}
+
+.loca-route-endpoint--start {
+  background: #fff;
+  border: 3.5px solid var(--ep-c, #9C7BC8);
+}
+
+.loca-route-endpoint--end {
+  background: var(--ep-c, #9C7BC8);
+  border: 2.5px solid #fff;
+}
+
 /* 핀: 이모지 + 라벨 통합 마커 */
 /* Place marker: emoji + compact lower label */
 .loca-place-marker-anchor {
