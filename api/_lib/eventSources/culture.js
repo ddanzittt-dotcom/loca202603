@@ -11,9 +11,10 @@
 
 import { normalizeDateStr, toNumber } from "../eventNormalize.js"
 
+// End Point: data.go.kr 15138937(한눈에보는문화정보조회서비스) 상세 = /B553457/cultureinfo
+// 기간+GPS 조회 오퍼레이션은 period2.
 const CULTURE_ENDPOINTS = [
-  "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period", // 신 가이드
-  "https://apis.data.go.kr/B553457/cultureinfo/period2", // 구 가이드 (병행 운영 가능성)
+  "https://apis.data.go.kr/B553457/cultureinfo/period2",
 ]
 const BBOX_DELTA_DEG = 0.7 // 위치 기준 약 ±60~70km 사각형 (하류 거리필터가 최종 반경 컷)
 const ROWS_PER_PAGE = 100
@@ -154,14 +155,12 @@ export async function diagnoseCulture(location) {
     sortStdr: "1",
   }
 
-  // 살아있는 경로 탐색용 후보 배치
+  // 살아있는 경로 탐색용 후보 배치 (base = /B553457/cultureinfo)
   const candidates = [
-    "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
-    "http://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
-    "https://api.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
-    "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/area",
-    "https://apis.data.go.kr/B553457/cultureinfo/period",
-    "https://api.kcisa.kr/openapi/API_CCA_145/request",
+    "https://apis.data.go.kr/B553457/cultureinfo/period2",
+    "https://apis.data.go.kr/B553457/cultureinfo/area2",
+    "https://apis.data.go.kr/B553457/cultureinfo/realm2",
+    "https://apis.data.go.kr/B553457/cultureinfo/detail2",
   ]
   const probes = []
   for (const baseUrl of candidates) {
