@@ -67,26 +67,30 @@ function extractRecords(xml) {
   return []
 }
 
+// period2 <item> 실제 필드: seq·title·startDate/endDate(YYYYMMDD)·place·realmName·
+//   area·sigungu·thumbnail·gpsX(경도)·gpsY(위도). url/phone/전체주소 필드는 없음.
 function normalizeCulture(block) {
-  const lng = toNumber(pick(block, ["gpsX", "gpsx"]))
-  const lat = toNumber(pick(block, ["gpsY", "gpsy"]))
+  const lng = toNumber(pick(block, ["gpsX"]))
+  const lat = toNumber(pick(block, ["gpsY"]))
   const title = pick(block, ["title"])
   const place = pick(block, ["place"])
-  const image = pick(block, ["thumbnail", "imgUrl", "imageObject"])
+  const image = pick(block, ["thumbnail", "imgUrl"])
+  // 주소 필드가 없어 지역(시·도 + 시군구) + 장소명을 합쳐 위치 정보를 만든다
+  const addr = [pick(block, ["area"]), pick(block, ["sigungu"]), place].filter(Boolean).join(" ")
   return {
-    id: `culture-${pick(block, ["seq", "localId", "id"]) || title}`,
+    id: `culture-${pick(block, ["seq"]) || title}`,
     source: "culture",
     title,
-    addr: pick(block, ["placeAddr", "addr", "spatialCoverage"]) || place,
+    addr,
     image: image ? image.replace(/^http:/, "https:") : "",
     lat,
     lng,
-    startDate: normalizeDateStr(pick(block, ["startDate", "period"])),
+    startDate: normalizeDateStr(pick(block, ["startDate"])),
     endDate: normalizeDateStr(pick(block, ["endDate"])),
-    tel: pick(block, ["phone", "tel", "contactPoint"]),
+    tel: "",
     contentTypeId: 15,
     eventPlace: place,
-    sourceUrl: pick(block, ["url", "referenceIdentifier"]),
+    sourceUrl: "",
   }
 }
 
@@ -129,56 +133,4 @@ export async function fetchCultureEvents(location) {
     if (items.length) return items
   }
   return []
-}
-
-// ── 임시 진단 (배포 후 원인 파악용, 확인되면 제거) ──
-// 키 자체는 노출하지 않고 존재/길이/앞3자만. 각 엔드포인트의 status·본문 앞부분·레코드 수 반환.
-export async function diagnoseCulture(location) {
-  const apiKey = cultureApiKey()
-  const keyInfo = {
-    present: Boolean(apiKey),
-    length: apiKey.length,
-    head: apiKey.slice(0, 3),
-    hasPercent: apiKey.includes("%"),
-    from: process.env.CULTURE_API_KEY ? "CULTURE_API_KEY" : (process.env.TOUR_API_KEY ? "TOUR_API_KEY(fallback)" : "none"),
-  }
-  if (!apiKey || !location) return { keyInfo, note: "no key or location" }
-
-  const today = new Date()
-  const params = {
-    from: ymd(shiftDate(today, -PAST_DAYS)),
-    to: ymd(shiftDate(today, FUTURE_DAYS)),
-    gpsxfrom: String(location.lng - BBOX_DELTA_DEG),
-    gpsxto: String(location.lng + BBOX_DELTA_DEG),
-    gpsyfrom: String(location.lat - BBOX_DELTA_DEG),
-    gpsyto: String(location.lat + BBOX_DELTA_DEG),
-    sortStdr: "1",
-  }
-
-  // 살아있는 경로 탐색용 후보 배치 (base = /B553457/cultureinfo)
-  const candidates = [
-    "https://apis.data.go.kr/B553457/cultureinfo/period2",
-    "https://apis.data.go.kr/B553457/cultureinfo/area2",
-    "https://apis.data.go.kr/B553457/cultureinfo/realm2",
-    "https://apis.data.go.kr/B553457/cultureinfo/detail2",
-  ]
-  const probes = []
-  for (const baseUrl of candidates) {
-    const query = new URLSearchParams({ ...params, cPage: "1", rows: "5" })
-    const url = `${baseUrl}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
-    try {
-      const resp = await fetch(url)
-      const text = await resp.text()
-      const recs = extractRecords(text)
-      probes.push({
-        baseUrl,
-        status: resp.status,
-        records: recs.length,
-        firstRecord: recs[0] || text.slice(0, 300),
-      })
-    } catch (error) {
-      probes.push({ baseUrl, error: `${error.name}: ${error.message}` })
-    }
-  }
-  return { keyInfo, probes }
 }

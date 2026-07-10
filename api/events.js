@@ -13,7 +13,7 @@ import {
   toNumber,
   toYYYYMMDD,
 } from "./_lib/eventNormalize.js"
-import { diagnoseCulture, fetchCultureEvents } from "./_lib/eventSources/culture.js"
+import { fetchCultureEvents } from "./_lib/eventSources/culture.js"
 
 const TOUR_BASE_URL = "https://apis.data.go.kr/B551011/KorService2"
 const FESTIVAL_ROWS_PER_PAGE = 200
@@ -157,12 +157,6 @@ export default async function handler(req, res) {
   const userLat = toNumber(req.query.lat)
   const userLng = toNumber(req.query.lng)
   const location = Number.isFinite(userLat) && Number.isFinite(userLng) ? { lat: userLat, lng: userLng } : null
-
-  // 임시 진단 — 문화포털 호출 원인 파악 (확인 후 제거)
-  if (req.query.debug === "culture") {
-    const diag = await diagnoseCulture(location || { lat: 37.5665, lng: 126.978 })
-    return res.status(200).json(diag)
-  }
   const today = new Date()
   const todayStr = toYYYYMMDD(today)
   const threeMonthsAgo = new Date(today)
