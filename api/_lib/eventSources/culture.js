@@ -154,8 +154,17 @@ export async function diagnoseCulture(location) {
     sortStdr: "1",
   }
 
+  // 살아있는 경로 탐색용 후보 배치
+  const candidates = [
+    "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
+    "http://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
+    "https://api.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/period",
+    "https://apis.data.go.kr/B553457/nopenapi/rest/publicperformancedisplays/area",
+    "https://apis.data.go.kr/B553457/cultureinfo/period",
+    "https://api.kcisa.kr/openapi/API_CCA_145/request",
+  ]
   const probes = []
-  for (const baseUrl of CULTURE_ENDPOINTS) {
+  for (const baseUrl of candidates) {
     const query = new URLSearchParams({ ...params, cPage: "1", rows: "5" })
     const url = `${baseUrl}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
     try {
@@ -165,7 +174,7 @@ export async function diagnoseCulture(location) {
         baseUrl,
         status: resp.status,
         records: extractRecords(text).length,
-        bodyHead: text.slice(0, 500),
+        bodyHead: text.slice(0, 300),
       })
     } catch (error) {
       probes.push({ baseUrl, error: `${error.name}: ${error.message}` })
