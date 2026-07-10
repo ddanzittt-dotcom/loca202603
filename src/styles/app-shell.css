@@ -5148,36 +5148,265 @@
 }
 
 @media (min-width: 1080px) {
+  /* 데스크톱: 지도(레이더) 5 : 목록 1. 지도는 sticky로 크게 고정, 목록만 스크롤. */
   .xc-view {
     flex-direction: row;
     align-items: flex-start;
-    gap: 26px;
+    gap: 18px;
   }
 
   .xc-view__map {
     position: sticky;
-    top: 20px;
-    flex: 0 0 clamp(360px, 38%, 520px);
+    top: 16px;
+    flex: 5 1 0;
+    min-width: 0;
     align-self: stretch;
-    transition: flex-basis 0.24s ease;
   }
 
   .xc-view__map .xradar__canvas {
-    height: clamp(440px, calc(100dvh - 210px), 680px);
-  }
-
-  /* 확대(⤢) 시 지도 열을 더 넓고 크게 — 오른쪽 피드는 그만큼 좁아진다 */
-  .xc-view:has(.xradar--expanded) .xc-view__map {
-    flex-basis: clamp(520px, 58%, 820px);
-  }
-
-  .xc-view__map .xradar--expanded .xradar__canvas {
-    height: clamp(520px, calc(100dvh - 120px), 900px);
+    height: clamp(520px, calc(100dvh - 150px), 920px);
   }
 
   .xc-view__feed {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    min-width: 264px;
+    max-width: 348px;
   }
+}
+
+/* ── 탐색 필터탭 + 세로 목록 (매물목록형) ── */
+.xc-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 8px;
+  background: linear-gradient(#FBF4E4 76%, rgba(251, 244, 228, 0));
+}
+
+.xc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  color: #1F1A12;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.xc-tab.is-active {
+  background: #FFD338;
+}
+
+.xc-tab.is-empty {
+  opacity: 0.5;
+}
+
+.xc-tab:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(31, 26, 18, 0.9);
+}
+
+.xc-tab__count {
+  font-family: "DungGeunMo", monospace;
+  font-size: 11px;
+  color: #E5493A;
+}
+
+.xc-tab.is-active .xc-tab__count {
+  color: #1F1A12;
+}
+
+.xc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 220px;
+}
+
+.xc-list__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xc-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-areas: "thumb body" "thumb foot";
+  gap: 2px 10px;
+  align-items: start;
+  padding: 10px;
+  border: 2.5px solid #1F1A12;
+  border-radius: 12px;
+  background: #FFFDF4;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.9);
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.xc-row:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 rgba(31, 26, 18, 0.9);
+}
+
+.xc-row--skeleton {
+  display: block;
+  height: 84px;
+  background: linear-gradient(100deg, #F6EFDB 40%, #FFFDF4 50%, #F6EFDB 60%);
+  background-size: 200% 100%;
+  animation: xc-shimmer 1.2s infinite linear;
+  box-shadow: none;
+  border-color: rgba(31, 26, 18, 0.25);
+  cursor: default;
+}
+
+.xc-row__thumb {
+  grid-area: thumb;
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #F6EFDB;
+  overflow: hidden;
+}
+
+.xc-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.xc-row__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8B7F63;
+}
+
+.xc-row__emoji {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.xc-row__tag {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  max-width: calc(100% - 6px);
+  padding: 1px 5px;
+  border: 1.5px solid #1F1A12;
+  border-radius: 5px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 9px;
+  line-height: 1.45;
+  background: #FFFDF4;
+  color: #1F1A12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xc-row__tag--ongoing { background: #E5493A; color: #FFF6E8; }
+.xc-row__tag--upcoming { background: #FFD338; }
+.xc-row__tag--place { background: #FFFDF4; }
+.xc-row__tag--wild { background: #B7D690; }
+
+.xc-row__body {
+  grid-area: body;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.xc-row__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1F1A12;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.xc-row__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+  color: #8B7F63;
+}
+
+.xc-row__meta em {
+  font-style: normal;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  color: #1F1A12;
+}
+
+.xc-row__meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xc-row__foot {
+  grid-area: foot;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.xc-row__dist {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  color: #8B7F63;
+}
+
+.xc-row__register {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  padding: 0 9px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.xc-row__register:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #1F1A12;
 }
 
 .xc-locbar {
@@ -5735,7 +5964,7 @@
 .xradar__canvas {
   display: block;
   width: 100%;
-  height: 252px;
+  height: clamp(300px, 44vh, 460px);
   touch-action: manipulation;
   /* height transition 금지 — 캔버스 ResizeObserver 재빌드와 얽혀 전환이 멈추는 이슈 */
 }

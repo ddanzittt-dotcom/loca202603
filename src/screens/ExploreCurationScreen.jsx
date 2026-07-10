@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { CalendarRange, ChevronRight, Landmark, MapPin, PawPrint, Plus } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
@@ -18,59 +18,20 @@ import { PixelRadar } from "../components/explore/PixelRadar"
 import { fetchRealTerrain } from "../lib/realTerrain"
 import { spriteForRadarItem } from "../lib/radarSprites"
 
+// 탐색 — 좌측 큰 지도(레이더) + 우측 세로 목록(매물목록형). 상단 필터탭으로 한 종류씩.
+// 탭 선택 = 지도 도트도 그 종류만 필터. 카드 CTA [+ 등록] → CollectSheet 프리필 → 바인더.
+
 // 레이더 도트 → 카드 앵커 id (스크롤·선택용)
 function cardAnchorId(type, id) {
   return `xc-card-${type}-${id}`
 }
 
-// 공간 카테고리별 레이더 도트 이모지 (자연/역사/공원/전시)
-function prefersReduced() {
-  return typeof window !== "undefined"
-    && window.matchMedia
-    && window.matchMedia("(prefers-reduced-motion: reduce)").matches
-}
-
-// 가로 한 줄 레일 — 오른쪽 화살표로 한 페이지씩 넘기고, 끝에서 처음으로 순환
-function CardRail({ children }) {
-  const railRef = useRef(null)
-  const [atEnd, setAtEnd] = useState(false)
-
-  const update = useCallback(() => {
-    const el = railRef.current
-    if (!el) return
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 8)
-  }, [])
-
-  const advance = () => {
-    const el = railRef.current
-    if (!el) return
-    if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 8) {
-      el.scrollTo({ left: 0, behavior: prefersReduced() ? "auto" : "smooth" })
-    } else {
-      el.scrollBy({ left: el.clientWidth * 0.85, behavior: prefersReduced() ? "auto" : "smooth" })
-    }
-  }
-
-  return (
-    <div className="xc-railwrap">
-      <div className="xc-rail" ref={railRef} onScroll={update}>
-        {children}
-      </div>
-      <button
-        type="button"
-        className={`xc-rail__arrow${atEnd ? " is-end" : ""}`}
-        onClick={advance}
-        aria-label={atEnd ? "처음으로" : "다음 보기"}
-      >
-        <ChevronRight size={18} strokeWidth={2.6} />
-      </button>
-    </div>
-  )
-}
-
-// 탐색 — 내 위치 주변에서 기록할만한 행사/축제 + 공간 큐레이션.
-// 공개 지도 검색(ExplorePublicScreen)은 데이터가 쌓일 때까지 진입점을 숨긴다.
-// 카드 CTA [+ 카드로 등록] → CollectSheet 프리필 → 바인더에 꽂힌다.
+const TABS = [
+  { key: "ongoing", label: "열린 행사" },
+  { key: "upcoming", label: "곧 시작" },
+  { key: "places", label: "기록할 공간" },
+  { key: "wildlife", label: "이 동네 생물" },
+]
 
 function readStoredLocation() {
   try {
@@ -84,134 +45,63 @@ function readStoredLocation() {
   }
 }
 
-function EventCard({ event, onRegister, onOpen, anchorId }) {
-  const badge = eventDdayBadge(event)
-  const period = formatEventPeriod(event)
-  const distance = formatDistanceKm(event.distKm)
-  const shortAddr = (event.addr || "").split(" ").slice(0, 3).join(" ")
-
-  return (
-    <article
-      id={anchorId}
-      className="xc-card xc-card--tappable"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen?.(event)}
-      onKeyDown={(keyEvent) => {
-        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
-          keyEvent.preventDefault()
-          onOpen?.(event)
-        }
-      }}
-    >
-      <div className="xc-card__art" aria-hidden="true">
-        {event.image ? (
-          <img src={event.image} alt="" loading="lazy" />
-        ) : (
-          <span className="xc-card__art-fallback">
-            <CalendarRange size={28} strokeWidth={1.6} />
-          </span>
-        )}
-        {badge ? (
-          <span className={`xc-card__dday xc-card__dday--${badge.kind}`}>{badge.label}</span>
-        ) : null}
-      </div>
-      <div className="xc-card__body">
-        <strong className="xc-card__title">{event.title}</strong>
-        <span className="xc-card__meta">
-          {period ? <em>{period}</em> : null}
-          {shortAddr ? <span>{shortAddr}</span> : null}
-        </span>
-      </div>
-      <div className="xc-card__foot">
-        {distance ? (
-          <span className="xc-card__dist">
-            <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
-            {distance}
-          </span>
-        ) : <span />}
-        <button
-          type="button"
-          className="xc-card__register"
-          onClick={(clickEvent) => {
-            clickEvent.stopPropagation()
-            onRegister?.(eventToPrefill(event))
-          }}
-        >
-          <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
-          카드로 등록
-        </button>
-      </div>
-    </article>
-  )
+function shortAddress(value) {
+  return String(value || "").split(" ").slice(0, 3).join(" ")
 }
 
-function PlaceSpotCard({ place, onRegister, onOpen, anchorId }) {
-  const distance = formatDistanceKm(place.distKm)
-  const shortAddr = (place.addr || "").split(" ").slice(0, 3).join(" ")
-
-  return (
-    <article
-      id={anchorId}
-      className="xc-card xc-card--tappable"
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen?.(place)}
-      onKeyDown={(keyEvent) => {
-        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
-          keyEvent.preventDefault()
-          onOpen?.(place)
-        }
-      }}
-    >
-      <div className="xc-card__art xc-card__art--place" aria-hidden="true">
-        {place.image ? (
-          <img src={place.image} alt="" loading="lazy" />
-        ) : (
-          <span className="xc-card__art-fallback">
-            <Landmark size={26} strokeWidth={1.6} />
-          </span>
-        )}
-        {place.category ? (
-          <span className="xc-card__dday xc-card__dday--place">{place.category}</span>
-        ) : null}
-      </div>
-      <div className="xc-card__body">
-        <strong className="xc-card__title">{place.title}</strong>
-        <span className="xc-card__meta">
-          {shortAddr ? <span>{shortAddr}</span> : null}
-        </span>
-      </div>
-      <div className="xc-card__foot">
-        {distance ? (
-          <span className="xc-card__dist">
-            <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
-            {distance}
-          </span>
-        ) : <span />}
-        <button
-          type="button"
-          className="xc-card__register"
-          onClick={(clickEvent) => {
-            clickEvent.stopPropagation()
-            onRegister?.(placeToPrefill(place))
-          }}
-        >
-          <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
-          카드로 등록
-        </button>
-      </div>
-    </article>
-  )
-}
-
-function WildlifeCard({ item, onRegister, onOpen, anchorId }) {
+// 종류별 목록 행 — 좁은 우측 열에 맞춘 컴팩트 가로 행(썸네일·본문·거리/등록).
+function ListRow({ item, type, onRegister, onOpen, anchorId }) {
   const distance = formatDistanceKm(item.distKm)
 
+  let thumb = null
+  let badge = null
+  let meta = null
+  let registerLabel = "카드로 등록"
+  let prefill = null
+
+  if (type === "event") {
+    const dday = eventDdayBadge(item)
+    const period = formatEventPeriod(item)
+    thumb = item.image
+      ? <img src={item.image} alt="" loading="lazy" />
+      : <span className="xc-row__fallback"><CalendarRange size={22} strokeWidth={1.6} /></span>
+    badge = dday ? <span className={`xc-row__tag xc-row__tag--${dday.kind}`}>{dday.label}</span> : null
+    meta = (
+      <span className="xc-row__meta">
+        {period ? <em>{period}</em> : null}
+        {shortAddress(item.addr) ? <span>{shortAddress(item.addr)}</span> : null}
+      </span>
+    )
+    prefill = eventToPrefill(item)
+  } else if (type === "place") {
+    thumb = item.image
+      ? <img src={item.image} alt="" loading="lazy" />
+      : <span className="xc-row__fallback"><Landmark size={20} strokeWidth={1.6} /></span>
+    badge = item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+    meta = (
+      <span className="xc-row__meta">
+        {shortAddress(item.addr) ? <span>{shortAddress(item.addr)}</span> : null}
+      </span>
+    )
+    prefill = placeToPrefill(item)
+  } else {
+    thumb = item.photo
+      ? <img src={item.photo} alt="" loading="lazy" />
+      : <span className="xc-row__emoji">{item.emoji || "✨"}</span>
+    badge = <span className="xc-row__tag xc-row__tag--wild">{item.emoji} {item.category}</span>
+    meta = (
+      <span className="xc-row__meta">
+        {item.place ? <span>{String(item.place).split(",")[0]}</span> : null}
+      </span>
+    )
+    registerLabel = "발견 기록"
+    prefill = wildlifeToPrefill(item)
+  }
+
   return (
     <article
       id={anchorId}
-      className="xc-card xc-card--tappable xc-card--wild"
+      className="xc-row"
       role="button"
       tabIndex={0}
       onClick={() => onOpen?.(item)}
@@ -222,37 +112,31 @@ function WildlifeCard({ item, onRegister, onOpen, anchorId }) {
         }
       }}
     >
-      <div className="xc-card__art xc-card__art--wild" aria-hidden="true">
-        {item.photo ? (
-          <img src={item.photo} alt="" loading="lazy" />
-        ) : (
-          <span className="xc-card__art-emoji">{item.emoji || "✨"}</span>
-        )}
-        <span className="xc-card__dday xc-card__dday--wild">{item.emoji} {item.category}</span>
+      <div className="xc-row__thumb" aria-hidden="true">
+        {thumb}
+        {badge}
       </div>
-      <div className="xc-card__body">
-        <strong className="xc-card__title">{item.title}</strong>
-        <span className="xc-card__meta">
-          {item.place ? <span>{item.place.split(",")[0]}</span> : null}
-        </span>
+      <div className="xc-row__body">
+        <strong className="xc-row__title">{item.title}</strong>
+        {meta}
       </div>
-      <div className="xc-card__foot">
+      <div className="xc-row__foot">
         {distance ? (
-          <span className="xc-card__dist">
+          <span className="xc-row__dist">
             <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
             {distance}
           </span>
         ) : <span />}
         <button
           type="button"
-          className="xc-card__register"
+          className="xc-row__register"
           onClick={(clickEvent) => {
             clickEvent.stopPropagation()
-            onRegister?.(wildlifeToPrefill(item))
+            onRegister?.(prefill)
           }}
         >
           <Plus size={13} strokeWidth={2.6} aria-hidden="true" />
-          발견 기록
+          {registerLabel}
         </button>
       </div>
     </article>
@@ -263,8 +147,8 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [location, setLocation] = useState(() => readStoredLocation())
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place", data}
-  const [radarExpanded, setRadarExpanded] = useState(false)
+  const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place"|"wildlife", data}
+  const [activeTab, setActiveTab] = useState("ongoing")
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
@@ -325,6 +209,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   const placesLoading = placesResult.key !== requestKey
   const placesError = placesLoading ? "" : placesResult.error
+  const visiblePlaces = placesLoading ? [] : placesResult.items
 
   const wildLoading = wildResult.key !== requestKey
   const wildError = wildLoading ? "" : wildResult.error
@@ -357,51 +242,56 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   const { ongoing, upcoming } = useMemo(() => {
     const list = Array.isArray(events) ? events : []
-    const result = { ongoing: [], upcoming: [] }
+    const split = { ongoing: [], upcoming: [] }
     for (const event of list) {
       const badge = eventDdayBadge(event)
       if (!badge) continue
-      if (badge.kind === "ongoing") result.ongoing.push(event)
-      else result.upcoming.push(event)
+      if (badge.kind === "ongoing") split.ongoing.push(event)
+      else split.upcoming.push(event)
     }
-    return result
+    return split
   }, [events])
 
-  // 추천순 단일 리스트 — 칩 없이 서버 추천 점수 순서 그대로
-  const visiblePlaces = placesLoading ? [] : placesResult.items
+  // 탭별 데이터/상태 묶음
+  const tabState = {
+    ongoing: { loading, error, items: ongoing, type: "event", emptyTitle: "지금 주변에 열린 행사가 없어요", emptySub: "위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요." },
+    upcoming: { loading, error, items: upcoming, type: "event", emptyTitle: "곧 시작하는 행사가 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    places: { loading: placesLoading, error: placesError, items: visiblePlaces, type: "place", emptyTitle: "주변에서 추천할 공간을 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    wildlife: { loading: wildLoading, error: wildError, items: visibleWildlife, type: "wildlife", emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+  }
 
-  // 레이더 도트 = 행사 + 공간 + 생물. 마커는 도트 스프라이트(행사=텐트 / 공간=종류별 / 생물=종별 20종)
+  const tabCount = (key) => {
+    const state = tabState[key]
+    return state.loading ? null : state.items.length
+  }
+
+  // 레이더 도트 = 활성 탭 종류만 (탭 = 지도 필터)
   const radarItems = useMemo(() => {
-    const toDot = (raw, type) => ({
-      id: raw.id, type, title: raw.title, sprite: spriteForRadarItem(type, raw),
-      lat: Number(raw.lat), lng: Number(raw.lng),
-      distKm: raw.distKm, category: raw.category, data: raw,
-    })
-    // 좌표 있는 것만. 생물(채집 핵심)은 상한을 크게 + 인터리브에서 2배 자리 → 앞에서 잘려도 덜 눌림.
-    const withCoords = (arr) => arr.filter((d) => Number.isFinite(d.lat) && Number.isFinite(d.lng))
-    const evts = withCoords((Array.isArray(events) ? events : []).map((e) => toDot(e, "event"))).slice(0, 24)
-    const plcs = withCoords((placesLoading ? [] : placesResult.items).map((p) => toDot(p, "place"))).slice(0, 24)
-    const wild = withCoords((wildLoading ? [] : wildResult.items).map((w) => toDot(w, "wildlife"))).slice(0, 60)
-    // 한 라운드마다 행사1·공간1·생물2 → 생물이 절반 비중, 앞에서 maxDots 로 잘라도 동물이 넉넉히 남는다
-    const interleaved = []
-    const maxLen = Math.max(evts.length, plcs.length, Math.ceil(wild.length / 2))
-    for (let i = 0; i < maxLen; i += 1) {
-      if (evts[i]) interleaved.push(evts[i])
-      if (plcs[i]) interleaved.push(plcs[i])
-      if (wild[i * 2]) interleaved.push(wild[i * 2])
-      if (wild[i * 2 + 1]) interleaved.push(wild[i * 2 + 1])
-    }
-    return interleaved
-  }, [events, placesLoading, placesResult.items, wildLoading, wildResult.items])
+    const state = tabState[activeTab]
+    const source = state.loading ? [] : state.items
+    const type = activeTab === "wildlife" ? "wildlife" : (activeTab === "places" ? "place" : "event")
+    return source
+      .map((raw) => ({
+        id: raw.id, type, title: raw.title, sprite: spriteForRadarItem(type, raw),
+        lat: Number(raw.lat), lng: Number(raw.lng),
+        distKm: raw.distKm, category: raw.category, data: raw,
+      }))
+      .filter((dot) => Number.isFinite(dot.lat) && Number.isFinite(dot.lng))
+      .slice(0, 80)
+    // tabState 는 매 렌더 새 객체지만, 실제 의존은 아래 값들
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, ongoing, upcoming, visiblePlaces, visibleWildlife, loading, placesLoading, wildLoading])
 
-  // 도트 [카드 보기] → 아래 목록으로 이동하지 않고 바로 상세 카드 오픈
+  // 도트 [카드 보기] → 상세 카드 오픈
   const handleRadarSelect = useCallback((item) => {
     setDetailItem({ type: item.type, data: item.data })
   }, [])
 
+  const active = tabState[activeTab]
+
   return (
     <div className="xc-view">
-      {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 고정, 오른쪽 피드만 스크롤 */}
+      {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 크게 고정 */}
       <div className="xc-view__map">
         <PixelRadar
           items={radarItems}
@@ -410,128 +300,66 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
           label={effectiveLocation.label}
           hasLocation={Boolean(location)}
           locating={locating}
-          maxDots={radarExpanded ? 110 : 30}
-          expanded={radarExpanded}
+          maxDots={80}
           onLocate={locateMe}
           onReload={() => setReloadKey((value) => value + 1)}
           onSelect={handleRadarSelect}
-          onExpand={() => setRadarExpanded((value) => !value)}
         />
       </div>
 
-      {/* 오른쪽: 축제·공간·생물 피드 */}
+      {/* 오른쪽: 필터탭 + 세로 목록 */}
       <div className="xc-view__feed">
-      <section className="xc-section" aria-label="지금 열린 행사">
-        <header className="xc-section__head">
-          <strong>지금 열린 행사</strong>
-          {!loading && ongoing.length > 0 ? <span className="xc-section__count">{ongoing.length}</span> : null}
-        </header>
+        <div className="xc-tabs" role="tablist" aria-label="탐색 필터">
+          {TABS.map((tab) => {
+            const count = tabCount(tab.key)
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`xc-tab${isActive ? " is-active" : ""}${count === 0 ? " is-empty" : ""}`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <span className="xc-tab__label">{tab.label}</span>
+                {count != null && count > 0 ? <span className="xc-tab__count">{count}</span> : null}
+              </button>
+            )
+          })}
+        </div>
 
-        {loading ? (
-          <div className="xc-grid" aria-hidden="true">
-            {Array.from({ length: 6 }, (_, index) => (
-              <div className="xc-card xc-card--skeleton" key={index} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="xc-empty">
-            <strong>행사 정보를 불러오지 못했어요</strong>
-            <span>{error}</span>
-            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
-          </div>
-        ) : ongoing.length === 0 ? (
-          <div className="xc-empty">
-            <strong>지금 주변에 열린 행사가 없어요</strong>
-            <span>위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요.</span>
-          </div>
-        ) : (
-          <CardRail>
-            {ongoing.slice(0, 24).map((event) => (
-              <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
-            ))}
-          </CardRail>
-        )}
-      </section>
-
-      {!loading && !error && upcoming.length > 0 ? (
-        <section className="xc-section" aria-label="곧 시작하는 행사">
-          <header className="xc-section__head">
-            <strong>곧 시작해요</strong>
-            <span className="xc-section__count">{upcoming.length}</span>
-          </header>
-          <CardRail>
-            {upcoming.slice(0, 12).map((event) => (
-              <EventCard key={event.id} event={event} anchorId={cardAnchorId("event", event.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "event", data })} />
-            ))}
-          </CardRail>
-        </section>
-      ) : null}
-
-      <section className="xc-section" aria-label="기록할만한 공간">
-        <header className="xc-section__head">
-          <strong>기록할만한 공간</strong>
-          <span className="xc-section__hint">10km 안 가볼만한 곳</span>
-        </header>
-
-        {placesLoading ? (
-          <div className="xc-grid" aria-hidden="true">
-            {Array.from({ length: 6 }, (_, index) => (
-              <div className="xc-card xc-card--skeleton" key={index} />
-            ))}
-          </div>
-        ) : placesError ? (
-          <div className="xc-empty">
-            <strong>공간 정보를 불러오지 못했어요</strong>
-            <span>{placesError}</span>
-            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
-          </div>
-        ) : visiblePlaces.length === 0 ? (
-          <div className="xc-empty">
-            <strong>주변에서 추천할 공간을 찾지 못했어요</strong>
-            <span>위치를 바꾸거나 새로고침(↻)을 눌러보세요.</span>
-          </div>
-        ) : (
-          <CardRail>
-            {visiblePlaces.slice(0, 24).map((place) => (
-              <PlaceSpotCard key={place.id} place={place} anchorId={cardAnchorId("place", place.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "place", data })} />
-            ))}
-          </CardRail>
-        )}
-      </section>
-
-      <section className="xc-section" aria-label="요즘 이 동네 생물">
-        <header className="xc-section__head">
-          <strong>요즘 이 동네 생물</strong>
-          <span className="xc-section__hint">
-            <PawPrint size={11} strokeWidth={2.2} aria-hidden="true" /> 근처에서 관측된 동식물
-          </span>
-        </header>
-
-        {wildLoading ? (
-          <div className="xc-grid" aria-hidden="true">
-            {Array.from({ length: 6 }, (_, index) => (
-              <div className="xc-card xc-card--skeleton" key={index} />
-            ))}
-          </div>
-        ) : wildError ? (
-          <div className="xc-empty">
-            <strong>생물 정보를 불러오지 못했어요</strong>
-            <span>{wildError}</span>
-            <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
-          </div>
-        ) : visibleWildlife.length === 0 ? (
-          <div className="xc-empty">
-            <strong>주변 관측 기록이 아직 없어요</strong>
-            <span>위치를 바꾸거나 새로고침(↻)을 눌러보세요.</span>
-          </div>
-        ) : (
-          <CardRail>
-            {visibleWildlife.slice(0, 24).map((item) => (
-              <WildlifeCard key={item.id} item={item} anchorId={cardAnchorId("wildlife", item.id)} onRegister={onRegister} onOpen={(data) => setDetailItem({ type: "wildlife", data })} />
-            ))}
-          </CardRail>
-        )}
-      </section>
+        <div className="xc-list" role="tabpanel" aria-label={TABS.find((t) => t.key === activeTab)?.label}>
+          {active.loading ? (
+            <div className="xc-list__skeleton" aria-hidden="true">
+              {Array.from({ length: 6 }, (_, index) => (
+                <div className="xc-row xc-row--skeleton" key={index} />
+              ))}
+            </div>
+          ) : active.error ? (
+            <div className="xc-empty">
+              <strong>정보를 불러오지 못했어요</strong>
+              <span>{active.error}</span>
+              <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
+            </div>
+          ) : active.items.length === 0 ? (
+            <div className="xc-empty">
+              <strong>{active.emptyTitle}</strong>
+              <span>{active.emptySub}</span>
+            </div>
+          ) : (
+            active.items.slice(0, 60).map((item) => (
+              <ListRow
+                key={item.id}
+                item={item}
+                type={active.type}
+                anchorId={cardAnchorId(active.type, item.id)}
+                onRegister={onRegister}
+                onOpen={(data) => setDetailItem({ type: active.type, data })}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {detailItem ? (
