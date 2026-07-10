@@ -129,3 +129,47 @@ export async function fetchCultureEvents(location) {
   }
   return []
 }
+
+// ── 임시 진단 (배포 후 원인 파악용, 확인되면 제거) ──
+// 키 자체는 노출하지 않고 존재/길이/앞3자만. 각 엔드포인트의 status·본문 앞부분·레코드 수 반환.
+export async function diagnoseCulture(location) {
+  const apiKey = cultureApiKey()
+  const keyInfo = {
+    present: Boolean(apiKey),
+    length: apiKey.length,
+    head: apiKey.slice(0, 3),
+    hasPercent: apiKey.includes("%"),
+    from: process.env.CULTURE_API_KEY ? "CULTURE_API_KEY" : (process.env.TOUR_API_KEY ? "TOUR_API_KEY(fallback)" : "none"),
+  }
+  if (!apiKey || !location) return { keyInfo, note: "no key or location" }
+
+  const today = new Date()
+  const params = {
+    from: ymd(shiftDate(today, -PAST_DAYS)),
+    to: ymd(shiftDate(today, FUTURE_DAYS)),
+    gpsxfrom: String(location.lng - BBOX_DELTA_DEG),
+    gpsxto: String(location.lng + BBOX_DELTA_DEG),
+    gpsyfrom: String(location.lat - BBOX_DELTA_DEG),
+    gpsyto: String(location.lat + BBOX_DELTA_DEG),
+    sortStdr: "1",
+  }
+
+  const probes = []
+  for (const baseUrl of CULTURE_ENDPOINTS) {
+    const query = new URLSearchParams({ ...params, cPage: "1", rows: "5" })
+    const url = `${baseUrl}?serviceKey=${encodeURIComponent(apiKey)}&${query.toString()}`
+    try {
+      const resp = await fetch(url)
+      const text = await resp.text()
+      probes.push({
+        baseUrl,
+        status: resp.status,
+        records: extractRecords(text).length,
+        bodyHead: text.slice(0, 500),
+      })
+    } catch (error) {
+      probes.push({ baseUrl, error: `${error.name}: ${error.message}` })
+    }
+  }
+  return { keyInfo, probes }
+}
