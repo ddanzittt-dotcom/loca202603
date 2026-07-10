@@ -6260,6 +6260,45 @@
 @media (min-width: 960px) {
   /* 레일: left 20px + width 240px → 가로 중앙 140px */
   .hcat { left: 140px; bottom: 30px; transform: translateX(-50%); }
+
+  /* 탐색 탭: 좌측 레일이 없어 로카냥 기본 위치가 지도와 겹침 → 우측 상단으로 이동 */
+  .app-shell--tab-explore .hcat {
+    left: auto;
+    right: 24px;
+    top: 72px;
+    bottom: auto;
+    transform: none;
+  }
+
+  /* 상단 배치라 말풍선·메뉴는 아래로 열리고 우측 정렬 (배너에 안 가리게) */
+  .app-shell--tab-explore .hcat-bubble,
+  .app-shell--tab-explore .hcat-menu {
+    left: auto;
+    right: 0;
+    top: calc(100% + 12px);
+    bottom: auto;
+    transform: none;
+  }
+
+  .app-shell--tab-explore .hcat-bubble::after {
+    left: auto;
+    right: 52px;
+    top: -10px;
+    bottom: auto;
+    margin-left: 0;
+    border-top-color: transparent;
+    border-bottom-color: #1B1B18;
+  }
+
+  .app-shell--tab-explore .hcat-menu::after {
+    left: auto;
+    right: 52px;
+    top: -12px;
+    bottom: auto;
+    margin-left: 0;
+    border-top-color: transparent;
+    border-bottom-color: #1B1B18;
+  }
 }
 .hcat-btn {
   background: transparent;
