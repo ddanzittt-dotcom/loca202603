@@ -1,8 +1,19 @@
-// 한국관광공사 TourAPI - 축제/행사 조회 (탐색 탭 큐레이션)
-// 환경변수: TOUR_API_KEY (data.go.kr 발급)
+// 한국관광공사 TourAPI + 문화포털 - 축제/행사 조회 (탐색 탭 큐레이션)
+// 환경변수: TOUR_API_KEY (data.go.kr 발급), CULTURE_API_KEY (선택, 없으면 TOUR_API_KEY 재사용)
 // 2026-07 탐색 큐레이션 개편으로 복원 — isAppRequest 가드 추가 (오픈 프록시 차단)
+// 2026-07 소규모 행사 커버리지 — 정규화/집계는 _lib/eventNormalize 공용 모듈로 추출,
+//          문화포털(공연전시 period2)을 소스로 병합. 소스별 어댑터는 정규화된 공통 스키마를 반환.
 
 import { isAppRequest } from "./_lib/appRequest.js"
+import {
+  dedupeEvents,
+  haversine,
+  isActiveEvent,
+  sortEvents,
+  toNumber,
+  toYYYYMMDD,
+} from "./_lib/eventNormalize.js"
+import { fetchCultureEvents } from "./_lib/eventSources/culture.js"
 
 const TOUR_BASE_URL = "https://apis.data.go.kr/B551011/KorService2"
 const FESTIVAL_ROWS_PER_PAGE = 200
@@ -12,24 +23,6 @@ const NEARBY_EVENT_DETAIL_LIMIT = 24
 const NEARBY_EVENT_RADIUS_M = 20000
 const EVENT_RADIUS_KM = 100
 const EVENT_LIMIT = 80
-
-function toYYYYMMDD(date) {
-  return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`
-}
-
-function haversine(lat1, lng1, lat2, lng2) {
-  const R = 6371
-  const toRad = (deg) => deg * Math.PI / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-function toNumber(value) {
-  const next = Number(value)
-  return Number.isFinite(next) ? next : null
-}
 
 function readTourItems(data) {
   const rawItems = data?.response?.body?.items?.item || []
@@ -82,11 +75,13 @@ async function fetchTourItems(apiKey, endpoint, params, { required = false } = {
   return readTourItems(data)
 }
 
-function normalizeItem(item) {
+// TourAPI 원본 → 공통 정규화 스키마 (eventNormalize 참조)
+function normalizeTourItem(item) {
   const lat = toNumber(item.mapy)
   const lng = toNumber(item.mapx)
   return {
     id: String(item.contentid || item.id || ""),
+    source: "tourapi",
     title: item.title || "",
     addr: item.addr1 || item.addr2 || item.eventplace || "",
     image: item.firstimage || item.firstimage2 || "",
@@ -97,40 +92,6 @@ function normalizeItem(item) {
     tel: item.tel || "",
     contentTypeId: Number(item.contenttypeid || 15),
   }
-}
-
-function isActiveEvent(item, todayStr) {
-  if (item.eventenddate) return item.eventenddate >= todayStr
-  if (item.eventstartdate) return item.eventstartdate >= todayStr
-  return false
-}
-
-function eventQualityScore(item) {
-  return [
-    item.firstimage || item.firstimage2,
-    item.eventstartdate,
-    item.eventenddate,
-    item.addr1 || item.addr2 || item.eventplace,
-    item.tel,
-  ].filter(Boolean).length
-}
-
-function dedupeEvents(items) {
-  const byKey = new Map()
-
-  for (const item of items) {
-    if (!item?.title) continue
-    const id = item.contentid ? `id:${item.contentid}` : ""
-    const fallback = `${item.title.replace(/\s+/g, "").toLowerCase()}|${String(item.addr1 || item.addr2 || item.eventplace || "").slice(0, 20)}`
-    const key = id || fallback
-    const prev = byKey.get(key)
-
-    if (!prev || eventQualityScore(item) > eventQualityScore(prev)) {
-      byKey.set(key, item)
-    }
-  }
-
-  return [...byKey.values()]
 }
 
 async function fetchFestivalPages(apiKey, startDateStr) {
@@ -178,15 +139,6 @@ async function fetchNearbyEventCandidates(apiKey, location) {
   return settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []))
 }
 
-function sortEvents(items, location = null) {
-  return [...items].sort((a, b) => {
-    if (location) return (a.distKm ?? Infinity) - (b.distKm ?? Infinity)
-    const aStart = a.startDate || "99999999"
-    const bStart = b.startDate || "99999999"
-    return aStart.localeCompare(bStart) || a.title.localeCompare(b.title)
-  })
-}
-
 export default async function handler(req, res) {
   // 남용 방지: 우리 앱(loca.im/프리뷰/로컬)에서 온 요청만 허용 (place-match.js와 동일 패턴)
   if (!isAppRequest(req)) {
@@ -194,7 +146,7 @@ export default async function handler(req, res) {
   }
 
   // 클라이언트가 좌표를 격자(소수 2자리 ≈ 1km)로 반올림해 보내므로
-  // 같은 동네 사용자끼리 엣지 캐시를 공유한다 → TourAPI 일일 쿼터 보호
+  // 같은 동네 사용자끼리 엣지 캐시를 공유한다 → API 일일 쿼터 보호
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600")
 
   const apiKey = (process.env.TOUR_API_KEY || "").trim()
@@ -212,15 +164,27 @@ export default async function handler(req, res) {
   const startDateStr = toYYYYMMDD(threeMonthsAgo)
 
   try {
-    const [festivalItems, nearbyCandidates] = await Promise.all([
+    // 소스별 어댑터는 각자 정규화된 공통 스키마를 돌려준다.
+    // 문화포털은 fail-soft(키 없음/에러 시 [])라 프로덕션(키 미설정)에서도 기존 동작 유지.
+    const [festivalRaw, nearbyRaw, cultureItems] = await Promise.all([
       fetchFestivalPages(apiKey, startDateStr),
       fetchNearbyEventCandidates(apiKey, location),
+      fetchCultureEvents(location),
     ])
 
-    const active = dedupeEvents([...festivalItems, ...nearbyCandidates])
-      .filter((item) => item.title && isActiveEvent(item, todayStr))
-      .map(normalizeItem)
+    const tourItems = [...festivalRaw, ...nearbyRaw]
+      .filter((item) => item?.title)
+      .map(normalizeTourItem)
+
+    const active = dedupeEvents([...tourItems, ...cultureItems])
+      .filter((item) => isActiveEvent(item, todayStr))
       .filter((item) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng))
+
+    const sources = {
+      festival: festivalRaw.length,
+      nearby: nearbyRaw.length,
+      culture: cultureItems.length,
+    }
 
     if (location) {
       const nearby = active
@@ -230,19 +194,13 @@ export default async function handler(req, res) {
       return res.status(200).json({
         items: sortEvents(nearby, location).slice(0, EVENT_LIMIT),
         radiusKm: EVENT_RADIUS_KM,
-        sources: {
-          festival: festivalItems.length,
-          nearby: nearbyCandidates.length,
-        },
+        sources,
       })
     }
 
     return res.status(200).json({
       items: sortEvents(active).slice(0, EVENT_LIMIT),
-      sources: {
-        festival: festivalItems.length,
-        nearby: 0,
-      },
+      sources,
     })
   } catch (error) {
     return res.status(502).json({ items: [], error: `${error.name}: ${error.message}` })

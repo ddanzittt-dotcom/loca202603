@@ -88,9 +88,11 @@ export async function fetchCurationDetail({ contentId, contentTypeId }) {
 }
 
 // 큐레이션 아이템에서 TourAPI contentId 추출 (행사=원본 id, 공간=`tour-<id>`)
+// TourAPI 외 소스(카카오/문화포털 등)는 TourAPI 상세가 없으므로 조회하지 않고
+// sourceUrl 링크로 폴백한다.
 export function curationContentRef(item) {
   if (!item) return null
-  if (item.source === "kakao") return null
+  if (item.source && item.source !== "tourapi") return null
   const providerId = item.providerId || (String(item.id || "").startsWith("tour-") ? String(item.id).slice(5) : item.id)
   if (!providerId) return null
   return { contentId: providerId, contentTypeId: item.contentTypeId || 15 }
