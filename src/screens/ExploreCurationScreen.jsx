@@ -27,9 +27,10 @@ function cardAnchorId(type, id) {
 }
 
 const TABS = [
-  { key: "ongoing", label: "열린 행사" },
-  { key: "upcoming", label: "곧 시작" },
-  { key: "places", label: "기록할 공간" },
+  { key: "all", label: "전체" },
+  { key: "ongoing", label: "진행중인 행사" },
+  { key: "upcoming", label: "곧 시작하는 행사" },
+  { key: "places", label: "가볼만한 공간" },
   { key: "wildlife", label: "이 동네 생물" },
 ]
 
@@ -148,7 +149,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [locating, setLocating] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [detailItem, setDetailItem] = useState(null) // {type: "event"|"place"|"wildlife", data}
-  const [activeTab, setActiveTab] = useState("ongoing")
+  const [activeTab, setActiveTab] = useState("all")
   // 결과를 요청 키와 함께 저장 — 키가 다르면 로딩 중 (effect 내 동기 setState 회피)
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
@@ -252,29 +253,45 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return split
   }, [events])
 
+  // 탭별 항목 = {item, type} 배열. '전체'는 준비된 소스를 거리순으로 합친다.
+  const eventEntry = (item) => ({ item, type: "event" })
+  const placeEntry = (item) => ({ item, type: "place" })
+  const wildEntry = (item) => ({ item, type: "wildlife" })
+
+  const allLoading = loading && placesLoading && wildLoading
+  const allEntries = [
+    ...(loading ? [] : ongoing.map(eventEntry)),
+    ...(loading ? [] : upcoming.map(eventEntry)),
+    ...(placesLoading ? [] : visiblePlaces.map(placeEntry)),
+    ...(wildLoading ? [] : visibleWildlife.map(wildEntry)),
+  ].sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity))
+  const allError = !allLoading && allEntries.length === 0 && (error || placesError || wildError)
+    ? "주변 정보를 일부 불러오지 못했어요."
+    : ""
+
   // 탭별 데이터/상태 묶음
   const tabState = {
-    ongoing: { loading, error, items: ongoing, type: "event", emptyTitle: "지금 주변에 열린 행사가 없어요", emptySub: "위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요." },
-    upcoming: { loading, error, items: upcoming, type: "event", emptyTitle: "곧 시작하는 행사가 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    places: { loading: placesLoading, error: placesError, items: visiblePlaces, type: "place", emptyTitle: "주변에서 추천할 공간을 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    wildlife: { loading: wildLoading, error: wildError, items: visibleWildlife, type: "wildlife", emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    all: { loading: allLoading, error: allError, entries: allEntries, emptyTitle: "주변에 표시할 항목이 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    ongoing: { loading, error, entries: ongoing.map(eventEntry), emptyTitle: "지금 진행중인 행사가 없어요", emptySub: "위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요." },
+    upcoming: { loading, error, entries: upcoming.map(eventEntry), emptyTitle: "곧 시작하는 행사가 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    places: { loading: placesLoading, error: placesError, entries: visiblePlaces.map(placeEntry), emptyTitle: "주변에서 가볼만한 공간을 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    wildlife: { loading: wildLoading, error: wildError, entries: visibleWildlife.map(wildEntry), emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
   }
 
   const tabCount = (key) => {
     const state = tabState[key]
-    return state.loading ? null : state.items.length
+    return state.loading ? null : state.entries.length
   }
 
-  // 레이더 도트 = 활성 탭 종류만 (탭 = 지도 필터)
+  // 레이더 도트 = 활성 탭 항목 (탭 = 지도 필터). '전체'는 전 종류.
   const radarItems = useMemo(() => {
     const state = tabState[activeTab]
-    const source = state.loading ? [] : state.items
-    const type = activeTab === "wildlife" ? "wildlife" : (activeTab === "places" ? "place" : "event")
-    return source
-      .map((raw) => ({
-        id: raw.id, type, title: raw.title, sprite: spriteForRadarItem(type, raw),
-        lat: Number(raw.lat), lng: Number(raw.lng),
-        distKm: raw.distKm, category: raw.category, data: raw,
+    const entries = state.loading ? [] : state.entries
+    return entries
+      .map(({ item, type }) => ({
+        id: `${type}-${item.id}`, type, title: item.title, sprite: spriteForRadarItem(type, item),
+        lat: Number(item.lat), lng: Number(item.lng),
+        distKm: item.distKm, category: item.category, data: item,
       }))
       .filter((dot) => Number.isFinite(dot.lat) && Number.isFinite(dot.lng))
       .slice(0, 80)
@@ -342,20 +359,20 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
               <span>{active.error}</span>
               <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
             </div>
-          ) : active.items.length === 0 ? (
+          ) : active.entries.length === 0 ? (
             <div className="xc-empty">
               <strong>{active.emptyTitle}</strong>
               <span>{active.emptySub}</span>
             </div>
           ) : (
-            active.items.slice(0, 60).map((item) => (
+            active.entries.slice(0, 60).map(({ item, type }) => (
               <ListRow
-                key={item.id}
+                key={`${type}-${item.id}`}
                 item={item}
-                type={active.type}
-                anchorId={cardAnchorId(active.type, item.id)}
+                type={type}
+                anchorId={cardAnchorId(type, item.id)}
                 onRegister={onRegister}
-                onOpen={(data) => setDetailItem({ type: active.type, data })}
+                onOpen={(data) => setDetailItem({ type, data })}
               />
             ))
           )}
