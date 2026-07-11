@@ -158,20 +158,26 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
 
-  // 스크롤 컨테이너를 내려가면 상단 로카냥(HelperCat)을 숨긴다 (목록/필터탭 위로 겹치지 않게).
+  // 목록(데스크톱=내부 스크롤 / 모바일=페이지 스크롤)을 내리면 상단 로카냥(HelperCat)을 숨긴다.
   // app-shell 요소에 클래스를 얹어 .app-shell--tab-explore.is-explore-scrolled .hcat 로 제어.
   const viewRef = useRef(null)
   useEffect(() => {
-    const scroller = viewRef.current?.closest(".screen--scroll")
-    const shell = viewRef.current?.closest(".app-shell")
-    if (!scroller || !shell) return undefined
+    const el = viewRef.current
+    if (!el) return undefined
+    const list = el.querySelector(".xc-list")
+    const pageScroller = el.closest(".screen--scroll")
+    const shell = el.closest(".app-shell")
+    if (!shell) return undefined
     const onScroll = () => {
-      shell.classList.toggle("is-explore-scrolled", scroller.scrollTop > 24)
+      const scrolled = (list && list.scrollTop > 24) || (pageScroller && pageScroller.scrollTop > 24)
+      shell.classList.toggle("is-explore-scrolled", Boolean(scrolled))
     }
     onScroll()
-    scroller.addEventListener("scroll", onScroll, { passive: true })
+    list?.addEventListener("scroll", onScroll, { passive: true })
+    pageScroller?.addEventListener("scroll", onScroll, { passive: true })
     return () => {
-      scroller.removeEventListener("scroll", onScroll)
+      list?.removeEventListener("scroll", onScroll)
+      pageScroller?.removeEventListener("scroll", onScroll)
       shell.classList.remove("is-explore-scrolled")
     }
   }, [])
