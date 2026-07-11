@@ -1,12 +1,14 @@
 // 실제 지형 데이터 — OpenStreetMap Overpass API (무료, 키 불필요)
 // 내 위치 반경의 실제 도로/하천/수면/공원 좌표를 받아 탐색 오버월드 지도에 그린다.
-// 실패/오프라인이면 null → 레이더는 절차 생성 필드로 폴백.
+// 전 미러 실패 시 만료된 캐시라도 stale 재사용, 그것도 없으면 null → 절차 생성 필드로 폴백.
 
 const CACHE_PREFIX = "loca.terrain."
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000 // 7일
+const FETCH_TIMEOUT_MS = 12000 // 공용 미러는 혼잡 시 무한 대기가 흔함 — 엔드포인트당 12초 컷
 const ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter", // overpass.osm.jp 는 인증서 오류로 제외
 ]
 const MAJOR_HIGHWAY = /^(motorway|trunk|primary|secondary)$/
 
@@ -59,11 +61,15 @@ function parseElements(elements) {
 export async function fetchRealTerrain(lat, lng, radiusM = 2500) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   const key = `${lat.toFixed(2)},${lng.toFixed(2)}` // ~1.1km 그리드 — 같은 동네 재사용
+  let stale = null // 만료된 캐시 — 전 미러 실패 시 최후 폴백 (절차 생성보다 옛 실지형이 낫다)
   try {
     const raw = window.localStorage?.getItem(CACHE_PREFIX + key)
     if (raw) {
       const cached = JSON.parse(raw)
-      if (Date.now() - cached.t < CACHE_TTL && cached.d) return { ...cached.d, key }
+      if (cached.d) {
+        if (Date.now() - cached.t < CACHE_TTL) return { ...cached.d, key }
+        stale = cached.d
+      }
     }
   } catch { /* 캐시 실패는 무시 */ }
 
@@ -78,11 +84,14 @@ way["leisure"~"^(park|garden)$"]${around};out geom 60;`
 
   for (const endpoint of ENDPOINTS) {
     try {
+      const ac = new AbortController()
+      const tid = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
       const res = await fetch(endpoint, {
         method: "POST",
+        signal: ac.signal,
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `data=${encodeURIComponent(query)}`,
-      })
+      }).finally(() => clearTimeout(tid))
       if (!res.ok) continue
       const json = await res.json()
       // Overpass 는 타임아웃 시에도 200 + 부분 결과 + remark 를 준다 — 부분 응답은 캐시하지 않고 다음 엔드포인트
@@ -94,8 +103,9 @@ way["leisure"~"^(park|garden)$"]${around};out geom 60;`
       } catch { /* 저장 공간 부족 시 캐시 생략 */ }
       return { ...data, key }
     } catch {
-      // 다음 엔드포인트 시도
+      // 타임아웃/네트워크 오류 — 다음 엔드포인트 시도
     }
   }
+  if (stale) return { ...stale, key }
   return null
 }
