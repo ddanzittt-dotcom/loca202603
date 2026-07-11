@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
@@ -158,6 +158,24 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
 
+  // 스크롤 컨테이너를 내려가면 상단 로카냥(HelperCat)을 숨긴다 (목록/필터탭 위로 겹치지 않게).
+  // app-shell 요소에 클래스를 얹어 .app-shell--tab-explore.is-explore-scrolled .hcat 로 제어.
+  const viewRef = useRef(null)
+  useEffect(() => {
+    const scroller = viewRef.current?.closest(".screen--scroll")
+    const shell = viewRef.current?.closest(".app-shell")
+    if (!scroller || !shell) return undefined
+    const onScroll = () => {
+      shell.classList.toggle("is-explore-scrolled", scroller.scrollTop > 24)
+    }
+    onScroll()
+    scroller.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      scroller.removeEventListener("scroll", onScroll)
+      shell.classList.remove("is-explore-scrolled")
+    }
+  }, [])
+
   // 실제 지형(OSM) — 레이더 오버월드 배경용. 실패하면 null → 절차 생성 필드 폴백
   const [terrain, setTerrain] = useState(null)
   const terrainKey = `${Number(effectiveLocation.lat).toFixed(2)},${Number(effectiveLocation.lng).toFixed(2)}`
@@ -307,7 +325,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const active = tabState[activeTab]
 
   return (
-    <div className="xc-view">
+    <div className="xc-view" ref={viewRef}>
       {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 크게 고정 */}
       <div className="xc-view__map">
         <PixelRadar
