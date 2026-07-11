@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
@@ -158,30 +158,6 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
 
-  // 목록(데스크톱=내부 스크롤 / 모바일=페이지 스크롤)을 내리면 상단 로카냥(HelperCat)을 숨긴다.
-  // app-shell 요소에 클래스를 얹어 .app-shell--tab-explore.is-explore-scrolled .hcat 로 제어.
-  const viewRef = useRef(null)
-  useEffect(() => {
-    const el = viewRef.current
-    if (!el) return undefined
-    const list = el.querySelector(".xc-list")
-    const pageScroller = el.closest(".screen--scroll")
-    const shell = el.closest(".app-shell")
-    if (!shell) return undefined
-    const onScroll = () => {
-      const scrolled = (list && list.scrollTop > 24) || (pageScroller && pageScroller.scrollTop > 24)
-      shell.classList.toggle("is-explore-scrolled", Boolean(scrolled))
-    }
-    onScroll()
-    list?.addEventListener("scroll", onScroll, { passive: true })
-    pageScroller?.addEventListener("scroll", onScroll, { passive: true })
-    return () => {
-      list?.removeEventListener("scroll", onScroll)
-      pageScroller?.removeEventListener("scroll", onScroll)
-      shell.classList.remove("is-explore-scrolled")
-    }
-  }, [])
-
   // 실제 지형(OSM) — 레이더 오버월드 배경용. 실패하면 null → 절차 생성 필드 폴백
   const [terrain, setTerrain] = useState(null)
   const terrainKey = `${Number(effectiveLocation.lat).toFixed(2)},${Number(effectiveLocation.lng).toFixed(2)}`
@@ -331,7 +307,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const active = tabState[activeTab]
 
   return (
-    <div className="xc-view" ref={viewRef}>
+    <div className="xc-view">
       {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 크게 고정 */}
       <div className="xc-view__map">
         <PixelRadar

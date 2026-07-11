@@ -6334,14 +6334,6 @@
     transform: none;
   }
 
-  /* 목록을 내리면(스크롤) 필터탭/카드와 겹치지 않게 로카냥을 숨긴다 */
-  .app-shell--tab-explore.is-explore-scrolled .hcat {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-20px);
-    pointer-events: none;
-  }
-
   /* 상단 배치라 말풍선·메뉴는 아래로 열리고 우측 정렬 (배너에 안 가리게) */
   .app-shell--tab-explore .hcat-bubble,
   .app-shell--tab-explore .hcat-menu {
