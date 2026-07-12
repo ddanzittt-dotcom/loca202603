@@ -5394,16 +5394,16 @@
 }
 
 @media (min-width: 1080px) {
-  /* 데스크톱: [필터탭 = 상단 전체 폭 바(우측 정렬)] 아래 [지도 5 : 목록 1].
-     뷰 전체를 뷰포트 높이에 맞춰 고정 → 지도가 한 화면에 다 보이고, 목록만 독립 스크롤.
-     필터탭을 목록 열에서 빼내 상단으로 올린 만큼 목록이 더 길어진다. */
+  /* 데스크톱: 왼쪽 지도(2행 span), 오른쪽 열 = [필터탭] 위 [목록].
+     필터탭은 오른쪽(목록) 열 폭 안에만 있어 지도 위로 넘어가지 않는다.
+     뷰 전체를 뷰포트 높이에 맞춰 고정 → 지도가 한 화면에 다 보이고, 목록만 독립 스크롤. */
   .xc-view {
     display: grid;
     grid-template-columns: 5fr minmax(288px, 384px);
     grid-template-rows: auto minmax(0, 1fr);
     grid-template-areas:
-      "tabs tabs"
-      "map  feed";
+      "map tabs"
+      "map feed";
     column-gap: 18px;
     row-gap: 10px;
     height: calc(100dvh - 208px);
@@ -5421,23 +5421,30 @@
     height: 100%;
   }
 
-  /* 필터탭 = 상단 전체 폭, 한 줄, 우측 정렬 (고양이 자리 → 우상단) */
+  /* 필터탭 = 오른쪽(목록) 열 안에서만, 작게 + 줄바꿈 (지도 위로 침범 금지) */
   .app-shell--tab-explore .xc-tabs {
     grid-area: tabs;
     position: static;
     top: auto;
-    flex-wrap: nowrap;
-    justify-content: flex-end;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-content: flex-start;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     margin: 0;
     padding: 0 2px 2px;
     background: transparent;
     box-shadow: none;
-    overflow-x: auto;
-    scrollbar-width: none;
   }
-  .app-shell--tab-explore .xc-tabs::-webkit-scrollbar { display: none; }
+  /* 좁은 열에 맞춰 칩 축소 */
+  .app-shell--tab-explore .xc-tab {
+    height: 25px;
+    padding: 0 8px;
+    gap: 4px;
+    font-size: 10.5px;
+    box-shadow: 1.5px 1.5px 0 rgba(31, 26, 18, 0.85);
+  }
+  .app-shell--tab-explore .xc-tab__count { font-size: 10px; }
 
   .xc-view__feed {
     grid-area: feed;
