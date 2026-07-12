@@ -50,7 +50,7 @@ export function PlaceSharePoster({ feature, dexNo, innerRef }) {
           </div>
 
           <div className="csp-foot">
-            <span className="csp-brand">loca</span>
+            <span className="csp-brand">LOCA</span>
           </div>
         </div>
       </div>
