@@ -6451,14 +6451,19 @@
   /* 레일: left 20px + width 240px → 가로 중앙 140px */
   .hcat { left: 140px; bottom: 30px; transform: translateX(-50%); }
 
-  /* 탐색 탭: 좌측 레일이 없어 로카냥 기본 위치가 지도와 겹침 → 우측 최상단으로 이동 */
+  /* 탐색 탭: 좌측 레일이 없어 로카냥 기본 위치가 지도와 겹침 → 우측 상단으로 이동.
+     듀오(로카냥+치즈냥)가 코너에 꽉 껴 잘려 보이던 문제 → 상·우 여백을 넉넉히,
+     좁은 코너에 맞게 살짝 작게(꼬리·그림자까지 여유). */
   .app-shell--tab-explore .hcat {
     left: auto;
-    right: 24px;
-    top: 6px;
+    right: 32px;
+    top: 18px;
     bottom: auto;
     transform: none;
   }
+  .app-shell--tab-explore .hcat-btn .hcat-svg { width: 104px; height: 125px; }
+  .app-shell--tab-explore .ccat-btn .ccat-svg { width: 72px; height: 76px; }
+  .app-shell--tab-explore .hcat-duo { gap: 8px; }
 
   /* 상단 배치라 말풍선·메뉴는 아래로 열리고 우측 정렬 (배너에 안 가리게) */
   .app-shell--tab-explore .hcat-bubble,
