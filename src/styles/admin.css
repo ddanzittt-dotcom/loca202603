@@ -85,6 +85,60 @@
   border-color: var(--ink-strong);
   color: #fff;
 }
+.admin-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* 피드백 상태 필터 칩 */
+.admin-fchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  color: var(--ink-mute);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-fchip.is-active {
+  background: var(--ink-strong);
+  border-color: var(--ink-strong);
+  color: #fff;
+}
+.admin-fchip em { font-style: normal; font-weight: 800; opacity: 0.8; }
+
+/* 피드백 유형 배지 */
+.admin-fbadge--bug { background: #FCEBEB; color: #a3211f; }
+.admin-fbadge--idea { background: var(--accent-faint); color: var(--accent-deep); }
+.admin-fbadge--pain { background: #FFF1B8; color: #7a5a00; }
+.admin-fbadge--praise { background: var(--sage-soft, #E1EAD7); color: #3f6030; }
+
+.admin-fmeta { font-size: 12px; color: var(--ink-mute); font-weight: 600; }
+
+/* 피드백 상태 변경 버튼 */
+.admin-fact--acked { border-color: #2563eb; color: #2563eb; }
+.admin-fact--acked:hover:not(:disabled) { background: #2563eb; color: #fff; }
+.admin-fact--resolved { border-color: #12905a; color: #12905a; }
+.admin-fact--resolved:hover:not(:disabled) { background: #12905a; color: #fff; }
+.admin-fact--spam { border-color: var(--ink-mute); color: var(--ink-soft); }
+.admin-fact--spam:hover:not(:disabled) { background: var(--ink-soft); color: #fff; }
+.admin-fact--new { border-color: var(--accent); color: var(--accent-deep); }
+.admin-fact--new:hover:not(:disabled) { background: var(--accent); color: #fff; }
 
 /* 섹션 제목 */
 .admin-section-title {

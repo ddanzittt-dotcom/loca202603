@@ -7,6 +7,7 @@ const KEYS = {
   coachmarkSeen: "loca.onboarding_editor_coachmark_seen",
   firstPinCelebrated: "loca.onboarding_first_pin_celebrated",
   profileSeen: "loca.onboarding_profile_seen",
+  cheeseGreetSeen: "loca.onboarding_cheese_greet_seen",
   version: "loca.onboarding_version",
 }
 
@@ -64,4 +65,12 @@ export function isFirstPinCelebrated() {
 }
 export function markFirstPinCelebrated() {
   write(KEYS.firstPinCelebrated, "true")
+}
+
+// 치즈냥(피드백 고양이) 첫 인사 — 등장 후 1회만 말풍선으로 자기소개
+export function isCheeseGreetSeen() {
+  return read(KEYS.cheeseGreetSeen) === "true"
+}
+export function markCheeseGreetSeen() {
+  write(KEYS.cheeseGreetSeen, "true")
 }

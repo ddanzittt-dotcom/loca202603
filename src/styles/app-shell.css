@@ -836,6 +836,56 @@
   color: #1F1A12;
 }
 
+/* 치즈냥의 귓속말 — 피드백 시트 */
+.fb-sheet {
+  padding: 4px 2px 8px;
+}
+.fb-sheet__body {
+  width: 100%;
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+}
+.fb-sheet__count {
+  align-self: flex-end;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #8a94a0;
+}
+.fb-sheet__note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 2px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: #8a94a0;
+}
+.fb-sheet__error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(226, 75, 74, 0.1);
+  color: #b3261e;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.fb-sheet__send {
+  width: 100%;
+  margin-top: 2px;
+}
+.app-shell--soft-social .fb-sheet__count,
+.app-shell--soft-social .fb-sheet__note {
+  font-family: "DungGeunMo", monospace;
+  color: #8B7F63;
+}
+.app-shell--soft-social .fb-sheet__error {
+  border: 2px solid #C2380B;
+  background: #FFEBE0;
+  color: #C2380B;
+  box-shadow: 3px 3px 0 rgba(194, 56, 11, 0.12);
+}
+
 @media (max-width: 959px) {
   .app-shell--map-editor .loca-v2-bottomnav {
     display: none;
@@ -4099,6 +4149,82 @@
   from { transform: translateX(-38%); }
   to { transform: translateX(38%); }
 }
+
+/* ── 홀로 카드 (2026-07-12) — 포인터 틸트 + 흐르는 파스텔 무지개 포일 + 글레어.
+   binder/holoTilt.js 가 --hx/--hy(포인터 %), --rx/--ry(기울기), --hp(중심거리 0~1)를 주입.
+   데스크톱 정밀 포인터 + 모션 허용 환경 전용 — 모바일/모션축소는 기존 스윕 그대로. ── */
+.bd-glare {
+  /* 미디어쿼리 밖 베이스 — 모바일에서 flex 아이템으로 끼어들지 않게 절대배치 고정 */
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bd-card--holo {
+    --hx: 50%;
+    --hy: 50%;
+    --rx: 0deg;
+    --ry: 0deg;
+    --hp: 0;
+    transition: box-shadow 0.18s ease, transform 0.5s ease;
+  }
+  .bd-card--holo.bd-holo-on {
+    transform: perspective(700px) rotateX(var(--ry)) rotateY(var(--rx));
+    transition: box-shadow 0.18s ease;
+    will-change: transform;
+  }
+  /* 흰색 스윕 대체 — 포인터 반대 방향으로 흐르는 무지개(LOCA 팔레트 파스텔) + 스캔라인 */
+  .bd-card--holo .bd-shine,
+  .bd-card--holo:hover .bd-shine {
+    animation: none;
+    inset: 0;
+    transform: none;
+    background:
+      repeating-linear-gradient(
+        115deg,
+        #d9c7e6 0%,
+        #bdcfe1 11%,
+        #b9d3cb 22%,
+        #f8dd8a 33%,
+        #f2bcb2 44%,
+        #d9c7e6 55%
+      ),
+      repeating-linear-gradient(90deg, rgba(27, 27, 24, 0.05) 0 1px, transparent 1px 4px);
+    background-size: 320% 320%, auto;
+    background-position:
+      calc(50% + (50% - var(--hx)) * 1.7) calc(50% + (50% - var(--hy)) * 1.7),
+      0 0;
+    background-blend-mode: multiply;
+    mix-blend-mode: multiply;
+    opacity: 0;
+    transition: opacity 0.4s ease, background-position 0.4s ease;
+  }
+  .bd-card--holo.bd-holo-on .bd-shine {
+    opacity: calc(0.5 + var(--hp) * 0.4);
+    transition: opacity 0.15s ease;
+  }
+  /* 글레어 — 포인터 위치의 빛 반사 (사진 카드에서 광을 잡아준다) */
+  .bd-card--holo .bd-glare {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--hx) var(--hy),
+      rgba(255, 255, 255, 0.65) 0%,
+      rgba(255, 255, 255, 0.18) 30%,
+      rgba(255, 255, 255, 0) 60%
+    );
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .bd-card--holo.bd-holo-on .bd-glare {
+    opacity: 0.9;
+    transition: opacity 0.15s ease;
+  }
+}
 .bd-chead {
   background: #F5C41B;
   border-bottom: 2.5px solid #1B1B18;
@@ -6483,6 +6609,84 @@
 }
 .hcat-menu__item:hover { background: #F5EFDC; }
 
+/* ── 치즈냥 (피드백 고양이) — 로카냥 오른쪽에 나란히 ── */
+.hcat-duo {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+@media (min-width: 960px) {
+  .hcat-duo { gap: 10px; }
+}
+.ccat {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+.ccat-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.ccat-btn:hover { transform: translateY(-2px); }
+.ccat-btn:focus-visible { outline: 2px solid var(--accent, #E8442E); outline-offset: 4px; border-radius: 10px; }
+.ccat-btn .ccat-svg {
+  width: 40px;
+  height: 42px;
+  filter: drop-shadow(2px 2px 0 rgba(27, 27, 24, 0.3));
+}
+@media (min-width: 960px) {
+  /* 데스크톱 로카냥(120px) 옆 막내 비율 */
+  .ccat-btn .ccat-svg { width: 84px; height: 89px; }
+}
+
+/* idle 애니메이션 — 로카냥과 주기를 살짝 다르게 해서 박자가 어긋나게 */
+.ccat-svg { animation: hcatBob 1.4s steps(2, end) infinite; overflow: visible; }
+.ccat-svg .ccat-tail {
+  transform-origin: 17px 17px;
+  animation: hcatTail 1.9s ease-in-out infinite;
+}
+.ccat-svg .ccat-lids { opacity: 0; animation: hcatBlink 5.2s steps(1) infinite; }
+.ccat-svg.is-waving { animation: hcatHop 0.45s ease-in-out infinite alternate; }
+
+/* 이야기 제출 모션 — 감사 폴짝(is-thanks 는 스프라이트 hop) → 우측 대시 → 자리 비움 → 복귀 */
+.ccat.is-dash {
+  animation: ccatDash 0.8s ease-in forwards;
+  pointer-events: none;
+}
+.ccat.is-dash::after {
+  /* 속도선 — 달리는 몸 뒤에 붙어 함께 이동 */
+  content: "";
+  position: absolute;
+  left: -20px;
+  top: 45%;
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: #D9822B;
+  opacity: 0.5;
+  box-shadow: -9px -10px 0 #D9822B, -13px 9px 0 #D9822B;
+}
+.ccat.is-away { visibility: hidden; }
+.ccat.is-return { animation: ccatReturn 0.6s ease-out; }
+@keyframes ccatDash {
+  0% { transform: translateX(0) translateY(0) rotate(0deg); }
+  20% { transform: translateX(8vw) translateY(-7px) rotate(-13deg); }
+  40% { transform: translateX(26vw) translateY(0) rotate(-11deg); }
+  60% { transform: translateX(50vw) translateY(-7px) rotate(-13deg); }
+  80% { transform: translateX(78vw) translateY(0) rotate(-11deg); }
+  100% { transform: translateX(112vw) translateY(-4px) rotate(-13deg); }
+}
+@keyframes ccatReturn {
+  from { transform: translateX(40vw); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* ── 튜토리얼 오버레이 ── */
 .tut-ov {
   position: fixed;
@@ -6605,6 +6809,14 @@
   .hcat-svg.is-waving,
   .loca-greet__cat .hcat-svg,
   .hcat-bubble,
+  .ccat-svg,
+  .ccat-svg .ccat-tail,
+  .ccat-svg .ccat-lids,
+  .ccat-svg.is-waving,
+  .ccat.is-return,
   .tut-dlg__next,
   .tut-card { animation: none; }
+
+  /* 치즈냥 대시 대신 페이드아웃으로 퇴장 */
+  .ccat.is-dash { animation: none; opacity: 0; transition: opacity 0.3s ease; }
 }

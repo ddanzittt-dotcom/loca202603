@@ -7,17 +7,53 @@ import {
   getAdminInsights,
   getAdminOverview,
 } from "../lib/adminModeration"
+import {
+  FEEDBACK_STATUS_TABS,
+  feedbackCategoryLabel,
+  listAdminFeedback,
+  updateFeedbackStatus,
+} from "../lib/feedback"
 import { ageBandLabel } from "../lib/demographics"
 
 // 데이터 대시보드 — /admin. platform_admin 전용(서버 RPC 게이트 + 클라이언트 선판별).
-// 탭 구성: 개요 / 지역·태그 / 인구통계 / 활동·유통. (커뮤니티 검수는 제거됨)
+// 탭 구성: 개요 / 지역·태그 / 인구통계 / 활동·유통 / 피드백. (커뮤니티 검수는 제거됨)
 
 const DASH_TABS = [
   { key: "overview", label: "개요" },
   { key: "region", label: "지역·태그" },
   { key: "demographics", label: "인구통계" },
   { key: "activity", label: "활동·유통" },
+  { key: "feedback", label: "피드백" },
 ]
+
+// 피드백 카드에 붙는 유형 배지 색상
+const FEEDBACK_BADGE_CLASS = {
+  bug: "admin-fbadge--bug",
+  idea: "admin-fbadge--idea",
+  pain: "admin-fbadge--pain",
+  praise: "admin-fbadge--praise",
+}
+
+// 현재 상태에서 넘어갈 수 있는 다음 상태 버튼 (되돌리기 포함)
+const FEEDBACK_NEXT_ACTIONS = {
+  new: [
+    { status: "acked", label: "확인함" },
+    { status: "resolved", label: "처리됨" },
+    { status: "spam", label: "스팸" },
+  ],
+  acked: [
+    { status: "resolved", label: "처리됨" },
+    { status: "new", label: "새 이야기로" },
+    { status: "spam", label: "스팸" },
+  ],
+  resolved: [
+    { status: "acked", label: "되돌리기" },
+    { status: "spam", label: "스팸" },
+  ],
+  spam: [
+    { status: "new", label: "복구" },
+  ],
+}
 
 function num(value) {
   return value === null || value === undefined ? "–" : Number(value).toLocaleString("ko-KR")
@@ -88,6 +124,12 @@ export function AdminScreen() {
   const [demographics, setDemographics] = useState(null)
   const [demographicsError, setDemographicsError] = useState("")
   const [loading, setLoading] = useState(false)
+  // 피드백 (치즈냥의 귓속말)
+  const [feedbackRecords, setFeedbackRecords] = useState([])
+  const [feedbackCounts, setFeedbackCounts] = useState({})
+  const [feedbackStatus, setFeedbackStatus] = useState("new")
+  const [feedbackError, setFeedbackError] = useState("")
+  const [feedbackBusyId, setFeedbackBusyId] = useState(null)
 
   useEffect(() => {
     document.title = "LOCA 데이터 대시보드"
@@ -110,6 +152,19 @@ export function AdminScreen() {
     return () => { sub?.data?.subscription?.unsubscribe?.() }
   }, [resolveAccess])
 
+  // 특정 상태의 피드백 목록 + 전체 상태별 카운트(탭 뱃지)를 불러온다
+  const loadFeedback = useCallback(async (status) => {
+    setFeedbackError("")
+    try {
+      const { records, counts } = await listAdminFeedback(status)
+      setFeedbackRecords(records)
+      setFeedbackCounts(counts)
+    } catch (error) {
+      setFeedbackRecords([])
+      setFeedbackError(error?.message || "피드백을 불러오지 못했어요.")
+    }
+  }, [])
+
   const loadAll = useCallback(async () => {
     setLoading(true)
     setInsightsError("")
@@ -126,10 +181,32 @@ export function AdminScreen() {
     } catch (error) {
       setDemographics(null)
       setDemographicsError(error?.message || "인구통계를 불러오지 못했어요.")
-    } finally {
-      setLoading(false)
     }
-  }, [])
+    // 뱃지 카운트를 위해 항상 함께 로드 (기본 '새 이야기' 목록)
+    setFeedbackStatus("new")
+    await loadFeedback("new")
+    setLoading(false)
+  }, [loadFeedback])
+
+  // 상태 필터 변경
+  const selectFeedbackStatus = useCallback((status) => {
+    setFeedbackStatus(status)
+    loadFeedback(status)
+  }, [loadFeedback])
+
+  // 상태 변경(확인함/처리됨/스팸/복구) — 성공 시 현재 보고 있는 목록을 새로고침
+  const handleFeedbackAction = useCallback(async (id, nextStatus, currentStatus) => {
+    setFeedbackBusyId(id)
+    setFeedbackError("")
+    try {
+      await updateFeedbackStatus(id, nextStatus)
+      await loadFeedback(currentStatus)
+    } catch (error) {
+      setFeedbackError(error?.message || "상태를 바꾸지 못했어요.")
+    } finally {
+      setFeedbackBusyId(null)
+    }
+  }, [loadFeedback])
 
   useEffect(() => {
     if (phase === "ready") loadAll()
@@ -182,16 +259,20 @@ export function AdminScreen() {
       </header>
 
       <nav className="admin-tabs" aria-label="대시보드 탭">
-        {DASH_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={`admin-tab${activeTab === tab.key ? " is-active" : ""}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {DASH_TABS.map((tab) => {
+          const newCount = tab.key === "feedback" ? Number(feedbackCounts.new) || 0 : 0
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              className={`admin-tab${activeTab === tab.key ? " is-active" : ""}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+              {newCount > 0 ? <span className="admin-tab__badge">{newCount}</span> : null}
+            </button>
+          )
+        })}
       </nav>
 
       {loading && !overview ? (
@@ -440,6 +521,79 @@ export function AdminScreen() {
             )}
           </section>
         </>
+      ) : null}
+
+      {/* ─────────── 피드백 (치즈냥의 귓속말) ─────────── */}
+      {activeTab === "feedback" ? (
+        <section className="admin-overview" aria-label="사용자 피드백">
+          <h2 className="admin-section-title">치즈냥의 귓속말 — 사용자 피드백</h2>
+
+          <div className="admin-chips" role="tablist" aria-label="피드백 상태 필터">
+            {FEEDBACK_STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={feedbackStatus === tab.key}
+                className={`admin-fchip${feedbackStatus === tab.key ? " is-active" : ""}`}
+                onClick={() => selectFeedbackStatus(tab.key)}
+              >
+                {tab.label}
+                <em>{num(feedbackCounts[tab.key] ?? 0)}</em>
+              </button>
+            ))}
+          </div>
+
+          {feedbackError ? <p className="admin-error">{feedbackError} (065 적용 여부 확인)</p> : null}
+
+          {!feedbackError && feedbackRecords.length === 0 ? (
+            <p className="admin-empty-note">
+              {feedbackStatus === "new" ? "아직 새로 온 이야기가 없어요." : "이 상태의 피드백이 없어요."}
+            </p>
+          ) : null}
+
+          <div className="admin-list" style={{ marginTop: 12 }}>
+            {feedbackRecords.map((row) => {
+              const ctx = row.context || {}
+              const busy = feedbackBusyId === row.id
+              return (
+                <article key={row.id} className="admin-card">
+                  <div className="admin-card__head">
+                    <span className={`admin-badge admin-fbadge ${FEEDBACK_BADGE_CLASS[row.category] || ""}`}>
+                      {feedbackCategoryLabel(row.category)}
+                    </span>
+                    <span className="admin-fmeta">
+                      {row.nickname || "익명"} · {formatStamp(row.created_at)}
+                    </span>
+                  </div>
+                  <p className="admin-card__desc">{row.body}</p>
+                  {(ctx.path || ctx.tab || ctx.viewport) ? (
+                    <div className="admin-card__tags">
+                      {ctx.tab ? <span>탭 {ctx.tab}</span> : null}
+                      {ctx.path ? <span>{ctx.path}</span> : null}
+                      {ctx.viewport ? <span>{ctx.viewport}</span> : null}
+                      <span>{ctx.authed ? "로그인" : "비로그인"}</span>
+                    </div>
+                  ) : null}
+                  {row.admin_note ? <p className="admin-empty-note">메모: {row.admin_note}</p> : null}
+                  <div className="admin-card__actions">
+                    {(FEEDBACK_NEXT_ACTIONS[row.status] || []).map((action) => (
+                      <button
+                        key={action.status}
+                        type="button"
+                        className={`admin-act admin-fact--${action.status}`}
+                        disabled={busy}
+                        onClick={() => handleFeedbackAction(row.id, action.status, feedbackStatus)}
+                      >
+                        {busy ? "..." : action.label}
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </section>
       ) : null}
 
       {stamp ? <p className="admin-stamp">집계 시각: {formatStamp(stamp)}</p> : null}

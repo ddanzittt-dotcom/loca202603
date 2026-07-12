@@ -75,6 +75,8 @@ import { SharePlaceSheet } from "./components/sheets/SharePlaceSheet"
 import { ProfilePlacementConfirmSheet } from "./components/sheets/ProfilePlacementConfirmSheet"
 import { CollaboratorsSheet } from "./components/sheets/CollaboratorsSheet"
 import { ProfileOnboardingSheet } from "./components/sheets/ProfileOnboardingSheet"
+import { FeedbackSheet } from "./components/sheets/FeedbackSheet"
+import { submitFeedback, collectFeedbackContext } from "./lib/feedback"
 import { findPlacementForMap, resetLegacyProfileCuration } from "./lib/mapPlacement"
 import { isCoachmarkSeen, markCoachmarkSeen, resetCoachmark, isFirstPinCelebrated, markFirstPinCelebrated, isTutorialSeen, markTutorialSeen, isProfileOnboardSeen, markProfileOnboardSeen } from "./lib/onboarding"
 import { HelperCat, TuxCatSprite } from "./components/helper/HelperCat"
@@ -360,6 +362,9 @@ export default function App() {
   ))
   // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
   const [tutorial, setTutorial] = useState(null)
+  // 치즈냥의 귓속말 — 피드백 시트 열림 + 제출 성공 시 뛰어나가기 모션 트리거(증가 카운터)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackRunSignal, setFeedbackRunSignal] = useState(0)
   // 가입 직후 연령대·지역 온보딩 시트
   const [profileOnboardOpen, setProfileOnboardOpen] = useState(false)
   const [profileOnboardSaving, setProfileOnboardSaving] = useState(false)
@@ -594,6 +599,17 @@ export default function App() {
       closeProfileOnboard()
     }
   }, [authUser, cloudMode, closeProfileOnboard, showToast])
+
+  // 치즈냥의 귓속말 — 제출. 성공 시 시트를 닫고 뛰어나가기 모션을 재생한다.
+  // 실패는 throw 로 남겨 시트가 인라인 문구를 보여주고 입력을 보존하게 한다.
+  const handleFeedbackSubmit = useCallback(async ({ category, body }) => {
+    const context = collectFeedbackContext({ tab: activeTab, authed: Boolean(authUser) })
+    await submitFeedback({ category, body, context })
+    logEvent("feedback_submitted", { category })
+    setFeedbackOpen(false)
+    setFeedbackRunSignal((n) => n + 1) // 치즈냥 "고마워! 잘 전달할게!" → 우측 대시
+    showToast("치즈냥이 이야기를 받아 달려갔어요!")
+  }, [activeTab, authUser, showToast])
 
   useEffect(() => {
     if (!showPersonalGate) return
@@ -2153,9 +2169,24 @@ export default function App() {
       />
       )}
 
-      {/* 도우미 로카냥 — 좌하단 상주, 누르면 도움말 메뉴 (편집/뷰어/로그인 화면에선 숨김) */}
+      {/* 도우미 로카냥 + 피드백 치즈냥 — 좌하단 상주 (편집/뷰어/로그인 화면에선 숨김).
+          치즈냥은 Supabase 환경(이야기 보낼 곳)이 있을 때만 등장. onOpenFeedback/runSignal 은 피드백 시트 단계에서 연결. */}
       {!shouldHideBottomNav && !isMapEditorLayout && bottomNavTab !== "login" ? (
-        <HelperCat onOpenTutorial={(step) => setTutorial({ step, auto: null })} />
+        <HelperCat
+          onOpenTutorial={(step) => setTutorial({ step, auto: null })}
+          showFeedbackCat={hasSupabaseEnv}
+          onOpenFeedback={() => setFeedbackOpen(true)}
+          runSignal={feedbackRunSignal}
+        />
+      ) : null}
+
+      {/* 치즈냥의 귓속말 — 피드백 시트 (열릴 때만 마운트 → 매번 새 입력) */}
+      {feedbackOpen ? (
+        <FeedbackSheet
+          open
+          onClose={() => setFeedbackOpen(false)}
+          onSubmit={handleFeedbackSubmit}
+        />
       ) : null}
 
       {/* 로카냥 튜토리얼 오버레이 */}
