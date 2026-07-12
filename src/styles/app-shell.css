@@ -907,11 +907,12 @@
   box-shadow: 3px 3px 0 rgba(194, 56, 11, 0.12);
 }
 
-@media (max-width: 959px) {
-  .app-shell--map-editor .loca-v2-bottomnav {
-    display: none;
-  }
+/* 지도 편집 중에는 내비 숨김 (DESIGN.md — 지도 조작 우선). 모바일·데스크톱 배너 공통. */
+.app-shell--map-editor .loca-v2-bottomnav {
+  display: none;
+}
 
+@media (max-width: 959px) {
   .web-auth-workspace {
     min-height: auto;
     grid-template-columns: 1fr;
@@ -968,23 +969,25 @@
       var(--bg);
   }
 
+  /* 상단 배너 전환(2026-07) — 구 좌측 레일의 280px 예약 제거, 전 탭 풀폭 */
   .app-shell .content,
   .app-shell:not(.app-shell--map-editor) .content,
   .app-shell--map-editor .content {
-    width: calc(100% - 280px);
+    width: 100%;
     min-height: 100dvh;
-    margin-left: 280px;
+    margin-left: 0;
     padding: 0;
   }
 
+  /* 상단 고정 배너(58px)를 비켜 가는 상단 여백 (기존 36px + 배너 58px) */
   .web-section.screen--scroll,
   .web-auth-screen.screen--scroll {
     min-height: 100dvh;
-    padding: 36px clamp(28px, 4vw, 64px) 48px;
+    padding: 94px clamp(28px, 4vw, 64px) 48px;
   }
 
   .app-shell .web-section.maps-library-screen--v2.screen--scroll {
-    padding: 36px clamp(28px, 4vw, 64px) 48px;
+    padding: 94px clamp(28px, 4vw, 64px) 48px;
   }
 
   .web-section__inner {
@@ -1025,178 +1028,53 @@
     font-size: 34px;
   }
 
+  /* ── 상단 풀블리드 배너 (전 탭 공통, 2026-07) — 구 좌측 레일(240px) 대체.
+     로고는 왼쪽, 탭 묶음은 뷰포트 정중앙, 계정 버튼·고양이 듀오는 오른쪽. ── */
   .loca-v2-bottomnav {
-    top: 20px;
-    right: auto;
-    bottom: 20px;
-    left: 20px;
-    width: 240px;
-    height: auto;
-    padding: 18px;
-    border-color: rgba(23, 24, 23, 0.08);
-    border-radius: 20px;
+    top: 0;
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: auto;
+    max-width: none;
+    height: 58px;
+    padding: 8px clamp(16px, 4vw, 40px);
+    border: none;
+    border-radius: 0;
     display: flex;
     grid-template-columns: none;
-    flex-direction: column;
-    align-items: stretch;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 24px 80px rgba(54, 61, 48, 0.13);
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     transform: none;
   }
 
   .loca-v2-bottomnav__brand {
     display: block;
-    padding: 4px 4px 18px;
-  }
-
-  .loca-v2-bottomnav__brand strong {
-    display: block;
-    color: var(--ink-strong);
-    font-size: 30px;
-    font-weight: 950;
-    letter-spacing: 0;
-    line-height: 1;
-  }
-
-  .loca-v2-bottomnav__brand strong span {
-    color: var(--accent);
-  }
-
-  .loca-v2-bottomnav__brand em {
-    display: block;
-    margin-top: 7px;
-    color: var(--ink-mute);
-    font-size: 11px;
-    font-style: normal;
-    font-weight: 800;
-    letter-spacing: 0;
-  }
-
-  .loca-v2-bottomnav__items {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    gap: 7px;
-  }
-
-  .loca-v2-bottomnav__tab {
-    min-height: 58px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    flex-direction: row;
-    justify-content: flex-start;
-    gap: 11px;
-  }
-
-  .loca-v2-bottomnav__tab span {
-    align-items: flex-start;
-    gap: 3px;
-    text-align: left;
-  }
-
-  .loca-v2-bottomnav__tab span,
-  .loca-v2-bottomnav__tab strong {
-    font-size: 14px;
-    line-height: 1.08;
-  }
-
-  .loca-v2-bottomnav__tab small {
-    display: block;
-    max-width: 138px;
-    overflow: hidden;
-    color: var(--ink-mute);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0;
-    line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .loca-v2-bottomnav__tab.is-active {
-    background: var(--accent-faint);
-    color: var(--ink-strong);
-  }
-
-  .loca-v2-bottomnav__tab.is-active small {
-    color: var(--accent-deep);
-  }
-
-  .loca-v2-bottomnav__foot {
-    display: block;
-    margin-top: 18px;
-    padding: 14px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--sage-soft);
-  }
-
-  .loca-v2-bottomnav__foot span,
-  .loca-v2-bottomnav__foot strong {
-    display: block;
-  }
-
-  .loca-v2-bottomnav__foot span {
-    color: var(--social-mint-deep);
-    font-size: 11px;
-    font-weight: 900;
-  }
-
-  .loca-v2-bottomnav__foot strong {
-    margin-top: 6px;
-    color: var(--ink-strong);
-    font-size: 12px;
-    font-weight: 850;
-    line-height: 1.35;
-  }
-
-  /* ── 탐색 탭 전용: 좌측 픽셀 레일 → 상단 풀블리드 컬러 배너.
-     왼쪽 280px 예약을 없애고, 양끝까지 꽉 찬 노란 배너 + 내용 좌측 정렬. ── */
-  .app-shell--tab-explore:not(.app-shell--map-editor) .content {
-    width: 100%;
-    margin-left: 0;
-  }
-
-  /* 배너 표면(배경/테두리/위치)은 픽셀 스킨(.app-shell--soft-social …)보다 뒤라 특이도 ↑ 로 덮는다 */
-  .app-shell--soft-social.app-shell--tab-explore .loca-v2-bottomnav {
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: auto;
-    width: auto;
-    max-width: none;
-    height: 58px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 10px;
-    padding: 8px clamp(16px, 4vw, 40px);
-    background: #F6EFDB;
-    border: none;
-    border-bottom: 2px solid #1F1A12;
-    border-radius: 0;
-    box-shadow: 0 2px 0 rgba(31, 26, 18, 0.12);
-    transform: none;
-  }
-
-  .app-shell--tab-explore .loca-v2-bottomnav__brand {
     padding: 0 14px 0 2px;
     margin-right: 2px;
     border-right: 2px solid rgba(31, 26, 18, 0.28);
   }
 
-  .app-shell--tab-explore .loca-v2-bottomnav__brand strong {
+  .loca-v2-bottomnav__brand strong {
     font-size: 20px;
   }
 
-  .app-shell--tab-explore .loca-v2-bottomnav__items {
+  /* 탭 묶음 — 배너(뷰포트) 정중앙 고정. 로고 폭과 무관하게 항상 가운데. */
+  .loca-v2-bottomnav__items {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: flex;
     flex-direction: row;
-    flex: 0 0 auto;
-    justify-content: flex-start;
     gap: 6px;
+    transform: translate(-50%, -50%);
   }
 
-  .app-shell--tab-explore .loca-v2-bottomnav__tab {
+  .loca-v2-bottomnav__tab {
     min-height: 40px;
     flex: 0 0 auto;
     flex-direction: row;
@@ -1206,12 +1084,19 @@
     border-radius: 8px;
   }
 
-  .app-shell--tab-explore .loca-v2-bottomnav__tab span {
+  .loca-v2-bottomnav__tab span {
     align-items: center;
+    gap: 3px;
     text-align: center;
   }
 
-  /* 풀블리드 배너(58px)가 콘텐츠를 가리지 않게 상단 여백 + sticky 지도 오프셋 */
+  .loca-v2-bottomnav__tab span,
+  .loca-v2-bottomnav__tab strong {
+    font-size: 14px;
+    line-height: 1.08;
+  }
+
+  /* 풀블리드 배너(58px)가 콘텐츠를 가리지 않게 상단 여백 + sticky 지도 오프셋 (탐색 전용 압축값) */
   .app-shell--tab-explore .web-section--explore.screen--scroll {
     padding-top: 82px;
   }
@@ -1327,7 +1212,8 @@
 
   .web-section--profile .pf-v2-card {
     position: sticky;
-    top: 28px;
+    /* 상단 고정 배너(58px) 아래에서 멈추도록 */
+    top: 78px;
     grid-column: 1;
     grid-row: 1 / span 2;
     margin: 0;
@@ -1354,6 +1240,15 @@
   top: 14px;
   right: 16px;
   z-index: 45;
+}
+
+/* 데스크톱: 상단 배너(58px) 우측 끝에 도킹. 팝오버가 고양이(z 52) 위로 열리게 z ↑ */
+@media (min-width: 960px) {
+  .account-menu {
+    top: 10px;
+    right: clamp(16px, 4vw, 40px);
+    z-index: 56;
+  }
 }
 
 /* 모바일 좌상단 loca. 로고 버튼 — 데스크톱(네비에 로고 있음)에선 숨김 */
@@ -2145,13 +2040,13 @@
   gap: 8px;
 }
 
-/* ── 좌레일 픽셀 스킨 (데스크톱) ── */
+/* ── 상단 배너 픽셀 스킨 (데스크톱) ── */
 
 @media (min-width: 960px) {
   .app-shell--soft-social .loca-v2-bottomnav {
     background: #F6EFDB;
-    border-right: 2px solid #1F1A12;
-    box-shadow: none;
+    border-bottom: 2px solid #1F1A12;
+    box-shadow: 0 2px 0 rgba(31, 26, 18, 0.12);
     border-radius: 0;
   }
 
@@ -3679,183 +3574,6 @@
    ============================================================ */
 .map-canvas img[src*="daumcdn"] {
   filter: saturate(0.62) brightness(1.07) contrast(0.93);
-}
-
-/* ============================================================
-   첫 방문 타이틀(입장) 화면 — 게임 카트리지 부팅 감성
-   ============================================================ */
-.app-shell--intro {
-  min-height: 100dvh;
-  display: flex;
-}
-.loca-intro {
-  flex: 1;
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: #FAF6EC;
-}
-.loca-intro__card {
-  width: 100%;
-  max-width: 340px;
-  background: #FFFDF4;
-  border: 3px solid #1F1A12;
-  border-radius: 16px;
-  box-shadow: 7px 7px 0 rgba(31, 26, 18, 0.9);
-  overflow: hidden;
-}
-.loca-intro__band {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 14px;
-  background: #FFD338;
-  border-bottom: 3px solid #1F1A12;
-  font-family: "DungGeunMo", monospace;
-}
-.loca-intro__band span {
-  font-size: 13px;
-  color: #1F1A12;
-  letter-spacing: 1px;
-}
-.loca-intro__band i {
-  font-size: 10px;
-  font-style: normal;
-  letter-spacing: 2px;
-  color: #8A6D14;
-}
-.loca-intro__body {
-  padding: 34px 26px 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-.loca-intro__logo {
-  margin: 0;
-  font-family: "DungGeunMo", monospace;
-  font-weight: 400;
-  font-size: 58px;
-  line-height: 1;
-  letter-spacing: 4px;
-  color: #1F1A12;
-  text-shadow: 4px 4px 0 #FFD338, 4px 4px 0 #1F1A12;
-}
-.loca-intro__tagline {
-  margin: 14px 0 0;
-  font-family: "DungGeunMo", Pretendard, sans-serif;
-  font-size: 14px;
-  color: #6B5E45;
-  letter-spacing: 0.5px;
-}
-.loca-intro__pin {
-  margin: 26px 0 30px;
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-.loca-intro__pin::before {
-  content: "";
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  border: 3px solid #1F1A12;
-  border-radius: 50%;
-  background: #E5493A;
-  animation: loca-intro-bob 1.4s ease-in-out infinite;
-}
-.loca-intro__pin-dot {
-  position: relative;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #FFF6E8;
-  z-index: 1;
-  animation: loca-intro-bob 1.4s ease-in-out infinite;
-}
-@keyframes loca-intro-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-.loca-intro__start {
-  width: 100%;
-  padding: 15px;
-  border: 3px solid #1F1A12;
-  border-radius: 12px;
-  background: #E5493A;
-  color: #FFF6E8;
-  font-family: "DungGeunMo", Pretendard, sans-serif;
-  font-size: 19px;
-  letter-spacing: 1px;
-  cursor: pointer;
-  box-shadow: 5px 5px 0 #1F1A12;
-  animation: loca-intro-blink 1.1s steps(1) infinite;
-}
-.loca-intro__start:active {
-  transform: translate(2px, 2px);
-  box-shadow: 3px 3px 0 #1F1A12;
-  animation: none;
-}
-@keyframes loca-intro-blink {
-  0%, 62% { opacity: 1; }
-  63%, 100% { opacity: 0.82; }
-}
-.loca-intro__login {
-  margin-top: 18px;
-  padding: 6px;
-  border: none;
-  background: none;
-  color: #8A7C5F;
-  font-family: "DungGeunMo", Pretendard, sans-serif;
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.loca-intro__login:active {
-  color: #1F1A12;
-}
-
-/* 타이틀 화면 — 점 대신 미니 지도 맵핑 애니메이션 */
-.loca-intro__scene {
-  margin: 20px 0 24px;
-  line-height: 0;
-}
-.loca-intro__drop {
-  animation: loca-intro-pin-drop 4s steps(24) infinite;
-  transform-origin: center;
-}
-.loca-intro__drop--b {
-  animation-delay: 2s;
-}
-@keyframes loca-intro-pin-drop {
-  0% { transform: translateY(-46px); opacity: 0; }
-  6% { transform: translateY(-46px); opacity: 1; }
-  14% { transform: translateY(0); }
-  18% { transform: translateY(-5px); }
-  22% { transform: translateY(0); }
-  86% { transform: translateY(0); opacity: 1; }
-  94%, 100% { transform: translateY(0); opacity: 0; }
-}
-.loca-intro__ripple {
-  opacity: 0;
-  transform-origin: center;
-  transform-box: fill-box;
-  animation: loca-intro-ripple 4s ease-out infinite;
-}
-.loca-intro__ripple--b {
-  animation-delay: 2s;
-}
-@keyframes loca-intro-ripple {
-  0%, 13% { opacity: 0; transform: scale(0.4); }
-  16% { opacity: 0.9; transform: scale(0.5); }
-  34% { opacity: 0; transform: scale(2.1); }
-  100% { opacity: 0; transform: scale(2.1); }
 }
 
 /* ============================================================
@@ -6621,72 +6339,14 @@
   transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s;
 }
 @media (min-width: 960px) {
-  /* 레일: left 20px + width 240px → 가로 중앙 140px */
-  .hcat { left: 140px; bottom: 30px; transform: translateX(-50%); }
-
-  /* 탐색 탭: 좌측 레일이 없어 로카냥 기본 위치가 지도와 겹침 → 우측 상단으로 이동.
-     듀오(로카냥+치즈냥)가 코너에 꽉 껴 잘려 보이던 문제 → 상·우 여백을 넉넉히,
-     좁은 코너에 맞게 살짝 작게(꼬리·그림자까지 여유). */
-  .app-shell--tab-explore .hcat {
+  /* 상단 배너(전 탭 공통): 고양이 듀오는 배너 우측 끝, 계정 버튼 왼쪽에 걸터앉는다.
+     탭 묶음이 정중앙이라 우측으로 비키고, 듀오 위 정렬로 콘텐츠 상단 버튼과의 겹침을 피한다. */
+  .hcat {
     left: auto;
-    right: 32px;
-    top: 18px;
+    right: 84px;
+    top: 8px;
     bottom: auto;
     transform: none;
-  }
-  .app-shell--tab-explore .hcat-btn .hcat-svg { width: 104px; height: 125px; }
-  .app-shell--tab-explore .ccat-btn .ccat-svg { width: 72px; height: 76px; }
-  .app-shell--tab-explore .hcat-duo { gap: 8px; }
-
-  /* 상단 배치라 말풍선·메뉴는 아래로 열리고 우측 정렬 (배너에 안 가리게) */
-  .app-shell--tab-explore .hcat-bubble,
-  .app-shell--tab-explore .hcat-menu {
-    left: auto;
-    right: 0;
-    top: calc(100% + 12px);
-    bottom: auto;
-    transform: none;
-  }
-
-  .app-shell--tab-explore .hcat-bubble::after {
-    left: auto;
-    right: 52px;
-    top: -10px;
-    bottom: auto;
-    margin-left: 0;
-    border-top-color: transparent;
-    border-bottom-color: #1B1B18;
-  }
-
-  .app-shell--tab-explore .hcat-menu::after {
-    left: auto;
-    right: 52px;
-    top: -12px;
-    bottom: auto;
-    margin-left: 0;
-    border-top-color: transparent;
-    border-bottom-color: #1B1B18;
-  }
-}
-
-@media (min-width: 1080px) {
-  /* 데스크톱 그리드: 필터탭이 우상단으로 올라간 뒤 → 고양이는 헤더 가운데-왼쪽 빈 공간으로.
-     상단 네비(로그인 시 ~850px)를 비켜 안전한 좌측에 두고, 넓어질수록 가운데로. */
-  .app-shell--tab-explore .hcat {
-    left: clamp(880px, 50%, 1040px);
-    right: auto;
-    top: 10px;
-  }
-  /* 말풍선·메뉴는 왼쪽 기준으로 다시 정렬 (우측 고정 해제) */
-  .app-shell--tab-explore .hcat-bubble,
-  .app-shell--tab-explore .hcat-menu {
-    left: 0;
-    right: auto;
-  }
-  .app-shell--tab-explore .hcat-bubble::after,
-  .app-shell--tab-explore .hcat-menu::after {
-    left: 40px;
-    right: auto;
   }
 }
 .hcat-btn {
@@ -6707,8 +6367,8 @@
   filter: drop-shadow(3px 3px 0 rgba(27, 27, 24, 0.3));
 }
 @media (min-width: 960px) {
-  /* 데스크톱: 4배 크기 */
-  .hcat-btn .hcat-svg { width: 120px; height: 144px; }
+  /* 데스크톱: 배너 우측에 맞는 크기 (구 좌레일 4배수에서 축소) */
+  .hcat-btn .hcat-svg { width: 72px; height: 86px; }
 }
 
 /* 스프라이트 idle 애니메이션 — 몸 들썩 + 꼬리 살랑 + 이따금 깜빡, 메뉴 열리면 폴짝 */
@@ -6751,8 +6411,25 @@
   border-top-color: #1B1B18;
 }
 @media (min-width: 960px) {
-  .hcat-bubble { left: 50%; transform: translateX(-50%); font-size: 13px; max-width: 230px; }
-  .hcat-bubble::after { left: 50%; margin-left: -5px; }
+  /* 데스크톱: 고양이가 배너 우측 상단 → 말풍선은 아래로 열리고 우측 정렬 */
+  .hcat-bubble {
+    left: auto;
+    right: 0;
+    top: calc(100% + 12px);
+    bottom: auto;
+    transform: none;
+    font-size: 13px;
+    max-width: 230px;
+  }
+  .hcat-bubble::after {
+    left: auto;
+    right: 52px;
+    top: -10px;
+    bottom: auto;
+    margin-left: 0;
+    border-top-color: transparent;
+    border-bottom-color: #1B1B18;
+  }
 }
 
 /* 말풍선 도움말 메뉴 — 고양이 머리 위 */
@@ -6780,9 +6457,23 @@
   border-top-color: #1B1B18;
 }
 @media (min-width: 960px) {
-  /* 데스크톱: 고양이가 레일 중앙이므로 말풍선·꼬리도 중앙 정렬 */
-  .hcat-menu { left: 50%; transform: translateX(-50%); }
-  .hcat-menu::after { left: 50%; margin-left: -6px; }
+  /* 데스크톱: 고양이가 배너 우측 상단 → 메뉴는 아래로 열리고 우측 정렬 */
+  .hcat-menu {
+    left: auto;
+    right: 0;
+    top: calc(100% + 12px);
+    bottom: auto;
+    transform: none;
+  }
+  .hcat-menu::after {
+    left: auto;
+    right: 52px;
+    top: -12px;
+    bottom: auto;
+    margin-left: 0;
+    border-top-color: transparent;
+    border-bottom-color: #1B1B18;
+  }
 }
 /* transform 키프레임 금지 — 데스크톱 중앙정렬 translateX(-50%) 를 덮어쓰지 않도록 opacity 만 */
 @keyframes hcatMenuPop { from { opacity: 0; } to { opacity: 1; } }
@@ -6815,7 +6506,8 @@
   gap: 6px;
 }
 @media (min-width: 960px) {
-  .hcat-duo { gap: 10px; }
+  /* 배너 위 정렬 — 치즈냥이 위쪽에 붙어 콘텐츠 버튼 영역을 침범하지 않게 */
+  .hcat-duo { align-items: flex-start; gap: 6px; }
 }
 .ccat {
   position: relative;
@@ -6840,8 +6532,8 @@
   filter: drop-shadow(2px 2px 0 rgba(27, 27, 24, 0.3));
 }
 @media (min-width: 960px) {
-  /* 데스크톱 로카냥(120px) 옆 막내 비율 */
-  .ccat-btn .ccat-svg { width: 84px; height: 89px; }
+  /* 데스크톱 로카냥(72px) 옆 막내 비율 */
+  .ccat-btn .ccat-svg { width: 50px; height: 53px; }
 }
 
 /* idle 애니메이션 — 로카냥과 주기를 살짝 다르게 해서 박자가 어긋나게 */

@@ -1,0 +1,184 @@
+/* 산책 모드 게임 (WalkModeScreen) — 풀블리드 캔버스 + 상단 탭바(App)를 피한 HUD.
+   게임 외피: Galmuri 픽셀폰트 · 잉크 프레임 · 하드섀도. z-index 40(네비 50 아래). */
+
+.walk-mode {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  background: #b7d690;
+  --wm-ink: #1f1a12;
+  --wm-paper: #fffdf4;
+  --wm-yellow: #ffd338;
+  --wm-red: #ff4d1a;
+}
+.walk-mode__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+}
+.walk-hud { position: absolute; inset: 0; pointer-events: none; }
+.walk-hud > * { pointer-events: auto; }
+
+.walk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: "DungGeunMo", monospace;
+  font-size: 12px;
+  color: var(--wm-ink);
+  background: var(--wm-paper);
+  border: 2px solid var(--wm-ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+  box-shadow: 2px 2px 0 var(--wm-ink);
+  cursor: pointer;
+}
+.walk-chip.is-on { background: var(--wm-yellow); }
+.walk-chip:active { transform: translate(2px, 2px); box-shadow: none; }
+
+.walk-hud__tl { position: absolute; top: 16px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 60%; }
+.walk-hud__tr { position: absolute; top: 16px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.walk-counter {
+  font-family: "DungGeunMo", monospace; font-size: 13px; color: var(--wm-ink);
+  background: var(--wm-yellow); border: 2px solid var(--wm-ink); border-radius: 8px;
+  padding: 6px 11px; box-shadow: 2px 2px 0 var(--wm-ink);
+}
+.walk-zoom { display: flex; gap: 6px; }
+.walk-zoom .walk-chip { padding: 3px 9px; font-size: 14px; }
+
+.walk-status {
+  position: absolute; left: 50%; top: 16px; transform: translateX(-50%);
+  font-family: "DungGeunMo", monospace; font-size: 12px; color: var(--wm-ink);
+  background: var(--wm-paper); border: 2px solid var(--wm-ink); border-radius: 8px;
+  padding: 6px 12px; box-shadow: 2px 2px 0 var(--wm-ink); max-width: 62%; text-align: center; pointer-events: none;
+}
+.walk-scan-label {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: "DungGeunMo", monospace; font-size: 14px; color: var(--wm-paper);
+  text-shadow: 2px 2px 0 var(--wm-ink); letter-spacing: 0.08em; pointer-events: none;
+}
+
+.walk-collect-wrap { position: absolute; left: 0; right: 0; bottom: 104px; display: flex; justify-content: center; }
+.walk-collect {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: "DungGeunMo", monospace; font-size: 15px; color: #fff;
+  background: var(--wm-red); border: 2px solid var(--wm-ink); border-radius: 10px;
+  padding: 11px 20px; box-shadow: 3px 3px 0 var(--wm-ink); cursor: pointer;
+  animation: walk-bob 0.8s ease-in-out infinite alternate;
+}
+.walk-collect:active { transform: translate(3px, 3px); box-shadow: none; }
+@keyframes walk-bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+
+/* 모바일 아날로그 조이스틱 */
+.walk-joystick {
+  position: absolute; left: 18px; bottom: 104px; width: 116px; height: 116px;
+  border-radius: 50%; border: 2px solid var(--wm-ink);
+  background: radial-gradient(circle, rgba(255, 253, 244, 0.5), rgba(255, 253, 244, 0.28));
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.4);
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.walk-joystick__ring {
+  position: absolute; inset: 14px; border-radius: 50%;
+  border: 2px dashed rgba(31, 26, 18, 0.28);
+}
+.walk-joystick__thumb {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--wm-yellow); border: 2px solid var(--wm-ink);
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.55);
+  will-change: transform;
+}
+
+.walk-sheet-chip { position: absolute; right: 12px; bottom: 100px; }
+
+/* 근처 생물 + 바인더 패널 */
+.walk-panel {
+  position: absolute; right: 12px; top: 92px; width: 288px; max-height: calc(100% - 210px);
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--wm-paper); border: 2px solid var(--wm-ink); border-radius: 12px;
+  box-shadow: 3px 3px 0 var(--wm-ink); padding: 12px 13px; display: none;
+}
+.walk-panel h2 {
+  font-family: "DungGeunMo", monospace; font-size: 13px; color: var(--wm-ink); letter-spacing: 0.05em;
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;
+}
+.walk-sub { font-family: "DungGeunMo", monospace; font-size: 11px; color: #807668; letter-spacing: 0; }
+.walk-divider { border-top: 2px dashed #e3dcc9; margin: 12px 0; }
+.walk-auto {
+  font-family: "DungGeunMo", monospace; font-size: 11px; color: var(--wm-ink); cursor: pointer;
+  background: #e1ead7; border: 2px solid var(--wm-ink); border-radius: 7px; padding: 4px 9px; box-shadow: 2px 2px 0 var(--wm-ink);
+}
+.walk-auto:active { transform: translate(2px, 2px); box-shadow: none; }
+.walk-panel-toggle { background: none; border: none; font-family: "DungGeunMo", monospace; font-size: 12px; color: #807668; cursor: pointer; padding: 0 2px; }
+.walk-panel.is-collapsed .walk-panel__body { display: none; }
+
+.walk-spot-list { display: flex; flex-direction: column; gap: 7px; }
+.walk-spot {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: 1.5px solid #e3dcc9; border-radius: 9px; padding: 7px 10px; background: #fff; cursor: pointer;
+}
+.walk-spot:hover { border-color: #c2b8a6; }
+.walk-spot.is-near { border-color: var(--wm-red); background: #ffebe0; }
+.walk-spot__sp { flex: none; width: 30px; height: 30px; image-rendering: pixelated; }
+.walk-spot__nm { flex: 1; min-width: 0; }
+.walk-spot__nm b { display: block; font-size: 12.5px; font-weight: 800; color: #0a0a0a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.walk-spot__nm small { display: block; font-size: 10.5px; color: #807668; font-weight: 600; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.walk-spot__d { flex: none; font-family: "DungGeunMo", monospace; font-size: 12px; color: #c2380b; text-align: right; }
+
+.walk-binder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.walk-bcard { border: 2px solid var(--wm-ink); border-radius: 9px; background: #f6efdb; padding: 7px 4px 6px; text-align: center; box-shadow: 2px 2px 0 var(--wm-ink); animation: walk-pop 0.25s cubic-bezier(0.2, 0.7, 0.3, 1.4); }
+.walk-bcard img { width: 30px; height: 30px; image-rendering: pixelated; }
+.walk-bcard .no { font-family: "DungGeunMo", monospace; font-size: 9.5px; color: #c2380b; }
+.walk-bcard .nm { font-size: 10px; font-weight: 800; color: #3f3a33; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.walk-empty { font-size: 12px; color: #807668; font-weight: 600; line-height: 1.5; }
+.walk-safety { margin-top: 11px; font-size: 10px; color: #c2b8a6; font-weight: 600; line-height: 1.6; }
+
+/* 채집 카드 모달 */
+.walk-modal { position: fixed; inset: 0; background: rgba(31, 26, 18, 0.6); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+.walk-findcard { width: 100%; max-width: 330px; background: var(--wm-paper); border: 3px solid var(--wm-ink); border-radius: 14px; box-shadow: 6px 6px 0 var(--wm-ink); overflow: hidden; animation: walk-pop 0.24s cubic-bezier(0.2, 0.7, 0.3, 1.35); }
+@keyframes walk-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.walk-findcard .band { display: flex; justify-content: space-between; align-items: center; background: var(--wm-ink); color: #f6efdb; padding: 7px 13px; font-family: "DungGeunMo", monospace; font-size: 11px; letter-spacing: 0.12em; }
+.walk-findcard .band b { color: var(--wm-yellow); }
+.walk-findcard .photo { position: relative; border-bottom: 3px solid var(--wm-ink); background: #e1ead7; }
+.walk-findcard .photo img { display: block; width: 100%; height: 160px; object-fit: cover; }
+.walk-findcard .photo .fb { height: 120px; display: flex; align-items: center; justify-content: center; }
+.walk-findcard .photo .fb img { width: 64px; height: 64px; object-fit: contain; image-rendering: pixelated; }
+.walk-findcard .body { padding: 13px 16px 16px; }
+.walk-findcard h3 { font-family: "DungGeunMo", monospace; font-weight: 400; font-size: 21px; color: var(--wm-ink); letter-spacing: 0.5px; }
+.walk-findcard .sci { font-size: 11px; font-style: italic; color: #807668; margin: 2px 0 9px; }
+.walk-findcard .meta { font-size: 12px; font-weight: 600; color: #3f3a33; line-height: 1.65; }
+.walk-findcard .attr { font-size: 9.5px; color: #c2b8a6; margin-top: 7px; }
+.walk-findcard .actions { display: flex; gap: 9px; margin-top: 14px; }
+.walk-findcard .actions button { flex: 1; font-family: "DungGeunMo", monospace; font-size: 13px; padding: 11px 0; border: 2px solid var(--wm-ink); border-radius: 9px; box-shadow: 2px 2px 0 var(--wm-ink); cursor: pointer; }
+.walk-findcard .actions .later { background: var(--wm-paper); color: #3f3a33; }
+.walk-findcard .actions .take { background: var(--wm-red); color: #fff; flex: 1.5; }
+.walk-findcard .actions button:active { transform: translate(2px, 2px); box-shadow: none; }
+
+/* 데스크톱 — 상단 탭바(top) 아래로 HUD, 사이드 패널 상시, 하단은 자유 */
+@media (min-width: 960px) {
+  .walk-hud__tl, .walk-hud__tr { top: 92px; }
+  .walk-status { top: 92px; }
+  .walk-collect-wrap { bottom: 28px; }
+  .walk-joystick, .walk-sheet-chip { display: none; }
+  .walk-panel { display: block; }
+}
+
+/* 모바일 — 근처 패널을 바텀시트로 (하단 네비 위) */
+@media (max-width: 959px) {
+  .walk-panel { right: 0; left: 0; top: auto; bottom: 92px; width: auto; max-height: 44%; border-radius: 14px 14px 0 0; }
+  .walk-mode.sheet-open .walk-panel { display: block; }
+  .walk-panel-toggle { display: none; }
+  .walk-mode.sheet-open .walk-joystick, .walk-mode.sheet-open .walk-collect-wrap { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walk-collect { animation: none; }
+  .walk-bcard, .walk-findcard { animation: none; }
+}

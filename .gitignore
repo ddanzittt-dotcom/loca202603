@@ -49,3 +49,6 @@ supabase/.branches/
 .claude/
 .agents/
 .vite/
+
+# 산책 모드 개발 프로토타입 (dev 전용, 배포 안 됨)
+prototype/

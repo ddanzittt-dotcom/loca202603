@@ -12,6 +12,19 @@ const MIN_RADIUS_KM = 1
 const MAX_RADIUS_KM = 15
 const SPARSE_THRESHOLD = 8
 const RESULT_LIMIT = 60
+const GRID_DEG = 0.01 // ~1.1km — 좌표 그리드 스냅 단위 (같은 동네 = 같은 쿼리 = 캐시 공유)
+
+// 상업 서비스에 노출 가능한 사진 라이선스만 — CC0/CC-BY 계열(-nc 비상업 제외, 저작권 전보류(null) 제외).
+// LOCA 는 상업 서비스라 CC-BY-NC 사진을 쓰면 회색지대 → 미허용 사진은 버리고 픽셀 스프라이트로 대체한다.
+const PHOTO_LICENSE_OK = new Set(["cc0", "cc-by", "cc-by-sa", "cc-by-nd"])
+function pickLicensedPhoto(photos) {
+  if (!Array.isArray(photos)) return null
+  for (const p of photos) {
+    if (p && PHOTO_LICENSE_OK.has(String(p.license_code || "").toLowerCase())) return p
+  }
+  return null
+}
+const snapCoord = (v) => Number((Math.round(Number(v) / GRID_DEG) * GRID_DEG).toFixed(2))
 
 // 노출할 분류군만 — 새/동물(포유·양서·파충·어류)/식물. 곤충·거미·연체·버섯 제외.
 const TAXON_META = {
@@ -49,7 +62,7 @@ function normalize(obs, location) {
   const coords = obs.geojson && Array.isArray(obs.geojson.coordinates) ? obs.geojson.coordinates : null
   const lng = coords ? toNumber(coords[0]) : toNumber(obs.longitude)
   const lat = coords ? toNumber(coords[1]) : toNumber(obs.latitude)
-  const photo = obs.photos && obs.photos[0] ? obs.photos[0] : null
+  const photo = pickLicensedPhoto(obs.photos) // 라이선스 허용 사진만 (없으면 스프라이트 대체)
   const meta = TAXON_META[taxon.iconic_taxon_name] || { label: "동물", emoji: "🐾" }
   return {
     id: `inat-${obs.id}`,
@@ -63,6 +76,7 @@ function normalize(obs, location) {
     photo: photo ? upgradePhoto(photo.url, "small") : "",
     photoLarge: photo ? upgradePhoto(photo.url, "medium") : "",
     attribution: photo ? (photo.attribution || "") : "",
+    photoLicense: photo ? (photo.license_code || "") : "",
     place: obs.place_guess || "",
     observedOn: (obs.observed_on_details && obs.observed_on_details.date) || obs.observed_on || "",
     qualityGrade: obs.quality_grade || "",
@@ -117,11 +131,15 @@ export default async function handler(req, res) {
     return res.status(403).json({ items: [], error: "forbidden" })
   }
 
-  const lat = toNumber(req.query.lat)
-  const lng = toNumber(req.query.lng)
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+  const rawLat = toNumber(req.query.lat)
+  const rawLng = toNumber(req.query.lng)
+  if (!Number.isFinite(rawLat) || !Number.isFinite(rawLng)) {
     return res.status(400).json({ items: [], error: "lat/lng required" })
   }
+  // 그리드 스냅 — 같은 동네 유저가 같은 쿼리를 공유 (upstream 호출·엣지 캐시 절약).
+  // distKm 도 스냅 중심 기준이라 셀 전체에서 응답이 동일하다.
+  const lat = snapCoord(rawLat)
+  const lng = snapCoord(rawLng)
   const location = { lat, lng }
   const requested = Number(req.query.radius || DEFAULT_RADIUS_KM)
   const radiusKm = Math.min(Math.max(requested, MIN_RADIUS_KM), MAX_RADIUS_KM)

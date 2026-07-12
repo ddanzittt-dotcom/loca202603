@@ -461,6 +461,11 @@ export function parseAppLocation(locationLike = window.location) {
     return { type: "map", mapId }
   }
 
+  // 산책 모드(게임으로 동네 탐색) 딥링크 — 공유 가능한 /walk 주소
+  if (pathname === "/walk") {
+    return { type: "walk" }
+  }
+
   return null
 }
 

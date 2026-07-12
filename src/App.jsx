@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, useCallback, useEffect, useMemo, useRef, use
 import { CheckCircle2, Database, Map as MapIcon, Plus, User } from "lucide-react"
 import { Toast } from "./components/ui"
 import { BottomNavV2 } from "./components/BottomNav.v2"
+import { PixelWordmark } from "./components/PixelWordmark"
 import { PlaceFlipCard } from "./components/binder/PlaceFlipCard"
 import { NewFindBurst } from "./components/binder/NewFindBurst"
 import { CollectSheet } from "./components/sheets/CollectSheet"
@@ -53,7 +54,8 @@ const PlacesScreen = lazy(() => import("./screens/PlacesScreen").then((m) => ({ 
 const DashboardScreen = lazy(() => import("./screens/DashboardScreen").then((m) => ({ default: m.DashboardScreen })))
 const AccountScreen = lazy(() => import("./screens/AccountScreen").then((m) => ({ default: m.AccountScreen })))
 const SharedMapViewer = lazy(() => import("./screens/SharedMapViewer").then((m) => ({ default: m.SharedMapViewer })))
-import { IntroScreen } from "./screens/IntroScreen"
+const WalkModeScreen = lazy(() => import("./screens/WalkModeScreen").then((m) => ({ default: m.WalkModeScreen })))
+import { TitleScreen } from "./screens/TitleScreen"
 import { useFeaturePool } from "./hooks/useFeaturePool"
 import { useMediaHandlers } from "./hooks/useMediaHandlers"
 import { useFeatureEditing } from "./hooks/useFeatureEditing"
@@ -356,10 +358,13 @@ export default function App() {
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
   // 첫 진입은 로그인 없이 구경할 수 있는 탐색 탭으로
   const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "explore")
-  // 첫 방문 타이틀(입장) 화면 — 공유/딥링크 진입이 아니고, 아직 입장 안 했을 때만
-  const [showIntro, setShowIntro] = useState(() => (
+  // 타이틀(입장) 화면 오버레이 — 첫 방문 자동 표시 + loca. 로고 클릭 시 재진입.
+  // 공유/딥링크 진입이 아닐 때만 자동 표시.
+  const [showTitle, setShowTitle] = useState(() => (
     !initialSharedMapData && !initialStoredTarget && !localStorage.getItem("loca.intro_seen")
   ))
+  // 산책 모드 게임 오버레이 — 타이틀 "게임으로 동네 탐색하기" 또는 /walk 딥링크로 진입
+  const [showWalk, setShowWalk] = useState(routeAtLoad?.type === "walk")
   // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
   const [tutorial, setTutorial] = useState(null)
   // 치즈냥의 귓속말 — 피드백 시트 열림 + 제출 성공 시 뛰어나가기 모션 트리거(증가 카운터)
@@ -1319,6 +1324,11 @@ export default function App() {
   }, [newFindCard, b2cFeatures])
 
   const handleBottomNavChange = useCallback((nextTab) => {
+    // 산책 모드 중 탭 이동 = 게임 나가기 (setShowWalk 는 idempotent, URL 은 실제 경로로 판단)
+    setShowWalk(false)
+    if (window.location.pathname === "/walk") {
+      try { window.history.replaceState(null, "", "/") } catch { /* ignore */ }
+    }
     if (nextTab === "login") {
       if (activeTab !== "login" && !confirmDiscardEditorDraft()) return
       handleTabChange("login")
@@ -1788,24 +1798,54 @@ export default function App() {
   ].join("")
 
 
-  if (showIntro && !authUser) {
-    const dismissIntro = () => {
-      try { localStorage.setItem("loca.intro_seen", "1") } catch { /* ignore */ }
-      setShowIntro(false)
+  // 타이틀 화면(오버레이) 핸들러 — 첫 방문 자동 + 로고 클릭 재진입 공용
+  const dismissTitle = () => {
+    try { localStorage.setItem("loca.intro_seen", "1") } catch { /* ignore */ }
+    setShowTitle(false)
+  }
+  const handleTitleEnter = () => {
+    dismissTitle()
+    if (showWalk) exitWalk()
+    setActiveTab("explore")
+    // 첫 입장이면 로카냥 튜토리얼 1회 자동 재생
+    if (!authUser && !isTutorialSeen("guest")) setTutorial({ step: 0, auto: "guest" })
+  }
+  const handleTitleGame = () => {
+    dismissTitle()
+    setShowWalk(true)
+    try { window.history.replaceState(null, "", "/walk") } catch { /* ignore */ }
+  }
+  const handleTitleLogin = () => { dismissTitle(); if (showWalk) exitWalk(); setActiveTab("login") }
+  // 산책 모드 나가기 — 탐색 탭 복귀 + URL 원복
+  const exitWalk = () => {
+    setShowWalk(false)
+    try { window.history.replaceState(null, "", "/") } catch { /* ignore */ }
+  }
+  // 산책 모드 채집 → 실제 새발견 카드 등록(explore 와 동일한 CollectSheet 경로).
+  // 개인영역 인증이 필요한 모드(supabase 로그인 전)면 로그인 게이트. 반환값 = 진행 여부.
+  const handleWalkCollect = (spot) => {
+    if (needsAuthForPersonalArea) {
+      requestLoginBanner()
+      showToast("로그인하면 내 도감에 남길 수 있어요")
+      return false
     }
-    return (
-      <div className="app-shell app-shell--soft-social app-shell--intro">
-        <IntroScreen
-          onEnter={() => {
-            dismissIntro()
-            setActiveTab("explore")
-            // 입장 직후 로카냥 튜토리얼 1회 자동 재생
-            if (!isTutorialSeen("guest")) setTutorial({ step: 0, auto: "guest" })
-          }}
-          onLogin={() => { dismissIntro(); setActiveTab("login") }}
-        />
-      </div>
-    )
+    if (!Number.isFinite(spot?.lat) || !Number.isFinite(spot?.lng)) {
+      showToast("이 생물은 위치 정보가 없어 카드로 등록할 수 없어요")
+      return false
+    }
+    // exploreCuration.wildlifeToPrefill 과 동일 형태 (여기 인라인해 explore 청크를 메인에 안 끌어옴)
+    const prefill = {
+      name: spot.title,
+      category: "nature",
+      tagLabel: spot.category || "생물",
+      address: spot.place || "",
+      lat: spot.lat,
+      lng: spot.lng,
+      asNewFind: true,
+    }
+    setCollectPrefill(prefill)
+    setCollectSheetOpen(true)
+    return true
   }
 
   return (
@@ -1833,6 +1873,7 @@ export default function App() {
       )}
 
       <main className="content">
+      {showWalk ? null : (
       <AppErrorBoundary>
       <Suspense fallback={<ScreenFallback />}>
         {showPersonalLoading ? (
@@ -2149,10 +2190,30 @@ export default function App() {
         ) : null}
       </Suspense>
       </AppErrorBoundary>
+      )}
       </main>
 
-      {/* 로그인 후 우상단 내 계정 버튼 (지도 편집 중에는 숨김) */}
-      {authUser && !isMapEditorLayout ? (
+      {/* 산책 모드 게임 오버레이 — 상단 탭바(BottomNavV2)는 위에 유지된다 */}
+      {showWalk ? (
+        <Suspense fallback={null}>
+          <WalkModeScreen onExit={exitWalk} onCollect={handleWalkCollect} />
+        </Suspense>
+      ) : null}
+
+      {/* 모바일 좌상단 loca. 로고 (데스크톱은 상단 네비에 로고가 있어 숨김). 클릭 → 타이틀 화면 */}
+      {!shouldHideBottomNav && !isMapEditorLayout && !showWalk ? (
+        <button
+          type="button"
+          className="loca-mobile-brand"
+          onClick={() => setShowTitle(true)}
+          aria-label="LOCA 시작 화면"
+        >
+          <PixelWordmark height={18} shadow="#E3DCC9" />
+        </button>
+      ) : null}
+
+      {/* 로그인 후 우상단 내 계정 버튼 (지도 편집·산책 모드 중에는 숨김) */}
+      {authUser && !isMapEditorLayout && !showWalk ? (
         <AccountMenu
           email={authUser.email}
           onOpenAccount={() => handleBottomNavChange("account")}
@@ -2166,12 +2227,22 @@ export default function App() {
         tab={bottomNavTab}
         onTabChange={handleBottomNavChange}
         authed={Boolean(authUser)}
+        onBrandClick={() => setShowTitle(true)}
       />
       )}
 
+      {/* 타이틀 화면 오버레이 — 첫 방문 자동 + loca. 로고 클릭 재진입 */}
+      {showTitle ? (
+        <TitleScreen
+          onEnter={handleTitleEnter}
+          onExploreGame={handleTitleGame}
+          onLogin={authUser ? null : handleTitleLogin}
+        />
+      ) : null}
+
       {/* 도우미 로카냥 + 피드백 치즈냥 — 좌하단 상주 (편집/뷰어/로그인 화면에선 숨김).
           치즈냥은 Supabase 환경(이야기 보낼 곳)이 있을 때만 등장. onOpenFeedback/runSignal 은 피드백 시트 단계에서 연결. */}
-      {!shouldHideBottomNav && !isMapEditorLayout && bottomNavTab !== "login" ? (
+      {!shouldHideBottomNav && !isMapEditorLayout && bottomNavTab !== "login" && !showWalk ? (
         <HelperCat
           onOpenTutorial={(step) => setTutorial({ step, auto: null })}
           showFeedbackCat={hasSupabaseEnv}
