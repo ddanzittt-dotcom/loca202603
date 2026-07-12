@@ -5406,7 +5406,7 @@
       "map feed";
     column-gap: 18px;
     row-gap: 10px;
-    height: calc(100dvh - 208px);
+    height: calc(100dvh - 218px);
     overflow: hidden;
   }
 
