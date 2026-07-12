@@ -3,6 +3,7 @@ import { Search as SearchIcon } from "lucide-react"
 import { featureSort } from "../lib/appUtils"
 import { getPlaceType } from "../lib/placeTypes"
 import { PlaceCardFront } from "../components/binder/PlaceFlipCard"
+import { holoTiltMove, holoTiltLeave } from "../components/binder/holoTilt"
 
 // 카드 바인더 — 내 장소. 장소 하나 = 카드 한 장.
 // 필터 칩 없이 검색만 제공한다 (리디자인 §1). 페이지당 장수는 조정 가능.
@@ -175,11 +176,14 @@ export function PlacesScreen({
                 <button
                   key={feature.id}
                   type="button"
-                  className="bd-card"
+                  className="bd-card bd-card--holo"
                   onClick={() => onOpenFeature(feature.id)}
+                  onPointerMove={holoTiltMove}
+                  onPointerLeave={holoTiltLeave}
                   aria-label={`${(feature.title || "").trim() || "이름 없는 장소"} 카드 열기`}
                 >
                   <span className="bd-shine" aria-hidden="true" />
+                  <span className="bd-glare" aria-hidden="true" />
                   <PlaceCardFront
                     feature={feature}
                     dexNo={dexNoByFeatureId.get(feature.id)}
