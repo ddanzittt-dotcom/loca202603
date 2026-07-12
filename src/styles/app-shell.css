@@ -5397,6 +5397,27 @@
   /* 데스크톱: 왼쪽 지도(2행 span), 오른쪽 열 = [필터탭] 위 [목록].
      필터탭은 오른쪽(목록) 열 폭 안에만 있어 지도 위로 넘어가지 않는다.
      뷰 전체를 뷰포트 높이에 맞춰 고정 → 지도가 한 화면에 다 보이고, 목록만 독립 스크롤. */
+  /* 탐색 섹션 → inner → workspace → xc-view 를 flex 로 연결.
+     제목 아래 남는 세로 공간을 지도/목록이 정확히 채운다(제목 크기 무관, 하단 여백 0). */
+  .app-shell--tab-explore .web-section--explore.screen--scroll {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+  .app-shell--tab-explore .web-section--explore .web-section__inner {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .app-shell--tab-explore .web-section--explore .web-section__head { flex: 0 0 auto; }
+  .app-shell--tab-explore .web-section--explore .web-section__workspace {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
   .xc-view {
     display: grid;
     grid-template-columns: 5fr minmax(288px, 384px);
@@ -5406,9 +5427,9 @@
       "map feed";
     column-gap: 18px;
     row-gap: 10px;
-    /* 지도 높이 = 뷰포트 비례 상한(60vh)으로 고정 → 위쪽 제목 크기가 바뀌어도
-       항상 한 화면에 들어온다. calc 는 초단신 화면 보조 가드. */
-    height: min(calc(100dvh - 210px), 60vh);
+    /* 고정 높이 대신 workspace 를 flex 로 꽉 채움 → 지도가 남는 공간을 다 씀 */
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -5419,6 +5440,11 @@
     height: 100%;
   }
 
+  /* 지도(레이더) = 셀을 세로로 꽉 채움 → aspect 고정으로 잘리던 것 해소 */
+  .app-shell--tab-explore .xc-view__map .xradar {
+    height: 100%;
+    min-height: 0;
+  }
   .xc-view__map .xradar__canvas {
     height: 100%;
   }
