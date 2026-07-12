@@ -36,8 +36,8 @@ export function holoTiltMove(event) {
     card.classList.add("bd-holo-on")
     card.style.setProperty("--hx", `${px.toFixed(1)}%`)
     card.style.setProperty("--hy", `${py.toFixed(1)}%`)
-    card.style.setProperty("--rx", `${(cx / 9).toFixed(2)}deg`) // rotateY — 좌우 기울임 (최대 ±5.6°)
-    card.style.setProperty("--ry", `${(-cy / 11).toFixed(2)}deg`) // rotateX — 상하 기울임 (최대 ±4.5°)
+    card.style.setProperty("--rx", `${(cx / 5).toFixed(2)}deg`) // rotateY — 좌우 기울임 (최대 ±10°)
+    card.style.setProperty("--ry", `${(-cy / 6).toFixed(2)}deg`) // rotateX — 상하 기울임 (최대 ±8.3°)
     card.style.setProperty("--hp", Math.min(1, Math.hypot(cx, cy) / 50).toFixed(3))
   })
 }
