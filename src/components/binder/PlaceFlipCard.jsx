@@ -4,6 +4,7 @@ import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRec
 import { getPlaceType } from "../../lib/placeTypes"
 import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
 import { PlaceSharePoster } from "./PlaceSharePoster"
+import { holoTiltMove, holoTiltLeave } from "./holoTilt"
 import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
 import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { logEvent } from "../../lib/analytics"
@@ -601,10 +602,20 @@ export function PlaceFlipCard({
       <div className="csp-share-ov" onClick={closeSharePreview} role="presentation">
         <div className="csp-share-panel" onClick={(event) => event.stopPropagation()}>
           <button type="button" className="csp-share-close" onClick={closeSharePreview} aria-label="닫기">✕</button>
-          <div className="csp-share-imgwrap">
+          <div
+            className="csp-share-imgwrap csp-share-imgwrap--holo"
+            onPointerMove={share.loading ? undefined : holoTiltMove}
+            onPointerLeave={share.loading ? undefined : holoTiltLeave}
+          >
             {share.loading
               ? <span className="csp-share-spin">공유 카드 만드는 중…</span>
-              : <img className="csp-share-img" src={share.url} alt={`${name} 공유 카드`} />}
+              : (
+                <>
+                  <img className="csp-share-img" src={share.url} alt={`${name} 공유 카드`} />
+                  <span className="csp-share-shine" aria-hidden="true" />
+                  <span className="csp-share-glare" aria-hidden="true" />
+                </>
+              )}
           </div>
           <div className="csp-share-acts">
             <button

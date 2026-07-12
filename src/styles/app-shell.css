@@ -431,6 +431,27 @@
   display: none;
 }
 
+/* 도트 로고 브랜드 버튼 (클릭 → 타이틀 화면). 표시 여부는 레이아웃별 규칙이 결정. */
+.loca-v2-bottomnav__brand--btn {
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  align-items: center;
+  line-height: 0;
+}
+.loca-v2-bottomnav__brand svg {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+.loca-v2-bottomnav__brand--btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .loca-v2-bottomnav__items {
   display: contents;
 }
@@ -1333,6 +1354,35 @@
   top: 14px;
   right: 16px;
   z-index: 45;
+}
+
+/* 모바일 좌상단 loca. 로고 버튼 — 데스크톱(네비에 로고 있음)에선 숨김 */
+.loca-mobile-brand {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(23, 24, 23, 0.12);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(23, 24, 23, 0.08);
+  cursor: pointer;
+}
+.loca-mobile-brand svg {
+  display: block;
+  height: 18px;
+  width: auto;
+}
+.loca-mobile-brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (min-width: 960px) {
+  .loca-mobile-brand { display: none; }
 }
 
 .account-menu__trigger {
@@ -4784,6 +4834,71 @@
 .csp-share-spin {
   color: #b9b19a;
   font-size: 14px;
+}
+/* ── 공유 시안 홀로 (2026-07-12) — 다크 포스터용 변형. binder/holoTilt.js 공용 사용.
+   시안은 캡처된 PNG(<img>)라 그 위에 틸트+포일+글레어를 오버레이로 얹는다 —
+   다크 베이스라 바인더(multiply)와 달리 screen 블렌드. 캡처/공유 PNG에는 미포함. ── */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .csp-share-imgwrap--holo {
+    --hx: 50%;
+    --hy: 50%;
+    --rx: 0deg;
+    --ry: 0deg;
+    --hp: 0;
+    position: relative;
+    transition: transform 0.5s ease;
+  }
+  .csp-share-imgwrap--holo.bd-holo-on {
+    transform: perspective(900px) rotateX(var(--ry)) rotateY(var(--rx));
+    will-change: transform;
+    transition: none;
+  }
+  .csp-share-shine {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(
+        115deg,
+        #8a5aa0 0%,
+        #44759f 11%,
+        #39836f 22%,
+        #f5c41b 33%,
+        #e8442e 44%,
+        #8a5aa0 55%
+      ),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 4px);
+    background-size: 320% 320%, auto;
+    background-position:
+      calc(50% + (50% - var(--hx)) * 1.7) calc(50% + (50% - var(--hy)) * 1.7),
+      0 0;
+    background-blend-mode: screen;
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 0.4s ease, background-position 0.4s ease;
+  }
+  .csp-share-imgwrap--holo.bd-holo-on .csp-share-shine {
+    opacity: calc(0.18 + var(--hp) * 0.2);
+    transition: opacity 0.15s ease;
+  }
+  .csp-share-glare {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--hx) var(--hy),
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(255, 255, 255, 0.1) 30%,
+      rgba(255, 255, 255, 0) 60%
+    );
+    mix-blend-mode: screen;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .csp-share-imgwrap--holo.bd-holo-on .csp-share-glare {
+    opacity: 1;
+    transition: opacity 0.15s ease;
+  }
 }
 .csp-share-acts {
   display: flex;
