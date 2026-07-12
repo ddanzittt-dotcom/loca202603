@@ -5279,18 +5279,25 @@
 }
 
 @media (min-width: 1080px) {
-  /* 데스크톱: 지도(레이더) 5 : 목록 1. 뷰 전체를 뷰포트에 고정하고,
-     지도는 움직이지 않으며 필터탭은 고정 헤더, 목록만 그 아래에서 독립 스크롤한다. */
+  /* 데스크톱: [필터탭 = 상단 전체 폭 바(우측 정렬)] 아래 [지도 5 : 목록 1].
+     뷰 전체를 뷰포트 높이에 맞춰 고정 → 지도가 한 화면에 다 보이고, 목록만 독립 스크롤.
+     필터탭을 목록 열에서 빼내 상단으로 올린 만큼 목록이 더 길어진다. */
   .xc-view {
-    flex-direction: row;
-    align-items: stretch;
-    gap: 18px;
-    height: calc(100dvh - 230px);
+    display: grid;
+    grid-template-columns: 5fr minmax(288px, 384px);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "tabs tabs"
+      "map  feed";
+    column-gap: 18px;
+    row-gap: 10px;
+    height: calc(100dvh - 208px);
     overflow: hidden;
   }
 
   .xc-view__map {
-    flex: 5 1 0;
+    grid-area: map;
+    position: static;
     min-width: 0;
     height: 100%;
   }
@@ -5299,27 +5306,34 @@
     height: 100%;
   }
 
+  /* 필터탭 = 상단 전체 폭, 한 줄, 우측 정렬 (고양이 자리 → 우상단) */
+  .app-shell--tab-explore .xc-tabs {
+    grid-area: tabs;
+    position: static;
+    top: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0 2px 2px;
+    background: transparent;
+    box-shadow: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-shell--tab-explore .xc-tabs::-webkit-scrollbar { display: none; }
+
   .xc-view__feed {
-    flex: 1 1 0;
-    min-width: 264px;
-    max-width: 348px;
+    grid-area: feed;
+    min-width: 0;
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
   }
 
-  /* 필터탭 = 스크롤하지 않는 고정 헤더 (목록이 뒤로 겹치지 않게) */
-  .app-shell--tab-explore .xc-tabs {
-    position: static;
-    top: auto;
-    flex: 0 0 auto;
-    box-shadow: none;
-    border-bottom: 2px solid rgba(31, 26, 18, 0.14);
-    margin-bottom: 2px;
-  }
-
-  /* 목록만 필터탭 아래에서 독립 스크롤 */
+  /* 목록 = 필터탭이 빠진 우측 열 전체를 차지하고 독립 스크롤 → 더 많은 항목 노출 */
   .xc-view__feed .xc-list {
     flex: 1 1 auto;
     min-height: 0;
@@ -5328,10 +5342,19 @@
     margin: 0 -2px;
   }
 
-  /* 페이지 자체 스크롤 제거 — 지도는 완전히 고정되고 내부 목록만 스크롤 */
+  /* 페이지 자체 스크롤 제거 — 지도는 고정, 내부 목록만 스크롤 */
   .app-shell--tab-explore .web-section--explore.screen--scroll {
     overflow: hidden;
-    padding-bottom: 20px;
+    padding-bottom: 12px;
+  }
+
+  /* 제목 밴드 압축 — 세로 폭을 줄여 지도가 한 화면에 들어오게 */
+  .app-shell--tab-explore .web-section--explore .web-section__head {
+    margin-bottom: 10px;
+  }
+  .app-shell--tab-explore .web-section--explore .web-section__description {
+    margin-top: 2px;
+    font-size: 13px;
   }
 }
 
@@ -6493,6 +6516,27 @@
     margin-left: 0;
     border-top-color: transparent;
     border-bottom-color: #1B1B18;
+  }
+}
+
+@media (min-width: 1080px) {
+  /* 데스크톱 그리드: 필터탭이 우상단으로 올라간 뒤 → 고양이는 헤더 가운데-왼쪽 빈 공간으로.
+     상단 네비(로그인 시 ~850px)를 비켜 안전한 좌측에 두고, 넓어질수록 가운데로. */
+  .app-shell--tab-explore .hcat {
+    left: clamp(880px, 50%, 1040px);
+    right: auto;
+    top: 10px;
+  }
+  /* 말풍선·메뉴는 왼쪽 기준으로 다시 정렬 (우측 고정 해제) */
+  .app-shell--tab-explore .hcat-bubble,
+  .app-shell--tab-explore .hcat-menu {
+    left: 0;
+    right: auto;
+  }
+  .app-shell--tab-explore .hcat-bubble::after,
+  .app-shell--tab-explore .hcat-menu::after {
+    left: 40px;
+    right: auto;
   }
 }
 .hcat-btn {

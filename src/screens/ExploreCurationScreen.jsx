@@ -308,7 +308,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   return (
     <div className="xc-view">
-      {/* 왼쪽: 지도(레이더) — 데스크톱에선 sticky로 크게 고정 */}
+      {/* 왼쪽: 지도(레이더) — 데스크톱에선 크게 고정(2행 span) */}
       <div className="xc-view__map">
         <PixelRadar
           items={radarItems}
@@ -324,28 +324,29 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
         />
       </div>
 
-      {/* 오른쪽: 필터탭 + 세로 목록 */}
-      <div className="xc-view__feed">
-        <div className="xc-tabs" role="tablist" aria-label="탐색 필터">
-          {TABS.map((tab) => {
-            const count = tabCount(tab.key)
-            const isActive = activeTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`xc-tab${isActive ? " is-active" : ""}${count === 0 ? " is-empty" : ""}`}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                <span className="xc-tab__label">{tab.label}</span>
-                {count != null && count > 0 ? <span className="xc-tab__count">{count}</span> : null}
-              </button>
-            )
-          })}
-        </div>
+      {/* 우상단: 필터탭 (데스크톱에선 목록 위 별도 셀 — 목록 세로 공간 확보) */}
+      <div className="xc-tabs" role="tablist" aria-label="탐색 필터">
+        {TABS.map((tab) => {
+          const count = tabCount(tab.key)
+          const isActive = activeTab === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`xc-tab${isActive ? " is-active" : ""}${count === 0 ? " is-empty" : ""}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <span className="xc-tab__label">{tab.label}</span>
+              {count != null && count > 0 ? <span className="xc-tab__count">{count}</span> : null}
+            </button>
+          )
+        })}
+      </div>
 
+      {/* 오른쪽: 세로 목록 */}
+      <div className="xc-view__feed">
         <div className="xc-list" role="tabpanel" aria-label={TABS.find((t) => t.key === activeTab)?.label}>
           {active.loading ? (
             <div className="xc-list__skeleton" aria-hidden="true">
