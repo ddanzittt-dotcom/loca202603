@@ -5406,7 +5406,9 @@
       "map feed";
     column-gap: 18px;
     row-gap: 10px;
-    height: calc(100dvh - 218px);
+    /* 지도 높이 = 뷰포트 비례 상한(60vh)으로 고정 → 위쪽 제목 크기가 바뀌어도
+       항상 한 화면에 들어온다. calc 는 초단신 화면 보조 가드. */
+    height: min(calc(100dvh - 210px), 60vh);
     overflow: hidden;
   }
 
