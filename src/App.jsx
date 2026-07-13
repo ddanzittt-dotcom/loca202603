@@ -358,11 +358,10 @@ export default function App() {
   const [pendingSharePlace, setPendingSharePlace] = useState(routeAtLoad?.type === "share-target" ? routeAtLoad.place : null)
   // 첫 진입은 로그인 없이 구경할 수 있는 탐색 탭으로
   const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "explore")
-  // 타이틀(입장) 화면 오버레이 — 첫 방문 자동 표시 + loca. 로고 클릭 시 재진입.
-  // 공유/딥링크 진입이 아닐 때만 자동 표시.
-  const [showTitle, setShowTitle] = useState(() => (
-    !initialSharedMapData && !initialStoredTarget && !localStorage.getItem("loca.intro_seen")
-  ))
+  // 타이틀(입장) 화면 오버레이 — loca.im 루트로 들어오면 매번 첫 화면으로 표시.
+  // 공유/슬러그/지도/산책/공유타깃 등 딥링크(routeAtLoad != null)면 건너뛴다.
+  // + loca. 로고 클릭 시 언제든 재진입.
+  const [showTitle, setShowTitle] = useState(() => !routeAtLoad)
   // 산책 모드 게임 오버레이 — 타이틀 "게임으로 동네 탐색하기" 또는 /walk 딥링크로 진입
   const [showWalk, setShowWalk] = useState(routeAtLoad?.type === "walk")
   // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
