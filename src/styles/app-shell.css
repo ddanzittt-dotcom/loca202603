@@ -3055,38 +3055,6 @@
   color: #8B7F63;
 }
 
-.app-shell--soft-social .res-voice-card {
-  border: 2px solid #1F1A12;
-  border-radius: 12px;
-  background: #FBF6E6;
-}
-
-.app-shell--soft-social .res-voice-mic {
-  border: 2px solid #1F1A12;
-  border-radius: 10px;
-  background: #E5493A;
-  color: #FFF6E8;
-  box-shadow: 2px 2px 0 #1F1A12;
-}
-
-.app-shell--soft-social .res-voice-mic.is-recording {
-  background: #C0442B;
-}
-
-.app-shell--soft-social .res-voice-hint,
-.app-shell--soft-social .res-voice-time {
-  font-family: "DungGeunMo", monospace;
-  color: #8B7F63;
-}
-
-.app-shell--soft-social .res-voice-chip {
-  border: 2px solid #1F1A12;
-  border-radius: 999px;
-  background: #FFFDF4;
-  font-family: "DungGeunMo", monospace;
-  color: #1F1A12;
-}
-
 .app-shell--soft-social .res-save {
   font-family: "DungGeunMo", Pretendard, sans-serif;
   border: 2px solid #1F1A12;

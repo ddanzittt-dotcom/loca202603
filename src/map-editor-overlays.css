@@ -928,31 +928,6 @@
   flex-shrink: 0;
 }
 
-.map-feature-summary__voices {
-  display: flex;
-  gap: 6px;
-  margin-top: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.map-feature-summary__voices::-webkit-scrollbar { display: none; }
-.map-feature-summary__voices .feature-voice-card {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-}
-.map-feature-summary__voices .feature-voice-card__play {
-  width: 24px;
-  height: 24px;
-  font-size: 10px;
-}
-.map-feature-summary__voices .feature-voice-card__dur {
-  font-size: 9px;
-}
-.map-feature-summary__voices .feature-voice-card__delete {
-  display: none;
-}
-
 .map-feature-summary__tags {
   display: flex;
   gap: 8px;
@@ -3546,130 +3521,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* ── voice card (갤러리형) ── */
-.feature-voice-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 10px;
-  background: var(--primary-light, #FFF4EB);
-  flex-shrink: 0;
-  position: relative;
-  gap: 2px;
-}
-.feature-voice-card__play {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: var(--primary, #FF6B35);
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-.feature-voice-card__play:disabled {
-  background: #ccc;
-}
-.feature-voice-card__dur {
-  font-size: 10px;
-  color: var(--muted, #888);
-}
-.feature-voice-card__delete {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  border: none;
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-}
-
-/* ── legacy voice compat ── */
-.feature-voice-section {
-  margin-top: 12px;
-  border-top: 1px solid #eee;
-  padding-top: 12px;
-}
-
-.feature-voice-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-}
-
-.feature-voice-play {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: none;
-  background: #4F46E5;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.feature-voice-play:disabled {
-  background: #ccc;
-}
-
-.feature-voice-info {
-  flex: 1;
-  font-size: 0.78rem;
-  color: #666;
-}
-
-.feature-voice-record {
-  display: block;
-  width: 100%;
-  margin-top: 6px;
-  padding: 8px 0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
-  font-size: 0.82rem;
-  cursor: pointer;
-  font-family: inherit;
-  text-align: center;
-}
-
-.feature-voice-record:active {
-  background: #f0f0f0;
-}
-
-.feature-voice-record--active {
-  background: #fee;
-  border-color: #f88;
-  color: #d00;
-  animation: voice-pulse 1s infinite;
-}
-
-@keyframes voice-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
 }
 
 /* ── 홈 탐험가 프로필 카드 (컴팩트) ── */
@@ -6782,10 +6633,6 @@ img.collab-item__avatar {
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; color: #aaa; cursor: pointer;
 }
-
-/* 음성 갤러리 */
-.fd__voice-row { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
-.fd__voice-row::-webkit-scrollbar { display: none; }
 
 /* 녹음 버튼 (갤러리 내 카드형) */
 .fd__record-btn {
