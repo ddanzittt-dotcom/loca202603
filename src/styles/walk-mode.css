@@ -43,7 +43,7 @@
 .walk-chip.is-on { background: var(--wm-yellow); }
 .walk-chip:active { transform: translate(2px, 2px); box-shadow: none; }
 
-.walk-hud__tl { position: absolute; top: 16px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 60%; }
+.walk-hud__tl { position: absolute; top: 16px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 64%; }
 .walk-hud__tr { position: absolute; top: 16px; right: 12px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .walk-counter {
   font-family: "DungGeunMo", monospace; font-size: 13px; color: var(--wm-ink);
@@ -124,7 +124,11 @@
   background: #e1ead7; border: 2px solid var(--wm-ink); border-radius: 7px; padding: 4px 9px; box-shadow: 2px 2px 0 var(--wm-ink);
 }
 .walk-auto:active { transform: translate(2px, 2px); box-shadow: none; }
-.walk-panel-toggle { background: none; border: none; font-family: "DungGeunMo", monospace; font-size: 12px; color: #807668; cursor: pointer; padding: 0 2px; }
+.walk-panel-toggle {
+  font-family: "DungGeunMo", monospace; font-size: 11px; color: var(--wm-ink); cursor: pointer;
+  background: #e1ead7; border: 2px solid var(--wm-ink); border-radius: 7px; padding: 4px 9px; box-shadow: 2px 2px 0 var(--wm-ink); white-space: nowrap;
+}
+.walk-panel-toggle:active { transform: translate(2px, 2px); box-shadow: none; }
 .walk-panel.is-collapsed .walk-panel__body { display: none; }
 
 .walk-spot-list { display: flex; flex-direction: column; gap: 7px; }
@@ -205,6 +209,7 @@
 /* 데스크톱 — 상단 탭바(top) 아래로 HUD, 사이드 패널 상시, 하단은 자유 */
 @media (min-width: 960px) {
   .walk-hud__tl, .walk-hud__tr { top: 92px; }
+  .walk-hud__tr { right: 312px; } /* 우측 패널(288px)과 겹치지 않게 왼쪽으로 */
   .walk-status { top: 92px; }
   .walk-collect-wrap { bottom: 28px; }
   .walk-joystick, .walk-sheet-chip { display: none; }

@@ -530,6 +530,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
       <div className="walk-hud">
         <div className="walk-hud__tl">
           <button type="button" className="walk-chip is-on" onClick={() => eng()?.scanMyArea()}>◎ 내 동네 지도 스캔</button>
+          <button type="button" className="walk-chip walk-exit" onClick={onExit} aria-label="게임 나가기">✕ 나가기</button>
         </div>
         <div className="walk-hud__tr">
           <span className="walk-counter">채집 <b>{count}</b>/{total}</span>
@@ -537,7 +538,6 @@ export function WalkModeScreen({ onExit, onCollect }) {
             <button type="button" className="walk-chip" onClick={() => eng()?.zoomBy(1 / 1.28)} aria-label="축소">－</button>
             <button type="button" className="walk-chip" onClick={() => eng()?.zoomBy(1.28)} aria-label="확대">＋</button>
           </div>
-          <button type="button" className="walk-chip walk-exit" onClick={onExit} aria-label="게임 나가기">✕ 나가기</button>
         </div>
 
         {status ? <div className="walk-status">{status}</div> : null}
@@ -557,7 +557,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
           <h2>근처의 생물
             <span>
               <button type="button" className="walk-auto" onClick={() => eng()?.toggleAuto()}>🐾 자동 산책</button>
-              <button type="button" className="walk-panel-toggle" onClick={() => setPanelOpen((v) => !v)} aria-label="패널 접기">{panelOpen ? "▾" : "▸"}</button>
+              <button type="button" className="walk-panel-toggle" onClick={() => setPanelOpen((v) => !v)} aria-label={panelOpen ? "창 접기" : "창 펴기"}>{panelOpen ? "▾ 창 접기" : "▸ 창 펴기"}</button>
               <button type="button" className="walk-panel-close" onClick={() => setSheetOpen(false)} aria-label="근처 생물 닫기">✕</button>
             </span>
           </h2>

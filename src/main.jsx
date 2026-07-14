@@ -47,7 +47,11 @@ import {
   getRecommendSearchOgMeta,
 } from "./lib/publicOgMeta"
 import { registerServiceWorker } from "./registerServiceWorker"
+import { installChunkReloadGuard } from "./lib/chunkReloadGuard"
 import { initMonitoring } from "./lib/monitoring"
+
+// 배포 직후 stale 청크 로드 실패 시 캐시 비우고 1회 자동 새로고침 (흰 화면 방지)
+installChunkReloadGuard()
 
 // 에러 추적 초기화 (VITE_SENTRY_DSN 있을 때만 활성화, 없으면 no-op)
 initMonitoring()
