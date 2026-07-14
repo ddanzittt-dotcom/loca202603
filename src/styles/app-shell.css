@@ -4234,6 +4234,12 @@
   gap: 12px;
   min-height: 0;
 }
+/* 고정 높이 카드 안 세로 flex 컨테이너 — 자식이 압축돼 내용이 잘리지 않게 한다.
+   (설명이 길면 .bd-textbox 가 min-height(66px)까지 눌려 텍스트가 박스 밖으로
+   삐져나오던 문제. shrink 를 막으면 설명칸이 내용만큼 커지고 넘치면 본문이 스크롤된다.) */
+.bd-backbody > * {
+  flex-shrink: 0;
+}
 .bd-textbox {
   position: relative;
   background: #FFFDF4;
