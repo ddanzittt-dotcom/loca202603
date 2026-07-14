@@ -24,11 +24,13 @@ GRANT SELECT (
   bio,
   slug,
   link,
-  is_public,
   created_at,
   updated_at
 ) ON public.profiles TO anon, authenticated;
 
+-- 참고(#5 재현성): is_public 은 046(제거된 마이그레이션)에서 추가·048에서 DROP 되어
+--   fresh replay 엔 존재하지 않는다. 이 GRANT 에 있으면 058 이 fresh replay 에서 실패하므로
+--   목록에서 제외했다. 컬럼 생성+공개 SELECT 는 071_profiles_is_public_baseline 에서 멱등 처리.
 -- dashboard_role / dashboard_enabled 는 의도적으로 미부여 → API 에서 조회 불가.
 -- (UPDATE/INSERT 권한과 RLS 정책은 변경 없음)
 
