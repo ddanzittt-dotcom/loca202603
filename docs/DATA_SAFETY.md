@@ -21,11 +21,11 @@
   - **Pro 이상**: 매일 자동 백업(보관 7일+) + **PITR(Point-in-Time Recovery)** 옵션 — 원하는 시점으로 복구.
   - **Free**: 자동 백업이 없거나 제한적 → **출시 전 Pro 승급 + PITR 활성화 강력 권장.**
 - **확인 항목**:
-  - [ ] Backups 탭에 최근 백업이 주기적으로 찍히는가
-  - [ ] PITR 토글 ON (실수 삭제·손상 시 시점 복구 가능)
+  - [x] 매일 자동 백업 활성 — **2026-07-15 확인**: 최근 7일 PHYSICAL 스냅샷(Scheduled backups). Pro 등급 정상.
+  - [ ] PITR(Point in time 탭) 활성 여부 — **미확인**. 일 1회 백업은 최대 ~24h 손실창이므로 PITR 로 축소 권장.
 
-### Storage(사진·음성) 백업 — 별도로 챙겨야 함
-- Storage 객체는 **DB 백업에 포함되지 않는다** (별도 계층).
+### Storage(사진·음성) 백업 — 별도로 챙겨야 함 ⚠️
+- Storage 객체는 **DB 백업에 포함되지 않는다** — **2026-07-15 대시보드에서 확인**: "Storage objects are not included. Restoring an old backup does not restore objects that have been deleted since then." (DB 백업은 메타데이터만.)
 - Supabase 는 객체 내구성(복제)은 제공하지만 "특정 시점 복원"은 DB 만큼 간단치 않으니 대시보드에서 현재 플랜의 Storage 백업 범위를 확인할 것.
 - **권장**:
   - [ ] 중요 미디어는 정기적으로 `media` 버킷을 외부(별도 S3/스크립트)로 스냅샷
