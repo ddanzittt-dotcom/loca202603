@@ -1,7 +1,6 @@
 import { useCallback } from "react"
 import { createId } from "../lib/appUtils"
 import { logEvent } from "../lib/analytics"
-import { cleanupFeatureMedia } from "../lib/mediaCleanup"
 import { friendlySupabaseError } from "../lib/mapService"
 import {
   createMap as createMapRecord,
@@ -162,28 +161,29 @@ export function useMapCRUD({
   const deleteMap = useCallback(async (directMapId) => {
     const targetId = directMapId || mapSheet?.id
     if (!targetId) return
-    if (!directMapId && !window.confirm("이 지도를 삭제할까요? 장소와 공유 정보도 함께 삭제됩니다.")) return
+    if (!directMapId && !window.confirm("이 지도를 삭제할까요? 지도에 담긴 장소 카드는 '내 장소'에 그대로 남고, 발행·공유만 해제돼요.")) return
 
     try {
       if (cloudMode) {
         await deleteMapRecord(targetId)
       }
-      const mapFeatures = features.filter((f) => f.mapId === targetId)
-      for (const f of mapFeatures) {
-        await cleanupFeatureMedia(f, cloudMode, false)
-      }
+      // 채집-우선(050): 지도를 지워도 장소 카드는 보존한다. 서버는 maps 행만 지우고
+      // map_features.map_id 는 SET NULL, 배치(map_feature_placements)는 CASCADE 로 정리한다.
+      // 클라 상태도 동일하게 — 이 지도 소속 카드를 mapless 로 전환(제거·미디어삭제 아님)해 바인더에 남긴다.
       setMaps((current) => current.filter((mapItem) => mapItem.id !== targetId))
-      setFeatures((current) => current.filter((feature) => feature.mapId !== targetId))
+      setFeatures((current) => current.map((feature) => (
+        feature.mapId === targetId ? { ...feature, mapId: null } : feature
+      )))
       setShares((current) => current.filter((share) => share.mapId !== targetId))
       if (mapSheet?.id === targetId) setMapSheet(null)
       setFeatureSheet(null)
       setMapsView("list")
-      showToast("지도를 삭제했어요.")
+      showToast("지도를 삭제했어요. 담긴 장소는 '내 장소'에 남아 있어요.")
     } catch (error) {
       console.error("Failed to delete map", error)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, features, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
+  }, [cloudMode, mapSheet, setFeatureSheet, setFeatures, setMapSheet, setMaps, setMapsView, setShares, showToast])
 
   const reorderMaps = useCallback(async (orderedIds = []) => {
     const orderById = new Map(orderedIds.map((id, index) => [id, index]))
