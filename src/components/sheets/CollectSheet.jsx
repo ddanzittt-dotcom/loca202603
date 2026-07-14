@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react"
-import { Search as SearchIcon, X } from "lucide-react"
+import { ClipboardPaste, Search as SearchIcon, X } from "lucide-react"
 import { KoreaMap } from "../koreaMap"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { createFeature } from "../../lib/mapService"
 import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { fetchPlaceMatch } from "../../lib/placeMatch"
+import { fetchCurationDetail, summarizeOverview } from "../../lib/exploreCuration"
 import { createId } from "../../lib/appUtils"
 import { PLACE_CATEGORIES, getDefaultPixelIdForCategory } from "../../lib/placeCategories"
 
@@ -42,6 +43,7 @@ export function CollectSheet({
   const [selectedSpot, setSelectedSpot] = useState(null) // null = NEW FIND
   const [name, setName] = useState("")
   const [desc, setDesc] = useState("") // 한줄 설명
+  const [descHint, setDescHint] = useState("") // 탐색 큐레이션 설명(overview) 요약 — "설명 붙여넣기" 후보
   const [tagList, setTagList] = useState([]) // 사용자 태그
   const [tagInput, setTagInput] = useState("")
   const [saving, setSaving] = useState(false)
@@ -58,10 +60,23 @@ export function CollectSheet({
     setSelectedSpot(null)
     setName("")
     setDesc("")
+    setDescHint("")
     setTagList([])
     setTagInput("")
     setSaving(false)
   }, [open])
+
+  // 탐색 큐레이션(행사·공간) 진입 시 TourAPI 상세의 소개(overview)를 조회해 한줄 설명 후보로 준비.
+  // 목록 카드/상세 시트 어느 경로로 들어와도 동작하며, 상세 시트를 거쳤으면 sessionStorage 캐시로 즉시 반환된다.
+  // TourAPI 외 소스(카카오/문화포털 등)는 contentRef 가 null → 후보 없음(버튼 미노출).
+  useEffect(() => {
+    if (!open || !prefill?.contentRef) { setDescHint(""); return undefined }
+    let cancelled = false
+    fetchCurationDetail(prefill.contentRef)
+      .then((detail) => { if (!cancelled) setDescHint(summarizeOverview(detail?.overview)) })
+      .catch(() => { if (!cancelled) setDescHint("") })
+    return () => { cancelled = true }
+  }, [open, prefill])
 
   // 탐색 큐레이션에서 진입 — 후보가 확정된 상태로 confirm 단계에서 시작
   useEffect(() => {
@@ -342,7 +357,20 @@ export function CollectSheet({
             </label>
 
             <label className="clt-field">
-              <span className="clt-field__label">한줄 설명</span>
+              <span className="clt-field__head">
+                <span className="clt-field__label">한줄 설명</span>
+                {descHint && !desc.trim() ? (
+                  <button
+                    type="button"
+                    className="clt-paste"
+                    onClick={() => setDesc(descHint)}
+                    title={descHint}
+                  >
+                    <ClipboardPaste size={11} strokeWidth={2.4} aria-hidden="true" />
+                    설명 붙여넣기
+                  </button>
+                ) : null}
+              </span>
               <input
                 className="clt-desc"
                 type="text"

@@ -146,7 +146,20 @@ export function formatDistanceKm(distKm) {
   return `${value < 10 ? value.toFixed(1) : Math.round(value)}km`
 }
 
+// TourAPI overview(긴 소개 문단) → 한줄 설명 후보로 압축.
+// 첫 문장(마침표/물음표/느낌표/줄바꿈 기준) 우선, 없으면 통짜 텍스트를 60자로 자른다.
+// CollectSheet 의 한줄 설명 칸(maxLength 60)에 그대로 넣을 수 있게 60자 이내로 보장.
+export function summarizeOverview(text) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim()
+  if (!clean) return ""
+  const breakAt = clean.search(/[.!?。\n]/)
+  let first = breakAt > -1 ? clean.slice(0, breakAt + 1).trim() : clean
+  if (first.length > 60) first = `${first.slice(0, 59).trim()}…`
+  return first
+}
+
 // 행사 → CollectSheet 프리필 (SPOT 후보 형태)
+// contentRef: TourAPI 상세(설명)를 CollectSheet 가 조회해 "설명 붙여넣기" 버튼을 띄우는 데 쓴다.
 export function eventToPrefill(event) {
   return {
     name: event.title,
@@ -156,6 +169,7 @@ export function eventToPrefill(event) {
     address: event.addr || "",
     lat: event.lat,
     lng: event.lng,
+    contentRef: curationContentRef(event),
   }
 }
 
@@ -176,6 +190,7 @@ export function placeToPrefill(place) {
     address: place.addr || "",
     lat: place.lat,
     lng: place.lng,
+    contentRef: curationContentRef(place),
   }
 }
 
