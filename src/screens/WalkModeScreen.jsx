@@ -7,7 +7,7 @@ import "../styles/walk-mode.css"
 // 데이터는 /api/terrain · /api/wildlife 프록시로만(walkWorld.js). 캔버스 엔진은 useEffect,
 // HUD/목록/바인더/모달은 React state 로 브릿지한다. 상단 탭바(App)는 그대로 위에 뜬다.
 
-const REVEAL_M = 260, COLLECT_M = 80, WALK_SPEED = 27, TSCALE = 0.4, WORLD_R = 2200
+const REVEAL_M = 260, COLLECT_M = 80, WALK_SPEED = 46, TSCALE = 0.4, WORLD_R = 2200
 const DEFAULT_ORIGIN = { lat: 37.5665, lng: 126.978 } // 서울시청 (데모 기본 위치)
 const TAXON_LABEL = { Aves: "새", Plantae: "식물", Mammalia: "포유류", Amphibia: "양서류", Reptilia: "파충류", Actinopterygii: "물고기" }
 const GRASS = "#B7D690", GRASS_ALT = "#AFCF87", PATH = "#E4CFA0", PATH_EDGE = "#D6BE8C"
@@ -74,7 +74,7 @@ const arrowOf = (dx, dy) => ARROWS[Math.round(((Math.atan2(dy, dx) + Math.PI * 2
 export function WalkModeScreen({ onExit, onCollect }) {
   const canvasRef = useRef(null)
   const engineRef = useRef(null)
-  const [mode, setMode] = useState("sim")
+  const [intro, setIntro] = useState(true)
   const [count, setCount] = useState(0)
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState("")
@@ -280,27 +280,17 @@ export function WalkModeScreen({ onExit, onCollect }) {
     canvas.addEventListener("pointerdown", onPointerDown)
     canvas.addEventListener("wheel", onWheel, { passive: false })
 
-    function setEngineMode(next) {
-      if (next === st.mode) return
-      if (st.watchId != null) { navigator.geolocation.clearWatch(st.watchId); st.watchId = null }
-      st.mode = next; setMode(next)
-      if (next === "gps") {
-        if (!("geolocation" in navigator)) { flashStatus("이 브라우저는 위치를 지원하지 않아요"); return setEngineMode("sim") }
-        st.auto = false; st.moveTarget = null
-        flashStatus("위치 권한을 허용하면 실제 걸음으로 채집해요", 4000)
-        navigator.geolocation.getCurrentPosition((pos) => {
-          if (st.mode !== "gps") return
-          st.origin = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-          st.player = { x: 0, y: 0 }; st.cam = { x: 0, y: 0 }; st.terrainBake = null
-          initWorld()
-          if (st.watchId != null) navigator.geolocation.clearWatch(st.watchId)
-          st.watchId = navigator.geolocation.watchPosition((p) => {
-            if (st.mode !== "gps") return
-            const m = geoToM(p.coords.latitude, p.coords.longitude)
-            st.player.x = m.x; st.player.y = m.y
-          }, () => {}, { enableHighAccuracy: true, maximumAge: 3000 })
-        }, () => { flashStatus("위치 권한이 거부되어 데모 걷기로 전환해요"); setEngineMode("sim") }, { timeout: 8000 })
-      } else flashStatus("데모 걷기 — 지도를 클릭하면 그 자리로 걸어가요")
+    // 내 동네 지도 스캔 — 실제 위치를 1회 받아 그 동네로 월드를 다시 그린다.
+    // 이동은 계속 조이스틱/클릭(sim)으로 — 실제로 걸어다닐 필요 없음.
+    function scanMyArea() {
+      if (!("geolocation" in navigator)) { flashStatus("이 브라우저는 위치를 지원하지 않아요"); return }
+      st.auto = false; st.moveTarget = null
+      flashStatus("내 위치로 동네를 스캔하는 중…", 6000)
+      navigator.geolocation.getCurrentPosition((pos) => {
+        st.origin = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        st.player = { x: 0, y: 0 }; st.cam = { x: 0, y: 0 }; st.terrainBake = null
+        initWorld()
+      }, () => { flashStatus("위치 권한이 거부돼 기본 동네로 둘게요") }, { timeout: 8000, enableHighAccuracy: true })
     }
 
     // ── 채집 ──
@@ -319,13 +309,12 @@ export function WalkModeScreen({ onExit, onCollect }) {
       press(dir, down) { if (st.mode !== "sim") return; st.keys[dir] = down ? 1 : 0; if (down) { st.moveTarget = null; st.auto = false } },
       setJoystick(x, y) { st.joy.x = x; st.joy.y = y; if (x || y) { st.moveTarget = null; st.auto = false } },
       zoomBy(f) { st.zoom = Math.min(1.4, Math.max(0.18, st.zoom * f)) },
-      toggleAuto() { st.auto = !st.auto; if (st.auto) { st.moveTarget = null; if (st.mode === "gps") setEngineMode("sim"); flashStatus("가장 가까운 생물에게 자동으로 걸어가요") } return st.auto },
-      setMode: setEngineMode,
+      toggleAuto() { st.auto = !st.auto; if (st.auto) { st.moveTarget = null; flashStatus("가장 가까운 생물에게 자동으로 걸어가요") } return st.auto },
+      scanMyArea,
       listRow(id) {
         const s = st.spots.find((x) => x.id === id); if (!s) return
         setSheetOpen(false)
-        if (st.mode === "sim") { st.moveTarget = { x: s.x, y: s.y, stamp: performance.now() }; st.auto = false }
-        else flashStatus("GPS 모드에선 그 자리까지 실제로 걸어가야 해요 🚶")
+        st.moveTarget = { x: s.x, y: s.y, stamp: performance.now() }; st.auto = false
       },
       openCollect() { if (st.activeSpot) setModalSpot(st.activeSpot) },
       take,
@@ -395,11 +384,11 @@ export function WalkModeScreen({ onExit, onCollect }) {
       const running = Math.hypot(st.vel.x, st.vel.y) > 1
       const u = 1.35
       ctx.save(); ctx.translate(c.x, c.y); if (st.facing < 0) ctx.scale(-1, 1); ctx.translate(-16 * u, -18 * u)
-      // 달리기 — 빠른 4프레임 갤럽 사이클 + 도약(suspension) 바운스
-      const rf = reduce ? 0 : Math.floor(now / 65) % 4
-      const bob = running ? [-3, -1, -3, 0][rf] * u : 0
-      // 그림자 — 도약 순간(bob 큼) 작아져 뜬 느낌
-      const shW = running ? [0.72, 0.9, 0.72, 1][rf] : 1
+      // 달리기 — 차분한 4프레임 갤럽 사이클 + 낮은 도약(suspension) 바운스
+      const rf = reduce ? 0 : Math.floor(now / 135) % 4
+      const bob = running ? [-2, -1, -2, 0][rf] * u : 0
+      // 그림자 — 도약 순간(bob 큼) 살짝 작아져 뜬 느낌
+      const shW = running ? [0.82, 0.94, 0.82, 1][rf] : 1
       ctx.fillStyle = "rgba(31,26,18,.22)"; ctx.beginPath(); ctx.ellipse(16 * u, 20.5 * u, 11 * u * shW, 2.6 * u, 0, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = INK
       const tf = Math.floor(now / (running ? 90 : 260)) % 2 // 달릴 때 꼬리 빨리 나부낌
@@ -520,10 +509,27 @@ export function WalkModeScreen({ onExit, onCollect }) {
     <div className={`walk-mode${sheetOpen ? " sheet-open" : ""}`}>
       <canvas ref={canvasRef} className="walk-mode__canvas" />
 
+      {intro ? (
+        <div className="walk-intro" role="dialog" aria-modal="true" aria-label="산책 모드 안내">
+          <div className="walk-intro__card">
+            <div className="walk-intro__band">🐾 내 동네 산책 모드</div>
+            <div className="walk-intro__body">
+              <p className="walk-intro__lead">내 동네를 게임처럼 걸으며<br /><b>주변에서 실제로 관측된 동식물</b>을 채집하는 모드예요.</p>
+              <ul className="walk-intro__list">
+                <li>🕹 <b>조이스틱·화면 클릭</b>으로 고양이를 움직여요 (실제로 걸어다닐 필요 없어요)</li>
+                <li>❓ 물음표 지점에 가까이 가면 정체가 드러나고, 원 안에 들면 채집할 수 있어요</li>
+                <li>◎ <b>내 동네 지도 스캔</b>을 누르면 실제 내 위치 기준으로 동네를 다시 그려요</li>
+              </ul>
+              <p className="walk-intro__note">⚠ 실제로 걸을 땐 화면보다 주변을 먼저 살펴요 · 기록·사진 © iNaturalist 기여자 (CC)</p>
+            </div>
+            <button type="button" className="walk-intro__ok" onClick={() => setIntro(false)}>확인하고 시작하기</button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="walk-hud">
         <div className="walk-hud__tl">
-          <button type="button" className={`walk-chip${mode === "sim" ? " is-on" : ""}`} onClick={() => eng()?.setMode("sim")}>▶ 데모 걷기</button>
-          <button type="button" className={`walk-chip${mode === "gps" ? " is-on" : ""}`} onClick={() => eng()?.setMode("gps")}>◎ 실제 GPS</button>
+          <button type="button" className="walk-chip is-on" onClick={() => eng()?.scanMyArea()}>◎ 내 동네 지도 스캔</button>
         </div>
         <div className="walk-hud__tr">
           <span className="walk-counter">채집 <b>{count}</b>/{total}</span>
@@ -537,7 +543,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
         {status ? <div className="walk-status">{status}</div> : null}
         {scanning ? <div className="walk-scan-label">내 동네 스캔 중…</div> : null}
 
-        {mode === "sim" ? <WalkJoystick engineRef={engineRef} /> : null}
+        <WalkJoystick engineRef={engineRef} />
 
         {collectTarget ? (
           <div className="walk-collect-wrap">

@@ -169,6 +169,39 @@
 .walk-findcard .actions .take { background: var(--wm-red); color: #fff; flex: 1.5; }
 .walk-findcard .actions button:active { transform: translate(2px, 2px); box-shadow: none; }
 
+/* 시작 안내 배너 (intro) — 이 모드의 목적·조작 가이드 + 확인 */
+.walk-intro {
+  position: absolute; inset: 0; z-index: 55;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(31, 26, 18, 0.55); padding: 20px;
+}
+.walk-intro__card {
+  width: 100%; max-width: 380px;
+  background: var(--wm-paper); border: 3px solid var(--wm-ink); border-radius: 16px;
+  box-shadow: 6px 6px 0 var(--wm-ink); overflow: hidden;
+  animation: walk-pop 0.24s cubic-bezier(0.2, 0.7, 0.3, 1.35);
+}
+.walk-intro__band {
+  background: var(--wm-ink); color: var(--wm-yellow);
+  font-family: "DungGeunMo", monospace; font-size: 15px; letter-spacing: 0.08em;
+  padding: 11px 16px; text-align: center;
+}
+.walk-intro__body { padding: 16px 18px 4px; }
+.walk-intro__lead { font-size: 14px; font-weight: 700; color: #2a251c; line-height: 1.6; margin-bottom: 12px; }
+.walk-intro__lead b { color: var(--wm-red); }
+.walk-intro__list { list-style: none; display: flex; flex-direction: column; gap: 9px; margin: 0 0 12px; padding: 0; }
+.walk-intro__list li { font-size: 12.5px; font-weight: 600; color: #3f3a33; line-height: 1.5; padding-left: 2px; }
+.walk-intro__list b { color: #0a0a0a; }
+.walk-intro__note { font-size: 10.5px; color: #a99f8c; font-weight: 600; line-height: 1.55; }
+.walk-intro__ok {
+  display: block; width: calc(100% - 36px); margin: 8px 18px 18px;
+  font-family: "DungGeunMo", monospace; font-size: 15px; color: #fff;
+  background: var(--wm-red); border: 2px solid var(--wm-ink); border-radius: 10px;
+  padding: 12px 0; box-shadow: 3px 3px 0 var(--wm-ink); cursor: pointer;
+}
+.walk-intro__ok:active { transform: translate(3px, 3px); box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .walk-intro__card { animation: none; } }
+
 /* 데스크톱 — 상단 탭바(top) 아래로 HUD, 사이드 패널 상시, 하단은 자유 */
 @media (min-width: 960px) {
   .walk-hud__tl, .walk-hud__tr { top: 92px; }
