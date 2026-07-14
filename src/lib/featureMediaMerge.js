@@ -44,7 +44,7 @@ function mergeMediaListWithLocal(nextList, localList) {
 /**
  * Keep browser-only media references while accepting fresher server rows.
  * Supabase media rows know the public URL, but the local IndexedDB key lives in
- * `localId`; losing it makes newly captured photos/voices look like they vanished.
+ * `localId`; losing it makes newly captured photos look like they vanished.
  */
 export function mergeFeatureMediaFromLocal(nextFeature, localFeature) {
   if (!localFeature) return nextFeature
@@ -52,7 +52,6 @@ export function mergeFeatureMediaFromLocal(nextFeature, localFeature) {
   return {
     ...nextFeature,
     photos: mergeMediaListWithLocal(nextFeature?.photos, localFeature.photos),
-    voices: mergeMediaListWithLocal(nextFeature?.voices, localFeature.voices),
     memos: Array.isArray(nextFeature?.memos) && nextFeature.memos.length > 0
       ? nextFeature.memos
       : (localFeature.memos || []),

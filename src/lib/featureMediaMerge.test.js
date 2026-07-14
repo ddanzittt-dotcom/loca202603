@@ -6,14 +6,12 @@ describe("featureMediaMerge", () => {
     const local = {
       id: "f1",
       photos: [{ id: "p1" }],
-      voices: [{ id: "v1" }],
       memos: [{ id: "m1", text: "memo" }],
     }
-    const next = { id: "f1", photos: [], voices: [], memos: [] }
+    const next = { id: "f1", photos: [], memos: [] }
 
     const merged = mergeFeatureMediaFromLocal(next, local)
     expect(merged.photos).toEqual(local.photos)
-    expect(merged.voices).toEqual(local.voices)
     expect(merged.memos).toEqual(local.memos)
   })
 
@@ -25,7 +23,6 @@ describe("featureMediaMerge", () => {
     const next = {
       id: "f1",
       photos: [{ id: "server-photo", url: "https://cdn/photo.jpg" }],
-      voices: [],
       memos: [],
     }
 
@@ -35,7 +32,7 @@ describe("featureMediaMerge", () => {
 
   it("keeps local-only media when server media exists", () => {
     const local = { id: "f1", photos: [{ id: "local-photo" }] }
-    const next = { id: "f1", photos: [{ id: "server-photo" }], voices: [], memos: [] }
+    const next = { id: "f1", photos: [{ id: "server-photo" }], memos: [] }
 
     const merged = mergeFeatureMediaFromLocal(next, local)
     expect(merged.photos).toEqual([{ id: "server-photo" }, { id: "local-photo" }])

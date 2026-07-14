@@ -294,7 +294,6 @@ export function useAppSession({
         await syncFeatureLocalMediaToCloud({
           ...createdFeature,
           photos: localFeature.photos || [],
-          voices: localFeature.voices || [],
         }, { throwOnFailure: true })
       }
 

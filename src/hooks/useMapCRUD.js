@@ -316,7 +316,7 @@ export function useMapCRUD({
           const syncedById = new Map(mediaSync.features.map((feature) => [feature.id, feature]))
           setFeatures((current) => current.map((feature) => {
             const synced = syncedById.get(feature.id)
-            return synced ? { ...feature, photos: synced.photos, voices: synced.voices } : feature
+            return synced ? { ...feature, photos: synced.photos } : feature
           }))
         }
         const { map: publishedMap } = await publishMapRecord(effectiveMapId, {

@@ -145,7 +145,7 @@ export function importBackup(payload, fallbackFollowed) {
 
 export function createMapSharePayload(map, features) {
   if (!map || typeof map !== "object") throw new Error("공유할 지도 정보가 없습니다.")
-  // 공유 URL에는 지도 구조만 포함, 개인 기록(memos/photos/voices)은 제외
+  // 공유 URL에는 지도 구조만 포함, 개인 기록(memos/photos)은 제외
   const safeFeatures = (Array.isArray(features) ? features : []).map((f) => ({
     id: f.id,
     mapId: f.mapId,

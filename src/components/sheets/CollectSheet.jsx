@@ -241,7 +241,6 @@ export function CollectSheet({
           ...base,
           memos: [],
           photos: [],
-          voices: [],
           updatedAt: new Date().toISOString(),
         }
       }

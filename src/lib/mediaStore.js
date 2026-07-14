@@ -79,13 +79,9 @@ export async function getAllMediaKeys() {
 export async function uploadMediaToCloud(id, blob, folder = "photos") {
   if (!hasSupabaseEnv || !supabase) return null
   try {
-    assertStoredMediaAllowed(blob, folder === "voices" ? "voice" : "photo")
-    const mimeType = blob.type || (folder === "voices" ? "audio/webm" : "image/jpeg")
-    const ext = mimeType.includes("webm") ? "webm"
-      : mimeType.includes("mp4") ? "mp4"
-      : mimeType.includes("ogg") ? "ogg"
-      : mimeType.includes("png") ? "png"
-      : "jpg"
+    assertStoredMediaAllowed(blob, "photo")
+    const mimeType = blob.type || "image/jpeg"
+    const ext = mimeType.includes("png") ? "png" : "jpg"
     const path = `${folder}/${id}.${ext}`
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(path, blob, {
       contentType: mimeType,
@@ -119,8 +115,6 @@ export async function deleteMediaFromCloud(id, folder = "photos", storagePath = 
       // 레거시 폴백: 가능한 확장자 모두 시도
       await supabase.storage.from(STORAGE_BUCKET).remove([
         `${folder}/${id}.jpg`,
-        `${folder}/${id}.webm`,
-        `${folder}/${id}.mp4`,
         `${folder}/${id}.png`,
       ])
     }
@@ -136,10 +130,6 @@ export async function cleanupOrphanedMedia(features) {
       for (const p of (f.photos || [])) {
         referencedIds.add(p.id)
         if (p.localId) referencedIds.add(p.localId)
-      }
-      for (const v of (f.voices || [])) {
-        referencedIds.add(v.id)
-        if (v.localId) referencedIds.add(v.localId)
       }
     }
     const allKeys = await getAllMediaKeys()

@@ -14,7 +14,6 @@ describe("mediaCloudSync", () => {
       {
         id: featureId,
         photos: [{ id: "photo-local" }, { id: mediaId, url: "https://cdn.example/photo.jpg" }],
-        voices: [{ id: "voice-local", localId: "voice-local" }],
       },
       {
         id: "local-feature",
@@ -24,7 +23,6 @@ describe("mediaCloudSync", () => {
 
     expect(keys).toEqual([
       `${featureId}:photo:photo-local`,
-      `${featureId}:voice:voice-local`,
     ])
   })
 
@@ -35,7 +33,7 @@ describe("mediaCloudSync", () => {
   })
 
   it("treats UUID media rows with remote metadata as cloud records", () => {
-    expect(isCloudMediaRecord({ id: mediaId, storagePath: "voices/voice.webm" })).toBe(true)
-    expect(isCloudMediaRecord({ id: "voice-local", url: "https://cdn.example/voice.webm" })).toBe(false)
+    expect(isCloudMediaRecord({ id: mediaId, storagePath: "photos/photo.jpg" })).toBe(true)
+    expect(isCloudMediaRecord({ id: "photo-local", url: "https://cdn.example/photo.jpg" })).toBe(false)
   })
 })

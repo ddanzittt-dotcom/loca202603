@@ -128,7 +128,6 @@ function normalizeCommunityRecordFeature(row, mapId) {
     approvedAt: row.approved_at || null,
     memos: [],
     photos: [],
-    voices: [],
     representativeLocation: { lat, lng },
     lat,
     lng,

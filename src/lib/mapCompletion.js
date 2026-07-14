@@ -44,7 +44,7 @@ export function getMapCompletionSnapshot(map, features) {
   breakdown.push({ key: "pins", label: `핀 ${pins.length}개`, points: pinPoints, max: 15, done: pins.length >= 3 })
 
   // 4. 핀 note/media 비율
-  const enrichedPins = pins.filter((f) => f.note?.trim() || (f.photos?.length > 0) || (f.voices?.length > 0))
+  const enrichedPins = pins.filter((f) => f.note?.trim() || (f.photos?.length > 0))
   const enrichRatio = pins.length > 0 ? enrichedPins.length / pins.length : 0
   const enrichPoints = enrichRatio >= 0.5 ? 15 : enrichRatio >= 0.25 ? 8 : 0
   score += enrichPoints

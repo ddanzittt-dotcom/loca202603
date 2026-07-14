@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Bookmark, Check, Edit3, FileText, Flag, MapPin, MapPinOff, Mic, Plus, Route, Shapes, Trash2, X } from "lucide-react"
+import { Bookmark, Check, Edit3, FileText, Flag, MapPin, MapPinOff, Plus, Route, Shapes, Trash2, X } from "lucide-react"
 import { FeatureEmoji, resolveFeatureEmoji } from "./FeatureEmoji"
 import { PhotoViewer } from "./visuals/PhotoViewer"
 import { useResolvedMediaUrl } from "../hooks/useResolvedMediaUrl"
@@ -51,13 +51,6 @@ function getFeaturePopupEmoji(feature) {
   return { kind: "unicode", value: "✨" }
 }
 
-function formatDuration(sec) {
-  const n = Math.max(0, Math.round(sec || 0))
-  const m = Math.floor(n / 60)
-  const s = n % 60
-  return `${m}:${String(s).padStart(2, "0")}`
-}
-
 function isToday(value) {
   if (!value) return false
   const d = new Date(value)
@@ -65,13 +58,7 @@ function isToday(value) {
   return d.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
 }
 
-function voiceKey(voice, index) {
-  return voice?.id || voice?.localId || `voice-${index}`
-}
-
-function RecordMediaPreview({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, isVoicePlaying }) {
-  const leadVoice = group.voices[0] || null
-
+function RecordMediaPreview({ group, onPhotoOpen }) {
   if (group.photos.length > 0) {
     return (
       <span className="fpc-diary-record-media fpc-diary-record-media--photos">
@@ -99,29 +86,6 @@ function RecordMediaPreview({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, i
     )
   }
 
-  if (leadVoice) {
-    const voiceIndex = getVoiceIndex(leadVoice)
-    return (
-      <span className="fpc-diary-record-media fpc-diary-record-media--voice">
-        {onVoiceClick ? (
-          <button
-            type="button"
-            className={`fpc-diary-record-voice ${isVoicePlaying(leadVoice, voiceIndex) ? "is-playing" : ""}`}
-            onClick={(event) => {
-              event.stopPropagation()
-              onVoiceClick(leadVoice, voiceIndex)
-            }}
-            aria-label={isVoicePlaying(leadVoice, voiceIndex) ? "음성 정지" : "음성 재생"}
-          >
-            <Mic size={15} />
-          </button>
-        ) : (
-          <Mic size={15} />
-        )}
-      </span>
-    )
-  }
-
   return (
     <span className="fpc-diary-record-media">
       <FileText size={15} />
@@ -129,7 +93,7 @@ function RecordMediaPreview({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, i
   )
 }
 
-function RecordGroupItem({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, isVoicePlaying, onOpenRecord, panel = false }) {
+function RecordGroupItem({ group, onPhotoOpen, onOpenRecord, panel = false }) {
   const summary = summarizeRecordGroup(group)
   const title = isToday(group.dateValue) ? "오늘 기록" : (formatRecordDate(group.dateValue) || "기록")
   const primaryText = summary.text || summary.assetLabel || "기록을 남겼어요."
@@ -151,36 +115,11 @@ function RecordGroupItem({ group, onPhotoOpen, onVoiceClick, getVoiceIndex, isVo
       <RecordMediaPreview
         group={group}
         onPhotoOpen={onPhotoOpen}
-        onVoiceClick={onVoiceClick}
-        getVoiceIndex={getVoiceIndex}
-        isVoicePlaying={isVoicePlaying}
       />
       <span className="fpc-diary-record-copy">
         <span>{title}</span>
         <strong>{primaryText}</strong>
         {showAssetLabel ? <em>{summary.assetLabel}</em> : null}
-        {group.voices.length > 0 ? (
-          <span className="fpc-diary-voice-row">
-            {group.voices.slice(0, 2).map((voice, index) => {
-              const voiceIndex = getVoiceIndex(voice)
-              return (
-                <button
-                  key={voiceKey(voice, index)}
-                  type="button"
-                  className={isVoicePlaying(voice, voiceIndex) ? "is-playing" : ""}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onVoiceClick?.(voice, voiceIndex)
-                  }}
-                  disabled={!onVoiceClick}
-                >
-                  <Mic size={10} />
-                  {formatDuration(voice.duration)}
-                </button>
-              )
-            })}
-          </span>
-        ) : null}
       </span>
     </div>
   )
@@ -194,9 +133,6 @@ function RecordDetailCard({
   onEdit,
   onDelete,
   onPhotoOpen,
-  onVoiceClick,
-  getVoiceIndex,
-  isVoicePlaying,
 }) {
   if (!group) return null
   const summary = summarizeRecordGroup(group)
@@ -238,29 +174,6 @@ function RecordDetailCard({
               </div>
             </div>
           ) : null}
-
-          {group.voices.length > 0 ? (
-            <div className="fpc-record-detail__section">
-              <span>음성 {group.voices.length}</span>
-              <div className="fpc-record-detail__voices">
-                {group.voices.map((voice, index) => {
-                  const voiceIndex = getVoiceIndex(voice)
-                  return (
-                    <button
-                      key={voiceKey(voice, index)}
-                      type="button"
-                      className={isVoicePlaying(voice, voiceIndex) ? "is-playing" : ""}
-                      onClick={() => onVoiceClick?.(voice, voiceIndex)}
-                      disabled={!onVoiceClick}
-                    >
-                      <Mic size={12} />
-                      {formatDuration(voice.duration)}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ) : null}
         </div>
 
         {canEdit ? (
@@ -297,8 +210,6 @@ export function FeaturePopupCard({
   onEditRecord,
   onDeleteRecord,
   onRemoveFromMap,
-  onVoiceClick,
-  currentPlayingVoiceId,
   busyImport = false,
 }) {
   const [recordsBannerFeatureId, setRecordsBannerFeatureId] = useState(null)
@@ -308,7 +219,6 @@ export function FeaturePopupCard({
   const copy = typeCopy(type)
   const TypeIcon = copy.Icon
   const tags = Array.isArray(feature?.tags) ? feature.tags : []
-  const voices = Array.isArray(feature?.voices) ? feature.voices : EMPTY_LIST
   const recordGroups = useMemo(() => buildFeatureRecordGroups(feature), [feature])
   const visibleRecords = recordGroups.slice(0, 2)
   const hasMoreRecords = recordGroups.length > 2
@@ -324,17 +234,6 @@ export function FeaturePopupCard({
   const canManageRecord = mapMode === "personal" && isAuthor && (typeof onEditRecord === "function" || typeof onDeleteRecord === "function")
   const popupEmoji = getFeaturePopupEmoji(feature)
 
-  const getVoiceIndex = (voice) => {
-    const key = voice?.id || voice?.localId || ""
-    const index = voices.findIndex((item, voiceIndex) => (
-      (item.id || item.localId || `voice-${voiceIndex}`) === key
-    ))
-    return index >= 0 ? index : 0
-  }
-  const isVoicePlaying = (voice, index) => {
-    const id = voice?.id || voice?.localId || `idx-${index}`
-    return currentPlayingVoiceId === `${feature.id || "feat"}::${id}`
-  }
   const openPhotoViewer = (photos, index = 0) => {
     setPhotoViewer({ photos: Array.isArray(photos) ? photos : [], index })
   }
@@ -427,9 +326,6 @@ export function FeaturePopupCard({
                 key={group.id}
                 group={group}
                 onPhotoOpen={openPhotoViewer}
-                onVoiceClick={onVoiceClick}
-                getVoiceIndex={getVoiceIndex}
-                isVoicePlaying={isVoicePlaying}
                 onOpenRecord={openRecordDetail}
               />
             ))}
@@ -482,9 +378,6 @@ export function FeaturePopupCard({
                 group={group}
                 panel
                 onPhotoOpen={openPhotoViewer}
-                onVoiceClick={onVoiceClick}
-                getVoiceIndex={getVoiceIndex}
-                isVoicePlaying={isVoicePlaying}
                 onOpenRecord={openRecordDetail}
               />
             ))}
@@ -500,9 +393,6 @@ export function FeaturePopupCard({
       onEdit={typeof onEditRecord === "function" ? editRecord : null}
       onDelete={typeof onDeleteRecord === "function" ? deleteRecord : null}
       onPhotoOpen={openPhotoViewer}
-      onVoiceClick={onVoiceClick}
-      getVoiceIndex={getVoiceIndex}
-      isVoicePlaying={isVoicePlaying}
     />
     <PhotoViewer
       open={Boolean(photoViewer?.photos?.length)}

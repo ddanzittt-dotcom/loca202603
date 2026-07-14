@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { X as XIcon, Camera, Mic, FileText, Play } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { X as XIcon, Camera, FileText } from "lucide-react"
 import { FeatureEmojiPicker } from "../FeatureEmojiPicker"
 import { FeatureEmoji, resolveFeatureEmoji, descriptorToDisplayText } from "../FeatureEmoji"
 import { RecordEntrySheet } from "./RecordEntrySheet"
@@ -127,21 +127,6 @@ function formatMemoTimestamp(dateStr) {
   else if (hour < 18) slot = "오후"
   else slot = "저녁"
   return `${mm}.${dd} · ${day} ${slot}`
-}
-
-function formatMMdd(dateStr) {
-  const d = dateStr ? new Date(dateStr) : null
-  if (!d || Number.isNaN(d.getTime())) return ""
-  const mm = `${d.getMonth() + 1}`.padStart(2, "0")
-  const dd = `${d.getDate()}`.padStart(2, "0")
-  return `${mm}.${dd}`
-}
-
-function formatDuration(sec) {
-  if (!Number.isFinite(sec)) return ""
-  const m = Math.floor(sec / 60)
-  const s = Math.round(sec - m * 60)
-  return `${m}:${`${s}`.padStart(2, "0")}`
 }
 
 // ---------- 공통 필드 UI ----------
@@ -377,58 +362,6 @@ function PhotoBlock({ photos, canEdit, onDelete }) {
   )
 }
 
-function VoiceBar({ voice, onDelete, canEdit }) {
-  const bars = useMemo(() => {
-    // 12개 고정, 의사-랜덤 높이 (voice id 기반)
-    const seed = `${voice.id}`.split("").reduce((s, c) => s + c.charCodeAt(0), 0)
-    return Array.from({ length: 12 }, (_, i) => {
-      const n = ((seed * (i + 3)) % 60) + 30
-      return n
-    })
-  }, [voice.id])
-
-  return (
-    <div className="fes-audio-bar">
-      <button type="button" className="fes-audio-play" aria-label="재생">
-        <Play size={10} fill="#fff" />
-      </button>
-      <div className="fes-audio-wave" aria-hidden>
-        {bars.map((h, i) => <span key={i} style={{ height: `${h}%` }} />)}
-      </div>
-      <span className="fes-audio-time">{formatDuration(voice.duration || 0)}</span>
-      <span className="fes-audio-date">{formatMMdd(voice.date)}</span>
-      {canEdit ? (
-        <button
-          type="button"
-          className="fes-audio-rm"
-          aria-label="음성 삭제"
-          onClick={() => onDelete?.(voice.id)}
-        >
-          <XIcon size={8} />
-        </button>
-      ) : null}
-    </div>
-  )
-}
-
-function VoiceBlock({ voices, canEdit, onDeleteVoice }) {
-  if (!voices?.length) return null
-  return (
-    <div className="fes-media">
-      <div className="fes-media-head">
-        <Mic size={11} />
-        <span>음성</span>
-        <span className="fes-count">{voices.length}</span>
-      </div>
-      <div className="fes-audio-list">
-        {voices.map((v) => (
-          <VoiceBar key={v.id} voice={v} canEdit={canEdit} onDelete={onDeleteVoice} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function MemoBlock({ memos, canEdit, onDeleteMemo }) {
   if (!memos?.length) return null
   const ordered = [...memos].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
@@ -462,7 +395,7 @@ function MemoBlock({ memos, canEdit, onDeleteMemo }) {
   )
 }
 
-function AttachToolbar({ counts, onPhoto, onVoice, onMemo, isRecording, recordingSeconds, showHint }) {
+function AttachToolbar({ counts, onPhoto, onMemo, showHint }) {
   return (
     <div className="fes-attach">
       <button
@@ -477,20 +410,6 @@ function AttachToolbar({ counts, onPhoto, onVoice, onMemo, isRecording, recordin
       </button>
       <button
         type="button"
-        className={`fes-attach-btn${isRecording ? " is-recording" : ""}`}
-        title={isRecording ? "녹음 중지" : "음성 녹음"}
-        aria-label={isRecording ? "녹음 중지" : "음성 녹음"}
-        onClick={onVoice}
-      >
-        <Mic size={16} />
-        {isRecording
-          ? <span className="fes-attach-dot">{recordingSeconds}</span>
-          : counts.voices > 0
-            ? <span className="fes-attach-dot">{counts.voices}</span>
-            : null}
-      </button>
-      <button
-        type="button"
         className="fes-attach-btn"
         title="메모 추가"
         aria-label="메모 추가"
@@ -499,7 +418,7 @@ function AttachToolbar({ counts, onPhoto, onVoice, onMemo, isRecording, recordin
         <FileText size={16} />
         {counts.memos > 0 ? <span className="fes-attach-dot">{counts.memos}</span> : null}
       </button>
-      {showHint ? <span className="fes-attach-hint">사진 · 음성 · 메모 추가</span> : null}
+      {showHint ? <span className="fes-attach-hint">사진 · 메모 추가</span> : null}
     </div>
   )
 }
@@ -557,13 +476,8 @@ export function FeatureEditSheet({
   onRelocatePin,
   // 미디어
   photoInputRef,
-  isRecording,
-  recordingSeconds,
   onPhotoSelected,
   onDeletePhoto,
-  onStartRecording,
-  onStopRecording,
-  onDeleteVoice,
   // 메모
   onAddMemo,
   // onDeleteMemo prop 은 v2 에서 RecordEntrySheet 가 직접 호출하지 않으므로 미사용 (호환을 위해 받지 않음).
@@ -571,7 +485,7 @@ export function FeatureEditSheet({
   const open = Boolean(featureSheet)
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
   const [memoSheetOpen, setMemoSheetOpen] = useState(false)
-  // v2 (2026-05): B8 RecordEntrySheet — 메모+사진+음성 통합 입력.
+  // v2 (2026-05): B8 RecordEntrySheet — 메모+사진 통합 입력.
   // FeatureEditSheet 는 메타데이터만 다루고, 미디어/메모 입력은 이 시트로 분리.
   const [recordSheetOpen, setRecordSheetOpen] = useState(false)
   const nameInputRef = useRef(null)
@@ -611,7 +525,6 @@ export function FeatureEditSheet({
   })()
 
   const photos = featureSheet.photos || []
-  const voices = featureSheet.voices || []
 
   const updateStyle = (patch) => {
     setFeatureSheet((current) => {
@@ -639,7 +552,7 @@ export function FeatureEditSheet({
     setEmojiPickerOpen(false)
   }
 
-  // v2: handlePhotoClick / handleVoiceClick 폐기 — AttachToolbar 제거에 따라 RecordEntrySheet 내부에서 처리.
+  // v2: handlePhotoClick 폐기 — AttachToolbar 제거에 따라 RecordEntrySheet 내부에서 처리.
 
   const handleMemoSave = (text) => {
     if (!featureSheet?.id) return
@@ -836,14 +749,8 @@ export function FeatureEditSheet({
           if (text && featureSheet?.id) onAddMemo?.(featureSheet.id, text)
         }}
         photos={photos}
-        voices={voices}
         onPhotoSelected={onPhotoSelected}
         onDeletePhoto={onDeletePhoto}
-        onStartRecording={onStartRecording}
-        onStopRecording={onStopRecording}
-        onDeleteVoice={onDeleteVoice}
-        isRecording={isRecording}
-        recordingSeconds={recordingSeconds}
         photoInputRef={photoInputRef}
       />
     </>

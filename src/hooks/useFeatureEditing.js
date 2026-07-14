@@ -73,7 +73,7 @@ function isSupabaseUuid(value) {
 }
 
 /**
- * DB에서 반환된 feature(memos/photos/voices가 빈 배열일 수 있음)와
+ * DB에서 반환된 feature(memos/photos가 빈 배열일 수 있음)와
  * 로컬 state의 기존 feature를 병합한다.
  * DB 응답 메타(title, tags 등)를 우선하고, 미디어/메모는 비어있지 않은 쪽을 유지한다.
  */
@@ -81,7 +81,6 @@ function mergeFeatureMedia(saved, current) {
   return {
     ...saved,
     photos: saved.photos?.length ? saved.photos : (current?.photos || []),
-    voices: saved.voices?.length ? saved.voices : (current?.voices || []),
     memos: saved.memos?.length ? saved.memos : (current?.memos || []),
   }
 }
@@ -702,7 +701,7 @@ export function useFeatureEditing({
   // 정책:
   //   - 타겟 지도: targetMapId 명시 우선, 없으면 maps[0] 폴백.
   //   - 복제 필드: type, title, emoji, tags, note, highlight, style, lat/lng, points.
-  //     memos/photos/voices 는 원본(커뮤니티)에 남겨두고 복제본은 빈 상태로 시작.
+  //     memos/photos 는 원본(커뮤니티)에 남겨두고 복제본은 빈 상태로 시작.
   //   - sourceFeatureId 에 원본 id 저장 — '저장됨' 상태 판별과 언임포트 매칭에 사용.
   //   - 현재는 localStorage 상태에만 반영. 클라우드 동기화는 별도 마이그레이션 필요.
   const importCommunityFeatureToMine = useCallback((sourceFeatureId, targetMapInput = null) => {
@@ -743,7 +742,6 @@ export function useFeatureEditing({
       sortOrder: 0,
       memos: [],
       photos: [],
-      voices: [],
       createdBy: currentUserId || me.id,
       createdByName: currentUserName || me.name,
       createdAt: new Date().toISOString(),

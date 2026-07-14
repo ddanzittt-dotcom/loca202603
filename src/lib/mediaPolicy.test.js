@@ -23,10 +23,8 @@ describe("mediaPolicy", () => {
     expect(() => assertPhotoFileAllowed(file)).toThrow("사진은")
   })
 
-  it("rejects stored media above type-specific limits", () => {
+  it("rejects stored photos above the limit", () => {
     const photo = new Blob([new Uint8Array(MEDIA_POLICY.photo.maxStoredBytes + 1)], { type: "image/jpeg" })
-    const voice = new Blob([new Uint8Array(MEDIA_POLICY.voice.maxStoredBytes + 1)], { type: "audio/webm" })
     expect(() => assertStoredMediaAllowed(photo, "photo")).toThrow("사진 파일")
-    expect(() => assertStoredMediaAllowed(voice, "voice")).toThrow("음성 파일")
   })
 })

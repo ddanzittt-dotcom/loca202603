@@ -41,8 +41,8 @@ export function isCloudMediaRecord(media = {}) {
   return isSupabaseUuid(media.id) && Boolean(getRemoteMediaUrl(media) || media.storagePath)
 }
 
-function getMediaFolder(mediaType) {
-  return mediaType === "voice" ? "voices" : "photos"
+function getMediaFolder() {
+  return "photos"
 }
 
 function getFileExtFromPath(storagePath) {
@@ -51,7 +51,7 @@ function getFileExtFromPath(storagePath) {
 }
 
 function buildMediaSyncError() {
-  const error = new Error("사진/음성을 웹에 올리지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.")
+  const error = new Error("사진을 웹에 올리지 못했어요. 네트워크를 확인한 뒤 다시 시도해 주세요.")
   error.code = "LOCA_MEDIA_SYNC_FAILED"
   return error
 }
@@ -98,12 +98,11 @@ async function ensureMediaRecord(featureId, mediaType, media, cloudMeta) {
     fileExt: cloudMeta.fileExt || media.ext || getFileExtFromPath(cloudMeta.storagePath),
     sizeBytes: cloudMeta.sizeBytes || media.sizeBytes || 0,
     mediaType,
-    duration: mediaType === "voice" ? (media.duration ?? null) : undefined,
     recordId: media.recordId || undefined,
   })
 }
 
-function mergeSyncedMedia(media, record, cloudMeta, localKey, mediaType) {
+function mergeSyncedMedia(media, record, cloudMeta, localKey) {
   const next = {
     ...media,
     id: record.id,
@@ -117,7 +116,6 @@ function mergeSyncedMedia(media, record, cloudMeta, localKey, mediaType) {
   }
 
   if (localKey) next.localId = media.localId || localKey
-  if (mediaType === "voice") next.duration = record.duration ?? media.duration ?? null
   return next
 }
 
@@ -146,7 +144,7 @@ async function syncMediaItemToCloud(featureId, media, mediaType) {
     const blob = await getMedia(localKey)
     if (!blob) return { media, status: "missing-local" }
 
-    cloudMeta = await uploadMediaToCloud(localKey, blob, getMediaFolder(mediaType))
+    cloudMeta = await uploadMediaToCloud(localKey, blob, getMediaFolder())
     if (!cloudMeta?.publicUrl || !cloudMeta?.storagePath) {
       return { media, status: "failed" }
     }
@@ -156,7 +154,7 @@ async function syncMediaItemToCloud(featureId, media, mediaType) {
 
   const record = await ensureMediaRecord(featureId, mediaType, media, cloudMeta)
   return {
-    media: mergeSyncedMedia(media, record, cloudMeta, localKey, mediaType),
+    media: mergeSyncedMedia(media, record, cloudMeta, localKey),
     status: "synced",
   }
 }
@@ -185,12 +183,11 @@ async function syncMediaList(featureId, items = [], mediaType) {
 
 export async function syncFeatureLocalMediaToCloud(feature = {}, options = {}) {
   const photoResult = await syncMediaList(feature.id, feature.photos, "photo")
-  const voiceResult = await syncMediaList(feature.id, feature.voices, "voice")
   const summary = {
-    syncedCount: photoResult.syncedCount + voiceResult.syncedCount,
-    failedCount: photoResult.failedCount + voiceResult.failedCount,
-    missingCount: photoResult.missingCount + voiceResult.missingCount,
-    skippedCount: photoResult.skippedCount + voiceResult.skippedCount,
+    syncedCount: photoResult.syncedCount,
+    failedCount: photoResult.failedCount,
+    missingCount: photoResult.missingCount,
+    skippedCount: photoResult.skippedCount,
   }
 
   if (options.throwOnFailure && (summary.failedCount > 0 || summary.missingCount > 0)) {
@@ -201,7 +198,6 @@ export async function syncFeatureLocalMediaToCloud(feature = {}, options = {}) {
     feature: {
       ...feature,
       photos: photoResult.items,
-      voices: voiceResult.items,
     },
     ...summary,
   }
@@ -234,7 +230,7 @@ export function getPendingFeatureMediaSyncKeys(features = []) {
   const keys = []
   for (const feature of Array.isArray(features) ? features : []) {
     if (!isSupabaseUuid(feature?.id)) continue
-    for (const [mediaType, items] of [["photo", feature.photos], ["voice", feature.voices]]) {
+    for (const [mediaType, items] of [["photo", feature.photos]]) {
       for (const item of Array.isArray(items) ? items : []) {
         if (isCloudMediaRecord(item)) continue
         const key = getMediaLocalKey(item) || item.storagePath || getRemoteMediaUrl(item)

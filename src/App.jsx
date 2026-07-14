@@ -753,14 +753,14 @@ export default function App() {
           const syncedById = new Map(result.features.map((feature) => [feature.id, feature]))
           const applySyncedMedia = (feature) => {
             const synced = syncedById.get(feature.id)
-            return synced ? { ...feature, photos: synced.photos, voices: synced.voices } : feature
+            return synced ? { ...feature, photos: synced.photos } : feature
           }
           setFeatures((current) => current.map(applySyncedMedia))
           setCommunityMapFeatures((current) => current.map(applySyncedMedia))
           setFeatureSheet((current) => (current ? applySyncedMedia(current) : current))
         }
         if (result.failedCount > 0 || result.missingCount > 0) {
-          showToast("일부 사진/음성은 아직 웹에 동기화되지 않았어요. 원래 저장한 기기에서 다시 열면 재시도돼요.")
+          showToast("일부 사진은 아직 웹에 동기화되지 않았어요. 원래 저장한 기기에서 다시 열면 재시도돼요.")
         }
       })
       .catch((error) => {
@@ -887,9 +887,8 @@ export default function App() {
   const { updateFeatures } = useFeaturePool(activeMapSource, setFeatures, setCommunityMapFeatures)
 
   const {
-    photoInputRef, isRecording, recordingSeconds,
+    photoInputRef,
     handlePhotoSelected, handleDeletePhoto,
-    startRecording, stopRecording, handleDeleteVoice,
   } = useMediaHandlers({ featureSheet, mediaTargetFeature: inlineRecordFeature, setFeatureSheet, updateFeatures, showToast, cloudMode })
 
   const {
@@ -2066,13 +2065,8 @@ export default function App() {
             }}
             onAddMemo={addMemo}
             photoInputRef={photoInputRef}
-            isRecording={isRecording}
-            recordingSeconds={recordingSeconds}
             onPhotoSelected={handlePhotoSelected}
             onDeletePhoto={handleDeletePhoto}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
-            onDeleteVoice={handleDeleteVoice}
             onBeginFeatureRecord={(featureId) => setInlineRecordFeatureId(featureId)}
             onEndFeatureRecord={() => setInlineRecordFeatureId(null)}
             importedCommunityFeatureIds={importedCommunityFeatureIds}
@@ -2459,13 +2453,8 @@ export default function App() {
               onDelete={deleteFeature}
               onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
               photoInputRef={photoInputRef}
-              isRecording={isRecording}
-              recordingSeconds={recordingSeconds}
               onPhotoSelected={handlePhotoSelected}
               onDeletePhoto={handleDeletePhoto}
-              onStartRecording={startRecording}
-              onStopRecording={stopRecording}
-              onDeleteVoice={handleDeleteVoice}
               onAddMemo={addMemo}
             />
           )
@@ -2480,9 +2469,8 @@ export default function App() {
             onEdit={canDirectlyEdit ? () => setFeatureSheetMode("edit") : undefined}
             onSave={saveFeatureSheet} onDelete={deleteFeature}
             onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
-            photoInputRef={photoInputRef} isRecording={isRecording} recordingSeconds={recordingSeconds}
+            photoInputRef={photoInputRef}
             onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
-            onStartRecording={startRecording} onStopRecording={stopRecording} onDeleteVoice={handleDeleteVoice}
             memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo} onUpdateMemo={updateMemo}
             onRequestCommunityUpdate={requestCommunityFeatureUpdate}
           />
@@ -2502,7 +2490,7 @@ export default function App() {
           step={3}
           totalSteps={3}
           title="이름과 메모를 적으면 기록이 완성돼요"
-          description="간단한 메모만 남겨도 괜찮아요. 사진이나 음성도 나중에 추가할 수 있어요."
+          description="간단한 메모만 남겨도 괜찮아요. 사진도 나중에 추가할 수 있어요."
           nextLabel="이해했어요"
           onNext={() => {
             markCoachmarkSeen()

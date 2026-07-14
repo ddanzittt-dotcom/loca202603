@@ -9,7 +9,6 @@ import { getFeatureCenter } from "../lib/appUtils"
 import { triggerSelectionFeedback } from "../lib/haptics"
 import { saveMap as saveMapRecord } from "../lib/mapService"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
-import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { BrandLogo } from "../components/BrandLogo"
 
 // 길 길이 (haversine) — FeaturePopupCard 의 routeLengthKm prop 으로 전달
@@ -91,7 +90,6 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
   }, [features])
   const featureViewStart = useRef(null)
   const prevSelectedId = useRef(null)
-  const voicePlayback = useVoicePlayback()
   const [toastMsg, setToastMsg] = useState("")
 
   const showViewerToast = useCallback((msg) => {
@@ -307,12 +305,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
                       ? computeRouteLengthKm(selectedFeature.points)
                       : null
                   }
-                  onClose={() => { voicePlayback.stop(); setSelectedId(null) }}
-                  currentPlayingVoiceId={voicePlayback.playingId}
-                  onVoiceClick={(voice, index) => {
-                    const key = makeVoiceScopeKey(selectedFeature.id, voice, index)
-                    voicePlayback.toggle(voice, key)
-                  }}
+                  onClose={() => setSelectedId(null)}
                 />
               </div>
             ) : null}

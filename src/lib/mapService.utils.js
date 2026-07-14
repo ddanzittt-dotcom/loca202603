@@ -161,7 +161,7 @@ export function normalizeMedia(row) {
   }
 }
 
-export function normalizeFeature(row, memos = [], photos = [], voices = []) {
+export function normalizeFeature(row, memos = [], photos = []) {
   // 새 컬럼 (emoji_kind/emoji_pixel_id/emoji_photo_url) 우선,
   // 없으면 레거시 emoji 문자열을 unicode 로 폴백.
   const rawKind = row.emoji_kind || null
@@ -190,7 +190,6 @@ export function normalizeFeature(row, memos = [], photos = [], voices = []) {
     style: normalizeFeatureStyle(row.style, row.type),
     memos,
     photos,
-    voices,
   }
 
   if (row.type === "pin") {
@@ -415,7 +414,6 @@ export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
   }, new Map())
 
   const photosByFeatureId = new Map()
-  const voicesByFeatureId = new Map()
   for (const row of mediaRows) {
     const m = normalizeMedia(row)
     const entry = { id: m.id, date: m.date, url: m.url, storagePath: m.storagePath, recordId: m.recordId }
@@ -423,10 +421,6 @@ export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
       const arr = photosByFeatureId.get(row.feature_id) || []
       arr.push(entry)
       photosByFeatureId.set(row.feature_id, arr)
-    } else if (m.type === "voice") {
-      const arr = voicesByFeatureId.get(row.feature_id) || []
-      arr.push({ ...entry, duration: m.duration })
-      voicesByFeatureId.set(row.feature_id, arr)
     }
   }
 
@@ -434,7 +428,6 @@ export function mergeFeaturesWithMemos(featureRows, memoRows, mediaRows = []) {
     row,
     memosByFeatureId.get(row.id) || [],
     photosByFeatureId.get(row.id) || [],
-    voicesByFeatureId.get(row.id) || [],
   ))
 }
 

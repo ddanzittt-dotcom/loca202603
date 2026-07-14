@@ -10,7 +10,6 @@ import { ShareSheet } from "../components/sheets/ShareSheet"
 import { RecordEntrySheet } from "../components/sheets/RecordEntrySheet"
 import { CommunityRecordComments } from "../components/CommunityRecordComments"
 import { FeaturePopupCard } from "../components/FeaturePopupCard"
-import { useVoicePlayback, makeVoiceScopeKey } from "../hooks/useVoicePlayback"
 import { createId } from "../lib/appUtils"
 import { fetchPlaceMatch } from "../lib/placeMatch"
 import { buildFeatureRecordGroups, recordEntryId, summarizeRecordGroup } from "../lib/featureRecordGroups"
@@ -52,8 +51,7 @@ function hasFeatureRecord(feature) {
   return Boolean(
     feature?.note?.trim()
     || (feature?.memos || []).some((memo) => memo.text?.trim() || (memo.photos || []).length > 0)
-    || (feature?.photos || []).length > 0
-    || (feature?.voices || []).length > 0,
+    || (feature?.photos || []).length > 0,
   )
 }
 
@@ -145,13 +143,8 @@ export function MapEditorScreen({
   onUpdateMemo,
   onDeleteMemo,
   photoInputRef,
-  isRecording = false,
-  recordingSeconds = 0,
   onPhotoSelected,
   onDeletePhoto,
-  onStartRecording,
-  onStopRecording,
-  onDeleteVoice,
   onBeginFeatureRecord,
   onEndFeatureRecord,
   importedCommunityFeatureIds,
@@ -194,7 +187,6 @@ export function MapEditorScreen({
   // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
   const [capturing, setCapturing] = useState(false)
   const naverMapRef = useRef(null)
-  const voicePlayback = useVoicePlayback()
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
   const trimmedExternalSearchQuery = externalSearchQuery.trim()
@@ -245,18 +237,13 @@ export function MapEditorScreen({
 
   const deleteSummaryRecord = useCallback(async (group) => {
     if (!selectedFeatureSummary?.id || !canWriteSummaryRecord || !group) return
-    if (!window.confirm("이 기록을 삭제할까요?\n사진, 음성, 메모가 함께 삭제돼요.")) return
+    if (!window.confirm("이 기록을 삭제할까요?\n사진과 메모가 함께 삭제돼요.")) return
     onBeginFeatureRecord?.(selectedFeatureSummary.id)
     const photoItems = group.photos || []
-    const voiceItems = group.voices || []
     const memoItems = group.memos || []
     for (const photo of photoItems) {
       const id = photo.id || photo.localId
       if (id) await onDeletePhoto?.(id, { skipConfirm: true, silent: true, featureId: selectedFeatureSummary.id })
-    }
-    for (const voice of voiceItems) {
-      const id = voice.id || voice.localId
-      if (id) await onDeleteVoice?.(id, { skipConfirm: true, silent: true, featureId: selectedFeatureSummary.id })
     }
     for (const memo of memoItems) {
       if (memo?.id) await onDeleteMemo?.(selectedFeatureSummary.id, memo.id, { silent: true })
@@ -268,7 +255,6 @@ export function MapEditorScreen({
     onBeginFeatureRecord,
     onDeleteMemo,
     onDeletePhoto,
-    onDeleteVoice,
     onEndFeatureRecord,
     selectedFeatureSummary?.id,
     showToast,
@@ -283,17 +269,11 @@ export function MapEditorScreen({
           const id = photo.id || photo.localId
           if (id) onDeletePhoto?.(id, { skipConfirm: true })
         })
-      ;(selectedFeatureSummary.voices || [])
-        .filter((voice) => recordEntryId(voice) === draftId)
-        .forEach((voice) => {
-          const id = voice.id || voice.localId
-          if (id) onDeleteVoice?.(id, { skipConfirm: true })
-        })
     }
     setSummaryRecordOpen(false)
     setSummaryRecordDraft(null)
     onEndFeatureRecord?.()
-  }, [onDeletePhoto, onDeleteVoice, onEndFeatureRecord, selectedFeatureSummary, summaryRecordDraft?.id, summaryRecordDraft?.mode])
+  }, [onDeletePhoto, onEndFeatureRecord, selectedFeatureSummary, summaryRecordDraft?.id, summaryRecordDraft?.mode])
 
   const summaryRecordPhotos = useMemo(() => {
     if (!summaryRecordDraft?.id) return []
@@ -303,15 +283,6 @@ export function MapEditorScreen({
     }
     return (selectedFeatureSummary?.photos || []).filter((photo) => recordEntryId(photo) === summaryRecordDraft.id)
   }, [selectedFeatureSummary?.photos, summaryRecordDraft?.groupId, summaryRecordDraft?.id, summaryRecordGroups])
-
-  const summaryRecordVoices = useMemo(() => {
-    if (!summaryRecordDraft?.id) return []
-    if (summaryRecordDraft.groupId) {
-      const group = summaryRecordGroups.find((item) => item.id === summaryRecordDraft.groupId || item.recordId === summaryRecordDraft.id)
-      if (group) return group.voices || []
-    }
-    return (selectedFeatureSummary?.voices || []).filter((voice) => recordEntryId(voice) === summaryRecordDraft.id)
-  }, [selectedFeatureSummary?.voices, summaryRecordDraft?.groupId, summaryRecordDraft?.id, summaryRecordGroups])
 
   const handleSummaryRequestEdit = useCallback(async () => {
     if (!selectedFeatureSummary?.id || !canRequestSummaryEdit) return
@@ -771,7 +742,7 @@ export function MapEditorScreen({
             type="button"
             className="map-feature-summary-backdrop"
             aria-label="닫기"
-            onClick={() => { voicePlayback.stop(); closeSummaryRecord(); onCloseFeatureSummary?.() }}
+            onClick={() => { closeSummaryRecord(); onCloseFeatureSummary?.() }}
           />
           <div className={`map-feature-summary-wrap${showCommunityRecordComments ? " map-feature-summary-wrap--comments" : ""}`}>
             <FeaturePopupCard
@@ -784,7 +755,7 @@ export function MapEditorScreen({
                   ? computeRouteLengthKm(selectedFeatureSummary.points)
                   : null
               }
-              onClose={() => { voicePlayback.stop(); closeSummaryRecord(); onCloseFeatureSummary?.() }}
+              onClose={() => { closeSummaryRecord(); onCloseFeatureSummary?.() }}
               onAddRecord={
                 canWriteSummaryRecord
                   ? openSummaryRecord
@@ -838,11 +809,6 @@ export function MapEditorScreen({
                     }
                   : undefined
               }
-              currentPlayingVoiceId={voicePlayback.playingId}
-              onVoiceClick={(voice, index) => {
-                const key = makeVoiceScopeKey(selectedFeatureSummary.id, voice, index)
-                voicePlayback.toggle(voice, key)
-              }}
             />
             {showCommunityRecordComments ? (
               <CommunityRecordComments
@@ -878,14 +844,8 @@ export function MapEditorScreen({
               if (text?.trim()) await onAddMemo?.(selectedFeatureSummary.id, text, [], { recordId })
             }}
             photos={summaryRecordPhotos}
-            voices={summaryRecordVoices}
             onPhotoSelected={onPhotoSelected}
             onDeletePhoto={onDeletePhoto}
-            onStartRecording={onStartRecording}
-            onStopRecording={onStopRecording}
-            onDeleteVoice={onDeleteVoice}
-            isRecording={isRecording}
-            recordingSeconds={recordingSeconds}
             photoInputRef={photoInputRef}
           />
         ) : null}
@@ -1028,7 +988,7 @@ export function MapEditorScreen({
           step={2}
           totalSteps={3}
           title="지도에 등록한 항목을 바로 확인할 수 있어요"
-          description="지도에 남긴 장소를 누르면 설명, 사진, 음성을 미리보기로 확인할 수 있습니다."
+          description="지도에 남긴 장소를 누르면 설명과 사진을 미리보기로 확인할 수 있습니다."
           nextLabel="시작하기"
           onNext={() => onCoachmarkNext?.(0)}
           onSkip={() => onCoachmarkSkip?.()}
@@ -1041,7 +1001,7 @@ export function MapEditorScreen({
           <img src="/characters/cloud_lv1.svg" alt="" className="first-pin-hint__icon" />
           <div className="first-pin-hint__text">
             <p className="first-pin-hint__title">첫 장소 남기기가 완료됐어요</p>
-            <p className="first-pin-hint__desc">장소에 설명과 사진, 음성을 추가해서 더 풍부하게 기록해 보세요.</p>
+            <p className="first-pin-hint__desc">장소에 설명과 사진을 추가해서 더 풍부하게 기록해 보세요.</p>
           </div>
           <button className="first-pin-hint__close" type="button" onClick={() => onDismissFirstPinHint?.()} aria-label="닫기">
             <X size={16} />

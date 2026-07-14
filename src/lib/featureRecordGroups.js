@@ -57,7 +57,6 @@ function createGroup({ id, recordId = null, at, dateValue, memo = null }) {
     dateValue,
     memos: memo ? [memo] : [],
     photos: [],
-    voices: [],
   }
 }
 
@@ -114,7 +113,6 @@ function addMediaToGroup(groups, item, kind, index, windowMs) {
 export function buildFeatureRecordGroups(feature, { windowMs = RECORD_GROUP_WINDOW_MS } = {}) {
   const memos = Array.isArray(feature?.memos) ? feature.memos : []
   const photos = Array.isArray(feature?.photos) ? feature.photos : []
-  const voices = Array.isArray(feature?.voices) ? feature.voices : []
   const memoPhotoKeys = new Set()
   const groups = []
   const byRecordId = new Map()
@@ -157,21 +155,8 @@ export function buildFeatureRecordGroups(feature, { windowMs = RECORD_GROUP_WIND
     addMediaToGroup(groups, photo, "photos", index, windowMs)
   })
 
-  voices.forEach((voice, index) => {
-    const recordId = recordEntryId(voice)
-    if (recordId) {
-      const at = recordTime(voice)
-      const dateValue = recordDateValue(voice)
-      const group = ensureRecordGroup(groups, byRecordId, recordId, { at, dateValue })
-      group.voices.push(voice)
-      touchGroupTime(group, at, dateValue)
-      return
-    }
-    addMediaToGroup(groups, voice, "voices", index, windowMs)
-  })
-
   return groups
-    .filter((group) => group.memos.length || group.photos.length || group.voices.length)
+    .filter((group) => group.memos.length || group.photos.length)
     .sort((a, b) => b.at - a.at)
 }
 
@@ -184,7 +169,6 @@ export function summarizeRecordGroup(group) {
 
   const parts = []
   if (group?.photos?.length) parts.push(`사진 ${group.photos.length}`)
-  if (group?.voices?.length) parts.push(`음성 ${group.voices.length}`)
   if (text) parts.push("메모")
 
   return {

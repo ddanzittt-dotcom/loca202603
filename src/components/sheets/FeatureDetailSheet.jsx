@@ -28,7 +28,6 @@ function groupToDiaryEntry(group, todayIso) {
     date,
     day: DAY_OF_WEEK_KO[d.getDay()],
     photos: group.photos.map((item) => ({ ...item, src: photoSrc(item) })),
-    audio: group.voices.map((item) => ({ ...item, duration: item?.duration, date })),
     memo,
   }
 }
@@ -127,13 +126,8 @@ export function FeatureDetailSheet({
   onClose,
   onEdit,
   photoInputRef,
-  isRecording,
-  recordingSeconds,
   onPhotoSelected,
   onDeletePhoto,
-  onStartRecording,
-  onStopRecording,
-  onDeleteVoice,
   onAddMemo,
   onUpdateMemo,
   onRequestCommunityUpdate,
@@ -209,17 +203,12 @@ export function FeatureDetailSheet({
 
   const activeRecordGroups = getActiveRecordGroups()
   const activeRecordPhotos = uniqueMedia(activeRecordGroups.flatMap((group) => group.photos || []))
-  const activeRecordVoices = uniqueMedia(activeRecordGroups.flatMap((group) => group.voices || []))
 
   const closeRecordSheet = ({ saved = false } = {}) => {
     if (!saved && activeRecord?.mode === "create") {
       activeRecordPhotos.forEach((photo) => {
         const id = photo.id || photo.localId
         if (id) onDeletePhoto?.(id, { skipConfirm: true })
-      })
-      activeRecordVoices.forEach((voice) => {
-        const id = voice.id || voice.localId
-        if (id) onDeleteVoice?.(id, { skipConfirm: true })
       })
     }
     setRecordOpen(false)
@@ -336,7 +325,7 @@ export function FeatureDetailSheet({
               <div className="fd-detail__empty">
                 <FileText size={24} />
                 <strong>첫 기록을 남겨보세요</strong>
-                <p>사진, 음성, 메모를 한 번에 묶어 이 장소의 기억으로 저장할 수 있어요.</p>
+                <p>사진과 메모를 한 번에 묶어 이 장소의 기억으로 저장할 수 있어요.</p>
               </div>
             ) : (
               <div className="fd-detail__diary">
@@ -376,14 +365,8 @@ export function FeatureDetailSheet({
         onClose={closeRecordSheet}
         onSave={saveRecord}
         photos={activeRecordPhotos}
-        voices={activeRecordVoices}
         onPhotoSelected={onPhotoSelected}
         onDeletePhoto={onDeletePhoto}
-        onStartRecording={onStartRecording}
-        onStopRecording={onStopRecording}
-        onDeleteVoice={onDeleteVoice}
-        isRecording={isRecording}
-        recordingSeconds={recordingSeconds}
         photoInputRef={photoInputRef}
       />
     </>

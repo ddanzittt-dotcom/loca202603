@@ -5,10 +5,6 @@ export const MEDIA_POLICY = {
     maxWidth: 1280,
     jpegQuality: 0.72,
   },
-  voice: {
-    maxDurationSeconds: 30,
-    maxStoredBytes: 8 * 1024 * 1024,
-  },
   localQueue: {
     maxAnalyticsEvents: 200,
   },
@@ -28,10 +24,10 @@ export function assertPhotoFileAllowed(file) {
   }
 }
 
-export function assertStoredMediaAllowed(blob, mediaType) {
-  const limit = mediaType === "voice" ? MEDIA_POLICY.voice.maxStoredBytes : MEDIA_POLICY.photo.maxStoredBytes
+export function assertStoredMediaAllowed(blob, mediaType = "photo") {
+  void mediaType
+  const limit = MEDIA_POLICY.photo.maxStoredBytes
   if (blob.size > limit) {
-    const label = mediaType === "voice" ? "음성" : "사진"
-    throw new Error(`${label} 파일이 너무 커요. ${formatBytes(limit)} 이하로 줄여주세요.`)
+    throw new Error(`사진 파일이 너무 커요. ${formatBytes(limit)} 이하로 줄여주세요.`)
   }
 }

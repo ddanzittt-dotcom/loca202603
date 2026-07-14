@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest"
 import { buildFeatureRecordGroups, summarizeRecordGroup } from "./featureRecordGroups"
 
 describe("featureRecordGroups", () => {
-  it("groups memo, photo, and voice records created close together", () => {
+  it("groups memo and photo records created close together", () => {
     const feature = {
       memos: [{ id: "memo-1", date: "2026-05-28T10:05:00.000Z", text: "좋았던 자리" }],
       photos: [{ id: "photo-1", date: "2026-05-28T10:01:00.000Z", url: "https://example.com/photo.jpg" }],
-      voices: [{ id: "voice-1", date: "2026-05-28T10:07:00.000Z", duration: 12 }],
     }
 
     const groups = buildFeatureRecordGroups(feature)
@@ -14,10 +13,9 @@ describe("featureRecordGroups", () => {
     expect(groups).toHaveLength(1)
     expect(groups[0].memos).toHaveLength(1)
     expect(groups[0].photos).toHaveLength(1)
-    expect(groups[0].voices).toHaveLength(1)
     expect(summarizeRecordGroup(groups[0])).toEqual({
       text: "좋았던 자리",
-      assetLabel: "사진 1 · 음성 1 · 메모",
+      assetLabel: "사진 1 · 메모",
     })
   })
 
@@ -28,7 +26,6 @@ describe("featureRecordGroups", () => {
         { id: "memo-2", date: "2026-05-28T13:00:00.000Z", text: "오후 기록" },
       ],
       photos: [{ id: "photo-1", date: "2026-05-28T13:03:00.000Z", url: "https://example.com/photo.jpg" }],
-      voices: [],
     }
 
     const groups = buildFeatureRecordGroups(feature)
@@ -49,7 +46,6 @@ describe("featureRecordGroups", () => {
         { id: "photo-1", recordId: "record-a", date: "2026-05-28T10:01:00.000Z" },
         { id: "photo-2", recordId: "record-b", date: "2026-05-28T10:03:00.000Z" },
       ],
-      voices: [],
     }
 
     const groups = buildFeatureRecordGroups(feature)

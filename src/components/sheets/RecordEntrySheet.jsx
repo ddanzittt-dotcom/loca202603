@@ -45,7 +45,6 @@ export function RecordEntrySheet({
   onClose,
   onSave,
   photos = [],
-  voices = [],
   onPhotoSelected,
   onDeletePhoto,
   photoInputRef,
@@ -67,7 +66,7 @@ export function RecordEntrySheet({
 
   if (!open) return null
 
-  const canSave = text.trim().length > 0 || photos.length > 0 || voices.length > 0
+  const canSave = text.trim().length > 0 || photos.length > 0
   const isEditMode = mode === "edit"
   const closeWithoutSave = () => onClose?.({ saved: false })
 

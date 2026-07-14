@@ -363,7 +363,7 @@ export function AccountScreen({
                 </p>
                 <ul className="acct-withdraw__list">
                   <li>내가 만든 지도와 발행된 공유 링크</li>
-                  <li>모든 장소 카드와 기록, 사진·음성</li>
+                  <li>모든 장소 카드와 기록, 사진</li>
                   <li>팔로우 관계, 저장한 지도, 계정 정보</li>
                 </ul>
                 <p className="acct-withdraw__note">
