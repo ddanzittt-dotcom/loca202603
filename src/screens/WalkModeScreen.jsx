@@ -7,7 +7,7 @@ import "../styles/walk-mode.css"
 // 데이터는 /api/terrain · /api/wildlife 프록시로만(walkWorld.js). 캔버스 엔진은 useEffect,
 // HUD/목록/바인더/모달은 React state 로 브릿지한다. 상단 탭바(App)는 그대로 위에 뜬다.
 
-const REVEAL_M = 260, COLLECT_M = 80, WALK_SPEED = 15, TSCALE = 0.4, WORLD_R = 2200
+const REVEAL_M = 260, COLLECT_M = 80, WALK_SPEED = 27, TSCALE = 0.4, WORLD_R = 2200
 const DEFAULT_ORIGIN = { lat: 37.5665, lng: 126.978 } // 서울시청 (데모 기본 위치)
 const TAXON_LABEL = { Aves: "새", Plantae: "식물", Mammalia: "포유류", Amphibia: "양서류", Reptilia: "파충류", Actinopterygii: "물고기" }
 const GRASS = "#B7D690", GRASS_ALT = "#AFCF87", PATH = "#E4CFA0", PATH_EDGE = "#D6BE8C"
@@ -392,22 +392,30 @@ export function WalkModeScreen({ onExit, onCollect }) {
     }
     function drawCat(now) {
       const c = w2s(st.player.x, st.player.y)
-      const walking = Math.hypot(st.vel.x, st.vel.y) > 1
+      const running = Math.hypot(st.vel.x, st.vel.y) > 1
       const u = 1.35
       ctx.save(); ctx.translate(c.x, c.y); if (st.facing < 0) ctx.scale(-1, 1); ctx.translate(-16 * u, -18 * u)
-      const bob = walking ? [0, -1, 0, -1][Math.floor(now / 130) % 4] * u : 0
-      ctx.fillStyle = "rgba(31,26,18,.22)"; ctx.beginPath(); ctx.ellipse(16 * u, 20.5 * u, 11 * u, 2.6 * u, 0, 0, Math.PI * 2); ctx.fill()
+      // 달리기 — 빠른 4프레임 갤럽 사이클 + 도약(suspension) 바운스
+      const rf = reduce ? 0 : Math.floor(now / 65) % 4
+      const bob = running ? [-3, -1, -3, 0][rf] * u : 0
+      // 그림자 — 도약 순간(bob 큼) 작아져 뜬 느낌
+      const shW = running ? [0.72, 0.9, 0.72, 1][rf] : 1
+      ctx.fillStyle = "rgba(31,26,18,.22)"; ctx.beginPath(); ctx.ellipse(16 * u, 20.5 * u, 11 * u * shW, 2.6 * u, 0, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = INK
-      const tf = Math.floor(now / 260) % 2
+      const tf = Math.floor(now / (running ? 90 : 260)) % 2 // 달릴 때 꼬리 빨리 나부낌
       ctx.fillRect(2 * u, (7 + tf) * u + bob, 3 * u, 3 * u); ctx.fillRect(0, (4 + tf) * u + bob, 3 * u, 4 * u); ctx.fillRect(1 * u, (2 + tf) * u + bob, 3 * u, 3 * u)
       ctx.fillRect(4 * u, 9 * u + bob, 18 * u, 7 * u); ctx.fillRect(17 * u, 6 * u + bob, 9 * u, 9 * u); ctx.fillRect(21 * u, 3 * u + bob, 9 * u, 7 * u)
       ctx.beginPath(); ctx.moveTo(21 * u, 4 * u + bob); ctx.lineTo(21 * u, bob); ctx.lineTo(25 * u, 4 * u + bob); ctx.closePath(); ctx.fill()
       ctx.beginPath(); ctx.moveTo(30 * u, 4 * u + bob); ctx.lineTo(30 * u, bob); ctx.lineTo(26 * u, 4 * u + bob); ctx.closePath(); ctx.fill()
       ctx.fillStyle = PAPER; ctx.fillRect(25 * u, 5 * u + bob, 2 * u, 2 * u); ctx.fillStyle = INK
-      const legs = (!walking || Math.floor(now / 130) % 2 === 0) ? [6, 12, 17, 22] : [8, 10, 19, 24]
-      for (const lx of legs) ctx.fillRect(lx * u, 15 * u + bob, 2.6 * u, 5 * u)
+      // 다리 — 갤럽: 뒷다리(꼬리쪽)·앞다리(머리쪽)가 프레임마다 앞뒤로 뻗음
+      const gait = running
+        ? [[5, 9, 16, 20], [2, 6, 21, 25], [6, 10, 15, 19], [9, 13, 18, 22]][rf]
+        : [6, 12, 17, 22]
+      const legLen = (running ? [4.5, 6.5, 4.5, 6.5][rf] : 5) * u
+      for (const lx of gait) ctx.fillRect(lx * u, 15 * u + bob, 2.6 * u, legLen)
       ctx.restore()
-      if (walking && now - st.lastDust > 150) { st.lastDust = now; st.dust.push({ x: st.player.x - st.facing * 8, y: st.player.y - 6, t: now }) }
+      if (running && now - st.lastDust > 100) { st.lastDust = now; st.dust.push({ x: st.player.x - st.facing * 8, y: st.player.y - 6, t: now }) }
     }
     function drawDust(now) {
       st.dust = st.dust.filter((d) => now - d.t < 480)
@@ -544,6 +552,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
             <span>
               <button type="button" className="walk-auto" onClick={() => eng()?.toggleAuto()}>🐾 자동 산책</button>
               <button type="button" className="walk-panel-toggle" onClick={() => setPanelOpen((v) => !v)} aria-label="패널 접기">{panelOpen ? "▾" : "▸"}</button>
+              <button type="button" className="walk-panel-close" onClick={() => setSheetOpen(false)} aria-label="근처 생물 닫기">✕</button>
             </span>
           </h2>
           <div className="walk-panel__body">

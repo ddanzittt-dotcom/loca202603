@@ -109,6 +109,14 @@
   font-family: "DungGeunMo", monospace; font-size: 13px; color: var(--wm-ink); letter-spacing: 0.05em;
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;
 }
+.walk-panel h2 > span { display: inline-flex; align-items: center; gap: 6px; }
+.walk-panel-close {
+  display: none; align-items: center; justify-content: center;
+  font-family: "DungGeunMo", monospace; font-size: 13px; color: var(--wm-ink); cursor: pointer;
+  background: var(--wm-paper); border: 2px solid var(--wm-ink); border-radius: 7px;
+  padding: 3px 9px; box-shadow: 2px 2px 0 var(--wm-ink);
+}
+.walk-panel-close:active { transform: translate(2px, 2px); box-shadow: none; }
 .walk-sub { font-family: "DungGeunMo", monospace; font-size: 11px; color: #807668; letter-spacing: 0; }
 .walk-divider { border-top: 2px dashed #e3dcc9; margin: 12px 0; }
 .walk-auto {
@@ -175,6 +183,7 @@
   .walk-panel { right: 0; left: 0; top: auto; bottom: 92px; width: auto; max-height: 44%; border-radius: 14px 14px 0 0; }
   .walk-mode.sheet-open .walk-panel { display: block; }
   .walk-panel-toggle { display: none; }
+  .walk-panel-close { display: inline-flex; }
   .walk-mode.sheet-open .walk-joystick, .walk-mode.sheet-open .walk-collect-wrap { display: none; }
 }
 
