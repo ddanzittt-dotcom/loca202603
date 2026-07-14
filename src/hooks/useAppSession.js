@@ -39,6 +39,8 @@ export function useAppSession({
   const [cloudDataReady, setCloudDataReady] = useState(false)
   const [cloudLoadedUserId, setCloudLoadedUserId] = useState(null)
   const cloudLoadedUserIdRef = useRef(null)
+  // 인증 epoch — 계정 전환/로그아웃 시 진행 중인 loadCloudData 의 늦은 응답을 무효화(레이스 가드).
+  const loadEpochRef = useRef(0)
   // gameProfile / recentReward state 폐기.
 
   const cloudMode = hasSupabaseEnv && Boolean(authUser) && !isAnonymousAuthUser(authUser)
@@ -72,6 +74,9 @@ export function useAppSession({
 
   const loadCloudData = useCallback(async (user) => {
     if (!hasSupabaseEnv || !user) return
+    // 이 로드의 epoch 을 선점. 이후 다른 계정 로드나 로그아웃이 발생하면 epoch 가 올라가 이 응답은 폐기된다.
+    const epoch = loadEpochRef.current + 1
+    loadEpochRef.current = epoch
     if (cloudLoadedUserIdRef.current !== user.id) setCloudDataReady(false)
     setCloudLoading(true)
     try {
@@ -82,6 +87,9 @@ export function useAppSession({
           return {}
         }),
       ])
+
+      // 응답이 도착했을 때 이미 다른 계정 로드/로그아웃이 앞질렀다면(stale) 현재 상태를 덮어쓰지 않는다.
+      if (loadEpochRef.current !== epoch) return
 
       const profileAlias = profile.alias || profile.tagline || profile.ho || ""
       const nextProfile = {
@@ -148,6 +156,8 @@ export function useAppSession({
       setCloudDataReady(true)
       try { window.localStorage?.setItem("loca.mobile.cloudUserId", user.id) } catch { /* noop */ }
     } catch (error) {
+      // stale 로드(다른 계정으로 전환됨)의 에러는 현재 계정 상태에 영향을 주지 않도록 무시.
+      if (loadEpochRef.current !== epoch) return
       console.error("Failed to load Supabase app data", error)
       showToast("Supabase 데이터를 불러오지 못했어요.")
       cloudLoadedUserIdRef.current = user.id
@@ -159,6 +169,8 @@ export function useAppSession({
   }, [readLocalImportData, routeAtLoad, setCollaborationInvites, setFeatures, setFollowed, setMaps, setPlacements, setShares, setViewerProfile, showToast, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
   const resetToLoggedOut = useCallback(() => {
+    // 진행 중인 클라우드 로드를 무효화 — 로그아웃 후 늦게 도착한 이전 계정 응답이 데모/초기 상태를 덮어쓰지 않게.
+    loadEpochRef.current += 1
     const keepSharedViewer = routeAtLoad?.type === "shared" || routeAtLoad?.type === "slug"
     setMaps(mapsSeed)
     setFeatures(featuresSeed)
