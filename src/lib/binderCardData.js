@@ -129,10 +129,16 @@ export function formatDotDate(value) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`
 }
 
-// 채집된 카드의 note 는 주소인 경우가 많다 — 주소처럼 보이면 스펙의 주소 줄로 보낸다
+// 채집된 카드의 note 는 주소인 경우가 많다 — 주소처럼 보이면 스펙의 주소 줄로 보낸다.
+// 단, 설명(서술문)은 주소가 아니다. 탐색 큐레이션 소개를 붙여넣으면 문장 안에
+// 주소 조각("천안시 서북구")이 들어가 통째로 주소로 오분류되던 문제 방지.
+// 실제 주소는 종결어미(다/요…)나 서술어(있다/입니다…)·문장부호로 끝나지 않으므로,
+// 그런 서술 신호가 보이면 주소가 아닌 설명으로 판정한다(실주소 오탐 없음).
+const SENTENCE_SIGNALS = /(다|요|죠|음|임|함)$|[.!?…]$|(있|없|입니다|습니다|이에요|예요|해요|이다|하다)/
 export function looksLikeAddress(text) {
   const t = `${text || ""}`.trim()
   if (!t || t.length > 60) return false
+  if (SENTENCE_SIGNALS.test(t)) return false
   return /(로|길)\s?\d|(동|리)\s?\d|번길|[가-힣]+(시|군)\s[가-힣]/.test(t)
 }
 
