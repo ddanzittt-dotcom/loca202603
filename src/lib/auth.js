@@ -166,3 +166,23 @@ export function onAuthStateChange(callback) {
     callback(session?.user ?? null, event, session ?? null)
   })
 }
+
+// ─── 동의(consent) 상태 — 로그인 후 게이트용 ───
+// 058 로 consent 컬럼은 공개 SELECT 불가라 RPC(073)로 본인 상태를 읽고 기록한다.
+
+export async function getMyConsentState() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_my_consent_state")
+  if (error) throw error
+  return data || {}
+}
+
+export async function recordMyConsent(marketing = false) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("record_my_consent", {
+    p_consent_version: CONSENT_VERSION,
+    p_marketing: Boolean(marketing),
+  })
+  if (error) throw error
+  return data
+}

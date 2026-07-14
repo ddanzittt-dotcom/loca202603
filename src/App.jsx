@@ -43,6 +43,8 @@ import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeatur
 import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlacements"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
+import { CONSENT_VERSION, getMyConsentState, recordMyConsent } from "./lib/auth"
+import { ConsentGate } from "./components/ConsentGate"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
 // 탐색 = 위치 기반 행사/공간 큐레이션. 공개 지도 검색(ExplorePublicScreen)은
@@ -526,6 +528,38 @@ export default function App() {
   })
 
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
+
+  // #6 동의 게이트 — 로그인 후 필수 동의 기록이 없거나 구버전이면 차단형 게이트 노출.
+  // OAuth·구계정·방침 버전 변경을 범용으로 커버(이메일 가입은 이미 기록돼 게이트 안 뜸).
+  const [needsConsent, setNeedsConsent] = useState(false)
+  const [consentSubmitting, setConsentSubmitting] = useState(false)
+  useEffect(() => {
+    if (!hasSupabaseEnv || !authUser?.id) { setNeedsConsent(false); return undefined }
+    let alive = true
+    getMyConsentState()
+      .then((state) => {
+        if (!alive) return
+        const ok = Boolean(state?.terms_agreed_at) && state?.consent_version === CONSENT_VERSION
+        setNeedsConsent(!ok)
+      })
+      .catch((error) => {
+        // 조회 실패 시 가용성 우선 — 게이트를 강제하지 않는다.
+        console.warn("Failed to load consent state", error)
+      })
+    return () => { alive = false }
+  }, [authUser?.id])
+  const handleConsentAgree = useCallback(async ({ marketing }) => {
+    setConsentSubmitting(true)
+    try {
+      await recordMyConsent(marketing)
+      setNeedsConsent(false)
+    } catch (error) {
+      console.error("Failed to record consent", error)
+      showToast("동의 처리에 실패했어요. 잠시 후 다시 시도해 주세요.")
+    } finally {
+      setConsentSubmitting(false)
+    }
+  }, [showToast])
 
   // 회원가입/로그인 후 첫 진입 — 로카냥 튜토리얼 1회 자동 재생
   useEffect(() => {
@@ -1908,6 +1942,8 @@ export default function App() {
             </WebAuthLayout>
           )
         ) : null}
+
+        <ConsentGate open={needsConsent} submitting={consentSubmitting} onAgree={handleConsentAgree} />
 
         {/* 탐색 — 내 위치 주변 행사/공간 큐레이션, 로그인 불필요 */}
         {activeTab === "explore" ? (
