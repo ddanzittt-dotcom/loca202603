@@ -85,6 +85,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
   const [scanning, setScanning] = useState(true)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [panelOpen, setPanelOpen] = useState(true)
+  const [atEdge, setAtEdge] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -293,6 +294,19 @@ export function WalkModeScreen({ onExit, onCollect }) {
       }, () => { flashStatus("위치 권한이 거부돼 기본 동네로 둘게요") }, { timeout: 8000, enableHighAccuracy: true })
     }
 
+    // 여기서 다시 스캔 — 고양이가 서 있는 지점을 새 중심으로 월드를 다시 그린다.
+    // 동네 끝(나무 울타리)에 닿았을 때 이어서 탐험하는 용도. 채집 기록(count/binder)은 유지.
+    // 좌표는 0.01° 그리드로 스냅돼 서버 엣지 캐시를 그대로 적중한다(walkWorld.js).
+    function rescanHere() {
+      const lat = st.origin.lat + st.player.y / mPerLat
+      const lng = st.origin.lng + st.player.x / mPerLng()
+      st.origin = { lat, lng }
+      st.player = { x: 0, y: 0 }; st.cam = { x: 0, y: 0 }; st.terrainBake = null
+      st.moveTarget = null; st.auto = false
+      setAtEdge(false)
+      initWorld()
+    }
+
     // ── 채집 ──
     function take(spot) {
       if (!spot || spot.collected) return
@@ -311,6 +325,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
       zoomBy(f) { st.zoom = Math.min(1.4, Math.max(0.18, st.zoom * f)) },
       toggleAuto() { st.auto = !st.auto; if (st.auto) { st.moveTarget = null; flashStatus("가장 가까운 생물에게 자동으로 걸어가요") } return st.auto },
       scanMyArea,
+      rescanHere,
       listRow(id) {
         const s = st.spots.find((x) => x.id === id); if (!s) return
         setSheetOpen(false)
@@ -481,6 +496,8 @@ export function WalkModeScreen({ onExit, onCollect }) {
         const active = nearest && nearest.d < COLLECT_M ? nearest.s : null
         st.activeSpot = active
         setCollectTarget(active ? { title: dist2(active, st.player) < REVEAL_M ? active.title : "미확인 생물" } : null)
+        // 동네 끝 근접 감지 — 울타리(WORLD_R-60) 가까이 가면 "여기서 다시 스캔" 안내
+        setAtEdge(st.loaded && Math.hypot(st.player.x, st.player.y) > WORLD_R - 340)
         pushNearby(false)
       }
       st.raf = requestAnimationFrame(tick)
@@ -519,6 +536,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
                 <li>🕹 <b>조이스틱·화면 클릭</b>으로 고양이를 움직여요 (실제로 걸어다닐 필요 없어요)</li>
                 <li>❓ 물음표 지점에 가까이 가면 정체가 드러나고, 원 안에 들면 채집할 수 있어요</li>
                 <li>◎ <b>내 동네 지도 스캔</b>을 누르면 실제 내 위치 기준으로 동네를 다시 그려요</li>
+                <li>🧭 동네 끝(나무 울타리)에 닿으면 <b>여기서 다시 스캔</b>으로 이어서 탐험해요</li>
               </ul>
               <p className="walk-intro__note">⚠ 실제로 걸을 땐 화면보다 주변을 먼저 살펴요 · 기록·사진 © iNaturalist 기여자 (CC)</p>
             </div>
@@ -530,7 +548,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
       <div className="walk-hud">
         <div className="walk-hud__tl">
           <button type="button" className="walk-chip is-on" onClick={() => eng()?.scanMyArea()}>◎ 내 동네 지도 스캔</button>
-          <button type="button" className="walk-chip walk-exit" onClick={onExit} aria-label="게임 나가기">✕ 나가기</button>
+          <button type="button" className="walk-chip walk-exit" onClick={onExit} aria-label="지도 나가기">✕ 지도 나가기</button>
         </div>
         <div className="walk-hud__tr">
           <span className="walk-counter">채집 <b>{count}</b>/{total}</span>
@@ -548,6 +566,12 @@ export function WalkModeScreen({ onExit, onCollect }) {
         {collectTarget ? (
           <div className="walk-collect-wrap">
             <button type="button" className="walk-collect" onClick={() => eng()?.openCollect()}>🧺 {collectTarget.title} 채집하기</button>
+          </div>
+        ) : null}
+
+        {atEdge && !collectTarget ? (
+          <div className="walk-rescan-wrap">
+            <button type="button" className="walk-rescan" onClick={() => eng()?.rescanHere()}>🧭 동네 끝! 여기서 다시 스캔</button>
           </div>
         ) : null}
 
