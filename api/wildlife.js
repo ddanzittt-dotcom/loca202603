@@ -14,9 +14,12 @@ const SPARSE_THRESHOLD = 8
 const RESULT_LIMIT = 60
 const GRID_DEG = 0.01 // ~1.1km — 좌표 그리드 스냅 단위 (같은 동네 = 같은 쿼리 = 캐시 공유)
 
-// 상업 서비스에 노출 가능한 사진 라이선스만 — CC0/CC-BY 계열(-nc 비상업 제외, 저작권 전보류(null) 제외).
-// LOCA 는 상업 서비스라 CC-BY-NC 사진을 쓰면 회색지대 → 미허용 사진은 버리고 픽셀 스프라이트로 대체한다.
-const PHOTO_LICENSE_OK = new Set(["cc0", "cc-by", "cc-by-sa", "cc-by-nd"])
+// 명시적 CC 라이선스가 있는 사진만 — CC0/CC-BY 계열 + CC-BY-NC(비상업).
+// 저작권 전보류(license_code=null "all rights reserved")는 여전히 제외한다.
+// * NC(비상업)는 상업 서비스에선 회색지대지만, iNat 관측 사진은 사실상 전부 CC-BY-NC라
+//   NC를 버리면 사진이 거의 안 뜬다 → attribution(사진 출처)을 함께 노출하는 조건으로 허용.
+//   저작권 전보류만 버리고 픽셀 스프라이트로 대체한다.
+const PHOTO_LICENSE_OK = new Set(["cc0", "cc-by", "cc-by-sa", "cc-by-nd", "cc-by-nc", "cc-by-nc-sa", "cc-by-nc-nd"])
 function pickLicensedPhoto(photos) {
   if (!Array.isArray(photos)) return null
   for (const p of photos) {
