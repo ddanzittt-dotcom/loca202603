@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js"
+import { isAppRequest } from "./_lib/appRequest.js"
 
 // 지도 카드 표지용 실제 지도 썸네일 프록시 (Naver Static Map API)
 // - NCP 키를 서버에만 두고, 결과 이미지는 엣지 캐시로 오래 캐싱해 호출량을 줄인다
@@ -54,6 +55,13 @@ export default async function handler(req, res) {
   const notFound = (reason) => {
     res.setHeader("x-thumb-reason", reason)
     res.status(404).end()
+  }
+
+  // 남용 방지: 우리 앱에서 온 요청만 허용 (유료 Static Map 프록시 익명 남용/핫링크 차단).
+  // 앱 내 <img> same-origin 로드는 sec-fetch-site/referer로 통과, 외부 스크립트는 404 → 클라이언트 SVG 폴백.
+  if (!isAppRequest(req)) {
+    notFound("forbidden")
+    return
   }
 
   // Key ID는 클라이언트(index.html)에도 노출되는 공개 값 — index.html의 폴백과 동일하게 유지
