@@ -119,6 +119,53 @@ async function fetchEventIntro(apiKey, contentId) {
   return rows[0] || {}
 }
 
+// 문화축제표준데이터 카탈로그 병합 (스펙 v3.3 §3-① — 면 단위 축제 안전망).
+// 수집 스크립트(scripts/ingest/ingest-festivals.mjs)가 적재한 explore_catalog 을
+// PostgREST 로 직접 읽는다 (supabase-js 없이 fetch, anon 키 — 공개 읽기 RLS).
+// fail-soft: env 미설정·테이블 미적용(migration 074 이전)·에러 전부 [] 반환.
+async function fetchCatalogFestivals(location) {
+  const baseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "").trim()
+  const anonKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "").trim()
+  if (!baseUrl || !anonKey || !location) return []
+
+  const bboxKm = EVENT_RADIUS_KM // 하류 거리 필터와 동일 반경 — bbox 는 근사, 정밀 컷은 하류에서
+  const dLat = bboxKm / 110.574
+  const dLng = bboxKm / (111.32 * Math.max(0.2, Math.cos((location.lat * Math.PI) / 180)))
+  const params = new URLSearchParams({
+    select: "id,title,addr,lat,lng,start_date,end_date,phone,source_url",
+    tab: "eq.enjoy",
+    source: "eq.festival",
+    and: `(lat.gte.${location.lat - dLat},lat.lte.${location.lat + dLat},lng.gte.${location.lng - dLng},lng.lte.${location.lng + dLng})`,
+    limit: "200",
+  })
+
+  let resp
+  try {
+    resp = await fetch(`${baseUrl}/rest/v1/explore_catalog?${params.toString()}`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+    })
+  } catch {
+    return []
+  }
+  if (!resp.ok) return []
+  const rows = await resp.json().catch(() => [])
+  if (!Array.isArray(rows)) return []
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    source: "festival",
+    title: row.title || "",
+    addr: row.addr || "",
+    image: "",
+    lat: toNumber(row.lat),
+    lng: toNumber(row.lng),
+    startDate: String(row.start_date || "").replace(/-/g, ""),
+    endDate: String(row.end_date || "").replace(/-/g, ""),
+    tel: row.phone || "",
+    contentTypeId: 15,
+  }))
+}
+
 async function fetchNearbyEventCandidates(apiKey, location) {
   if (!location) return []
 
@@ -172,18 +219,19 @@ export default async function handler(req, res) {
 
     // 소스별 어댑터는 각자 정규화된 공통 스키마를 돌려준다.
     // 문화포털·KOPIS는 fail-soft(키 없음/에러 시 [])라 프로덕션(키 미설정)에서도 기존 동작 유지.
-    const [festivalRaw, nearbyRaw, cultureItems, kopisItems] = await Promise.all([
+    const [festivalRaw, nearbyRaw, cultureItems, kopisItems, catalogFestivals] = await Promise.all([
       fetchFestivalPages(apiKey, startDateStr),
       fetchNearbyEventCandidates(apiKey, location),
       fetchCultureEvents(location, region),
       fetchKopisEvents(location, region),
+      fetchCatalogFestivals(location),
     ])
 
     const tourItems = [...festivalRaw, ...nearbyRaw]
       .filter((item) => item?.title)
       .map(normalizeTourItem)
 
-    const active = dedupeEvents([...tourItems, ...cultureItems, ...kopisItems])
+    const active = dedupeEvents([...tourItems, ...cultureItems, ...kopisItems, ...catalogFestivals])
       .filter((item) => isActiveEvent(item, todayStr))
       .filter((item) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng))
 
@@ -192,6 +240,7 @@ export default async function handler(req, res) {
       nearby: nearbyRaw.length,
       culture: cultureItems.length,
       kopis: kopisItems.length,
+      festivalStd: catalogFestivals.length,
     }
 
     if (location) {

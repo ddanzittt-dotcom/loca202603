@@ -284,8 +284,10 @@ export async function createFeature(mapId, featureData, { onRegionTagged } = {})
 
   // 동네(region_name) 태깅 — 좌표로 역지오코딩해 DB에 기록 (best-effort, 저장·반환에 영향 없음).
   // 대시보드 "동네 도감"이 이 값을 쓴다. 없으면 동네가 안 잡힘.
-  const gcLat = Number(data?.lat)
-  const gcLng = Number(data?.lng)
+  // route/area 는 lat/lng 가 null 이라 첫 점(시작점)을 기준으로 태깅한다 (둘레길 채집 — v3.3 V4).
+  const firstPoint = Array.isArray(data?.points) && Array.isArray(data.points[0]) ? data.points[0] : null
+  const gcLat = Number(data?.lat ?? firstPoint?.[1])
+  const gcLng = Number(data?.lng ?? firstPoint?.[0])
   if (data?.id && Number.isFinite(gcLat) && Number.isFinite(gcLng) && (gcLat !== 0 || gcLng !== 0)) {
     // region 쓰기가 트리거로 updated_at 을 갱신하므로, 갱신값을 콜백으로 돌려줘
     // 로컬 캐시의 updatedAt 을 맞춘다. 안 맞추면 방금 만든 카드를 바로 편집할 때

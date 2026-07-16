@@ -1,38 +1,64 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { CalendarRange, Landmark, MapPin, Plus } from "lucide-react"
+import { CalendarRange, ChevronRight, Footprints, Landmark, MapPin, Plus } from "lucide-react"
 import {
   DEFAULT_EXPLORE_LOCATION,
   EXPLORE_LOCATION_KEY,
+  curationSourceLabel,
+  dedupeWalkItems,
   eventDdayBadge,
+  eventTimeKey,
   eventToPrefill,
   fetchNearbyEvents,
   fetchNearbyPlaces,
   fetchNearbyWildlife,
   formatDistanceKm,
   formatEventPeriod,
+  formatObservedAgo,
+  formatRouteMeta,
   placeToPrefill,
+  routeToPrefill,
+  wildlifeSortKey,
   wildlifeToPrefill,
 } from "../lib/exploreCuration"
+import { fetchCatalogItems } from "../lib/exploreCatalog"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
 import { fetchRealTerrain } from "../lib/realTerrain"
 import { spriteForRadarItem } from "../lib/radarSprites"
 
-// 탐색 — 좌측 큰 지도(레이더) + 우측 세로 목록(매물목록형). 상단 필터탭으로 한 종류씩.
-// 탭 선택 = 지도 도트도 그 종류만 필터. 카드 CTA [+ 등록] → CollectSheet 프리필 → 바인더.
+// 탐색 — 좌측 큰 지도(레이더) + 우측 목록. 칩 = 카테고리 4 + 전체 (스펙 v3.3 T1).
+// 전체 = 카테고리별 섹션 캐러셀(T2, 모바일 가로 스크롤/데스크톱 세로 변형),
+// 카테고리 탭 = 그 칸만 깊게 보는 정렬 뷰(칸마다 정렬축 다름).
+// 탭 선택 = 지도 도트도 그 종류만 필터. 카드/상세 CTA [+ 등록] → CollectSheet 프리필 → 바인더.
 
 // 레이더 도트 → 카드 앵커 id (스크롤·선택용)
 function cardAnchorId(type, id) {
   return `xc-card-${type}-${id}`
 }
 
+// 시급성은 탭 이름이 아니라 정렬+배지로 표현. 칩에 개수 배지는 달지 않는다(스펙 v3.3 §5).
 const TABS = [
   { key: "all", label: "전체" },
-  { key: "ongoing", label: "진행중인 행사" },
-  { key: "upcoming", label: "곧 시작하는 행사" },
-  { key: "places", label: "가볼만한 공간" },
-  { key: "wildlife", label: "이 동네 생물" },
+  { key: "enjoy", label: "즐기기" },
+  { key: "learn", label: "배우기" },
+  { key: "walk", label: "걷기·머물기" },
+  { key: "nature", label: "자연" },
 ]
+
+// 전체 탭 섹션 순서 = 행동·시급 → 잔잔·상시 (T2). 빈 섹션은 접는다.
+const SECTIONS = [
+  { key: "enjoy", label: "즐기기", hint: "마감 임박 순" },
+  { key: "learn", label: "배우기", hint: "" },
+  { key: "walk", label: "걷기·머물기", hint: "가까운 순" },
+  { key: "nature", label: "자연", hint: "가까운 순 · 최근 관측" },
+]
+
+const CAROUSEL_CAP = 6
+const NO_ENTRIES = []
+
+const eventEntry = (item) => ({ item, type: "event" })
+const placeEntry = (item) => ({ item, type: "place" })
+const wildEntry = (item) => ({ item, type: "wildlife" })
 
 function readStoredLocation() {
   try {
@@ -50,9 +76,10 @@ function shortAddress(value) {
   return String(value || "").split(" ").slice(0, 3).join(" ")
 }
 
-// 종류별 목록 행 — 좁은 우측 열에 맞춘 컴팩트 가로 행(썸네일·본문·거리/등록).
+// 종류별 목록 행 — 좁은 우측 열에 맞춘 컴팩트 가로 행(썸네일·본문·거리/출처/등록).
 function ListRow({ item, type, onRegister, onOpen, anchorId }) {
   const distance = formatDistanceKm(item.distKm)
+  const source = curationSourceLabel(type, item)
 
   let thumb = null
   let badge = null
@@ -75,23 +102,37 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
     )
     prefill = eventToPrefill(item)
   } else if (type === "place") {
+    const isRoute = item.group === "route"
+    const routeMeta = isRoute ? formatRouteMeta(item) : ""
     thumb = item.image
       ? <img src={item.image} alt="" loading="lazy" />
-      : <span className="xc-row__fallback"><Landmark size={20} strokeWidth={1.6} /></span>
-    badge = item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+      : (
+        <span className="xc-row__fallback">
+          {isRoute ? <Footprints size={20} strokeWidth={1.6} /> : <Landmark size={20} strokeWidth={1.6} />}
+        </span>
+      )
+    // 상태 배지 우선(오늘 장), 없으면 카테고리 라벨 (스펙 v3.3 §5)
+    badge = item.marketToday
+      ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
+      : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
     meta = (
       <span className="xc-row__meta">
+        {routeMeta ? <em>{routeMeta}</em> : null}
+        {!routeMeta && item.marketCycle ? <em>장날 {item.marketCycle}</em> : null}
         {shortAddress(item.addr) ? <span>{shortAddress(item.addr)}</span> : null}
       </span>
     )
-    prefill = placeToPrefill(item)
+    registerLabel = isRoute ? "길 카드로 등록" : "카드로 등록"
+    prefill = isRoute ? routeToPrefill(item) : placeToPrefill(item)
   } else {
+    const observed = formatObservedAgo(item)
     thumb = item.photo
       ? <img src={item.photo} alt="" loading="lazy" />
       : <span className="xc-row__emoji">{item.emoji || "✨"}</span>
     badge = <span className="xc-row__tag xc-row__tag--wild">{item.emoji} {item.category}</span>
     meta = (
       <span className="xc-row__meta">
+        {observed ? (observed.recent ? <em>{observed.label}</em> : <span>{observed.label}</span>) : null}
         {item.place ? <span>{String(item.place).split(",")[0]}</span> : null}
       </span>
     )
@@ -122,12 +163,15 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
         {meta}
       </div>
       <div className="xc-row__foot">
-        {distance ? (
-          <span className="xc-row__dist">
-            <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
-            {distance}
-          </span>
-        ) : <span />}
+        <span className="xc-row__facts">
+          {distance ? (
+            <span className="xc-row__dist">
+              <MapPin size={11} strokeWidth={2.4} aria-hidden="true" />
+              {distance}
+            </span>
+          ) : null}
+          {source ? <span className="xc-row__src">{source}</span> : null}
+        </span>
         <button
           type="button"
           className="xc-row__register"
@@ -144,6 +188,66 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
   )
 }
 
+// 전체 탭 캐러셀용 컴팩트 카드 — 클릭하면 상세 시트(등록 CTA는 시트 안).
+function MiniCard({ item, type, onOpen }) {
+  const distance = formatDistanceKm(item.distKm)
+
+  let thumb = null
+  let badge = null
+  if (type === "event") {
+    const dday = eventDdayBadge(item)
+    thumb = item.image
+      ? <img src={item.image} alt="" loading="lazy" />
+      : <span className="xc-mini__fallback"><CalendarRange size={20} strokeWidth={1.6} /></span>
+    badge = dday ? <span className={`xc-row__tag xc-row__tag--${dday.kind}`}>{dday.label}</span> : null
+  } else if (type === "place") {
+    thumb = item.image
+      ? <img src={item.image} alt="" loading="lazy" />
+      : (
+        <span className="xc-mini__fallback">
+          {item.group === "route" ? <Footprints size={18} strokeWidth={1.6} /> : <Landmark size={18} strokeWidth={1.6} />}
+        </span>
+      )
+    badge = item.marketToday
+      ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
+      : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+  } else {
+    thumb = item.photo
+      ? <img src={item.photo} alt="" loading="lazy" />
+      : <span className="xc-mini__emoji">{item.emoji || "✨"}</span>
+    badge = <span className="xc-row__tag xc-row__tag--wild">{item.emoji} {item.category}</span>
+  }
+
+  return (
+    <article
+      className="xc-mini"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen?.(item)}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key === "Enter" || keyEvent.key === " ") {
+          keyEvent.preventDefault()
+          onOpen?.(item)
+        }
+      }}
+    >
+      <div className="xc-mini__thumb" aria-hidden="true">
+        {thumb}
+        {badge}
+      </div>
+      <div className="xc-mini__body">
+        <strong className="xc-mini__title">{item.title}</strong>
+        {distance ? (
+          <span className="xc-mini__dist">
+            <MapPin size={10} strokeWidth={2.4} aria-hidden="true" />
+            {distance}
+          </span>
+        ) : null}
+      </div>
+    </article>
+  )
+}
+
 export function ExploreCurationScreen({ onRegister, showToast }) {
   const [location, setLocation] = useState(() => readStoredLocation())
   const [locating, setLocating] = useState(false)
@@ -154,6 +258,8 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
   const [wildResult, setWildResult] = useState({ key: null, items: [], error: "" })
+  // 사전 적재 카탈로그(공원·시장·둘레길) — Supabase 직접 조회, 실패해도 빈 목록 (스펙 v3.3 §3.5)
+  const [walkCatalog, setWalkCatalog] = useState({ key: null, items: [] })
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
@@ -204,17 +310,25 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return () => { cancelled = true }
   }, [effectiveLocation, requestKey])
 
+  useEffect(() => {
+    let cancelled = false
+    fetchCatalogItems("walk", effectiveLocation)
+      .then((items) => { if (!cancelled) setWalkCatalog({ key: requestKey, items }) })
+      .catch(() => { if (!cancelled) setWalkCatalog({ key: requestKey, items: [] }) })
+    return () => { cancelled = true }
+  }, [effectiveLocation, requestKey])
+
   const loading = result.key !== requestKey
   const events = loading ? null : result.items
   const error = loading ? "" : result.error
 
   const placesLoading = placesResult.key !== requestKey
   const placesError = placesLoading ? "" : placesResult.error
-  const visiblePlaces = placesLoading ? [] : placesResult.items
+  const visiblePlaces = placesLoading ? NO_ENTRIES : placesResult.items
 
   const wildLoading = wildResult.key !== requestKey
   const wildError = wildLoading ? "" : wildResult.error
-  const visibleWildlife = wildLoading ? [] : wildResult.items
+  const visibleWildlife = wildLoading ? NO_ENTRIES : wildResult.items
 
   const locateMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -241,53 +355,61 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     )
   }, [showToast])
 
-  const { ongoing, upcoming } = useMemo(() => {
-    const list = Array.isArray(events) ? events : []
-    const split = { ongoing: [], upcoming: [] }
-    for (const event of list) {
-      const badge = eventDdayBadge(event)
-      if (!badge) continue
-      if (badge.kind === "ongoing") split.ongoing.push(event)
-      else split.upcoming.push(event)
-    }
-    return split
+  // ① 즐기기 — 시간순(마감 임박 먼저). 날짜 판정 불가 항목은 기존처럼 제외.
+  const enjoyEntries = useMemo(() => {
+    const list = Array.isArray(events) ? events.filter((event) => eventDdayBadge(event)) : []
+    return list.map(eventEntry).sort((a, b) => eventTimeKey(a.item) - eventTimeKey(b.item))
   }, [events])
 
-  // 탭별 항목 = {item, type} 배열. '전체'는 준비된 소스를 거리순으로 합친다.
-  const eventEntry = (item) => ({ item, type: "event" })
-  const placeEntry = (item) => ({ item, type: "place" })
-  const wildEntry = (item) => ({ item, type: "wildlife" })
+  // ③ 걷기·머물기 — 거리순. TourAPI 공간(자연/역사/공원/전시) + 카탈로그(공원·시장·둘레길) 병합,
+  // 제목+근접(500m) 중복 제거 — 같은 공원이 두 소스에 잡히면 이미지 있는 쪽만 남는다 (스펙 §5)
+  const walkEntries = useMemo(() => {
+    const catalogItems = walkCatalog.key === requestKey ? walkCatalog.items : []
+    return dedupeWalkItems([...visiblePlaces, ...catalogItems])
+      .map(placeEntry)
+      .sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity))
+  }, [visiblePlaces, walkCatalog, requestKey])
+
+  // ④ 자연 — 거리순 + 최근 관측 가중
+  const natureEntries = useMemo(
+    () => visibleWildlife.map(wildEntry)
+      .sort((a, b) => wildlifeSortKey(a.item) - wildlifeSortKey(b.item)),
+    [visibleWildlife],
+  )
+
+  // 전체 = 레이더용 병합(거리순). 목록 UI는 섹션 캐러셀이 담당.
+  const allEntries = useMemo(
+    () => [...enjoyEntries, ...walkEntries, ...natureEntries]
+      .sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)),
+    [enjoyEntries, walkEntries, natureEntries],
+  )
 
   const allLoading = loading && placesLoading && wildLoading
-  const allEntries = [
-    ...(loading ? [] : ongoing.map(eventEntry)),
-    ...(loading ? [] : upcoming.map(eventEntry)),
-    ...(placesLoading ? [] : visiblePlaces.map(placeEntry)),
-    ...(wildLoading ? [] : visibleWildlife.map(wildEntry)),
-  ].sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity))
   const allError = !allLoading && allEntries.length === 0 && (error || placesError || wildError)
     ? "주변 정보를 일부 불러오지 못했어요."
     : ""
 
-  // 탭별 데이터/상태 묶음
+  // 탭별 데이터/상태 묶음 — ② 배우기는 소스 연동 전이라 "준비 중" 빈 상태 (스펙 v3.3 부록 1단계)
   const tabState = {
     all: { loading: allLoading, error: allError, entries: allEntries, emptyTitle: "주변에 표시할 항목이 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    ongoing: { loading, error, entries: ongoing.map(eventEntry), emptyTitle: "지금 진행중인 행사가 없어요", emptySub: "위치를 바꾸거나, 곧 시작하는 행사를 기다려보세요." },
-    upcoming: { loading, error, entries: upcoming.map(eventEntry), emptyTitle: "곧 시작하는 행사가 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    places: { loading: placesLoading, error: placesError, entries: visiblePlaces.map(placeEntry), emptyTitle: "주변에서 가볼만한 공간을 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    wildlife: { loading: wildLoading, error: wildError, entries: visibleWildlife.map(wildEntry), emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-  }
-
-  const tabCount = (key) => {
-    const state = tabState[key]
-    return state.loading ? null : state.entries.length
+    enjoy: { loading, error, entries: enjoyEntries, emptyTitle: "지금 즐길 행사를 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    learn: { loading: false, error: "", entries: NO_ENTRIES, emptyTitle: "배우기 카드는 준비 중이에요", emptySub: "동네 강좌·체험 프로그램·도서관이 이 칸에 들어올 예정이에요." },
+    // ③은 카탈로그(Supabase 직접 조회)가 병합되므로 TourAPI 실패·로딩 중이어도
+    // 카탈로그 항목이 있으면 목록을 우선한다 (dev의 /api 부재·프로덕션 장애 시에도 공원·시장은 뜸)
+    walk: {
+      loading: placesLoading && walkEntries.length === 0,
+      error: walkEntries.length > 0 ? "" : placesError,
+      entries: walkEntries,
+      emptyTitle: "주변에서 걷고 머물 곳을 찾지 못했어요",
+      emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요.",
+    },
+    nature: { loading: wildLoading, error: wildError, entries: natureEntries, emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
   }
 
   // 레이더 도트 = 활성 탭 항목 (탭 = 지도 필터). '전체'는 전 종류.
+  const activeEntries = tabState[activeTab].loading ? NO_ENTRIES : tabState[activeTab].entries
   const radarItems = useMemo(() => {
-    const state = tabState[activeTab]
-    const entries = state.loading ? [] : state.entries
-    return entries
+    return activeEntries
       .map(({ item, type }) => ({
         id: `${type}-${item.id}`, type, title: item.title, sprite: spriteForRadarItem(type, item),
         lat: Number(item.lat), lng: Number(item.lng),
@@ -295,9 +417,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       }))
       .filter((dot) => Number.isFinite(dot.lat) && Number.isFinite(dot.lng))
       .slice(0, 80)
-    // tabState 는 매 렌더 새 객체지만, 실제 의존은 아래 값들
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, ongoing, upcoming, visiblePlaces, visibleWildlife, loading, placesLoading, wildLoading])
+  }, [activeEntries])
 
   // 도트 [카드 보기] → 상세 카드 오픈
   const handleRadarSelect = useCallback((item) => {
@@ -305,6 +425,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   }, [])
 
   const active = tabState[activeTab]
+  const openDetail = (type) => (data) => setDetailItem({ type, data })
+
+  // 전체 탭 섹션 — 로딩 중이면 스켈레톤, 로딩 끝났는데 비면 접기(T2)
+  const visibleSections = SECTIONS
+    .map((section) => ({ ...section, state: tabState[section.key] }))
+    .filter((section) => section.state.loading || section.state.entries.length > 0)
 
   return (
     <div className="xc-view">
@@ -327,7 +453,6 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
       {/* 우상단: 필터탭 (데스크톱에선 목록 위 별도 셀 — 목록 세로 공간 확보) */}
       <div className="xc-tabs" role="tablist" aria-label="탐색 필터">
         {TABS.map((tab) => {
-          const count = tabCount(tab.key)
           const isActive = activeTab === tab.key
           return (
             <button
@@ -335,20 +460,67 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
               type="button"
               role="tab"
               aria-selected={isActive}
-              className={`xc-tab${isActive ? " is-active" : ""}${count === 0 ? " is-empty" : ""}`}
+              className={`xc-tab${isActive ? " is-active" : ""}`}
               onClick={() => setActiveTab(tab.key)}
             >
               <span className="xc-tab__label">{tab.label}</span>
-              {count != null && count > 0 ? <span className="xc-tab__count">{count}</span> : null}
             </button>
           )
         })}
       </div>
 
-      {/* 오른쪽: 세로 목록 */}
+      {/* 오른쪽: 목록 — 전체는 섹션 캐러셀, 카테고리 탭은 세로 목록 */}
       <div className="xc-view__feed">
         <div className="xc-list" role="tabpanel" aria-label={TABS.find((t) => t.key === activeTab)?.label}>
-          {active.loading ? (
+          {activeTab === "all" ? (
+            allLoading ? (
+              <div className="xc-list__skeleton" aria-hidden="true">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div className="xc-row xc-row--skeleton" key={index} />
+                ))}
+              </div>
+            ) : allError ? (
+              <div className="xc-empty">
+                <strong>정보를 불러오지 못했어요</strong>
+                <span>{allError}</span>
+                <button type="button" onClick={() => setReloadKey((value) => value + 1)}>다시 시도</button>
+              </div>
+            ) : allEntries.length === 0 ? (
+              <div className="xc-empty">
+                <strong>{tabState.all.emptyTitle}</strong>
+                <span>{tabState.all.emptySub}</span>
+              </div>
+            ) : (
+              <div className="xc-secs">
+                {visibleSections.map((section) => (
+                  <section className="xc-sec" key={section.key}>
+                    <div className="xc-sec__head">
+                      <strong>{section.label}</strong>
+                      {section.hint ? <span className="xc-sec__hint">{section.hint}</span> : null}
+                      <button type="button" className="xc-sec__more" onClick={() => setActiveTab(section.key)}>
+                        더보기
+                        <ChevronRight size={12} strokeWidth={2.6} aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div className="xc-sec__scroller">
+                      {section.state.loading
+                        ? Array.from({ length: 3 }, (_, index) => (
+                          <div className="xc-mini xc-mini--skeleton" key={index} aria-hidden="true" />
+                        ))
+                        : section.state.entries.slice(0, CAROUSEL_CAP).map(({ item, type }) => (
+                          <MiniCard
+                            key={`${type}-${item.id}`}
+                            item={item}
+                            type={type}
+                            onOpen={openDetail(type)}
+                          />
+                        ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )
+          ) : active.loading ? (
             <div className="xc-list__skeleton" aria-hidden="true">
               {Array.from({ length: 6 }, (_, index) => (
                 <div className="xc-row xc-row--skeleton" key={index} />
@@ -373,7 +545,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
                 type={type}
                 anchorId={cardAnchorId(type, item.id)}
                 onRegister={onRegister}
-                onOpen={(data) => setDetailItem({ type, data })}
+                onOpen={openDetail(type)}
               />
             ))
           )}

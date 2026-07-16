@@ -6,6 +6,7 @@ import { createFeature } from "../../lib/mapService"
 import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { fetchPlaceMatch } from "../../lib/placeMatch"
 import { fetchCurationDetail, summarizeOverview } from "../../lib/exploreCuration"
+import { fetchCatalogRoutePoints } from "../../lib/exploreCatalog"
 import { createId } from "../../lib/appUtils"
 import { PLACE_CATEGORIES, getDefaultPixelIdForCategory } from "../../lib/placeCategories"
 
@@ -220,15 +221,28 @@ export function CollectSheet({
       const tags = [...new Set([...autoTags, ...userTags])]
       // 한줄 설명을 적었으면 note = 설명(카드 설명줄에 노출), 안 적었으면 주소를 note 로 유지
       const trimmedDesc = desc.trim()
+
+      // 둘레길 프리필(routeCatalogId) — 등록 시점에 폴리라인을 지연 조회해 route 피처로 저장 (스펙 v3.3 V4).
+      // 탐색 목록/프리필은 시작점만 들고 다니고, 선 전체는 여기서 처음 가져온다.
+      let routePoints = null
+      if (prefill?.routeCatalogId) {
+        routePoints = await fetchCatalogRoutePoints(prefill.routeCatalogId)
+        if (!routePoints) {
+          showToast?.("길 경로를 불러오지 못했어요. 잠시 후 다시 시도해주세요.")
+          setSaving(false)
+          return
+        }
+      }
+
       const base = {
-        type: "pin",
         title: trimmedName,
         emojiKind: "pixel",
         emojiPixelId: isNewFind ? "px-star" : pixelId,
         tags,
         note: trimmedDesc || selectedSpot?.address || pickedAddress || "",
-        lat: point.lat,
-        lng: point.lng,
+        ...(routePoints
+          ? { type: "route", points: routePoints }
+          : { type: "pin", lat: point.lat, lng: point.lng }),
       }
 
       let collected = null
@@ -418,7 +432,11 @@ export function CollectSheet({
                       }}
                     >
                       <strong>{candidate.name}</strong>
-                      <span>{candidate.categoryName} · {candidate.distance}m</span>
+                      {/* 프리필 후보(탐색 큐레이션)는 distance 가 없다 — 있을 때만 표기 */}
+                      <span>
+                        {candidate.categoryName}
+                        {Number.isFinite(Number(candidate.distance)) ? ` · ${candidate.distance}m` : ""}
+                      </span>
                     </button>
                   ))}
                   <button

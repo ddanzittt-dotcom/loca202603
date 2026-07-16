@@ -7,7 +7,9 @@ import {
   fetchCurationDetail,
   formatDistanceKm,
   formatEventPeriod,
+  formatRouteMeta,
   placeToPrefill,
+  routeToPrefill,
   wildlifeToPrefill,
 } from "../../lib/exploreCuration"
 
@@ -118,13 +120,16 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
   const detailLoading = Boolean(detailKey) && detailResult.key !== detailKey
   const detail = detailKey && detailResult.key === detailKey ? detailResult.detail : null
 
+  const isRoute = data.group === "route"
+  const routeMeta = isRoute ? formatRouteMeta(data) : ""
   const badge = isEvent ? eventDdayBadge(data) : null
   const period = isEvent ? formatEventPeriod(data) : ""
   const distance = formatDistanceKm(data.distKm)
   const image = data.image || detail?.image || ""
-  const overview = (detail?.overview || "").trim()
+  // TourAPI 상세 소개가 없으면 카탈로그 요약(summary)으로 대체 (표준데이터·두루누비 소스)
+  const overview = (detail?.overview || "").trim() || (data.summary || "").trim()
   const externalUrl = data.sourceUrl || detail?.homepage || ""
-  const prefill = isEvent ? eventToPrefill(data) : placeToPrefill(data)
+  const prefill = isEvent ? eventToPrefill(data) : isRoute ? routeToPrefill(data) : placeToPrefill(data)
 
   return (
     <div className="xdt-backdrop" onClick={onClose} role="presentation">
@@ -164,6 +169,8 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
           <div className="xdt-rows">
             <InfoRow label="주소" value={detail?.addr || data.addr} />
             {isEvent ? <InfoRow label="장소" value={detail?.eventPlace} /> : null}
+            {isRoute ? <InfoRow label="코스" value={routeMeta} /> : null}
+            <InfoRow label="장날" value={data.marketCycle} />
             {isEvent ? <InfoRow label="시간" value={detail?.playTime} /> : <InfoRow label="이용" value={detail?.useTime} />}
             {isEvent ? <InfoRow label="요금" value={detail?.useTimeFestival} /> : <InfoRow label="요금" value={detail?.useFee} />}
             {!isEvent ? <InfoRow label="휴무" value={detail?.restDate} /> : null}
@@ -191,7 +198,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
           ) : <span />}
           <button type="button" className="xdt-register" onClick={() => onRegister?.(prefill)}>
             <Plus size={14} strokeWidth={2.6} aria-hidden="true" />
-            카드로 등록
+            {isRoute ? "길 카드로 등록" : "카드로 등록"}
           </button>
         </footer>
       </section>

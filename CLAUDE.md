@@ -75,7 +75,7 @@ src/
     analytics.js       # 이벤트 로깅 (logEvent, getSessionId, setUtmSource, 오프라인 큐)
     supabase.js        # Supabase 클라이언트 (detectSessionInUrl: true)
     auth.js            # 인증 헬퍼 (이메일, OAuth, Vercel 도메인 지원)
-    mapService.js      # Supabase CRUD + B2B 서비스 + 공지 CRUD + friendlySupabaseError
+    mapService.js      # Supabase CRUD (mapService.read/write/publish/community/utils 로 분할) + friendlySupabaseError — B2B·공지 서비스 제거됨
     appUtils.js        # 압축, 직렬화, 포맷 유틸, URL 파싱 (/s/:slug), buildSlugShareUrl
     mediaStore.js      # IndexedDB + Supabase Storage 듀얼 미디어 저장소
     supabaseHealthCheck.js  # 프로덕션 환경 검증 스크립트 (dev 전용, 번들 미포함)
@@ -98,7 +98,6 @@ api/                        # Vercel Serverless Functions (dev 서버엔 없음 
   wildlife.js              # 내 주변 생물 (iNaturalist)
   reverse-geocode.js       # 역지오코딩 프록시 (nominatim CORS/429 우회)
   terrain.js               # 실지형 (OSM Overpass — 산책 모드/오버월드)
-  directions/walk.js       # 도보 경로
   map-thumb.js, place-match.js
   _lib/eventSources/       # culture.js, kopis.js — 행사 소스 어댑터
 
@@ -145,7 +144,7 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 
 > **Migration 번호 주의 (2026-07):**
 > - 웹 MVP 실험분 046·047은 라이브 DB에 적용 후 파일만 제거됨 → **048_web_mvp_teardown** 으로 정리. 게이미피케이션은 **049_gamification_teardown**, 채집-우선 구조는 **050_collect_first_structure** (map_id nullable + map_feature_placements M:N).
-> - 이후 적용분: 051 협업 하드닝, 052 mapless 미디어 RLS, 053 탈퇴(delete_my_account), 054 region 컬럼, 055~057 관리자 대시보드, 058 profiles 관리자컬럼 차단, 059 동의(consent), 060~062 인구통계, 063 인사이트 하드닝, 064 커뮤니티 샘플 정리, 065 사용자 피드백. **신규 migration은 066부터.**
+> - 이후 적용분: 051 협업 하드닝, 052 mapless 미디어 RLS, 053 탈퇴(delete_my_account), 054 region 컬럼, 055~057 관리자 대시보드, 058 profiles 관리자컬럼 차단, 059 동의(consent), 060~062 인구통계, 063 인사이트 하드닝, 064 커뮤니티 샘플 정리, 065 사용자 피드백, 066~073 P0 보안감사(2026-07-14 — 071·072는 라이브 적용 대기였음), 074 탐색 사전 적재 카탈로그(explore_catalog). **신규 migration은 075부터.**
 > - 중복 번호 존재: 005·013·020·022·030. 이 중 B2B 전용(`005_organizations`, `013_rate_limit_comments_features`, `022_dashboard_tenant_rbac`, `022_event_collab_roles_and_approval`)은 신규 환경 구축 시 실행하지 않는다.
 
 ### Sharing & OG 메타
@@ -162,8 +161,6 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 ### 이벤트 로깅 + 오프라인 큐
 - `analytics.js`: logEvent → 성공 시 즉시 전송, 실패/오프라인 시 `loca.event_queue` localStorage에 저장
 - `flushEventQueue()`: 온라인 복귀 시 자동 실행 (2초 딜레이), 최대 5회 재시도
-- 설문도 오프라인 큐 지원 (`loca.survey_queue` localStorage)
-- 공지사항 오프라인 캐시 (sessionStorage)
 
 ### 에러 처리 체계
 - `friendlySupabaseError(error)`: 6종 에러 한국어 매핑 (네트워크/권한/인증/중복/미발견/서버)
@@ -177,11 +174,12 @@ DEPLOY.md              # 배포 가이드 (Vercel/Netlify + Supabase 설정)
 - 라이트웹(`/s/:slug`) 접속 시 불필요한 스크린/라이브러리 로딩 안 됨
 - SharedMapViewer 청크: 8KB (gzip 2.9KB)
 
-### RLS 보안
-- invitation_codes: SELECT 정책 없음 (코드 목록 직접 조회 불가, RPC만 허용)
-- invitation_code_attempts: 분당 5회 rate limit
-- feature_memos UPDATE: 지도 소유자만 status 변경 가능 (콘텐츠 관리)
-- survey_responses: INSERT open, UPDATE/DELETE 불가
+### RLS 보안 (현행 요점)
+- profiles: `select('*')` 금지 — 관리자·동의 컬럼 차단(058), 자가 승격 차단 트리거(066), 공개 기준선 is_public(071). 본인 동의 상태는 RPC(073 get_my_consent_state/record_my_consent)로만 조회/기록
+- feature_media/feature_memos: 소유자 스코프 읽기 + Storage 오너 스코프(067~070), mapless 기록 RLS(052)
+- 발행 스냅샷은 map_feature_placements 포함(072) — 지도 삭제 시 카드 보존, 비공개 카드 유출 방지
+- map_features 조회 1000행 페이지네이션, 협업 작성자 위조 방지(051)
+> 구 B2B RLS(invitation_codes rate limit, survey_responses 등)는 과거 이력 — 앱 미사용.
 
 ## Commands
 ```bash
@@ -191,6 +189,7 @@ npm run build         # 프로덕션 빌드 → dist/ (코드 스플리팅 + bun
 npm run preview       # 빌드 미리보기
 npm run lint          # ESLint
 npm test              # Vitest 1회 실행 (test:watch 으로 watch 모드)
+npm run ingest:parks  # 🚧 / markets / festivals / durunubi — 탐색 카탈로그(explore_catalog) 사전 적재, SERVICE_ROLE 필요 (v3 진행 중)
 npm run cap:sync      # Capacitor 빌드+동기화
 npm run cap:android   # Android Studio 열기
 npm run cap:ios       # Xcode 열기
