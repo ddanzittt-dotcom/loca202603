@@ -299,6 +299,34 @@ export function formatRouteMeta(item) {
   return parts.join(" · ")
 }
 
+// ③ 걷기·머물기 다양성 인터리빙 — 거리순 골격은 유지하되 같은 종류(kind)가 연속 maxRun개를
+// 넘으면 가장 가까운 다른 종류가 먼저 나온다. 밀린 항목은 버리지 않고 바로 다음 자리에서
+// 재진입한다 (도심 실측: 성정동 3km 근린공원 21개가 목록 상위 도배 — 숨기지 않고 섞는다).
+// 다른 종류가 남아 있지 않으면 같은 종류가 그대로 이어진다.
+export function interleaveByKind(list, getKind, maxRun = 2) {
+  const pending = [...list]
+  const result = []
+  let runKind = null
+  let runCount = 0
+  while (pending.length) {
+    let index = 0
+    if (runCount >= maxRun) {
+      const breaker = pending.findIndex((entry) => getKind(entry) !== runKind)
+      if (breaker !== -1) index = breaker
+    }
+    const [entry] = pending.splice(index, 1)
+    const kind = getKind(entry)
+    if (kind === runKind) {
+      runCount += 1
+    } else {
+      runKind = kind
+      runCount = 1
+    }
+    result.push(entry)
+  }
+  return result
+}
+
 // ③ 걷기·머물기 병합 중복 제거 — TourAPI 공간과 카탈로그(공원·문화재 등)가 같은 장소를 들고 올 때.
 // 규칙 2단: (1) 제목(공백 제거·소문자) 완전 일치 + 근접 500m
 //          (2) 포함관계("덕수궁" ⊂ "덕수궁 함녕전") + 근접 200m — 계열 중복은 더 보수적으로,

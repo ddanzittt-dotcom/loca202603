@@ -6,6 +6,7 @@ import {
   eventTimeKey,
   formatObservedAgo,
   formatRouteMeta,
+  interleaveByKind,
   routeToPrefill,
   wildlifeSortKey,
 } from "./exploreCuration"
@@ -150,6 +151,41 @@ describe("dedupeWalkItems (③ TourAPI + 카탈로그 병합 중복 제거)", ()
     const forest = { title: "숲", lat: 37.5443, lng: 127.0374, image: "" }
     const seoulForest = { title: "서울숲", lat: 37.5444, lng: 127.0375, image: "" }
     expect(dedupeWalkItems([forest, seoulForest])).toHaveLength(2)
+  })
+})
+
+describe("interleaveByKind (③ 같은 종류 연속 제한 — 도심 공원 도배 방지)", () => {
+  const kindOf = (item) => item.kind
+
+  it("연속 3개째부터 가장 가까운 다른 종류에 양보, 밀린 항목은 바로 재진입", () => {
+    const items = [
+      { id: "p1", kind: "park" }, { id: "p2", kind: "park" }, { id: "p3", kind: "park" },
+      { id: "m1", kind: "market" }, { id: "p4", kind: "park" },
+    ]
+    expect(interleaveByKind(items, kindOf).map((i) => i.id)).toEqual(["p1", "p2", "m1", "p3", "p4"])
+  })
+
+  it("다른 종류가 없으면 순서 그대로", () => {
+    const items = [{ id: "p1", kind: "park" }, { id: "p2", kind: "park" }, { id: "p3", kind: "park" }]
+    expect(interleaveByKind(items, kindOf).map((i) => i.id)).toEqual(["p1", "p2", "p3"])
+  })
+
+  it("항목을 잃지 않는다 (재배치만)", () => {
+    const items = [
+      { id: "p1", kind: "park" }, { id: "p2", kind: "park" }, { id: "p3", kind: "park" },
+      { id: "r1", kind: "trail" }, { id: "m1", kind: "market" }, { id: "p4", kind: "park" },
+    ]
+    const out = interleaveByKind(items, kindOf)
+    expect(out).toHaveLength(6)
+    expect(new Set(out.map((i) => i.id)).size).toBe(6)
+  })
+
+  it("종류가 번갈아 나오면 개입하지 않는다", () => {
+    const items = [
+      { id: "p1", kind: "park" }, { id: "m1", kind: "market" },
+      { id: "p2", kind: "park" }, { id: "h1", kind: "history" },
+    ]
+    expect(interleaveByKind(items, kindOf).map((i) => i.id)).toEqual(["p1", "m1", "p2", "h1"])
   })
 })
 

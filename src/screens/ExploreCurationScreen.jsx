@@ -15,6 +15,7 @@ import {
   formatEventPeriod,
   formatObservedAgo,
   formatRouteMeta,
+  interleaveByKind,
   placeToPrefill,
   routeToPrefill,
   wildlifeSortKey,
@@ -393,11 +394,13 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   // ③ 걷기·머물기 — 거리순. TourAPI 공간(자연/역사/공원/전시) + 카탈로그(공원·시장·둘레길) 병합,
   // 제목+근접(500m) 중복 제거 — 같은 공원이 두 소스에 잡히면 이미지 있는 쪽만 남는다 (스펙 §5)
+  // 마지막에 같은 종류 연속 2개 제한 — 도심 근린공원 도배 방지 (거리순 골격 유지)
   const walkEntries = useMemo(() => {
     const catalogItems = walkCatalog.key === requestKey ? walkCatalog.items : []
-    return dedupeWalkItems([...visiblePlaces, ...catalogItems])
+    const sorted = dedupeWalkItems([...visiblePlaces, ...catalogItems])
       .map(placeEntry)
       .sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity))
+    return interleaveByKind(sorted, (entry) => entry.item.kind || entry.item.source || "etc", 2)
   }, [visiblePlaces, walkCatalog, requestKey])
 
   // ④ 자연 — 거리순 + 최근 관측 가중
