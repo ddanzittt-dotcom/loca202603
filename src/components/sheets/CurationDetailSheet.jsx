@@ -12,6 +12,14 @@ import {
   routeToPrefill,
   wildlifeToPrefill,
 } from "../../lib/exploreCuration"
+import { fetchCatalogDetail } from "../../lib/exploreCatalog"
+
+// "2026-03-11" → "3.11" (접수기간 표기)
+function shortDate(value) {
+  const text = String(value || "").slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return ""
+  return `${Number(text.slice(5, 7))}.${Number(text.slice(8, 10))}`
+}
 
 // 탐색 큐레이션 카드 상세 시트 — 행사/공간 공용 간단 정보.
 // TourAPI 소스면 상세(소개/시간/요금)를 추가 조회, 카카오 소스는 기본 정보 + 외부 링크.
@@ -45,6 +53,19 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
       .catch(() => { if (!cancelled) setDetailResult({ key: detailKey, detail: null }) })
     return () => { cancelled = true }
   }, [detailKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 카탈로그 소스(강좌·도서관·체험마을 등) — 목록에서 뺀 부가정보(detail jsonb)를 시트에서만 조회
+  const catalogId = data?.catalogId && !contentRef && !isWildlife ? data.catalogId : null
+  const [catalogResult, setCatalogResult] = useState({ key: null, detail: null })
+
+  useEffect(() => {
+    if (!catalogId) return undefined
+    let cancelled = false
+    fetchCatalogDetail(catalogId)
+      .then((detail) => { if (!cancelled) setCatalogResult({ key: catalogId, detail }) })
+      .catch(() => { if (!cancelled) setCatalogResult({ key: catalogId, detail: null }) })
+    return () => { cancelled = true }
+  }, [catalogId])
 
   if (!data) return null
 
@@ -122,6 +143,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
 
   const isRoute = data.group === "route"
   const routeMeta = isRoute ? formatRouteMeta(data) : ""
+  const catalogDetail = catalogId && catalogResult.key === catalogId ? catalogResult.detail : null
   const badge = isEvent ? eventDdayBadge(data) : null
   const period = isEvent ? formatEventPeriod(data) : ""
   const distance = formatDistanceKm(data.distKm)
@@ -171,6 +193,23 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {isEvent ? <InfoRow label="장소" value={detail?.eventPlace} /> : null}
             {isRoute ? <InfoRow label="코스" value={routeMeta} /> : null}
             <InfoRow label="장날" value={data.marketCycle} />
+            {/* ② 배우기 — 강좌 기간·접수·기관·일정·수강료 / 도서관 휴관 / 체험마을 구분·시설 */}
+            <InfoRow label="기간" value={data.coursePeriod} />
+            {data.applyStart || data.applyEnd ? (
+              <InfoRow
+                label="접수"
+                value={`${shortDate(data.applyStart)} ~ ${shortDate(data.applyEnd)}${data.applyOpen ? " (접수중)" : ""}`}
+              />
+            ) : null}
+            <InfoRow label="기관" value={catalogDetail?.institution} />
+            <InfoRow label="장소" value={!isEvent ? catalogDetail?.place : ""} />
+            <InfoRow label="일정" value={[catalogDetail?.day, catalogDetail?.time].filter(Boolean).join(" ")} />
+            {catalogDetail?.cost != null ? (
+              <InfoRow label="수강료" value={Number(catalogDetail.cost) === 0 ? "무료" : `${Number(catalogDetail.cost).toLocaleString()}원`} />
+            ) : null}
+            <InfoRow label="휴관" value={catalogDetail?.closeDay} />
+            <InfoRow label="체험" value={catalogDetail?.kind} />
+            <InfoRow label="시설" value={catalogDetail?.facilities} />
             {isEvent ? <InfoRow label="시간" value={detail?.playTime} /> : <InfoRow label="이용" value={detail?.useTime} />}
             {isEvent ? <InfoRow label="요금" value={detail?.useTimeFestival} /> : <InfoRow label="요금" value={detail?.useFee} />}
             {!isEvent ? <InfoRow label="휴무" value={detail?.restDate} /> : null}

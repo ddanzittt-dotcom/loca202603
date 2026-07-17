@@ -238,6 +238,9 @@ const PLACE_KIND_TO_CATEGORY = {
   exhibit: "culture",
   market: "shop",
   route: "route",
+  lifelong: "culture",
+  library: "culture",
+  farmvillage: "nature",
 }
 
 export function placeToPrefill(place) {

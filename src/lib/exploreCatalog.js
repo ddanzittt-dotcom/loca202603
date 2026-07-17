@@ -5,6 +5,7 @@
 
 import { hasSupabaseEnv, supabase } from "./supabase"
 import { isMarketDayToday } from "./marketDays"
+import { isApplyOpen } from "./learnFilter"
 
 // 단계식 반경 3→10→20km (fallback 확장 = 취지의 코드화 §1, 상한 20km는 D8 기존 기준).
 // bbox 쿼리는 무순서라 넓은 반경에서 limit 에 걸리면 가까운 행이 잘린다(서울 10km bbox > 800행 실측)
@@ -16,19 +17,46 @@ const ROW_LIMIT = 800
 const CACHE_PREFIX = "loca.explore.catalog2." // v2: 반경 로직 변경으로 이전 캐시 무효화
 const CACHE_TTL_MS = 30 * 60 * 1000
 
-// 목록 조회 컬럼 — route 폴리라인(points)은 제외 (등록 시점에 fetchCatalogRoutePoints 로 지연 조회)
+// 목록 조회 컬럼 — route 폴리라인(points)·detail(부가정보)은 제외
+// (points 는 등록 시점, detail 은 상세 시트에서 fetchCatalogDetail 로 지연 조회)
 const LIST_COLUMNS = [
   "id", "source", "tab", "title", "category", "addr", "lat", "lng", "region_text", "phone",
-  "start_date", "end_date", "market_cycle", "market_days",
+  "start_date", "end_date", "apply_start", "apply_end", "market_cycle", "market_days",
   "route_distance_km", "route_duration_min", "route_level",
-  "summary", "source_url", "source_ref",
+  "summary", "image", "source_url", "source_ref",
 ].join(",")
 
 const SOURCE_LABELS = {
   citypark: "공공데이터",
   market: "공공데이터",
   festival: "공공데이터",
+  lifelong: "공공데이터",
+  library: "공공데이터",
+  farmvillage: "공공데이터",
   durunubi: "두루누비",
+}
+
+// 카탈로그 source → 기존 탐색 공간의 kind 키 (스프라이트·채집 카테고리 매핑 재사용)
+const SOURCE_KINDS = {
+  citypark: "park",
+  market: "market",
+  durunubi: "route",
+  lifelong: "lifelong",
+  library: "library",
+  farmvillage: "farmvillage",
+}
+
+// "3.21~5.23" — 강좌 교육기간 카드 표기
+function shortPeriod(startDate, endDate) {
+  const fmt = (value) => {
+    const text = String(value || "").slice(0, 10)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null
+    return `${Number(text.slice(5, 7))}.${Number(text.slice(8, 10))}`
+  }
+  const start = fmt(startDate)
+  const end = fmt(endDate)
+  if (start && end) return start === end ? start : `${start}~${end}`
+  return start || end || ""
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -48,33 +76,51 @@ export function normalizeCatalogItem(row, location) {
     ? Math.round(haversineKm(location.lat, location.lng, lat, lng) * 10) / 10
     : null
   const isRoute = row.source === "durunubi"
-  // kind 는 기존 탐색 공간의 스프라이트/카테고리 매핑 키를 재사용한다
-  // (citypark → "park" 스프라이트·nature 카테고리, durunubi → "route")
-  const kind = row.source === "citypark" ? "park" : row.source === "market" ? "market" : isRoute ? "route" : row.source
   return {
     id: row.id,
     catalogId: row.id,
     source: row.source,
     sourceLabel: SOURCE_LABELS[row.source] || "공공데이터",
     group: isRoute ? "route" : "place",
-    kind,
+    kind: SOURCE_KINDS[row.source] || row.source,
     category: row.category || (isRoute ? "둘레길" : "공간"),
     title: row.title || "",
     addr: row.addr || row.region_text || "",
     lat,
     lng,
     phone: row.phone || "",
-    image: "", // 표준데이터엔 이미지 없음 — 카드 폴백 아이콘 사용 (§8 썸네일 리스크)
+    image: row.image || "", // 농어촌마을 등 소스 제공 사진 — 없으면 카드 폴백 아이콘
     summary: row.summary || "",
     sourceUrl: row.source_url || "",
     distKm,
     // 오일장 — "오늘 장" 상태 배지 (스펙 §5)
     marketCycle: row.market_cycle || "",
     marketToday: isMarketDayToday(row.market_days),
+    // ② 배우기 — 접수중 배지 + 교육기간 표기 (강좌)
+    applyOpen: isApplyOpen(row.apply_start, row.apply_end),
+    applyStart: row.apply_start || "",
+    applyEnd: row.apply_end || "",
+    coursePeriod: row.source === "lifelong" ? shortPeriod(row.start_date, row.end_date) : "",
     // 둘레길 route 메타 — 카드 표기 + 채집 시 route 피처 생성에 사용
     routeDistanceKm: Number.isFinite(Number(row.route_distance_km)) ? Number(row.route_distance_km) : null,
     routeDurationMin: Number.isFinite(Number(row.route_duration_min)) ? Number(row.route_duration_min) : null,
     routeLevel: row.route_level || "",
+  }
+}
+
+// 상세 시트용 단건 조회 — 목록에서 뺀 detail(jsonb 부가정보)까지 가져온다
+export async function fetchCatalogDetail(catalogId) {
+  if (!hasSupabaseEnv || !supabase || !catalogId) return null
+  try {
+    const { data, error } = await supabase
+      .from("explore_catalog")
+      .select("detail")
+      .eq("id", catalogId)
+      .maybeSingle()
+    if (error) return null
+    return data?.detail || null
+  } catch {
+    return null
   }
 }
 

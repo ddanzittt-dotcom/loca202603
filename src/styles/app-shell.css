@@ -5369,10 +5369,11 @@
   white-space: nowrap;
 }
 
-/* 상태 신호등: 마감 임박·오늘 장=빨강 / 진행중=초록 / 곧 시작=노랑 (스펙 v3.3 §5 상태 배지) */
+/* 상태 신호등: 마감 임박·오늘 장=빨강 / 진행중·접수중=초록 / 곧 시작=노랑 (스펙 v3.3 §5 상태 배지) */
 .xc-row__tag--closing { background: #E5493A; color: #FFF6E8; }
 .xc-row__tag--market { background: #E5493A; color: #FFF6E8; }
 .xc-row__tag--ongoing { background: #B7D690; }
+.xc-row__tag--open { background: #B7D690; }
 .xc-row__tag--upcoming { background: #FFD338; }
 .xc-row__tag--place { background: #FFFDF4; }
 .xc-row__tag--wild { background: #B7D690; }

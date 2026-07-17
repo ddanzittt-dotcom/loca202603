@@ -48,7 +48,7 @@ const TABS = [
 // 전체 탭 섹션 순서 = 행동·시급 → 잔잔·상시 (T2). 빈 섹션은 접는다.
 const SECTIONS = [
   { key: "enjoy", label: "즐기기", hint: "마감 임박 순" },
-  { key: "learn", label: "배우기", hint: "" },
+  { key: "learn", label: "배우기", hint: "가까운 순 · 접수중 우선" },
   { key: "walk", label: "걷기·머물기", hint: "가까운 순" },
   { key: "nature", label: "자연", hint: "가까운 순 · 최근 관측" },
 ]
@@ -111,14 +111,17 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
           {isRoute ? <Footprints size={20} strokeWidth={1.6} /> : <Landmark size={20} strokeWidth={1.6} />}
         </span>
       )
-    // 상태 배지 우선(오늘 장), 없으면 카테고리 라벨 (스펙 v3.3 §5)
+    // 상태 배지 우선(오늘 장 > 접수중), 없으면 카테고리 라벨 (스펙 v3.3 §5)
     badge = item.marketToday
       ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
-      : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+      : item.applyOpen
+        ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
+        : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
     meta = (
       <span className="xc-row__meta">
         {routeMeta ? <em>{routeMeta}</em> : null}
-        {!routeMeta && item.marketCycle ? <em>장날 {item.marketCycle}</em> : null}
+        {!routeMeta && item.coursePeriod ? <em>{item.coursePeriod}</em> : null}
+        {!routeMeta && !item.coursePeriod && item.marketCycle ? <em>장날 {item.marketCycle}</em> : null}
         {shortAddress(item.addr) ? <span>{shortAddress(item.addr)}</span> : null}
       </span>
     )
@@ -210,7 +213,9 @@ function MiniCard({ item, type, onOpen }) {
       )
     badge = item.marketToday
       ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
-      : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+      : item.applyOpen
+        ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
+        : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
   } else {
     thumb = item.photo
       ? <img src={item.photo} alt="" loading="lazy" />
@@ -258,8 +263,9 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const [result, setResult] = useState({ key: null, items: [], error: "" })
   const [placesResult, setPlacesResult] = useState({ key: null, items: [], error: "" })
   const [wildResult, setWildResult] = useState({ key: null, items: [], error: "" })
-  // 사전 적재 카탈로그(공원·시장·둘레길) — Supabase 직접 조회, 실패해도 빈 목록 (스펙 v3.3 §3.5)
-  const [walkCatalog, setWalkCatalog] = useState({ key: null, items: [] })
+  // 사전 적재 카탈로그 — Supabase 직접 조회, 실패해도 빈 목록 (스펙 v3.3 §3.5)
+  const [walkCatalog, setWalkCatalog] = useState({ key: null, items: [] }) // ③ 공원·시장·둘레길
+  const [learnCatalog, setLearnCatalog] = useState({ key: null, items: [] }) // ② 강좌·도서관·체험마을
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
@@ -318,6 +324,14 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return () => { cancelled = true }
   }, [effectiveLocation, requestKey])
 
+  useEffect(() => {
+    let cancelled = false
+    fetchCatalogItems("learn", effectiveLocation)
+      .then((items) => { if (!cancelled) setLearnCatalog({ key: requestKey, items }) })
+      .catch(() => { if (!cancelled) setLearnCatalog({ key: requestKey, items: [] }) })
+    return () => { cancelled = true }
+  }, [effectiveLocation, requestKey])
+
   const loading = result.key !== requestKey
   const events = loading ? null : result.items
   const error = loading ? "" : result.error
@@ -361,6 +375,16 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return list.map(eventEntry).sort((a, b) => eventTimeKey(a.item) - eventTimeKey(b.item))
   }, [events])
 
+  // ② 배우기 — 거리순 + 접수중 우선 (스펙 §5). 강좌·도서관·체험마을 전부 카탈로그 소스.
+  const learnEntries = useMemo(() => {
+    const items = learnCatalog.key === requestKey ? learnCatalog.items : []
+    return items.map(placeEntry).sort((a, b) => {
+      const openDiff = (a.item.applyOpen ? 0 : 1) - (b.item.applyOpen ? 0 : 1)
+      if (openDiff !== 0) return openDiff
+      return (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)
+    })
+  }, [learnCatalog, requestKey])
+
   // ③ 걷기·머물기 — 거리순. TourAPI 공간(자연/역사/공원/전시) + 카탈로그(공원·시장·둘레길) 병합,
   // 제목+근접(500m) 중복 제거 — 같은 공원이 두 소스에 잡히면 이미지 있는 쪽만 남는다 (스펙 §5)
   const walkEntries = useMemo(() => {
@@ -379,9 +403,9 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   // 전체 = 레이더용 병합(거리순). 목록 UI는 섹션 캐러셀이 담당.
   const allEntries = useMemo(
-    () => [...enjoyEntries, ...walkEntries, ...natureEntries]
+    () => [...enjoyEntries, ...learnEntries, ...walkEntries, ...natureEntries]
       .sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)),
-    [enjoyEntries, walkEntries, natureEntries],
+    [enjoyEntries, learnEntries, walkEntries, natureEntries],
   )
 
   const allLoading = loading && placesLoading && wildLoading
@@ -393,7 +417,14 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   const tabState = {
     all: { loading: allLoading, error: allError, entries: allEntries, emptyTitle: "주변에 표시할 항목이 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
     enjoy: { loading, error, entries: enjoyEntries, emptyTitle: "지금 즐길 행사를 찾지 못했어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
-    learn: { loading: false, error: "", entries: NO_ENTRIES, emptyTitle: "배우기 카드는 준비 중이에요", emptySub: "동네 강좌·체험 프로그램·도서관이 이 칸에 들어올 예정이에요." },
+    // ②는 전부 카탈로그 소스 — 로딩·빈 상태만 구분 (fail-soft 라 에러 상태 없음)
+    learn: {
+      loading: learnCatalog.key !== requestKey && learnEntries.length === 0,
+      error: "",
+      entries: learnEntries,
+      emptyTitle: "주변에서 배울 거리를 찾지 못했어요",
+      emptySub: "동네 강좌·도서관·체험마을이 이 칸에 모여요. 위치를 바꾸거나 새로고침(↻)을 눌러보세요.",
+    },
     // ③은 카탈로그(Supabase 직접 조회)가 병합되므로 TourAPI 실패·로딩 중이어도
     // 카탈로그 항목이 있으면 목록을 우선한다 (dev의 /api 부재·프로덕션 장애 시에도 공원·시장은 뜸)
     walk: {

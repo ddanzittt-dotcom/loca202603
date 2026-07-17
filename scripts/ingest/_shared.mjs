@@ -160,6 +160,49 @@ export async function fetchDurunubiAll(endpoint, apiKey, { limit = null, extra =
   return limit ? rows.slice(0, limit) : rows
 }
 
+// ── 카카오 주소 지오코딩 (평생학습강좌 — 좌표 필드가 없는 소스용) ──
+// 같은 기관 주소가 수백 번 반복되므로 유니크 주소만 조회한다.
+// 실패 주소는 null → 호출부에서 해당 행 제외 + 로그 (스펙 §8 지오코딩 품질 규칙)
+export function kakaoRestKey(env) {
+  const key = (env.KAKAO_REST_KEY || env.KAKAO_REST_API_KEY || "").trim()
+  if (!key) {
+    console.error("[ingest] KAKAO_REST_KEY 가 없습니다 — 카카오 개발자센터 REST API 키를 .env에 추가하세요 (지오코딩용).")
+    process.exit(1)
+  }
+  return key
+}
+
+export async function geocodeAddresses(addresses, kakaoKey, { delayMs = 40 } = {}) {
+  const unique = [...new Set(addresses.filter(Boolean))]
+  const result = new Map()
+  let done = 0
+  let failed = 0
+  for (const addr of unique) {
+    try {
+      const params = new URLSearchParams({ query: addr, size: "1" })
+      const resp = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?${params.toString()}`, {
+        headers: { Authorization: `KakaoAK ${kakaoKey}` },
+      })
+      const data = resp.ok ? await resp.json() : null
+      const doc = data?.documents?.[0]
+      const lng = Number(doc?.x)
+      const lat = Number(doc?.y)
+      result.set(addr, Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null)
+      if (!result.get(addr)) failed += 1
+    } catch {
+      result.set(addr, null)
+      failed += 1
+    }
+    done += 1
+    if (done % 100 === 0 || done === unique.length) {
+      process.stdout.write(`\r[geocode] ${done}/${unique.length} (실패 ${failed})`)
+    }
+    await new Promise((resolve) => { setTimeout(resolve, delayMs) })
+  }
+  process.stdout.write("\n")
+  return result
+}
+
 // dry-run 출력 — 실제 필드명 확인용 (표준데이터 로마자 필드가 문서와 다를 수 있어 첫 실행 시 검증)
 export function printDrySample(rows, mapped) {
   console.log(`\n[dry-run] 원본 ${rows.length}건 중 샘플 1건의 필드:`)
