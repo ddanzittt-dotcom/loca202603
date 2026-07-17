@@ -123,6 +123,34 @@ describe("dedupeWalkItems (③ TourAPI + 카탈로그 병합 중복 제거)", ()
     const b = { title: "남산공원", lat: 37.5512, lng: 126.9882, image: "" }
     expect(dedupeWalkItems([a, b])).toHaveLength(2)
   })
+
+  it("포함관계 + 200m 이내 → 병합, 짧은 제목(상위 개념) 우선", () => {
+    const palace = { title: "덕수궁", lat: 37.5658, lng: 126.9751, image: "" }
+    const hall = { title: "덕수궁 함녕전", lat: 37.5661, lng: 126.9753, image: "" }
+    const result = dedupeWalkItems([hall, palace])
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe("덕수궁")
+  })
+
+  it("포함관계라도 이미지 있는 쪽이 대표", () => {
+    const palace = { title: "덕수궁", lat: 37.5658, lng: 126.9751, image: "" }
+    const hall = { title: "덕수궁 함녕전", lat: 37.5661, lng: 126.9753, image: "http://img" }
+    const result = dedupeWalkItems([palace, hall])
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe("덕수궁 함녕전")
+  })
+
+  it("포함관계라도 200m 넘게 떨어지면 둘 다 유지 (완전 일치 500m 보다 보수적)", () => {
+    const palace = { title: "덕수궁", lat: 37.5658, lng: 126.9751, image: "" }
+    const far = { title: "덕수궁 돌담길", lat: 37.5695, lng: 126.9751, image: "" } // 약 400m
+    expect(dedupeWalkItems([palace, far])).toHaveLength(2)
+  })
+
+  it("짧은 쪽 제목이 3자 미만이면 포함관계 병합 스킵", () => {
+    const forest = { title: "숲", lat: 37.5443, lng: 127.0374, image: "" }
+    const seoulForest = { title: "서울숲", lat: 37.5444, lng: 127.0375, image: "" }
+    expect(dedupeWalkItems([forest, seoulForest])).toHaveLength(2)
+  })
 })
 
 describe("routeToPrefill / formatRouteMeta (둘레길 채집)", () => {

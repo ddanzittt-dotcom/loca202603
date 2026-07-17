@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isApplyOpen, isLearnFitCourse } from "./learnFilter"
+import { isApplyClosing, isApplyOpen, isLearnFitCourse } from "./learnFilter"
 
 describe("isLearnFitCourse (D3 — 배우기 탭 적합 분류)", () => {
   it("공예·요리·운동·인문 계열은 통과", () => {
@@ -51,5 +51,30 @@ describe("isApplyOpen (접수중 판정)", () => {
   it("한쪽만 있어도 판정 (종료일만 = 그날까지 접수)", () => {
     expect(isApplyOpen("", day(3), now)).toBe(true)
     expect(isApplyOpen(day(-3), "", now)).toBe(true)
+  })
+})
+
+describe("isApplyClosing (마감 임박 판정 — 접수 종료 D-3 이내)", () => {
+  const day = (offset) => {
+    const date = new Date(2026, 6, 17)
+    date.setDate(date.getDate() + offset)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+  }
+  const now = new Date(2026, 6, 17)
+
+  it("접수중 + 종료 D-3 이내 → true (당일 마감 포함)", () => {
+    expect(isApplyClosing(day(-5), day(0), now)).toBe(true)
+    expect(isApplyClosing(day(-5), day(3), now)).toBe(true)
+  })
+
+  it("접수중이지만 종료가 멀면 false", () => {
+    expect(isApplyClosing(day(-5), day(4), now)).toBe(false)
+    expect(isApplyClosing(day(-5), day(30), now)).toBe(false)
+  })
+
+  it("접수 전·접수 종료 후·종료일 없음이면 false", () => {
+    expect(isApplyClosing(day(1), day(2), now)).toBe(false)
+    expect(isApplyClosing(day(-9), day(-1), now)).toBe(false)
+    expect(isApplyClosing(day(-3), "", now)).toBe(false)
   })
 })

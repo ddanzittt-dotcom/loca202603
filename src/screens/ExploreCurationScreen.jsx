@@ -112,12 +112,14 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
           {isRoute ? <Footprints size={20} strokeWidth={1.6} /> : <Landmark size={20} strokeWidth={1.6} />}
         </span>
       )
-    // 상태 배지 우선(오늘 장 > 접수중), 없으면 카테고리 라벨 (스펙 v3.3 §5)
+    // 상태 배지 우선(오늘 장 > 마감 임박 > 접수중), 없으면 카테고리 라벨 (스펙 v3.3 §5)
     badge = item.marketToday
       ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
-      : item.applyOpen
-        ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
-        : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+      : item.applyClosing
+        ? <span className="xc-row__tag xc-row__tag--closing">마감 임박</span>
+        : item.applyOpen
+          ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
+          : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
     meta = (
       <span className="xc-row__meta">
         {routeMeta ? <em>{routeMeta}</em> : null}
@@ -214,9 +216,11 @@ function MiniCard({ item, type, onOpen }) {
       )
     badge = item.marketToday
       ? <span className="xc-row__tag xc-row__tag--market">오늘 장</span>
-      : item.applyOpen
-        ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
-        : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
+      : item.applyClosing
+        ? <span className="xc-row__tag xc-row__tag--closing">마감 임박</span>
+        : item.applyOpen
+          ? <span className="xc-row__tag xc-row__tag--open">접수중</span>
+          : item.category ? <span className="xc-row__tag xc-row__tag--place">{item.category}</span> : null
   } else {
     thumb = item.photo
       ? <img src={item.photo} alt="" loading="lazy" />
@@ -376,11 +380,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return list.map(eventEntry).sort((a, b) => eventTimeKey(a.item) - eventTimeKey(b.item))
   }, [events])
 
-  // ② 배우기 — 거리순 + 접수중 우선 (스펙 §5). 강좌·도서관·체험마을 전부 카탈로그 소스.
+  // ② 배우기 — 거리순 + 접수중 우선, 접수중 안에서는 마감 임박 먼저 (스펙 §5).
   const learnEntries = useMemo(() => {
     const items = learnCatalog.key === requestKey ? learnCatalog.items : []
+    const applyRank = (item) => (item.applyClosing ? 0 : item.applyOpen ? 1 : 2)
     return items.map(placeEntry).sort((a, b) => {
-      const openDiff = (a.item.applyOpen ? 0 : 1) - (b.item.applyOpen ? 0 : 1)
+      const openDiff = applyRank(a.item) - applyRank(b.item)
       if (openDiff !== 0) return openDiff
       return (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)
     })

@@ -31,3 +31,13 @@ export function isApplyOpen(applyStart, applyEnd, now = new Date()) {
   if (end && today > end) return false
   return true
 }
+
+// 마감 임박 판정 — 접수중이면서 접수 종료가 D-3 이내 (①의 신호등 체계와 정합, 스펙 §5)
+export function isApplyClosing(applyStart, applyEnd, now = new Date()) {
+  if (!isApplyOpen(applyStart, applyEnd, now)) return false
+  const end = String(applyEnd || "").slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) return false
+  const endDate = new Date(`${end}T23:59:59`)
+  const daysLeft = Math.floor((endDate - now) / (24 * 60 * 60 * 1000))
+  return daysLeft >= 0 && daysLeft <= 3
+}

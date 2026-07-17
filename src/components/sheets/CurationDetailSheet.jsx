@@ -256,10 +256,15 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {data.applyStart || data.applyEnd ? (
               <InfoRow
                 label="접수"
-                value={`${shortDate(data.applyStart)} ~ ${shortDate(data.applyEnd)}${data.applyOpen ? " (접수중)" : ""}`}
+                value={`${shortDate(data.applyStart)} ~ ${shortDate(data.applyEnd)}${data.applyClosing ? " (마감 임박)" : data.applyOpen ? " (접수중)" : ""}`}
               />
             ) : null}
             <InfoRow label="기관" value={catalogDetail?.institution} />
+            <InfoRow label="대상" value={catalogDetail?.target} />
+            {catalogDetail?.capacity != null ? (
+              <InfoRow label="정원" value={`${Number(catalogDetail.capacity).toLocaleString()}명`} />
+            ) : null}
+            <InfoRow label="접수방법" value={catalogDetail?.receptMethod} />
             <InfoRow label="장소" value={!isEvent ? catalogDetail?.place : ""} />
             <InfoRow label="일정" value={[catalogDetail?.day, catalogDetail?.time].filter(Boolean).join(" ")} />
             {catalogDetail?.cost != null ? (

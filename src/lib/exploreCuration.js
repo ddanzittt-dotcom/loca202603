@@ -299,32 +299,45 @@ export function formatRouteMeta(item) {
   return parts.join(" · ")
 }
 
-// ③ 걷기·머물기 병합 중복 제거 — TourAPI 공간과 카탈로그(공원 등)가 같은 장소를 들고 올 때
-// 제목(공백 제거·소문자) 일치 + 근접(500m)이면 하나로 본다. 이미지가 있는 쪽(주로 TourAPI)을 남긴다.
+// ③ 걷기·머물기 병합 중복 제거 — TourAPI 공간과 카탈로그(공원·문화재 등)가 같은 장소를 들고 올 때.
+// 규칙 2단: (1) 제목(공백 제거·소문자) 완전 일치 + 근접 500m
+//          (2) 포함관계("덕수궁" ⊂ "덕수궁 함녕전") + 근접 200m — 계열 중복은 더 보수적으로,
+//             짧은 쪽 3자 미만이면 스킵("숲" 같은 짧은 제목이 다 잡아먹는 것 방지)
+// 대표: 이미지 있는 쪽 > 동률이면 짧은 제목(상위 개념 — 문화재 상세 보강 후 양쪽 다 이미지일 때)
 export function dedupeWalkItems(items) {
   const normalize = (title) => String(title || "").replace(/\s+/g, "").toLowerCase()
-  const byTitle = new Map()
+  const distKmBetween = (a, b) => {
+    const dLat = Math.abs(Number(a.lat) - Number(b.lat)) * 110.574
+    const dLng = Math.abs(Number(a.lng) - Number(b.lng)) * 88 // 한국 위도권 근사
+    return Math.hypot(dLat, dLng)
+  }
+  const pickRep = (a, b) => {
+    if (Boolean(a.image) !== Boolean(b.image)) return a.image ? a : b
+    return normalize(a.title).length <= normalize(b.title).length ? a : b
+  }
   const result = []
+  const keys = [] // result 와 같은 순서의 정규화 제목
   for (const item of items) {
     const key = normalize(item.title)
     if (!key) continue
-    const candidates = byTitle.get(key) || []
-    const nearDup = candidates.find((prev) => {
-      const dLat = Math.abs(Number(prev.lat) - Number(item.lat)) * 110.574
-      const dLng = Math.abs(Number(prev.lng) - Number(item.lng)) * 88 // 한국 위도권 근사
-      return Math.hypot(dLat, dLng) < 0.5
+    const dupIndex = result.findIndex((prev, i) => {
+      const prevKey = keys[i]
+      if (prevKey === key) return distKmBetween(prev, item) < 0.5
+      const shorter = prevKey.length < key.length ? prevKey : key
+      const longer = prevKey.length < key.length ? key : prevKey
+      if (shorter.length < 3 || !longer.includes(shorter)) return false
+      return distKmBetween(prev, item) < 0.2
     })
-    if (nearDup) {
-      // 이미지 있는 쪽을 대표로 (표준데이터엔 이미지가 없어 보통 TourAPI 가 남는다)
-      if (!nearDup.image && item.image) {
-        result[result.indexOf(nearDup)] = item
-        candidates[candidates.indexOf(nearDup)] = item
+    if (dupIndex >= 0) {
+      const rep = pickRep(result[dupIndex], item)
+      if (rep !== result[dupIndex]) {
+        result[dupIndex] = rep
+        keys[dupIndex] = normalize(rep.title)
       }
       continue
     }
-    candidates.push(item)
-    byTitle.set(key, candidates)
     result.push(item)
+    keys.push(key)
   }
   return result
 }

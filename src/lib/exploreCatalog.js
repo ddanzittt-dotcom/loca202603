@@ -5,7 +5,7 @@
 
 import { hasSupabaseEnv, supabase } from "./supabase"
 import { isMarketDayToday } from "./marketDays"
-import { isApplyOpen } from "./learnFilter"
+import { isApplyClosing, isApplyOpen } from "./learnFilter"
 
 // 단계식 반경 3→10→20km (fallback 확장 = 취지의 코드화 §1, 상한 20km는 D8 기존 기준).
 // bbox 쿼리는 무순서라 넓은 반경에서 limit 에 걸리면 가까운 행이 잘린다(서울 10km bbox > 800행 실측)
@@ -102,6 +102,7 @@ export function normalizeCatalogItem(row, location) {
     marketToday: isMarketDayToday(row.market_days),
     // ② 배우기 — 접수중 배지 + 교육기간 표기 (강좌)
     applyOpen: isApplyOpen(row.apply_start, row.apply_end),
+    applyClosing: isApplyClosing(row.apply_start, row.apply_end), // 접수 종료 D-3 이내 (빨강 승격)
     applyStart: row.apply_start || "",
     applyEnd: row.apply_end || "",
     coursePeriod: row.source === "lifelong" ? shortPeriod(row.start_date, row.end_date) : "",
