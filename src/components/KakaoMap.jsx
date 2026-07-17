@@ -252,7 +252,8 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     }
   }, [draftMode])
 
-  // 조준점 → 마지막 점 고무줄 가이드선 (지도를 움직이면 실시간으로 따라옴)
+  // 마지막 점 → 고무줄 가이드선.
+  // 마우스가 있으면 커서를 따라(주식 차트 선긋기), 터치 기기는 지도 중앙 기준 폴백.
   useEffect(() => {
     const map = mapRef.current
     const kakaoMaps = getKakaoMaps()
@@ -266,13 +267,12 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     const first = draftPoints[0]
     const firstLatLng = new kakaoMaps.LatLng(first[1], first[0])
 
-    // 마지막 점 → 조준점(중심)
     const guide = new kakaoMaps.Polyline({
       path: [lastLatLng, map.getCenter()],
       strokeColor: color, strokeWeight: 3, strokeStyle: "dot", strokeOpacity: 0.95,
     })
     guide.setMap(map)
-    // 영역: 조준점 → 첫 점(닫히는 변) 옅게 미리보기
+    // 영역: 커서/중앙 → 첫 점(닫히는 변) 옅게 미리보기
     let closeGuide = null
     if (draftMode === "area" && draftPoints.length >= 2) {
       closeGuide = new kakaoMaps.Polyline({
@@ -281,14 +281,26 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
       })
       closeGuide.setMap(map)
     }
-    const update = () => {
-      const c = map.getCenter()
-      guide.setPath([lastLatLng, c])
-      if (closeGuide) closeGuide.setPath([c, firstLatLng])
+
+    const updateTo = (target) => {
+      guide.setPath([lastLatLng, target])
+      if (closeGuide) closeGuide.setPath([target, firstLatLng])
     }
-    kakaoMaps.event.addListener(map, "center_changed", update)
+    // 마우스가 한 번이라도 움직이면 커서 추적으로 전환 (터치 기기는 발화 안 함)
+    let usePointer = false
+    const onMouseMove = (mouseEvent) => {
+      if (!mouseEvent?.latLng) return
+      usePointer = true
+      updateTo(mouseEvent.latLng)
+    }
+    const onCenterChanged = () => {
+      if (!usePointer) updateTo(map.getCenter())
+    }
+    kakaoMaps.event.addListener(map, "mousemove", onMouseMove)
+    kakaoMaps.event.addListener(map, "center_changed", onCenterChanged)
     return () => {
-      kakaoMaps.event.removeListener(map, "center_changed", update)
+      kakaoMaps.event.removeListener(map, "mousemove", onMouseMove)
+      kakaoMaps.event.removeListener(map, "center_changed", onCenterChanged)
       guide.setMap(null)
       if (closeGuide) closeGuide.setMap(null)
     }

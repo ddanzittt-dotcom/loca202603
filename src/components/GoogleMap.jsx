@@ -363,7 +363,7 @@ export const GoogleMap = forwardRef(function GoogleMap({
       zIndex: 8000,
     }))
 
-    // 조준점(중심) → 마지막 점 고무줄 가이드선
+    // 마지막 점 → 고무줄 가이드선 (마우스 커서 추적, 터치는 지도 중앙 폴백)
     const last = path[path.length - 1]
     const guide = new window.google.maps.Polyline({
       path: [last, map.getCenter()],
@@ -373,15 +373,22 @@ export const GoogleMap = forwardRef(function GoogleMap({
       strokeWeight: 2,
       strokeDashArray: [2, 6],
     })
-    const listener = map.addListener("center_changed", () => {
-      guide.setPath([last, map.getCenter()])
+    let usePointer = false
+    const moveListener = map.addListener("mousemove", (event) => {
+      if (!event?.latLng) return
+      usePointer = true
+      guide.setPath([last, event.latLng])
+    })
+    const centerListener = map.addListener("center_changed", () => {
+      if (!usePointer) guide.setPath([last, map.getCenter()])
     })
 
     return () => {
       line.setMap(null)
       dots.forEach((dot) => dot.setMap(null))
       guide.setMap(null)
-      if (listener) window.google.maps.event.removeListener(listener)
+      if (moveListener) window.google.maps.event.removeListener(moveListener)
+      if (centerListener) window.google.maps.event.removeListener(centerListener)
     }
   }, [draftPoints, draftMode])
 
