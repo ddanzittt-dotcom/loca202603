@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { Search as SearchIcon, X, ArrowLeft, ChevronDown, ChevronUp, Link2, Navigation, Users } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, ChevronDown, ChevronUp, ChevronRight, Link2, Navigation, Plus, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -172,6 +172,7 @@ export function MapEditorScreen({
   const [activeFilter, setActiveFilter] = useState("all")
   const stripTouchedRef = useRef(false)
   const [stripOpen, setStripOpen] = useState(() => !(communityMode || features.length > LARGE_MAP_STRIP_COLLAPSE_THRESHOLD))
+  const [dockCollapsed, setDockCollapsed] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState(map.title)
@@ -593,16 +594,6 @@ export function MapEditorScreen({
             <div className="me-bar__right">
               {!communityMode ? (
                 <>
-                  {onAddCards && !readOnly ? (
-                    <button
-                      className="me-bar__addcards"
-                      type="button"
-                      onClick={onAddCards}
-                      aria-label="카드 추가"
-                    >
-                      + 카드 추가
-                    </button>
-                  ) : null}
                   <div className="me-bar__cluster">
                     <button
                       className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
@@ -674,49 +665,74 @@ export function MapEditorScreen({
           </div>
         ) : null}
 
-        {/* 도구 도크 — 내 위치 + 입력 도구 (장소/길/영역) */}
-        <div className="me-fabs me-fabs--v2 is-expanded">
+        {/* 도구 도크 — 내 위치 + 입력 도구(장소/길/영역) + 카드 추가. 오른쪽으로 접었다 폈다 */}
+        <div className={`me-fabs me-fabs--v2 is-expanded${dockCollapsed ? " is-collapsed" : ""}`}>
+          <div className="me-fabs__tools">
+            <button
+              className="me-fab me-fab--tool me-fab--locate"
+              type="button"
+              onClick={onLocate}
+              aria-label="내 위치로 이동"
+            >
+              <Navigation size={14} />
+              <span>내 위치</span>
+            </button>
+            {!readOnly ? (
+              <>
+                <span className="me-fabs__divider" aria-hidden="true" />
+                <button
+                  className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
+                  type="button"
+                  onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")}
+                  aria-label="장소 남기기 모드"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
+                  <span>장소</span>
+                </button>
+                <button
+                  className={`me-fab me-fab--route me-fab--tool${editorMode === "route" ? " is-active" : ""}`}
+                  type="button"
+                  onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")}
+                  aria-label="길 그리기 모드"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
+                  <span>길</span>
+                </button>
+                <button
+                  className={`me-fab me-fab--area me-fab--tool${editorMode === "area" ? " is-active" : ""}`}
+                  type="button"
+                  onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")}
+                  aria-label="영역 그리기 모드"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
+                  <span>영역</span>
+                </button>
+                {onAddCards && !communityMode ? (
+                  <>
+                    <span className="me-fabs__divider" aria-hidden="true" />
+                    <button
+                      className="me-fab me-fab--tool me-fab--addcards"
+                      type="button"
+                      onClick={onAddCards}
+                      aria-label="카드 추가"
+                    >
+                      <Plus size={14} strokeWidth={2.6} />
+                      <span>카드</span>
+                    </button>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </div>
           <button
-            className="me-fab me-fab--tool me-fab--locate"
+            className="me-fabs__toggle"
             type="button"
-            onClick={onLocate}
-            aria-label="내 위치로 이동"
+            onClick={() => setDockCollapsed((value) => !value)}
+            aria-label={dockCollapsed ? "도구 펼치기" : "도구 접기"}
+            aria-expanded={!dockCollapsed}
           >
-            <Navigation size={14} />
-            <span>내 위치</span>
+            <ChevronRight size={16} strokeWidth={2.4} aria-hidden="true" />
           </button>
-          {!readOnly ? (
-            <>
-              <span className="me-fabs__divider" aria-hidden="true" />
-              <button
-                className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
-                type="button"
-                onClick={() => onModeChange(editorMode === "pin" ? "browse" : "pin")}
-                aria-label="장소 남기기 모드"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="2.5" fill="#FFF4EB"/></svg>
-                <span>장소</span>
-              </button>
-              <button
-                className={`me-fab me-fab--route me-fab--tool${editorMode === "route" ? " is-active" : ""}`}
-                type="button"
-                onClick={() => onModeChange(editorMode === "route" ? "browse" : "route")}
-                aria-label="길 그리기 모드"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19L10 7L16 14L20 5"/></svg>
-                <span>길</span>
-              </button>
-              <button
-                className={`me-fab me-fab--area me-fab--tool${editorMode === "area" ? " is-active" : ""}`}
-                type="button"
-                onClick={() => onModeChange(editorMode === "area" ? "browse" : "area")}
-                aria-label="영역 그리기 모드"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>
-                <span>영역</span>
-              </button>
-            </>
-          ) : null}
         </div>
 
         {editorGuide ? (

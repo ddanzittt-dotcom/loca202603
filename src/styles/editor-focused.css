@@ -148,6 +148,66 @@ body.loca-editor-open .me-fab--area.is-active {
   box-shadow: 0 0 0 2.5px rgba(142, 90, 44, 0.3), 0 4px 10px rgba(142, 90, 44, 0.4) !important;
 }
 
+/* 카드 추가 — 도크 맨 아래, 유일한 엠버 강조 액션 */
+body.loca-editor-open .me-fab--addcards {
+  background: #FF4D1A !important;
+  color: #fff !important;
+  box-shadow: 0 3px 8px rgba(255, 77, 26, 0.32) !important;
+}
+body.loca-editor-open .me-fab--addcards svg { color: #fff !important; }
+
+/* ── 도크 접기/펴기 ── */
+/* 도구 묶음 — 접힘 시 오른쪽으로 슬라이드 + 세로 수납.
+   overflow 는 펼친 상태에선 visible(활성 도구 글로우 링 안 잘리게), 접힘에서만 hidden */
+body.loca-editor-open .me-fabs__tools {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  max-height: 520px;
+  transition: max-height 0.3s cubic-bezier(0.2, 0.7, 0.3, 1),
+              opacity 0.2s ease,
+              transform 0.3s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+body.loca-editor-open .me-fabs.is-collapsed .me-fabs__tools {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(22px);
+  pointer-events: none;
+}
+/* 접힘 시 컨테이너는 토글 탭만 감싸도록 여백 축소 */
+body.loca-editor-open .me-fabs.is-collapsed {
+  gap: 0 !important;
+  padding: 4px !important;
+}
+
+/* 토글 핸들 — 항상 보이는 그립 (접힘/펼침 공통) */
+body.loca-editor-open .me-fabs__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: #F1EBDD;
+  color: #6B6152;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+body.loca-editor-open .me-fabs__toggle:hover { background: #E9E1CF; }
+body.loca-editor-open .me-fabs__toggle:active { transform: translateY(1px); }
+body.loca-editor-open .me-fabs__toggle svg {
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+/* 펼침 = ▶(오른쪽으로 밀어넣기) / 접힘 = ◀(다시 꺼내기) */
+body.loca-editor-open .me-fabs.is-collapsed .me-fabs__toggle svg {
+  transform: rotate(180deg);
+}
+
 /* ════════════════ 상단 배너 (양 뷰포트 공통 조각) ════════════════ */
 /* 카운터 — 회색 점·텍스트 → 타입색 칩 */
 body.loca-editor-open .me-bar__counters { gap: 5px !important; overflow: visible !important; }
