@@ -135,7 +135,9 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
           </button>
 
           {/* 관측 좌표는 iNaturalist 흐림 처리 가능성이 있어 살짝 넓게(level 6) 보여 준다 */}
+          {/* key: item 교체 시 뷰·지도 마운트 상태 이월 방지 (숨김 상태 재생성 = 0×0 지도) */}
           <SheetHero
+            key={data.id || data.title}
             image={data.photoLarge || data.photo || ""}
             coords={wCoords}
             title={data.title}
@@ -221,6 +223,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
 
         {/* 걷기길은 시작점 좌표라 동네 맥락이 보이게 한 단계 넓힌다(level 6) */}
         <SheetHero
+          key={data.id || data.title}
           image={image}
           coords={mapCoords}
           title={data.title}

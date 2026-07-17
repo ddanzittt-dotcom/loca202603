@@ -11,6 +11,7 @@ export function StaticMapPreview({ lat, lng, title, level = 5 }) {
   useEffect(() => {
     if (typeof window.loadKakaoMap !== "function") return undefined
     let cancelled = false
+    let observer = null
     window.loadKakaoMap((ok) => {
       if (cancelled || !boxRef.current) return
       const kakaoMaps = window.kakao?.maps
@@ -18,20 +19,42 @@ export function StaticMapPreview({ lat, lng, title, level = 5 }) {
         setFailed(true)
         return
       }
-      try {
-        const center = new kakaoMaps.LatLng(lat, lng)
-        boxRef.current.innerHTML = ""
-        new kakaoMaps.StaticMap(boxRef.current, {
-          center,
-          level,
-          marker: { position: center },
+      const create = () => {
+        const box = boxRef.current
+        if (cancelled || !box) return
+        try {
+          const center = new kakaoMaps.LatLng(lat, lng)
+          box.innerHTML = ""
+          new kakaoMaps.StaticMap(box, {
+            center,
+            level,
+            marker: { position: center },
+          })
+        } catch (e) {
+          console.warn("정적 지도 생성 실패:", e)
+          setFailed(true)
+        }
+      }
+      const box = boxRef.current
+      // display:none 등 크기 0 상태에서 생성하면 0×0 이미지(IW=0&IH=0)를 요청한다
+      // — 크기가 잡힐 때까지 생성을 미룬다 (ResizeObserver 미지원 구형 브라우저는 지도 생략)
+      if (box.offsetWidth > 0 && box.offsetHeight > 0) {
+        create()
+      } else if (typeof ResizeObserver !== "undefined") {
+        observer = new ResizeObserver(() => {
+          const el = boxRef.current
+          if (!el || el.offsetWidth < 1 || el.offsetHeight < 1) return
+          observer?.disconnect()
+          observer = null
+          create()
         })
-      } catch (e) {
-        console.warn("정적 지도 생성 실패:", e)
-        setFailed(true)
+        observer.observe(box)
       }
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      observer?.disconnect()
+    }
   }, [lat, lng, level])
 
   if (failed) {
