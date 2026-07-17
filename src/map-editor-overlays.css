@@ -96,7 +96,8 @@
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 200;
+  /* 도구 도크(.me-fabs z-1200)·피처 시트(z-620)보다 위 — 온보딩 딤은 항상 최상위 */
+  z-index: 1400;
   display: flex;
   align-items: center;
   justify-content: center;

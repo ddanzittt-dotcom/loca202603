@@ -310,9 +310,10 @@
   height: 68px;
   box-sizing: border-box;
   padding: 6px max(6px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-right));
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* 탭 수와 무관하게 균등 분배 (구 5칸 그리드는 탭 2개일 때 왼쪽으로 몰렸음) */
+  display: flex;
   align-items: center;
+  gap: 2px;
   background: rgba(250, 248, 242, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -2223,13 +2224,26 @@
 /* ── 모바일 하단탭 ── */
 
 @media (max-width: 959px) {
+  /* 모바일 하단 바 — 도감 카드 필: 불투명 표면 + 사방 균일 2px 잉크 보더 + 오프셋 그림자
+     (구: 둥근 필에 border-top 2px만 얹혀 외곽선이 깨져 보였음) */
   .app-shell--soft-social .loca-v2-bottomnav {
-    background: #F6EFDB;
-    border-top: 2px solid #1F1A12;
+    background: #FFFDF6;
+    border: 2px solid #1F1A12;
+    border-radius: 22px;
+    box-shadow: 4px 4px 0 rgba(31, 26, 18, 0.85);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .loca-v2-bottomnav__tab {
+    flex: 1 1 0;
   }
 
   .app-shell--soft-social .loca-v2-bottomnav__tab {
     font-family: "DungGeunMo", Pretendard, sans-serif;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    gap: 3px;
   }
 
   .app-shell--soft-social .loca-v2-bottomnav__tab strong {
@@ -2237,7 +2251,10 @@
   }
 
   .app-shell--soft-social .loca-v2-bottomnav__tab.is-active {
+    background: #FFF1E4;
+    border-color: #1F1A12;
     color: #E5493A;
+    box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.85);
   }
 }
 
@@ -3195,15 +3212,25 @@
   background: rgba(31, 26, 18, 0.5);
 }
 
+/* 시트 = 세로 플렉스: 헤더·이름·검색 고정, 카드 그리드만 스크롤, 액션은 하단 상시 노출 */
 .mbld-sheet {
   width: min(100%, 460px);
   max-height: 88dvh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: #FFFDF4;
   border: 3px solid #1F1A12;
   border-radius: 14px;
   box-shadow: 8px 8px 0 rgba(31, 26, 18, 0.9);
   padding: 14px 16px 16px;
+}
+
+.mbld-head,
+.mbld-name,
+.mbld-search,
+.mbld-actions {
+  flex: 0 0 auto;
 }
 
 .mbld-head {
@@ -3248,26 +3275,28 @@
   margin-bottom: 14px;
 }
 
-/* 빌더 카드 검색 */
+/* 빌더 카드 검색 — 지도 이름 입력과 같은 높이(46px)·프레임으로 통일 */
 .mbld-search {
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 46px;
   border: 2px solid #1F1A12;
   border-radius: 8px;
   background: #FFFDF4;
-  padding: 8px 12px;
+  padding: 0 12px;
   margin-bottom: 12px;
   color: #8B7F63;
+  box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.12);
 }
 .mbld-search input {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 14px;
+  font-size: 15px;
   flex: 1;
   color: #1F1A12;
-  font-family: Pretendard, sans-serif;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
 }
 .mbld-noresult {
   text-align: center;
@@ -3287,13 +3316,15 @@
 
 .mbld-name input {
   width: 100%;
+  height: 46px;
+  box-sizing: border-box;
   border: 2px solid #1F1A12;
   border-radius: 8px;
   background: #FFFDF4;
   font-family: "DungGeunMo", Pretendard, sans-serif;
   font-size: 15px;
   color: #1F1A12;
-  padding: 11px 12px;
+  padding: 0 12px;
   outline: none;
   box-shadow: 3px 3px 0 rgba(31, 26, 18, 0.12);
 }
@@ -3302,11 +3333,22 @@
   box-shadow: 3px 3px 0 #1F1A12;
 }
 
+/* 카드 그리드만 스크롤 — 체크 배지(-7px 돌출)가 안 잘리게 안쪽 여백 확보 */
 .mbld-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 9px;
-  margin-bottom: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-bottom: 0;
+  padding: 8px 8px 10px 2px;
+}
+.mbld-noresult {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .mbld-card {
@@ -3376,9 +3418,13 @@
   color: #FFF6E8;
 }
 
+/* 액션 — 그리드가 길어져도 항상 보이는 하단 고정 줄 */
 .mbld-actions {
   display: flex;
   gap: 8px;
+  padding-top: 12px;
+  margin-top: 2px;
+  border-top: 2px dashed rgba(31, 26, 18, 0.22);
 }
 
 .mbld-primary {

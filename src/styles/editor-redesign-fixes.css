@@ -5,59 +5,7 @@
  * 스코프: body.loca-editor-open
  * ============================================================ */
 
-/* ── 1) 우측 툴 레일: 4개 버튼 가로폭 동일 + 내위치 맨 위 ── */
-body.loca-editor-open .map-locate-button,
-body.loca-editor-open .me-fab--tool {
-  width: 48px !important;
-  min-width: 48px !important;
-  max-width: 48px !important;
-  padding: 6px 0 !important;
-  gap: 2px !important;
-  border-width: 1px !important;
-  box-shadow: 0 4px 10px rgba(20, 12, 0, 0.12) !important;
-}
-body.loca-editor-open .map-locate-button svg,
-body.loca-editor-open .me-fab--tool svg { width: 14px !important; height: 14px !important; }
-body.loca-editor-open .map-locate-button__label,
-body.loca-editor-open .me-fab--tool span { font-size: 9px !important; }
-
-/* 내 위치 — 맨 위, 화이트 + 잉크 */
-body.loca-editor-open .map-locate-button {
-  top: 138px !important;
-  bottom: auto !important;
-  background: #fff !important;
-  border-color: rgba(20, 12, 0, 0.12) !important;
-  color: #3F3A33 !important;
-}
-body.loca-editor-open .map-locate-button svg { stroke: #3F3A33 !important; color: #3F3A33 !important; }
-
-/* 도구 그룹 하단 고정 (트레이 열려도 중앙으로 안 올라오게) + 가운데 정렬 */
-body.loca-editor-open .me-fabs,
-body.loca-editor-open .map-editor--record-panel-open .me-fabs {
-  bottom: 150px !important;
-  top: auto !important;
-  gap: 7px !important;
-  align-items: center !important;
-}
-/* 비활성 = 화이트 바탕 + 타입색 아이콘/라벨, 활성 = 타입색 보더 + soft 배경 (DESIGN.md §5.6) */
-body.loca-editor-open .me-fab--pin {
-  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #C2380B !important;
-}
-body.loca-editor-open .me-fab--pin.is-active {
-  background: #FFEBE0 !important; border: 1.5px solid #FF4D1A !important; color: #C2380B !important;
-}
-body.loca-editor-open .me-fab--route {
-  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #5B3E85 !important;
-}
-body.loca-editor-open .me-fab--route.is-active {
-  background: #E8DEF5 !important; border: 1.5px solid #9C7BC8 !important; color: #5B3E85 !important;
-}
-body.loca-editor-open .me-fab--area {
-  background: #fff !important; border-color: rgba(20, 12, 0, 0.12) !important; color: #6B4116 !important;
-}
-body.loca-editor-open .me-fab--area.is-active {
-  background: #F0DDC4 !important; border: 1.5px solid #8E5A2C !important; color: #6B4116 !important;
-}
+/* ── 1) 도구 도크/내 위치 — P3(2026-07-17)부터 editor-focused.css 가 전담 ── */
 
 /* ── 2) 편집 배너 세로 스크롤 (도크 높이 초과 시 잘림 방지) ── */
 body.loca-editor-open .fes-sheet--v2 {

@@ -2090,7 +2090,7 @@ export default function App() {
             onAddCards={() => { setBuilderAddMapId(activeMap?.id || null); setMapBuilderOpen(true) }}
             onOpenCollaborators={activeMapSource === "local" && cloudMode && activeMap
               ? () => openCollaboratorsForMap(activeMap.id)
-              : undefined}
+              : () => showToast("로그인 후 협업자를 초대할 수 있어요")}
             onOpenFeatureDetail={(featureId) => {
               setFeatureSheetMode("detail")
               openFeatureDetail(featureId)

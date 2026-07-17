@@ -226,9 +226,9 @@ export function FeaturePopupCard({
 
   if (!feature) return null
 
-  const metric = type === "route" && Number.isFinite(routeLengthKm) && routeLengthKm > 0
-    ? `${routeLengthKm < 1 ? `${Math.round(routeLengthKm * 1000)} m` : `${routeLengthKm.toFixed(1)} km`}`
-    : `${recordGroups.length}개 기록`
+  const routeDistanceLabel = type === "route" && Number.isFinite(routeLengthKm) && routeLengthKm > 0
+    ? (routeLengthKm < 1 ? `${Math.round(routeLengthKm * 1000)} m` : `${routeLengthKm.toFixed(1)} km`)
+    : null
   const latestRecordLabel = recordGroups[0]?.dateValue ? formatRecordDate(recordGroups[0].dateValue) : ""
   const canWriteRecord = mapMode === "personal" && isAuthor && typeof onAddRecord === "function"
   const canManageRecord = mapMode === "personal" && isAuthor && (typeof onEditRecord === "function" || typeof onDeleteRecord === "function")
@@ -262,7 +262,7 @@ export function FeaturePopupCard({
             )}
           </span>
           <div>
-            <span>{copy.label}</span>
+            <span className={`fpc-diary-kind fpc-diary-kind--${type}`}>{copy.label}</span>
             <strong>{feature.title || copy.label}</strong>
           </div>
         </div>
@@ -298,9 +298,16 @@ export function FeaturePopupCard({
       </header>
 
       <div className="fpc-diary-body">
-        <div className="fpc-diary-meta">
-          <span>{metric}</span>
-          {latestRecordLabel ? <span>최근 {latestRecordLabel}</span> : null}
+        <div className="fpc-diary-stats">
+          {routeDistanceLabel ? (
+            <span className="fpc-diary-stat fpc-diary-stat--route">
+              <Route size={11} /> {routeDistanceLabel}
+            </span>
+          ) : null}
+          <span className="fpc-diary-stat">
+            <FileText size={11} /> 기록 {recordGroups.length}
+          </span>
+          {latestRecordLabel ? <span className="fpc-diary-stat fpc-diary-stat--mute">최근 {latestRecordLabel}</span> : null}
         </div>
 
         {feature.note ? <p className="fpc-diary-desc">{feature.note}</p> : null}
@@ -332,8 +339,13 @@ export function FeaturePopupCard({
           </div>
         ) : (
           <div className="fpc-diary-empty">
-            <FileText size={15} />
-            <span>아직 기록이 없어요</span>
+            <span className="fpc-diary-empty__icon" aria-hidden="true">
+              <FileText size={16} />
+            </span>
+            <span className="fpc-diary-empty__copy">
+              <strong>아직 기록이 없어요</strong>
+              <span>이곳의 첫 기억을 남겨보세요</span>
+            </span>
           </div>
         )}
       </div>

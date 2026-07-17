@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Minus, Navigation, Plus, Users } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, ChevronDown, ChevronUp, Link2, Navigation, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -531,6 +531,65 @@ export function MapEditorScreen({
                 ) : null}
               </div>
             </div>
+            <div className="me-bar__center">
+              {showExternalPlaceSearch ? (
+                <div className="map-search-box map-search-box--external">
+                  <div className="map-search-box__bar">
+                    <SearchIcon size={13} color="#aaa" />
+                    <input
+                      type="search"
+                      value={externalSearchQuery}
+                      onChange={(event) => {
+                        const nextQuery = event.target.value
+                        setExternalSearchQuery(nextQuery)
+                        setPendingSearchPin(null)
+                        if (!nextQuery.trim()) {
+                          setSearchResults([])
+                          setSearchOpen(false)
+                          setSearching(false)
+                        }
+                      }}
+                      placeholder="주소 또는 장소를 검색하세요"
+                    />
+                    {externalSearchQuery ? (
+                      <button
+                        className="map-search-box__clear"
+                        type="button"
+                        onClick={() => {
+                          setExternalSearchQuery("")
+                          setSearchResults([])
+                          setSearchOpen(false)
+                          setSearching(false)
+                          setPendingSearchPin(null)
+                        }}
+                        aria-label="검색어 지우기"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
+                  {searchOpen ? (
+                    <div className="map-search-box__results">
+                      {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
+                      {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요. 다른 주소나 장소 이름으로 다시 검색해 주세요.</div> : null}
+                      {searchResults.map((result) => (
+                        <button
+                          key={result.id}
+                          className="map-search-box__item"
+                          type="button"
+                          onClick={() => handleSearchResultSelect(result)}
+                        >
+                          <strong>{result.name || result.address}</strong>
+                          {(result.categoryName || result.address) ? (
+                            <span>{[result.categoryName, result.address].filter(Boolean).join(" · ")}</span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             <div className="me-bar__right">
               {!communityMode ? (
                 <>
@@ -544,23 +603,25 @@ export function MapEditorScreen({
                       + 카드 추가
                     </button>
                   ) : null}
-                  <button
-                    className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
-                    type="button"
-                    onClick={onToggleLabels}
-                    aria-pressed={showLabels}
-                    aria-label="이름 표시 전환"
-                  >
-                    이름 {showLabels ? "ON" : "OFF"}
-                  </button>
-                  <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
-                    <Link2 size={16} color="#2D4A3E" />
-                  </button>
-                  {typeof onOpenCollaborators === "function" ? (
-                    <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
-                      <Users size={16} color="#2D4A3E" />
+                  <div className="me-bar__cluster">
+                    <button
+                      className={`me-bar__label-toggle${showLabels ? " is-active" : ""}`}
+                      type="button"
+                      onClick={onToggleLabels}
+                      aria-pressed={showLabels}
+                      aria-label="이름 표시 전환"
+                    >
+                      이름 {showLabels ? "ON" : "OFF"}
                     </button>
-                  ) : null}
+                    <button className="me-bar__share" type="button" onClick={() => setShareOpen(true)} aria-label="공유하기">
+                      <Link2 size={16} color="#2D4A3E" />
+                    </button>
+                    {typeof onOpenCollaborators === "function" ? (
+                      <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
+                        <Users size={16} color="#2D4A3E" />
+                      </button>
+                    ) : null}
+                  </div>
                 </>
               ) : null}
             </div>
@@ -569,64 +630,6 @@ export function MapEditorScreen({
       </div>
 
       <div className="map-editor__canvas-wrap">
-        {showExternalPlaceSearch ? (
-          <div className="map-search-box map-search-box--external">
-            <div className="map-search-box__bar">
-              <SearchIcon size={13} color="#aaa" />
-              <input
-                type="search"
-                value={externalSearchQuery}
-                onChange={(event) => {
-                  const nextQuery = event.target.value
-                  setExternalSearchQuery(nextQuery)
-                  setPendingSearchPin(null)
-                  if (!nextQuery.trim()) {
-                    setSearchResults([])
-                    setSearchOpen(false)
-                    setSearching(false)
-                  }
-                }}
-                placeholder="주소 또는 장소를 검색하세요"
-              />
-              {externalSearchQuery ? (
-                <button
-                  className="map-search-box__clear"
-                  type="button"
-                  onClick={() => {
-                    setExternalSearchQuery("")
-                    setSearchResults([])
-                    setSearchOpen(false)
-                    setSearching(false)
-                    setPendingSearchPin(null)
-                  }}
-                  aria-label="검색어 지우기"
-                >
-                  ×
-                </button>
-              ) : null}
-            </div>
-            {searchOpen ? (
-              <div className="map-search-box__results">
-                {searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 중...</div> : null}
-                {!searching && searchResults.length === 0 ? <div className="map-search-box__item">검색 결과가 없어요. 다른 주소나 장소 이름으로 다시 검색해 주세요.</div> : null}
-                {searchResults.map((result) => (
-                  <button
-                    key={result.id}
-                    className="map-search-box__item"
-                    type="button"
-                    onClick={() => handleSearchResultSelect(result)}
-                  >
-                    <strong>{result.name || result.address}</strong>
-                    {(result.categoryName || result.address) ? (
-                      <span>{[result.categoryName, result.address].filter(Boolean).join(" · ")}</span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         <MapErrorBoundary>
           <NaverMap
             ref={naverMapRef}
@@ -643,21 +646,6 @@ export function MapEditorScreen({
             myLocation={myLocation}
           />
         </MapErrorBoundary>
-
-        <button className="map-locate-button" type="button" onClick={onLocate} aria-label="내 위치로 이동">
-          <Navigation size={18} />
-          <span className="map-locate-button__label">내 위치</span>
-        </button>
-
-        {/* 줌 컨트롤 — 데스크톱 전용 노출 (editor-focused.css) */}
-        <div className="me-zoom-ctl" role="group" aria-label="지도 확대 축소">
-          <button type="button" onClick={() => naverMapRef.current?.zoomIn?.()} aria-label="확대">
-            <Plus size={15} />
-          </button>
-          <button type="button" onClick={() => naverMapRef.current?.zoomOut?.()} aria-label="축소">
-            <Minus size={15} />
-          </button>
-        </div>
 
         {pendingSearchPin && canMapPinFromSearch && showExternalPlaceSearch ? (
           <div className="search-pin-confirm">
@@ -686,10 +674,20 @@ export function MapEditorScreen({
           </div>
         ) : null}
 
-        {/* 입력 도구 (장소/길/영역) — 상시 노출 */}
+        {/* 도구 도크 — 내 위치 + 입력 도구 (장소/길/영역) */}
         <div className="me-fabs me-fabs--v2 is-expanded">
+          <button
+            className="me-fab me-fab--tool me-fab--locate"
+            type="button"
+            onClick={onLocate}
+            aria-label="내 위치로 이동"
+          >
+            <Navigation size={14} />
+            <span>내 위치</span>
+          </button>
           {!readOnly ? (
             <>
+              <span className="me-fabs__divider" aria-hidden="true" />
               <button
                 className={`me-fab me-fab--pin me-fab--tool${editorMode === "pin" ? " is-active" : ""}`}
                 type="button"
@@ -862,9 +860,10 @@ export function MapEditorScreen({
         {features.length > 0 ? (
           <div className={`map-list-bar${stripOpen ? " is-open" : " is-collapsed"}`} aria-label="지도 안 기록 목록">
             <div className="map-list-bar__head">
-              <button className="map-filter-chip map-filter-toggle map-list-bar__toggle" type="button" onClick={toggleStripOpen}>
-                지도 안 기록 <span className="map-list-bar__count">{nearbyVisibleFeatures.length}/{features.length}</span>
-                <span style={{ fontSize: "0.5em", verticalAlign: "middle", lineHeight: 1 }}>{stripOpen ? "▼" : "▲"}</span>
+              <button className="map-list-bar__toggle" type="button" onClick={toggleStripOpen} aria-expanded={stripOpen}>
+                <span className="map-list-bar__toggle-label">지도 안 기록</span>
+                <span className="map-list-bar__count">{nearbyVisibleFeatures.length}/{features.length}</span>
+                {stripOpen ? <ChevronDown size={13} aria-hidden="true" /> : <ChevronUp size={13} aria-hidden="true" />}
               </button>
               {stripOpen ? (
                 <div className="map-record-filters" aria-label="지도 안 기록 필터">

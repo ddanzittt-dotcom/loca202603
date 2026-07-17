@@ -41,33 +41,39 @@ body.loca-editor-open .res-save:disabled {
   opacity: 0.45 !important;
 }
 
-/* ---------- 마커 배너 (fpc) ---------- */
+/* ---------- 마커 배너 (fpc) — P3: feature-popup-card.css 타입 컬러 시스템 존중 ---------- */
+body.loca-editor-open .fpc-diary-cta { border-radius: 14px !important; }
 body.loca-editor-open .fpc-diary-icon {
-  border: 1px solid rgba(20, 12, 0, 0.08) !important;
-  border-radius: 11px !important;
-  box-shadow: 0 2px 6px rgba(20, 12, 0, 0.08) !important;
+  border: 1.5px solid var(--fpc-type-soft, rgba(20, 12, 0, 0.08)) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 10px rgba(30, 20, 10, 0.1) !important;
+  background: #fff !important;
 }
-body.loca-editor-open .fpc-diary-type { color: #C2380B !important; font-weight: 800 !important; }
-body.loca-editor-open .fpc-diary-icon-btn,
-body.loca-editor-open .fpc-diary-edit-banner {
+body.loca-editor-open .fpc-diary-icon-btn {
   border: 1px solid rgba(20, 12, 0, 0.1) !important;
   box-shadow: none !important;
   background: #fff !important;
   color: #3F3A33 !important;
+  border-radius: 50% !important;
 }
-body.loca-editor-open .fpc-diary-icon-btn { border-radius: 50% !important; }
+body.loca-editor-open .fpc-diary-edit-banner {
+  border: 1px solid var(--accent-soft, #FFD0BC) !important;
+  box-shadow: none !important;
+  background: var(--accent-faint, #FFEBE0) !important;
+  color: var(--accent-deep, #C2380B) !important;
+}
 body.loca-editor-open .fpc-diary-tags span {
-  background: #EFE9D8 !important;
-  border: none !important;
-  border-radius: 6px !important;
+  background: #fff !important;
+  border: 1px solid rgba(27, 22, 16, 0.12) !important;
+  border-radius: 999px !important;
   color: #3F3A33 !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
 }
 body.loca-editor-open .fpc-diary-records .fpc-diary-rec,
 body.loca-editor-open .fpc-diary-record-item {
   background: #FAF8F2 !important;
   border: 1px solid rgba(20, 12, 0, 0.08) !important;
-  border-radius: 10px !important;
+  border-radius: 13px !important;
 }
 body.loca-editor-open .fpc-diary-foot {
   background: #FAF8F2 !important;
