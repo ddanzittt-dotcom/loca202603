@@ -381,10 +381,12 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return list.map(eventEntry).sort((a, b) => eventTimeKey(a.item) - eventTimeKey(b.item))
   }, [events])
 
-  // ② 배우기 — 카탈로그(도서관·강좌·체험마을·박물관) + TourAPI 전시(박물관·미술관·전시관) 병합.
+  // ② 배우기 — 카탈로그(도서관·강좌·박물관) + TourAPI 전시(박물관·미술관·전시관) 병합.
   // 접수중(강좌) 우선 → 마감 임박 먼저 → 거리순, 마지막에 같은 종류 연속 2개 제한(도서관 도배 방지).
   const learnEntries = useMemo(() => {
-    const catalogItems = learnCatalog.key === requestKey ? learnCatalog.items : []
+    // 체험마을(farmvillage)은 "배우는 프로그램"이 아니라 제외
+    const catalogItems = (learnCatalog.key === requestKey ? learnCatalog.items : [])
+      .filter((item) => item.source !== "farmvillage")
     // 전시(exhibit)는 TourAPI 공간에서 배우기로 이동 — 박물관 카탈로그와 제목·근접 중복 제거
     const exhibitPlaces = visiblePlaces.filter((place) => place.kind === "exhibit")
     const applyRank = (item) => (item.applyClosing ? 0 : item.applyOpen ? 1 : 2)
