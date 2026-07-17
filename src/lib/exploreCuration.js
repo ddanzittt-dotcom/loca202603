@@ -236,6 +236,7 @@ const PLACE_KIND_TO_CATEGORY = {
   history: "culture",
   park: "nature",
   exhibit: "culture",
+  museum: "culture",
   market: "shop",
   route: "route",
   lifelong: "culture",

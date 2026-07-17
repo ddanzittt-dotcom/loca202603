@@ -270,6 +270,19 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {catalogDetail?.cost != null ? (
               <InfoRow label="수강료" value={Number(catalogDetail.cost) === 0 ? "무료" : `${Number(catalogDetail.cost).toLocaleString()}원`} />
             ) : null}
+            {/* 박물관·미술관 — 관람시간·관람료(어른/청소년/어린이) */}
+            <InfoRow label="관람" value={catalogDetail?.hours} />
+            {catalogDetail?.adultFee || catalogDetail?.youthFee || catalogDetail?.childFee ? (
+              <InfoRow
+                label="관람료"
+                value={[
+                  catalogDetail.adultFee ? `어른 ${catalogDetail.adultFee}` : "",
+                  catalogDetail.youthFee ? `청소년 ${catalogDetail.youthFee}` : "",
+                  catalogDetail.childFee ? `어린이 ${catalogDetail.childFee}` : "",
+                ].filter(Boolean).join(" · ")}
+              />
+            ) : null}
+            <InfoRow label="교통" value={catalogDetail?.traffic} />
             <InfoRow label="휴관" value={catalogDetail?.closeDay} />
             <InfoRow label="체험" value={catalogDetail?.kind} />
             <InfoRow label="시설" value={catalogDetail?.facilities} />

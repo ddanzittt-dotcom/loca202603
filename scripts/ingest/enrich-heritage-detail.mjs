@@ -11,7 +11,8 @@ import { cliFlags, loadEnv, serviceSupabase } from "./_shared.mjs"
 
 const LIST_URL = "https://www.khs.go.kr/cha/SearchKindOpenapiList.do"
 const DETAIL_URL = "https://www.khs.go.kr/cha/SearchKindOpenapiDt.do"
-const KINDS = ["11", "12", "13", "15", "16", "18"] // ingest-heritage.mjs 와 동일 (국가지정 6종목)
+// ingest-heritage.mjs 와 동일 종목 (국가지정 6 + 시도지정·자료·등록 5)
+const KINDS = ["11", "12", "13", "15", "16", "18", "21", "23", "24", "31", "79"]
 const CONCURRENCY = 4
 const SUMMARY_MAX = 500
 

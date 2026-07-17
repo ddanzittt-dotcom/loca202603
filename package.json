@@ -28,6 +28,7 @@
     "ingest:trails": "node scripts/ingest/ingest-trails.mjs",
     "ingest:heritage": "node scripts/ingest/ingest-heritage.mjs",
     "ingest:heritage-detail": "node scripts/ingest/enrich-heritage-detail.mjs",
+    "ingest:museums": "node scripts/ingest/ingest-museums.mjs",
     "ingest:all": "node scripts/ingest/run-all.mjs",
     "preview:host": "vite preview --host 127.0.0.1 --port 4173",
     "cap:copy": "npm run build && npx cap copy",

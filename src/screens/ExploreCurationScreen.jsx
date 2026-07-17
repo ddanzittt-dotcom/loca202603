@@ -381,23 +381,30 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
     return list.map(eventEntry).sort((a, b) => eventTimeKey(a.item) - eventTimeKey(b.item))
   }, [events])
 
-  // ② 배우기 — 거리순 + 접수중 우선, 접수중 안에서는 마감 임박 먼저 (스펙 §5).
+  // ② 배우기 — 카탈로그(도서관·강좌·체험마을·박물관) + TourAPI 전시(박물관·미술관·전시관) 병합.
+  // 접수중(강좌) 우선 → 마감 임박 먼저 → 거리순, 마지막에 같은 종류 연속 2개 제한(도서관 도배 방지).
   const learnEntries = useMemo(() => {
-    const items = learnCatalog.key === requestKey ? learnCatalog.items : []
+    const catalogItems = learnCatalog.key === requestKey ? learnCatalog.items : []
+    // 전시(exhibit)는 TourAPI 공간에서 배우기로 이동 — 박물관 카탈로그와 제목·근접 중복 제거
+    const exhibitPlaces = visiblePlaces.filter((place) => place.kind === "exhibit")
     const applyRank = (item) => (item.applyClosing ? 0 : item.applyOpen ? 1 : 2)
-    return items.map(placeEntry).sort((a, b) => {
-      const openDiff = applyRank(a.item) - applyRank(b.item)
-      if (openDiff !== 0) return openDiff
-      return (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)
-    })
-  }, [learnCatalog, requestKey])
+    const sorted = dedupeWalkItems([...catalogItems, ...exhibitPlaces])
+      .map(placeEntry)
+      .sort((a, b) => {
+        const openDiff = applyRank(a.item) - applyRank(b.item)
+        if (openDiff !== 0) return openDiff
+        return (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity)
+      })
+    return interleaveByKind(sorted, (entry) => entry.item.kind || entry.item.source || "etc", 2)
+  }, [learnCatalog, visiblePlaces, requestKey])
 
-  // ③ 걷기·머물기 — 거리순. TourAPI 공간(자연/역사/공원/전시) + 카탈로그(공원·시장·둘레길) 병합,
-  // 제목+근접(500m) 중복 제거 — 같은 공원이 두 소스에 잡히면 이미지 있는 쪽만 남는다 (스펙 §5)
+  // ③ 걷기·머물기 — 거리순. TourAPI 공간(자연/역사/공원) + 카탈로그(공원·시장·둘레길·문화재) 병합.
+  // 전시(exhibit)는 배우기로 이동했으므로 제외. 제목+근접(500m) 중복 제거(이미지 있는 쪽 우선).
   // 마지막에 같은 종류 연속 2개 제한 — 도심 근린공원 도배 방지 (거리순 골격 유지)
   const walkEntries = useMemo(() => {
     const catalogItems = walkCatalog.key === requestKey ? walkCatalog.items : []
-    const sorted = dedupeWalkItems([...visiblePlaces, ...catalogItems])
+    const walkPlaces = visiblePlaces.filter((place) => place.kind !== "exhibit")
+    const sorted = dedupeWalkItems([...walkPlaces, ...catalogItems])
       .map(placeEntry)
       .sort((a, b) => (a.item.distKm ?? Infinity) - (b.item.distKm ?? Infinity))
     return interleaveByKind(sorted, (entry) => entry.item.kind || entry.item.source || "etc", 2)

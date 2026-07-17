@@ -28,26 +28,36 @@ export async function resolveRegion(location) {
   }
 }
 
+async function keywordSearch(key, query, bias) {
+  const params = new URLSearchParams({ query, size: "1" })
+  if (bias) {
+    params.set("x", Number(bias.lng).toFixed(6))
+    params.set("y", Number(bias.lat).toFixed(6))
+    params.set("sort", "distance")
+  }
+  const resp = await fetch(`${KAKAO_KEYWORD}?${params.toString()}`, { headers: { Authorization: `KakaoAK ${key}` } })
+  if (!resp.ok) return null
+  const data = await resp.json()
+  const doc = (Array.isArray(data.documents) ? data.documents : [])[0]
+  if (!doc) return null
+  const lat = Number(doc.y)
+  const lng = Number(doc.x)
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+}
+
 // 장소명 → { lat, lng } (bias 있으면 가까운 순 1건). 실패 시 null.
+// 괄호 병기(예: "천안어린이꿈누리터 (구. 천안시 어린이 회관)")는 키워드 검색이 통째로 못 잡으므로,
+// 1차 실패 시 괄호 이후를 잘라 재시도한다 (KOPIS 공연장·개명 시설 커버).
 export async function geocodePlace(query, bias) {
   const key = kakaoKey()
   const q = String(query || "").trim()
   if (!key || !q) return null
   try {
-    const params = new URLSearchParams({ query: q, size: "1" })
-    if (bias) {
-      params.set("x", Number(bias.lng).toFixed(6))
-      params.set("y", Number(bias.lat).toFixed(6))
-      params.set("sort", "distance")
-    }
-    const resp = await fetch(`${KAKAO_KEYWORD}?${params.toString()}`, { headers: { Authorization: `KakaoAK ${key}` } })
-    if (!resp.ok) return null
-    const data = await resp.json()
-    const doc = (Array.isArray(data.documents) ? data.documents : [])[0]
-    if (!doc) return null
-    const lat = Number(doc.y)
-    const lng = Number(doc.x)
-    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+    const first = await keywordSearch(key, q, bias)
+    if (first) return first
+    const stripped = q.replace(/\s*[(（].*$/, "").trim()
+    if (stripped && stripped !== q) return await keywordSearch(key, stripped, bias)
+    return null
   } catch {
     return null
   }

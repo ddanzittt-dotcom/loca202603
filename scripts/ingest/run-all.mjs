@@ -20,6 +20,7 @@ const SCRIPTS = [
   "ingest-lifelong.mjs",
   "ingest-libraries.mjs",
   "ingest-farmvillages.mjs",
+  "ingest-museums.mjs",
   "ingest-trails.mjs",
   "ingest-heritage.mjs",
   "enrich-heritage-detail.mjs",

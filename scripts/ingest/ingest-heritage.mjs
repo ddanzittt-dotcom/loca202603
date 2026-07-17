@@ -10,7 +10,9 @@ import {
 
 const LIST_URL = "https://www.khs.go.kr/cha/SearchKindOpenapiList.do"
 
-// 1차 큐레이션: "가서 볼 수 있는 공간·건물" 유형만 (무형·시도지정·등록문화재는 2차)
+// "가서 볼 수 있는 공간·건물" 종목 — 무형(22)은 장소가 아니라 제외.
+// 이동유물(불상·비석 등 좌표 0)은 mapItem 의 좌표 가드가 자동 제외한다.
+// 국가지정 6종목(11~18) + 시도지정·자료·등록(21·23·24·31·79)으로 지역 밀도 확장 (2026-07 A1).
 const KINDS = [
   { code: "11", label: "국보" },
   { code: "12", label: "보물" },
@@ -18,6 +20,11 @@ const KINDS = [
   { code: "15", label: "명승" },
   { code: "16", label: "천연기념물" },
   { code: "18", label: "국가민속문화유산" },
+  { code: "21", label: "시도유형문화유산" },
+  { code: "23", label: "시도기념물" },
+  { code: "24", label: "시도민속문화유산" },
+  { code: "31", label: "문화유산자료" },
+  { code: "79", label: "국가등록문화유산" },
 ]
 
 function decode(text) {
@@ -110,5 +117,5 @@ if (flags.dryRun) {
   const supabase = serviceSupabase(env)
   await upsertCatalog(supabase, mapped, "heritage")
   printCoverage(mapped)
-  console.log("[done] 문화재 적재 완료 — 국가지정 6종목 (시도지정·등록문화재는 2차)")
+  console.log("[done] 문화재 적재 완료 — 국가지정 6 + 시도지정·자료·등록 5종목 (좌표 없는 이동유물 제외)")
 }
