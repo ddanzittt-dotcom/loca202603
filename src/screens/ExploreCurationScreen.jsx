@@ -55,6 +55,7 @@ const SECTIONS = [
 ]
 
 const CAROUSEL_CAP = 6
+const LEARN_LIBRARY_CAP = 12 // 배우기 도서관 상한 — 동네 인프라라 목록 잠식 방지(박물관·강좌 노출 우선)
 const NO_ENTRIES = []
 
 const eventEntry = (item) => ({ item, type: "event" })
@@ -385,8 +386,14 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
   // 접수중(강좌) 우선 → 마감 임박 먼저 → 거리순, 마지막에 같은 종류 연속 2개 제한(도서관 도배 방지).
   const learnEntries = useMemo(() => {
     // 체험마을(farmvillage)은 "배우는 프로그램"이 아니라 제외
-    const catalogItems = (learnCatalog.key === requestKey ? learnCatalog.items : [])
+    const raw = (learnCatalog.key === requestKey ? learnCatalog.items : [])
       .filter((item) => item.source !== "farmvillage")
+    // 도서관은 "동네 인프라"라 목록을 잠식(성정동 40/60) — 가까운 순 상한을 둬 박물관·강좌를 띄운다
+    const libraries = raw
+      .filter((item) => item.source === "library")
+      .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity))
+      .slice(0, LEARN_LIBRARY_CAP)
+    const catalogItems = [...raw.filter((item) => item.source !== "library"), ...libraries]
     // 전시(exhibit)는 TourAPI 공간에서 배우기로 이동 — 박물관 카탈로그와 제목·근접 중복 제거
     const exhibitPlaces = visiblePlaces.filter((place) => place.kind === "exhibit")
     const applyRank = (item) => (item.applyClosing ? 0 : item.applyOpen ? 1 : 2)
