@@ -129,9 +129,19 @@ export default async function handler(req, res) {
 
     if (query) {
       // 검색은 상호(keyword)와 주소(address)를 병행한다 — 사용자가 "성수 카페" 든 "성정로 75" 든 다 잡히게.
-      // 반경(radius)은 걸지 않는다 — x/y 는 거리 정렬 기준으로만 쓰고 전국에서 찾는다.
-      //   (반경을 20km 로 걸면 서울 기준점에서 천안 '쌍용역'·'왕천파닭' 같은 상호가 잘려 검색이 안 됨)
-      const [keywordDocs, addressDocs] = await Promise.all([
+      // 키워드는 정확도(accuracy)와 거리(distance) 두 축을 동시에 가져와 합친다:
+      //   - accuracy: "쌍용역"·"천안역" 같은 정확한 상호를 전국에서 끌어온다
+      //     (distance 만 쓰면 서울 기준점에서 가까운 15개만 와서 멀리 있는 진짜 '쌍용역'이 아예 안 잡힘)
+      //   - distance: "성수 카페"처럼 지명+업종 검색 시 내 주변 후보를 놓치지 않게 보강
+      // 두 결과를 합친 뒤 아래 dedupe + 관련도 재정렬로 최종 순서를 만든다.
+      const [keywordByAccuracy, keywordByDistance, addressDocs] = await Promise.all([
+        kakaoSearch("keyword.json", {
+          query,
+          x: lng.toFixed(6),
+          y: lat.toFixed(6),
+          sort: "accuracy",
+          size: "15",
+        }, key).catch(() => []),
         kakaoSearch("keyword.json", {
           query,
           x: lng.toFixed(6),
@@ -141,6 +151,7 @@ export default async function handler(req, res) {
         }, key).catch(() => []),
         kakaoSearch("address.json", { query, size: "8" }, key).catch(() => []),
       ])
+      const keywordDocs = [...keywordByAccuracy, ...keywordByDistance]
       const bias = { lat, lng }
       // 관련도 우선(정확·접두·부분 일치), 같은 관련도 안에서 거리순.
       const keywordCandidates = keywordDocs
