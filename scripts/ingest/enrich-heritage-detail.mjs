@@ -3,8 +3,9 @@
 //   (예: 0000010000000). 8자리 등으로 가공하면 HTTP 200 이지만 전 필드 빈 값이 온다.
 // 제공 필드: imageUrl(공식 이미지, 공공누리), content(소개문), ccbaLcad(상세주소 — 목록엔 시군구까지만).
 // 실행:  node scripts/ingest/enrich-heritage-detail.mjs --dry-run / (없이) 보강 적재
-// 주의: ingest-heritage.mjs 적재 후 실행 (id=heritage:{ccbaCpno} 기준 — 카탈로그에 있는 행만 갱신,
-//       upsert 는 제공 컬럼만 merge 되고 교집합 필터로 INSERT 분기는 발생하지 않는다)
+// 주의: ingest-heritage.mjs 적재 후 실행 (id=heritage:{ccbaCpno} 기준 — 카탈로그에 있는 행만 갱신).
+//       부분 컬럼 upsert 는 conflict 판정 전에 INSERT tuple 의 NOT NULL(source 등)이 평가되어
+//       실패한다(실측) — 행별 update 로 값 있는 컬럼만 갱신한다.
 
 import { cliFlags, loadEnv, serviceSupabase } from "./_shared.mjs"
 
@@ -99,21 +100,21 @@ if (flags.dryRun) {
 
 const supabase = serviceSupabase(env)
 
-// 카탈로그에 실재하는 문화재 행만 대상 (upsert 가 INSERT 로 새지 않게) + 기존 값 보존용 현재값 로드
-const existing = new Map()
+// 카탈로그에 실재하는 문화재 행만 대상
+const existingIds = new Set()
 for (let from = 0; ; from += 1000) {
   const { data, error } = await supabase
     .from("explore_catalog")
-    .select("id, image, summary, addr")
+    .select("id")
     .eq("source", "heritage")
     .range(from, from + 999)
   if (error) throw new Error(`카탈로그 조회 실패: ${error.message}`)
-  for (const row of data || []) existing.set(row.id, row)
+  for (const row of data || []) existingIds.add(row.id)
   if (!data || data.length < 1000) break
 }
-console.log(`[catalog] 대상 문화재 행 ${existing.size}건`)
+console.log(`[catalog] 대상 문화재 행 ${existingIds.size}건`)
 
-const targets = refs.filter((ref) => existing.has(ref.id))
+const targets = refs.filter((ref) => existingIds.has(ref.id))
 const updates = []
 let done = 0
 let failed = 0
@@ -133,14 +134,12 @@ async function worker(queue) {
       }
     }
     if (detail) {
-      const prev = existing.get(ref.id)
-      // 새 값이 비어 있으면 기존 값 유지 — 배치 upsert 컬럼을 균일하게 가져가기 위한 병합
-      updates.push({
-        id: ref.id,
-        image: detail.image || prev.image || "",
-        summary: detail.summary || prev.summary || "",
-        addr: detail.addr || prev.addr || "",
-      })
+      // 값 있는 컬럼만 갱신 — 빈 값으로 기존 데이터를 덮지 않는다
+      const cols = {}
+      if (detail.image) cols.image = detail.image
+      if (detail.summary) cols.summary = detail.summary
+      if (detail.addr) cols.addr = detail.addr
+      if (Object.keys(cols).length) updates.push({ id: ref.id, cols })
       if (detail.image) imageFilled += 1
     }
     done += 1
@@ -156,12 +155,25 @@ await Promise.all(Array.from({ length: CONCURRENCY }, () => worker(queue)))
 process.stdout.write("\n")
 
 let written = 0
-for (let i = 0; i < updates.length; i += 500) {
-  const chunk = updates.slice(i, i + 500)
-  const { error } = await supabase.from("explore_catalog").upsert(chunk, { onConflict: "id" })
-  if (error) throw new Error(`보강 upsert 실패 (${i}~): ${error.message}`)
-  written += chunk.length
-  process.stdout.write(`\r[upsert] ${written}/${updates.length}건`)
+let writeFailed = 0
+async function writeWorker(writeQueue) {
+  for (;;) {
+    const row = writeQueue.shift()
+    if (!row) return
+    const { error } = await supabase.from("explore_catalog").update(row.cols).eq("id", row.id)
+    if (error) writeFailed += 1
+    written += 1
+    if (written % 100 === 0 || written === updates.length) {
+      process.stdout.write(`\r[update] ${written}/${updates.length}건 (실패 ${writeFailed})`)
+    }
+  }
 }
+
+const writeQueue = [...updates]
+await Promise.all(Array.from({ length: 8 }, () => writeWorker(writeQueue)))
 process.stdout.write("\n")
-console.log(`[done] 문화재 상세 보강 — 이미지 ${imageFilled}건, 주소 보강 대상 ${updates.length}건, 상세 실패 ${failed}건`)
+if (writeFailed > 0) {
+  console.error(`[warn] 갱신 실패 ${writeFailed}건 — 재실행하면 나머지가 채워진다 (멱등)`)
+  process.exitCode = 1
+}
+console.log(`[done] 문화재 상세 보강 — 이미지 ${imageFilled}건, 갱신 ${written - writeFailed}건, 상세 실패 ${failed}건`)
