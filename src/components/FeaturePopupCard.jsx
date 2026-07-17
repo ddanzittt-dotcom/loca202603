@@ -264,6 +264,17 @@ export function FeaturePopupCard({
           <div>
             <span className={`fpc-diary-kind fpc-diary-kind--${type}`}>{copy.label}</span>
             <strong>{feature.title || copy.label}</strong>
+            <div className="fpc-diary-stats">
+              {routeDistanceLabel ? (
+                <span className="fpc-diary-stat fpc-diary-stat--route">
+                  <Route size={11} /> {routeDistanceLabel}
+                </span>
+              ) : null}
+              <span className="fpc-diary-stat">
+                <FileText size={11} /> 기록 {recordGroups.length}
+              </span>
+              {latestRecordLabel ? <span className="fpc-diary-stat fpc-diary-stat--mute">최근 {latestRecordLabel}</span> : null}
+            </div>
           </div>
         </div>
 
@@ -298,18 +309,6 @@ export function FeaturePopupCard({
       </header>
 
       <div className="fpc-diary-body">
-        <div className="fpc-diary-stats">
-          {routeDistanceLabel ? (
-            <span className="fpc-diary-stat fpc-diary-stat--route">
-              <Route size={11} /> {routeDistanceLabel}
-            </span>
-          ) : null}
-          <span className="fpc-diary-stat">
-            <FileText size={11} /> 기록 {recordGroups.length}
-          </span>
-          {latestRecordLabel ? <span className="fpc-diary-stat fpc-diary-stat--mute">최근 {latestRecordLabel}</span> : null}
-        </div>
-
         {feature.note ? <p className="fpc-diary-desc">{feature.note}</p> : null}
 
         {tags.length > 0 ? (

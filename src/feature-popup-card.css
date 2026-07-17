@@ -875,16 +875,17 @@
 
 .fpc-diary-body {
   overflow: visible;
-  padding: 0 15px 12px;
+  padding: 2px 15px 12px;
 }
+.fpc-diary-body:empty { padding: 0 0 4px; }
 
-/* 스탯 칩 — 거리(길)·기록 수·최근 날짜 */
+/* 스탯 칩 — 거리(길)·기록 수·최근 날짜. 제목 바로 아래(헤더 안) 배치 */
 .fpc-diary-stats {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;
-  margin-bottom: 8px;
+  margin-top: 7px;
 }
 .fpc-diary-stat {
   display: inline-flex;

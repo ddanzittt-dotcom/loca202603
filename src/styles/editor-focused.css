@@ -590,21 +590,90 @@ body.loca-editor-open .editor-mode-guide {
 
 /* ════════════════ 모바일 <960px ════════════════ */
 @media (max-width: 959px) {
-  /* 도구 도크 — 우하단 (기록 트레이 위) */
-  body.loca-editor-open .me-fabs {
-    right: 10px !important;
-    left: auto !important;
-    top: auto !important;
-    bottom: max(128px, calc(env(safe-area-inset-bottom, 0px) + 116px)) !important;
-    transform: none !important;
-  }
-  /* 기록 트레이 펼침 시 트레이 위로 밀어올림 */
+  /* 도구 도크 — 우하단 고정. 기록 트레이를 열고 닫아도 절대 안 움직인다
+     (트레이 펼침 최대 높이 ~135px 를 상시 클리어하는 위치) */
+  body.loca-editor-open .me-fabs,
   body.loca-editor-open .map-editor--record-panel-open .me-fabs {
     right: 10px !important;
     left: auto !important;
     top: auto !important;
-    bottom: clamp(340px, 52%, 520px) !important;
+    bottom: max(158px, calc(env(safe-area-inset-bottom, 0px) + 146px)) !important;
     transform: none !important;
+  }
+
+  /* 도크 컴팩트 — 44px 버튼 */
+  body.loca-editor-open .me-fabs {
+    padding: 4px !important;
+    gap: 4px !important;
+    border-radius: 14px !important;
+  }
+  body.loca-editor-open .me-fab--tool {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    padding: 6px 0 5px !important;
+    gap: 2px !important;
+    border-radius: 10px !important;
+  }
+  body.loca-editor-open .me-fab--tool svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  body.loca-editor-open .me-fab--tool span {
+    font-size: 8.5px !important;
+  }
+  body.loca-editor-open .me-fabs__divider { margin: 0 5px; }
+
+  /* 지도 안 기록 — 컴팩트 트레이 (열림 높이 ~135px 이하 유지) */
+  body.loca-editor-open .map-list-bar {
+    padding: 7px 9px !important;
+    gap: 6px !important;
+    border-radius: 14px !important;
+  }
+  body.loca-editor-open .map-list-bar.is-collapsed {
+    padding: 4px 9px !important;
+  }
+  body.loca-editor-open .map-list-bar__toggle {
+    font-size: 11.5px !important;
+    gap: 5px !important;
+  }
+  body.loca-editor-open .map-list-bar__count {
+    padding: 1.5px 7px !important;
+    font-size: 10px !important;
+  }
+  body.loca-editor-open .map-list-bar__head { gap: 6px !important; }
+  /* 필터 칩 — 줄바꿈 대신 한 줄 가로 스크롤 */
+  body.loca-editor-open .map-list-bar__head .map-record-filters {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 4px !important;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  body.loca-editor-open .map-list-bar__head .map-record-filters::-webkit-scrollbar { display: none; }
+  body.loca-editor-open .map-list-bar .map-filter-chip--record {
+    min-height: 24px !important;
+    padding: 2px 9px !important;
+    font-size: 10.5px !important;
+    flex-shrink: 0;
+  }
+  body.loca-editor-open .map-list-bar .map-place-strip { gap: 6px !important; }
+  body.loca-editor-open .map-list-bar .map-place-card {
+    min-height: 40px;
+    padding: 5px 8px 5px 5px !important;
+    gap: 7px !important;
+  }
+  body.loca-editor-open .me-strip-thumb {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 8px !important;
+  }
+  body.loca-editor-open .me-strip-info strong { font-size: 11.5px !important; }
+  body.loca-editor-open .me-strip-kind { font-size: 9.5px !important; }
+  body.loca-editor-open .me-strip-rec {
+    padding: 1.5px 6px !important;
+    font-size: 9.5px !important;
   }
 
   /* 상단 밴드 2줄 — 검색이 제목/액션 아래 풀폭 행으로 */
@@ -643,30 +712,74 @@ body.loca-editor-open .editor-mode-guide {
     z-index: 640;
   }
 
-  /* 정보 카드(마커) — 하단 시트 */
+  /* 정보 카드(마커) — 하단 시트 폐지 → 상단 컴팩트 플로팅 카드.
+     지도 대신 상단 크롬(제목·검색) 위를 덮어 지도 가림을 최소화한다 */
   body.loca-editor-open .map-feature-summary-wrap {
-    left: 0 !important;
-    right: 0 !important;
-    top: auto !important;
-    bottom: 0 !important;
+    left: 8px !important;
+    right: 8px !important;
+    top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+    bottom: auto !important;
     transform: none !important;
-    width: 100% !important;
+    width: auto !important;
     max-width: none !important;
     margin: 0 !important;
     z-index: 620;
   }
   body.loca-editor-open .map-feature-summary-wrap > .fpc {
-    border-radius: 20px 20px 0 0 !important;
-    border-bottom: none !important;
-    max-height: 56dvh !important;
+    border-radius: 16px !important;
+    max-height: 46dvh !important;
     overflow-y: auto !important;
-    box-shadow: 0 -8px 24px rgba(20, 12, 0, 0.16) !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 16px 36px rgba(20, 12, 0, 0.3) !important;
   }
+  /* 딤 제거 — 지도가 그대로 보이게 (바깥 탭 닫기는 유지) */
   body.loca-editor-open .map-feature-summary-backdrop {
-    background: rgba(20, 12, 5, 0.18) !important;
+    background: transparent !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+  }
+
+  /* 정보 카드 콤팩트 — 태그·빈상태 숨김, 설명 1줄, 여백·CTA 축소 */
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-tags,
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-empty {
+    display: none !important;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-head {
+    padding: 10px 12px 8px;
+    gap: 10px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-type strong {
+    margin-top: 2px;
+    font-size: 15px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-stats { margin-top: 5px; }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-stat {
+    padding: 2.5px 8px;
+    font-size: 10.5px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-body {
+    padding: 0 12px 8px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-desc {
+    margin: 0 0 4px;
+    font-size: 11.5px;
+    -webkit-line-clamp: 1;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-record-item {
+    min-height: 48px;
+    padding: 6px 9px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-foot {
+    padding: 8px 12px 10px;
+  }
+  body.loca-editor-open .map-feature-summary-wrap .fpc-diary-cta {
+    height: 38px;
+    border-radius: 12px;
+    font-size: 12.5px;
   }
 
   /* 좁은 헤더 — 넘치는 칩은 CTA 위로 겹치지 않게 클립 */
