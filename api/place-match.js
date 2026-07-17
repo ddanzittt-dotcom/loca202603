@@ -56,6 +56,19 @@ function normalizeAddressDocument(doc, bias) {
   }
 }
 
+// 상호명 관련도 순위 — 검색어와 얼마나 정확히 겹치는지(공백 무시).
+// 0=정확히 일치, 1=접두 일치, 2=부분 포함, 3=그 외(카카오 관련도에 위임).
+// 거리보다 이걸 우선해서 "천안역" 검색 시 역 자체가 주변 상호보다 위로 온다.
+function relevanceRank(name, query) {
+  const n = (name || "").replace(/\s+/g, "").toLowerCase()
+  const q = (query || "").replace(/\s+/g, "").toLowerCase()
+  if (!q) return 3
+  if (n === q) return 0
+  if (n.startsWith(q)) return 1
+  if (n.includes(q)) return 2
+  return 3
+}
+
 function haversineMeters(lat1, lng1, lat2, lng2) {
   if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return 0
   const toRad = (deg) => (deg * Math.PI) / 180
@@ -126,12 +139,16 @@ export default async function handler(req, res) {
           sort: "distance",
           size: "15",
         }, key).catch(() => []),
-        kakaoSearch("address.json", { query, size: "5" }, key).catch(() => []),
+        kakaoSearch("address.json", { query, size: "8" }, key).catch(() => []),
       ])
       const bias = { lat, lng }
+      // 관련도 우선(정확·접두·부분 일치), 같은 관련도 안에서 거리순.
       const keywordCandidates = keywordDocs
         .map(normalizeDocument)
-        .sort((a, b) => a.distance - b.distance)
+        .sort((a, b) => {
+          const rankDiff = relevanceRank(a.name, query) - relevanceRank(b.name, query)
+          return rankDiff !== 0 ? rankDiff : a.distance - b.distance
+        })
       const addressCandidates = addressDocs
         .map((doc) => normalizeAddressDocument(doc, bias))
         .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lng))
@@ -162,7 +179,7 @@ export default async function handler(req, res) {
         seen.add(dedupeKey)
         return true
       })
-      .slice(0, 8)
+      .slice(0, 15)
 
     res.setHeader("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400")
     res.status(200).json({ candidates })

@@ -299,8 +299,8 @@ export function CollectSheet({
 
             {searchResults.length > 0 ? (
               <ul className="clt-results">
-                {searchResults.slice(0, 5).map((candidate) => (
-                  <li key={`${candidate.name}-${candidate.lat}`}>
+                {searchResults.map((candidate) => (
+                  <li key={`${candidate.name}-${candidate.lat}-${candidate.lng}`}>
                     <button type="button" onClick={() => pickSearchResult(candidate)}>
                       <strong>{candidate.name}</strong>
                       <span>{candidate.categoryName} · {candidate.address}</span>
