@@ -14,7 +14,12 @@ const RADIUS_TIERS_KM = [3, 10, 20]
 const SPARSE_THRESHOLD = 12 // 이 개수 미만이면 다음 반경으로 확장
 const PER_SOURCE_CAP = 40 // 한 소스(공원 등)가 목록을 독점하지 않게
 const ROW_LIMIT = 800
-const CACHE_PREFIX = "loca.explore.catalog2." // v2: 반경 로직 변경으로 이전 캐시 무효화
+const CACHE_PREFIX = "loca.explore.catalog3." // v3: route 반경 예외 추가로 이전 캐시 무효화
+
+// 길(route) 소스는 시작점이 도심에서 10~20km 떨어진 게 정상 — 밀집 지역에서 반경 티어가
+// 좁게 멈추거나(폴백) 거리순 상위 행에 밀려(RPC p_limit) 구조적으로 안 보이는 문제를,
+// 항상 최대 반경으로 별도 조회해 병합하는 것으로 푼다 (천안 성정동 실측: 20km 안 15개 전부 누락).
+const ROUTE_SOURCES = ["trail", "durunubi"]
 const CACHE_TTL_MS = 30 * 60 * 1000
 
 // 목록 조회 컬럼 — route 폴리라인(points)·detail(부가정보)은 제외
@@ -184,8 +189,26 @@ function toSortedItems(rows, lat, lng, radiusKm) {
   return rows
     .map((row) => normalizeCatalogItem(row, { lat, lng }))
     .filter((item) => item.title && Number.isFinite(item.lat) && Number.isFinite(item.lng))
-    .filter((item) => item.distKm == null || item.distKm <= radiusKm)
+    // route 소스는 좁은 폴백 반경에도 잘리지 않게 최대 반경 기준으로 예외
+    .filter((item) => item.distKm == null || item.distKm <= radiusKm
+      || (ROUTE_SOURCES.includes(item.source) && item.distKm <= RADIUS_TIERS_KM[RADIUS_TIERS_KM.length - 1]))
     .sort((a, b) => (a.distKm ?? Infinity) - (b.distKm ?? Infinity))
+}
+
+// 길 소스 전용 최대 반경 조회 — 전국 route 행이 1,500건 규모라 bbox 로도 가볍다
+async function queryRouteRows(lat, lng, radiusKm) {
+  const dLat = radiusKm / 110.574
+  const dLng = radiusKm / (111.32 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)))
+  const { data, error } = await supabase
+    .from("explore_catalog")
+    .select(LIST_COLUMNS)
+    .eq("tab", "walk")
+    .in("source", ROUTE_SOURCES)
+    .gte("lat", lat - dLat).lte("lat", lat + dLat)
+    .gte("lng", lng - dLng).lte("lng", lng + dLng)
+    .limit(200)
+  if (error) return []
+  return data || []
 }
 
 // 1순위: 거리순 RPC(075 explore_catalog_nearby) — 밀집 지역에서도 가까운 순 보장.
@@ -219,10 +242,20 @@ export async function fetchCatalogItems(tab, location) {
 
   try {
     const maxRadius = RADIUS_TIERS_KM[RADIUS_TIERS_KM.length - 1]
+    // walk 탭은 route 소스를 항상 최대 반경으로 함께 병합 (RPC limit·폴백 티어와 무관)
+    const routeRows = tab === "walk" ? await queryRouteRows(lat, lng, maxRadius) : []
+    const mergeRoutes = (rows) => {
+      if (!routeRows.length) return rows
+      const byId = new Map(rows.map((row) => [row.id, row]))
+      for (const row of routeRows) byId.set(row.id, row)
+      return [...byId.values()]
+    }
+
     const rpcRows = await queryNearbyRpc(tab, lat, lng)
     if (rpcRows) {
-      writeCache(key, { rows: rpcRows, radiusKm: maxRadius })
-      return capPerSource(toSortedItems(rpcRows, lat, lng, maxRadius), PER_SOURCE_CAP)
+      const rows = mergeRoutes(rpcRows)
+      writeCache(key, { rows, radiusKm: maxRadius })
+      return capPerSource(toSortedItems(rows, lat, lng, maxRadius), PER_SOURCE_CAP)
     }
 
     const byId = new Map()
@@ -234,6 +267,7 @@ export async function fetchCatalogItems(tab, location) {
       best = { rows: [...byId.values()], radiusKm }
       if (toSortedItems(best.rows, lat, lng, radiusKm).length >= SPARSE_THRESHOLD) break
     }
+    best.rows = mergeRoutes(best.rows)
     writeCache(key, best)
     return capPerSource(toSortedItems(best.rows, lat, lng, best.radiusKm), PER_SOURCE_CAP)
   } catch {
