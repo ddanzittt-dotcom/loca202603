@@ -153,12 +153,16 @@ export default async function handler(req, res) {
       ])
       const keywordDocs = [...keywordByAccuracy, ...keywordByDistance]
       const bias = { lat, lng }
-      // 관련도 우선(정확·접두·부분 일치), 같은 관련도 안에서 거리순.
+      const nameLen = (name) => (name || "").replace(/\s+/g, "").length
+      // 관련도 우선(정확·접두·부분 일치) → 이름 짧은 순(검색어에 가까움) → 거리순.
+      //   "쌍용역" 검색 시 '쌍용역 1호선'(짧음)이 '쌍용역공인중개사사무소'보다 위로.
       const keywordCandidates = keywordDocs
         .map(normalizeDocument)
         .sort((a, b) => {
           const rankDiff = relevanceRank(a.name, query) - relevanceRank(b.name, query)
-          return rankDiff !== 0 ? rankDiff : a.distance - b.distance
+          if (rankDiff !== 0) return rankDiff
+          const lenDiff = nameLen(a.name) - nameLen(b.name)
+          return lenDiff !== 0 ? lenDiff : a.distance - b.distance
         })
       const addressCandidates = addressDocs
         .map((doc) => normalizeAddressDocument(doc, bias))
