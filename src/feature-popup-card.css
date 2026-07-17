@@ -763,11 +763,8 @@
   padding: 14px 15px 9px;
   background: linear-gradient(180deg, var(--fpc-type-band), rgba(255, 255, 255, 0) 90%);
 }
-/* 길(라일락)은 그라데이션 금지(DESIGN.md §0.4) — 단색 플랫 밴드 */
-.fpc--diary.fpc--route .fpc-diary-head {
-  background: var(--fpc-type-band);
-  border-bottom: 1px solid var(--fpc-type-soft);
-}
+/* 길·영역도 장소와 동일한 틴트 그라데이션 밴드 — 헤더/본문 경계가 자연스럽게 이어진다
+   (2026-07-18 사용자 결정: DESIGN.md의 라일락 그라데이션 금지는 지도 위 경로 선 색에 한정) */
 
 .fpc-diary-type {
   display: flex;
