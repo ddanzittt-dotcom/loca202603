@@ -6039,7 +6039,8 @@
   background: #F6EFDB;
 }
 
-.xdt-hero img {
+/* 직계 자식만 — StaticMap 이 주입하는 타일 img 에 번지면 안 된다 */
+.xdt-hero > img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -6049,6 +6050,87 @@
 .xdt-hero .xc-card__dday {
   top: 10px;
   left: 10px;
+}
+
+/* 히어로 사진·지도 전환 — 지도는 카카오 StaticMap, 생성 후 display 전환으로 유지 */
+.xdt-hero > .xdt-hero__off {
+  display: none;
+}
+
+.xdt-hero__map {
+  position: absolute;
+  inset: 0;
+  isolation: isolate; /* StaticMap 내부 z-index 가 배지·토글 위로 새지 않게 격리 */
+}
+
+.xdt-map,
+.xdt-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.xdt-map {
+  position: relative;
+  background: #EFE9D8;
+}
+
+.xdt-map--error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #8B7F63;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+}
+
+.xdt-map__open {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border: 2px solid #1F1A12;
+  border-radius: 7px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11px;
+  color: #1F1A12;
+  text-decoration: none;
+}
+
+.xdt-heroswitch {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+
+.xdt-heroswitch button {
+  height: 22px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.xdt-heroswitch button.is-on {
+  background: #FF6B35;
+  color: #FFF6E8;
 }
 
 .xdt-body {
