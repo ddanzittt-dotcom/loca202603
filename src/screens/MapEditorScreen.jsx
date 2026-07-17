@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { createPortal } from "react-dom"
-import { Search as SearchIcon, X, ArrowLeft, Link2, Navigation, Plus, Users } from "lucide-react"
+import { Search as SearchIcon, X, ArrowLeft, Link2, Minus, Navigation, Plus, Users } from "lucide-react"
 import { CoachMark } from "../components/CoachMark"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
@@ -648,6 +648,16 @@ export function MapEditorScreen({
           <Navigation size={18} />
           <span className="map-locate-button__label">내 위치</span>
         </button>
+
+        {/* 줌 컨트롤 — 데스크톱 전용 노출 (editor-focused.css) */}
+        <div className="me-zoom-ctl" role="group" aria-label="지도 확대 축소">
+          <button type="button" onClick={() => naverMapRef.current?.zoomIn?.()} aria-label="확대">
+            <Plus size={15} />
+          </button>
+          <button type="button" onClick={() => naverMapRef.current?.zoomOut?.()} aria-label="축소">
+            <Minus size={15} />
+          </button>
+        </div>
 
         {pendingSearchPin && canMapPinFromSearch && showExternalPlaceSearch ? (
           <div className="search-pin-confirm">

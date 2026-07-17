@@ -1,0 +1,316 @@
+/* ============================================================
+ * 지도 편집 — Focused Map P2 (2026-07-17)
+ * 풀블리드 지도 + 화이트 아일랜드 크롬. 스코프: body.loca-editor-open
+ *   데스크톱(≥960px): 타이틀 필(좌상) · 검색 420px(상단 중앙) · 액션(우상)
+ *     · 그리기 도구 좌중 수직 도크 · 줌/내위치 우하 · 트레이 → 좌하 목록 패널
+ *     · 정보창(도크) 우상 슬롯 (right 12 / top 64 / w 320)
+ *   모바일(<960px): 그리기 도구 우중 수직 도크 · 내위치 좌하
+ *     · 정보창/기록/편집 배너 = 하단 시트 (핫픽스 중앙 모달 대체)
+ * 도구 버튼은 시안(50/46px)보다 축소 — 40px (사용자 결정 2026-07-17).
+ * 로드 순서: editor-redesign-fixes.css 뒤 (동일 !important 는 후행이 승리)
+ * ============================================================ */
+
+/* ── 공통: 그리기 도구 40px 축소 (내위치 포함 레일 통일) ── */
+body.loca-editor-open .map-locate-button,
+body.loca-editor-open .me-fab--tool {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 4px 0 !important;
+  gap: 1px !important;
+  border-radius: 11px !important;
+}
+body.loca-editor-open .map-locate-button svg,
+body.loca-editor-open .me-fab--tool svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+body.loca-editor-open .map-locate-button__label,
+body.loca-editor-open .me-fab--tool span {
+  font-size: 8.5px !important;
+}
+
+/* 도구 도크 컨테이너 — 화이트 아일랜드 (양 뷰포트 공통 골격) */
+body.loca-editor-open .me-fabs {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: auto !important;
+  height: auto !important;
+  background: #fff !important;
+  border: 1px solid rgba(27, 22, 16, 0.1) !important;
+  border-radius: 13px !important;
+  padding: 4px !important;
+  box-shadow: 0 8px 22px rgba(30, 20, 8, 0.16) !important;
+}
+body.loca-editor-open .me-fabs:empty { display: none !important; }
+body.loca-editor-open .me-fab--tool {
+  position: static !important;
+  right: auto !important;
+  bottom: auto !important;
+  animation: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 줌 컨트롤 (JSX 신규) — 기본 숨김, 데스크톱에서 노출 */
+body.loca-editor-open .me-zoom-ctl { display: none; }
+
+/* ════════════════ 데스크톱 ≥960px — 워크벤치 ════════════════ */
+@media (min-width: 960px) {
+  /* 풀블리드 캔버스 */
+  body.loca-editor-open .map-editor {
+    position: relative !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  body.loca-editor-open .map-editor__canvas-wrap {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* 헤더 밴드 → 플로팅 아일랜드 행 (좌 타이틀 필 · 우 액션) */
+  body.loca-editor-open .me-bar {
+    position: absolute !important;
+    top: 12px !important;
+    left: 12px !important;
+    right: 12px !important;
+    z-index: 80 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    pointer-events: none;
+  }
+  body.loca-editor-open .me-bar__card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  body.loca-editor-open .me-bar__main-row {
+    padding: 0 !important;
+    min-height: 0 !important;
+    align-items: flex-start !important;
+  }
+  body.loca-editor-open .me-bar__left {
+    pointer-events: auto;
+    flex: 0 1 auto !important;
+    max-width: 320px;
+    background: #fff;
+    border: 1px solid rgba(27, 22, 16, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(30, 20, 8, 0.13);
+    padding: 6px 16px 6px 8px;
+  }
+  body.loca-editor-open .me-bar__right {
+    pointer-events: auto;
+    gap: 8px !important;
+  }
+  body.loca-editor-open .me-bar__share,
+  body.loca-editor-open .me-bar__collab {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    border: 1px solid rgba(27, 22, 16, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(30, 20, 8, 0.13) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  body.loca-editor-open .me-bar__label-toggle,
+  body.loca-editor-open .me-bar__addcards {
+    box-shadow: 0 4px 12px rgba(30, 20, 8, 0.13) !important;
+  }
+
+  /* 검색 — 상단 중앙 420px 고정폭 (풀폭 바 폐지) */
+  body.loca-editor-open .map-search-box {
+    top: 12px !important;
+    left: 50% !important;
+    right: auto !important;
+    width: min(420px, calc(100vw - 760px));
+    min-width: 300px;
+    transform: translateX(-50%);
+    z-index: 70 !important;
+  }
+  body.loca-editor-open .search-pin-confirm {
+    top: 64px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    width: min(420px, calc(100vw - 760px));
+    min-width: 300px;
+    transform: translateX(-50%);
+  }
+
+  /* 그리기 도구 — 좌중앙 수직 도크 */
+  body.loca-editor-open .me-fabs,
+  body.loca-editor-open .map-editor--record-panel-open .me-fabs {
+    left: 12px !important;
+    right: auto !important;
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+  }
+
+  /* 보기 컨트롤 — 우하단 (줌 + 내위치) */
+  body.loca-editor-open .me-zoom-ctl {
+    display: flex;
+    position: absolute;
+    right: 12px;
+    bottom: 64px;
+    z-index: 75;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid rgba(27, 22, 16, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(30, 20, 8, 0.13);
+    overflow: hidden;
+  }
+  body.loca-editor-open .me-zoom-ctl button {
+    width: 40px;
+    height: 38px;
+    border: none;
+    background: transparent;
+    color: #3F3A33;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  body.loca-editor-open .me-zoom-ctl button + button {
+    border-top: 1px solid rgba(27, 22, 16, 0.07);
+  }
+  body.loca-editor-open .me-zoom-ctl button:active { background: #FAF8F2; }
+  body.loca-editor-open .map-locate-button {
+    top: auto !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: 12px !important;
+  }
+
+  /* 지도 안 기록 — 좌하 목록 패널 (풀폭 트레이 폐지) */
+  body.loca-editor-open .map-list-bar {
+    left: 12px !important;
+    right: auto !important;
+    bottom: 12px !important;
+    width: 324px;
+    max-height: 56dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  body.loca-editor-open .map-list-bar.is-collapsed {
+    width: auto !important;
+  }
+  body.loca-editor-open .map-list-bar .map-place-strip {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    align-items: stretch;
+    min-height: 0;
+  }
+  body.loca-editor-open .map-list-bar .map-place-card {
+    max-width: none !important;
+    width: 100%;
+  }
+
+  /* 정보창(마커)·기록·편집 배너 — 우상 슬롯 (액션 아래) */
+  body.loca-editor-open .map-feature-summary-wrap,
+  body.loca-editor-open .res-sheet,
+  body.loca-editor-open .fes-sheet--v2 {
+    right: 12px !important;
+    top: 62px !important;
+    width: 320px !important;
+    max-height: calc(100dvh - 86px) !important;
+  }
+  body.loca-editor-open .map-feature-summary-wrap > .fpc,
+  body.loca-editor-open .res-sheet,
+  body.loca-editor-open .fes-sheet--v2 {
+    max-height: calc(100dvh - 86px) !important;
+  }
+
+  /* 그리기 완료/취소 — 하단 중앙 필 */
+  body.loca-editor-open .draft-bar.draft-bar--compact:not(.draft-bar--relocate),
+  body.loca-editor-open .draft-bar.draft-bar--compact.draft-bar--relocate {
+    left: 50% !important;
+    right: auto !important;
+    bottom: 20px !important;
+    width: auto;
+    transform: translateX(-50%);
+  }
+
+  /* 모드 가이드 — 도구 도크 오른쪽 */
+  body.loca-editor-open .editor-mode-guide {
+    left: 64px !important;
+    right: auto !important;
+    top: 50% !important;
+    bottom: auto !important;
+    transform: translateY(-50%);
+    max-width: 260px;
+  }
+}
+
+/* ════════════════ 모바일 <960px ════════════════ */
+@media (max-width: 959px) {
+  /* 그리기 도구 — 우중앙 수직 도크 (엄지 존) */
+  body.loca-editor-open .me-fabs,
+  body.loca-editor-open .map-editor--record-panel-open .me-fabs {
+    right: 10px !important;
+    left: auto !important;
+    top: 45% !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+  }
+
+  /* 내위치 — 좌하 (트레이 위, 도구 반대편) */
+  body.loca-editor-open .map-locate-button {
+    top: auto !important;
+    right: auto !important;
+    left: 10px !important;
+    bottom: max(196px, calc(env(safe-area-inset-bottom, 0px) + 184px)) !important;
+  }
+
+  /* 정보창(마커) — 하단 시트 (핫픽스 중앙 모달 대체) */
+  body.loca-editor-open .map-feature-summary-wrap {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    z-index: 620;
+  }
+  body.loca-editor-open .map-feature-summary-wrap > .fpc {
+    border-radius: 20px 20px 0 0 !important;
+    border-bottom: none !important;
+    max-height: 56dvh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 -8px 24px rgba(20, 12, 0, 0.16) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body.loca-editor-open .map-feature-summary-backdrop {
+    background: rgba(20, 12, 5, 0.18) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* 기록·편집 배너 — 하단 시트 유지 (720~959px 태블릿에서 도크 규칙 해제) */
+  body.loca-editor-open .res-sheet,
+  body.loca-editor-open .fes-sheet--v2 {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 82dvh !important;
+  }
+}

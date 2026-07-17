@@ -102,6 +102,29 @@ const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
 const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
+// 길 라벨 거리 병기용 — [[lng,lat], ...] haversine 합산
+const routePointsLengthKm = (points) => {
+  if (!Array.isArray(points) || points.length < 2) return null
+  const R = 6371
+  const toRad = (deg) => (deg * Math.PI) / 180
+  let km = 0
+  for (let i = 1; i < points.length; i += 1) {
+    const [lng1, lat1] = points[i - 1]
+    const [lng2, lat2] = points[i]
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) continue
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+    km += 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
+  }
+  return km > 0 ? km : null
+}
+
+const formatRouteLengthLabel = (km) => {
+  if (!Number.isFinite(km) || km <= 0) return ""
+  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
+}
+
 // HTML 문자열 → CustomOverlay content 엘리먼트 (+선택 클릭 바인딩)
 const makeOverlayElement = (html, onClick) => {
   const wrap = document.createElement("div")
@@ -143,6 +166,14 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
       // 카카오는 타일을 <img>로 렌더 → html2canvas 로 캡처
       const html2canvas = (await import("html2canvas")).default
       return html2canvas(container, { useCORS: true, allowTaint: true, scale: 2 })
+    },
+    zoomIn() {
+      const map = mapRef.current
+      if (map) map.setLevel(Math.max(1, map.getLevel() - 1), { animate: true })
+    },
+    zoomOut() {
+      const map = mapRef.current
+      if (map) map.setLevel(Math.min(14, map.getLevel() + 1), { animate: true })
     },
   }), [])
 
@@ -593,7 +624,7 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
               const angle = Math.atan2(lat2 - lat1, lng2 - lng1) * (180 / Math.PI) - 90
               pushOverlay({
                 lat: lat2, lng: lng2,
-                html: `<div class="loca-route-arrow" style="transform:rotate(${angle}deg)"><svg width="10" height="10" viewBox="0 0 10 10" fill="${routeColor}" opacity="0.62"><polygon points="5,0 10,10 0,10"/></svg></div>`,
+                html: `<div class="loca-route-arrow" style="transform:rotate(${angle}deg)"><svg width="12" height="12" viewBox="0 0 10 10" fill="${routeColor}" opacity="0.85"><polygon points="5,0 10,10 0,10" stroke="#FFFFFF" stroke-width="1"/></svg></div>`,
                 xAnchor: 0.5, yAnchor: 0.5,
               })
             }
@@ -603,7 +634,10 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
           if (showLabels && routeLabelPoint) {
             pushOverlay({
               lat: routeLabelPoint.lat, lng: routeLabelPoint.lng,
-              html: createFeatureTagContent({ feature, type: "route", color: routeColor, isSelected: isRouteSelected }),
+              html: createFeatureTagContent({
+                feature, type: "route", color: routeColor, isSelected: isRouteSelected,
+                metaText: formatRouteLengthLabel(routePointsLengthKm(routePoints)),
+              }),
               onClick: makeSelectHandler(feature.id),
               xAnchor: 0.5, yAnchor: 1, zIndex: isRouteSelected ? 250 : 55,
             })
@@ -692,7 +726,7 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     }
   }, [draftMode, draftPoints, features, mapReady, mapZoom, markerStyle, myLocation, onFeatureTap, selectedFeatureId, showLabels, showRouteBadge, viewportRenderVersion, zoomLevel])
 
-  // 포커스 이동
+  // 포커스 이동 (offsetX/offsetY: 정보창·시트가 가리지 않는 영역으로 중심 보정 — px)
   useEffect(() => {
     const map = mapRef.current
     const kakaoMaps = getKakaoMaps()
@@ -700,12 +734,15 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     try {
       map.setCenter(new kakaoMaps.LatLng(focusPoint.lat, focusPoint.lng))
       map.setLevel(zoomToLevel(focusPoint.zoom || 15))
+      const offsetX = Number(focusPoint.offsetX) || 0
+      const offsetY = Number(focusPoint.offsetY) || 0
+      if ((offsetX || offsetY) && typeof map.panBy === "function") map.panBy(offsetX, offsetY)
       emitViewportChange()
     } catch (e) {
       console.warn("카카오 지도 포커스 실패:", e)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusPoint?.lat, focusPoint?.lng])
+  }, [focusPoint?.lat, focusPoint?.lng, focusPoint?.offsetX, focusPoint?.offsetY])
 
   // fitBounds — 가장 밀집한 클러스터에 맞춤
   useEffect(() => {

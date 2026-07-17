@@ -357,6 +357,9 @@ export const GoogleMap = forwardRef(function GoogleMap({
     if (!map || !focusPoint) return
     map.panTo({ lat: focusPoint.lat, lng: focusPoint.lng })
     if (focusPoint.zoom) map.setZoom(focusPoint.zoom)
+    const offsetX = Number(focusPoint.offsetX) || 0
+    const offsetY = Number(focusPoint.offsetY) || 0
+    if ((offsetX || offsetY) && typeof map.panBy === "function") map.panBy(offsetX, offsetY)
     emitViewportChange()
   }, [focusPoint])
 
@@ -408,6 +411,14 @@ export const GoogleMap = forwardRef(function GoogleMap({
 
   // capture (?ㅽ겕由곗꺑??
   useImperativeHandle(ref, () => ({
+    zoomIn() {
+      const map = mapRef.current
+      if (map) map.setZoom((map.getZoom() || 14) + 1)
+    },
+    zoomOut() {
+      const map = mapRef.current
+      if (map) map.setZoom(Math.max(2, (map.getZoom() || 14) - 1))
+    },
     capture: () => null, // Google Maps??罹≪쿂 ?쒗븳
   }))
 

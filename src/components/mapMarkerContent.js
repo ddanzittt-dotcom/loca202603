@@ -75,18 +75,22 @@ export const createBadgePlaceMarkerContent = ({ feature, isSelected, shouldShowL
   )
 }
 
-// 길/영역 이름 태그 — 피처색 배지 필
-export const createFeatureTagContent = ({ feature, type, color, isSelected = false }) => {
+// 길/영역 이름 태그 — 피처색 배지 필 (metaText: 길 거리 등 보조 정보 병기)
+export const createFeatureTagContent = ({ feature, type, color, isSelected = false, metaText = "" }) => {
   const fallback = type === "area" ? "영역" : "길"
   const classNames = [
     "loca-feature-tag",
     `loca-feature-tag--${type}`,
     isSelected ? "is-selected" : "",
   ].filter(Boolean).join(" ")
+  const metaHtml = metaText
+    ? `<em class="loca-feature-tag__meta">${escapeMarkerHtml(metaText)}</em>`
+    : ""
   return (
     `<div class="loca-map-label-anchor">`
       + `<div class="${classNames}" style="--tag-c:${escapeMarkerHtml(color)}">`
         + `<span>${escapeMarkerHtml(stripEmojiFromLabel(feature.title, fallback))}</span>`
+        + metaHtml
       + `</div>`
     + `</div>`
   )

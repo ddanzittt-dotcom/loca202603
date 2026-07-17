@@ -1,17 +1,26 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react"
-import { ArrowLeft, Share2 } from "lucide-react"
+import { ArrowLeft, MapPin, Minus, Navigation, Plus, Route, Shapes, Share2, X } from "lucide-react"
 import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
-import { MapRenderer as NaverMap } from "../components/MapRenderer"
+import { MapRenderer } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
 import { logEvent } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
 import { triggerSelectionFeedback } from "../lib/haptics"
 import { saveMap as saveMapRecord } from "../lib/mapService"
-import { FeaturePopupCard } from "../components/FeaturePopupCard"
 import { BrandLogo } from "../components/BrandLogo"
+import "../styles/shared-viewer-v3.css"
 
-// 길 길이 (haversine) — FeaturePopupCard 의 routeLengthKm prop 으로 전달
+// ============================================================
+// 공유 뷰어 v3 — Focused Map (2026-07)
+// 풀블리드 지도 + 플로팅 아일랜드:
+//   데스크톱: 좌 지도 카드(제목·설명·목록) + 우상 저장 CTA·공유 + 우상 요약 정보창
+//   모바일:   상단 타이틀 필 + 하단 스냅 시트(peek 요약 / 목록 / 피처 요약)
+// 정보창은 요약 전용 — 기록(개인 메모·사진)은 공유 지도에 노출되지 않는다.
+// 선택 시 오프셋 패닝으로 정보창·시트가 피처를 가리지 않게 한다.
+// ============================================================
+
+// 길 길이 (haversine) — 요약 정보의 거리 표기용
 function computeRouteLengthKm(points) {
   if (!Array.isArray(points) || points.length < 2) return null
   const R = 6371
@@ -33,54 +42,37 @@ function computeRouteLengthKm(points) {
   return km > 0 ? km : null
 }
 
-// Pin SVG icon for save button
-function PinSvg() {
-  return (
-    <svg width="12" height="14" viewBox="0 0 10 12" fill="none" aria-hidden="true">
-      <path d="M5 0C2.24 0 0 2.24 0 5c0 3.5 5 7 5 7s5-3.5 5-7c0-2.76-2.24-5-5-5zm0 6.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" fill="currentColor"/>
-    </svg>
-  )
+function formatKm(km) {
+  if (!Number.isFinite(km) || km <= 0) return ""
+  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
 }
 
-// Save button component
-function SaveButton({ onClick, loading = false }) {
-  return (
-    <button className="lw-save-btn" type="button" onClick={onClick} disabled={loading}>
-      <PinSvg />
-      <span className="lw-save-btn__text">{loading ? "저장 중..." : "내 라이브러리에 저장"}</span>
-    </button>
-  )
+const TYPE_META = {
+  pin: { label: "장소", Icon: MapPin, cls: "pin" },
+  route: { label: "길", Icon: Route, cls: "route" },
+  area: { label: "영역", Icon: Shapes, cls: "area" },
 }
 
-// 피처 카드 보조 텍스트: 제작자의 한 줄 메모 우선, 없으면 첫 태그
-function getFeatureCardNote(feature) {
-  const note = String(feature.note || "").trim()
-  if (note) return note
-  if (feature.tags?.length) return `#${feature.tags[0]}`
-  return ""
-}
+const getTypeMeta = (feature) => TYPE_META[feature?.type] || TYPE_META.pin
 
-const FEATURE_TYPE_META = {
-  pin: { label: "장소", modifier: "pin" },
-  route: { label: "길", modifier: "route" },
-  area: { label: "영역", modifier: "area" },
-}
-
-function getFeatureTypeMeta(feature) {
-  return FEATURE_TYPE_META[feature.type] || FEATURE_TYPE_META.pin
-}
+const isDesktopViewport = () => (
+  typeof window !== "undefined" && window.matchMedia("(min-width: 960px)").matches
+)
 
 export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToApp = false }) {
   const [selectedId, setSelectedId] = useState(null)
   const [fitTrigger] = useState(1)
   const [focusPoint, setFocusPoint] = useState(null)
-  const [sheetExpanded, setSheetExpanded] = useState(false)
+  const [listExpanded, setListExpanded] = useState(false)
+  const [myLocation, setMyLocation] = useState(null)
+  const mapApiRef = useRef(null)
   // 진입 연출: 첫 2초 동안만 핀 드롭/라벨 페이드인 (이후 재렌더에는 미적용)
   const [introPlaying, setIntroPlaying] = useState(true)
   useEffect(() => {
     const timer = window.setTimeout(() => setIntroPlaying(false), 2000)
     return () => window.clearTimeout(timer)
   }, [])
+
   const featureCounts = useMemo(() => {
     const counts = { pin: 0, route: 0, area: 0 }
     features.forEach((f) => {
@@ -88,6 +80,15 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     })
     return counts
   }, [features])
+
+  const routeKmById = useMemo(() => {
+    const table = {}
+    features.forEach((f) => {
+      if (f.type === "route") table[f.id] = computeRouteLengthKm(f.points)
+    })
+    return table
+  }, [features])
+
   const featureViewStart = useRef(null)
   const prevSelectedId = useRef(null)
   const [toastMsg, setToastMsg] = useState("")
@@ -184,7 +185,7 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     }
 
     setSelectedId(featureId)
-    setSheetExpanded(false)
+    setListExpanded(false)
     prevSelectedId.current = featureId
     featureViewStart.current = featureId ? Date.now() : null
 
@@ -194,10 +195,45 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     }
   }, [map.id])
 
-  const handleSpotTap = (feature) => {
+  // 선택 + 오프셋 패닝 — 정보창(데스크톱 우측 카드/모바일 하단 시트)이
+  // 가리지 않는 영역의 중심으로 피처를 이동시킨다.
+  const selectAndFocus = useCallback((feature) => {
+    if (!feature) return
     handleFeatureSelect(feature.id)
-    setFocusPoint(getFeatureCenter(feature))
-  }
+    const center = getFeatureCenter(feature)
+    if (!center) return
+    const desktop = isDesktopViewport()
+    setFocusPoint({
+      ...center,
+      offsetX: desktop ? 48 : 0,
+      offsetY: desktop ? 0 : Math.round(window.innerHeight * 0.19),
+    })
+  }, [handleFeatureSelect])
+
+  const handleMapFeatureTap = useCallback((featureId) => {
+    const feature = features.find((f) => f.id === featureId)
+    if (feature) selectAndFocus(feature)
+  }, [features, selectAndFocus])
+
+  const clearSelection = useCallback(() => {
+    handleFeatureSelect(null)
+  }, [handleFeatureSelect])
+
+  const handleLocate = useCallback(() => {
+    if (!navigator.geolocation) {
+      showViewerToast("이 브라우저에서는 위치 기능을 사용할 수 없어요.")
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude, zoom: 15 }
+        setMyLocation({ lat: point.lat, lng: point.lng })
+        setFocusPoint(point)
+      },
+      () => showViewerToast("현재 위치를 가져오지 못했어요."),
+      { enableHighAccuracy: true, timeout: 8000 },
+    )
+  }, [showViewerToast])
 
   const handleSave = useCallback(async () => {
     if (savingToApp || !onSaveToApp) return
@@ -212,174 +248,248 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     onSaveToApp()
   }, [map.id, onSaveToApp, savingToApp])
 
-  const orgName = map.title
-  // unified shared viewer shell
-  return (
-    <div className="lw-viewer lw-viewer--v2">
-      {/* Hero card header */}
-      <div className="lw-hero">
-        <div className="lw-hero__blob" />
-        <div className="lw-hero__row1">
-          {onBack ? (
-            <button type="button" onClick={onBack} className="lw-back-btn" aria-label="뒤로">
-              <ArrowLeft size={20} />
-            </button>
-          ) : null}
-          <div className="lw-ci-logo">
-            {orgName.slice(0, 2)}
-          </div>
-          <span className="lw-ci-kicker">공유된 지도</span>
-          <div className="lw-ci-actions">
-            <button
-              className="lw-noti-btn"
-              type="button"
-              aria-label="공유"
-              onClick={() => setShareOpen((v) => !v)}
-            >
-              <Share2 size={14} />
-            </button>
-          </div>
+  const saveLabel = savingToApp ? "저장 중..." : "내 라이브러리에 저장"
+  const selectedMeta = selectedFeature ? getTypeMeta(selectedFeature) : null
+  const selectedKm = selectedFeature?.type === "route" ? routeKmById[selectedFeature.id] : null
+  const selectedTags = Array.isArray(selectedFeature?.tags) ? selectedFeature.tags : []
+  const selectedNote = String(selectedFeature?.note || "").trim()
 
-          {/* 공유 드롭다운 */}
-          {shareOpen && (
+  // 목록 행 (좌 카드 · 모바일 확장 목록 공용)
+  const renderFeatureRow = (feature) => {
+    const meta = getTypeMeta(feature)
+    const km = feature.type === "route" ? formatKm(routeKmById[feature.id]) : ""
+    const sub = km ? `${meta.label} · ${km}` : meta.label
+    return (
+      <button
+        key={feature.id}
+        type="button"
+        className={`sv-frow${feature.id === selectedId ? " is-active" : ""}`}
+        onClick={() => selectAndFocus(feature)}
+      >
+        <span className={`sv-frow__icon sv-tile--${meta.cls}`} aria-hidden="true">
+          <FeatureEmoji emoji={resolvePlaceMarkerEmoji(feature)} size={16} />
+        </span>
+        <span className="sv-frow__body">
+          <span className="sv-frow__name">{feature.title || meta.label}</span>
+          <span className="sv-frow__sub">{sub}</span>
+        </span>
+      </button>
+    )
+  }
+
+  // 요약 정보 본문 (데스크톱 정보창 · 모바일 시트 공용) — 기록 미노출, 상단 요약만
+  const renderSummaryBody = () => (
+    <>
+      {(selectedKm || selectedTags.length > 0) ? (
+        <div className="sv-info__chips">
+          {selectedKm ? <span className="sv-chip sv-chip--meta">{formatKm(selectedKm)}</span> : null}
+          {selectedTags.slice(0, 4).map((tag) => (
+            <span key={tag} className="sv-chip sv-chip--tag">#{tag}</span>
+          ))}
+        </div>
+      ) : null}
+      {selectedNote ? <p className="sv-info__note">{selectedNote}</p> : null}
+    </>
+  )
+
+  return (
+    <div className="sv-viewer">
+      {/* 풀블리드 지도 */}
+      <div className={`sv-map${introPlaying ? " sv-map-intro" : ""}`}>
+        <MapErrorBoundary>
+          <MapRenderer
+            ref={mapApiRef}
+            features={features}
+            selectedFeatureId={selectedId}
+            draftPoints={[]}
+            draftMode="browse"
+            focusPoint={focusPoint}
+            fitTrigger={fitTrigger}
+            onFeatureTap={handleMapFeatureTap}
+            showLabels
+            myLocation={myLocation}
+          />
+        </MapErrorBoundary>
+      </div>
+
+      {/* 상단 아일랜드 — 뒤로 · 브랜드/타이틀 필 · (데스크톱) 저장 CTA · 공유 */}
+      <div className="sv-top">
+        {onBack ? (
+          <button type="button" className="sv-round" onClick={onBack} aria-label="뒤로">
+            <ArrowLeft size={16} />
+          </button>
+        ) : null}
+
+        {/* 데스크톱: LOCA 브랜드 필 */}
+        <div className="sv-brand" aria-label="LOCA 공유된 지도">
+          <BrandLogo as="span" className="sv-brand__logo" dotClassName="sv-brand__logo-dot" />
+          <span className="sv-brand__kicker">공유된 지도</span>
+        </div>
+
+        {/* 모바일: 타이틀 필 */}
+        <div className="sv-title-pill">
+          <b>{map.title}</b>
+          <span>공유된 지도</span>
+        </div>
+
+        <div className="sv-top__spacer" />
+
+        {onSaveToApp ? (
+          <button type="button" className="sv-cta sv-cta--top" onClick={handleSave} disabled={savingToApp}>
+            📍 {saveLabel}
+          </button>
+        ) : null}
+
+        <div className="sv-share-anchor">
+          <button
+            type="button"
+            className="sv-round"
+            aria-label="공유"
+            onClick={() => setShareOpen((v) => !v)}
+          >
+            <Share2 size={15} />
+          </button>
+          {shareOpen ? (
             <>
-              <div className="lw-share-overlay" onClick={() => setShareOpen(false)} />
-              <div className="lw-share-dropdown">
-                <button type="button" className="lw-share-item" onClick={handleCopyLink}>
-                  <span className="lw-share-icon">🔗</span>
-                  <span>링크 복사</span>
+              <button type="button" className="sv-share-overlay" aria-label="공유 닫기" onClick={() => setShareOpen(false)} />
+              <div className="sv-share-drop">
+                <button type="button" className="sv-share-item" onClick={handleCopyLink}>
+                  <span aria-hidden="true">🔗</span> 링크 복사
                 </button>
-                <button type="button" className="lw-share-item lw-share-item--kakao" onClick={handleKakaoShare}>
-                  <span className="lw-share-icon">💬</span>
-                  <span>카카오톡</span>
+                <button type="button" className="sv-share-item" onClick={handleKakaoShare}>
+                  <span aria-hidden="true">💬</span> 카카오톡
                 </button>
               </div>
             </>
-          )}
-        </div>
-
-        {/* Hero head — 지도가 자기소개를 하는 영역 */}
-        <div className="lw-hero__head">
-          <h1 className="lw-hero__big-title">{map.title}</h1>
-          {map.description ? <p className="lw-hero__big-desc">{map.description}</p> : null}
-          <div className="lw-hero__counts">
-            {featureCounts.pin > 0 ? (
-              <span className="lw-count-chip lw-count-chip--pin"><i />장소 {featureCounts.pin}</span>
-            ) : null}
-            {featureCounts.route > 0 ? (
-              <span className="lw-count-chip lw-count-chip--route"><i />길 {featureCounts.route}</span>
-            ) : null}
-            {featureCounts.area > 0 ? (
-              <span className="lw-count-chip lw-count-chip--area"><i />영역 {featureCounts.area}</span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Inner content area */}
-        <div className="lw-ci-inner">
-          {/* Map area */}
-          <div className={`lw-event-map${introPlaying ? " lw-map-intro" : ""}`}>
-            <MapErrorBoundary>
-              <NaverMap
-                features={features}
-                selectedFeatureId={selectedId}
-                draftPoints={[]}
-                draftMode="browse"
-                focusPoint={focusPoint}
-                fitTrigger={fitTrigger}
-                onFeatureTap={handleFeatureSelect}
-                showLabels
-              />
-            </MapErrorBoundary>
-
-            {/* Pin tap card — FeaturePopupCard (subscriber view) */}
-            {selectedFeature ? (
-              <div className="lw-spot-detail-wrap">
-                <FeaturePopupCard
-                  feature={selectedFeature}
-                  mapMode="personal"
-                  isAuthor={false}
-                  currentUserId={null}
-                  routeLengthKm={
-                    selectedFeature.type === "route"
-                      ? computeRouteLengthKm(selectedFeature.points)
-                      : null
-                  }
-                  onClose={() => setSelectedId(null)}
-                />
-              </div>
-            ) : null}
-
-            {/* Bottom sheet */}
-            {!selectedFeature ? (
-              <div className={`lw-sheet${sheetExpanded ? " is-expanded" : ""}`}>
-                <div className="lw-sheet__handle" onClick={() => setSheetExpanded((v) => !v)} />
-                {!sheetExpanded ? (
-                  <div className="lw-sheet__scroll">
-                    {features.map((f) => {
-                      const meta = getFeatureTypeMeta(f)
-                      const note = getFeatureCardNote(f)
-                      return (
-                        <button key={f.id} className="lw-sheet__card" type="button" onClick={() => handleSpotTap(f)}>
-                          <span className={`lw-sheet__card-emoji lw-sheet__card-emoji--${meta.modifier}`} aria-hidden="true">
-                            <FeatureEmoji emoji={resolvePlaceMarkerEmoji(f)} size={18} />
-                          </span>
-                          <span className="lw-sheet__card-main">
-                            <span className="lw-sheet__card-name">{f.title}</span>
-                            <span className="lw-sheet__card-sub">{note || meta.label}</span>
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <>
-                    <div className="lw-sheet__header">기록 목록 ({features.length}곳)</div>
-                    <div className="lw-sheet__list">
-                      {features.map((f) => {
-                        const meta = getFeatureTypeMeta(f)
-                        const note = getFeatureCardNote(f)
-                        return (
-                          <button
-                            key={f.id}
-                            className="lw-sheet__row"
-                            type="button"
-                            onClick={() => handleSpotTap(f)}
-                          >
-                            <span className={`lw-sheet__row-icon lw-sheet__card-emoji--${meta.modifier}`} aria-hidden="true">
-                              <FeatureEmoji emoji={resolvePlaceMarkerEmoji(f)} size={20} />
-                            </span>
-                            <span className="lw-sheet__row-info">
-                              <span className="lw-sheet__row-name">{f.title}</span>
-                              <span className="lw-sheet__row-sub">{note || meta.label}</span>
-                            </span>
-                            <span className={`lw-sheet__row-badge lw-sheet__row-badge--${meta.modifier}`}>{meta.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Save CTA — 뷰어의 유일한 강조 버튼 */}
-        {onSaveToApp ? (
-          <div className="lw-cta-row">
-            <SaveButton onClick={handleSave} loading={savingToApp} />
-          </div>
-        ) : null}
-
-        {/* Bottom frame */}
-        <div className="lw-ci-bottom">
-          <span className="lw-ci-powered">Powered by</span>
-          <BrandLogo as="span" className="lw-ci-powered-logo" dotClassName="lw-ci-powered-logo__dot" />
+          ) : null}
         </div>
       </div>
 
-      {toastMsg ? <div className="lw-toast">{toastMsg}</div> : null}
+      {/* 데스크톱 — 좌측 지도 카드: 제목·설명·카운터 + 목록 */}
+      <aside className="sv-card" aria-label="지도 정보">
+        <div className="sv-card__head">
+          <span className="sv-badge">공유된 지도</span>
+          <h1 className="sv-card__title">{map.title}</h1>
+          {map.description ? <p className="sv-card__desc">{map.description}</p> : null}
+          <div className="sv-counts">
+            {featureCounts.pin > 0 ? <span className="sv-chip sv-chip--pin"><i />장소 {featureCounts.pin}</span> : null}
+            {featureCounts.route > 0 ? <span className="sv-chip sv-chip--route"><i />길 {featureCounts.route}</span> : null}
+            {featureCounts.area > 0 ? <span className="sv-chip sv-chip--area"><i />영역 {featureCounts.area}</span> : null}
+          </div>
+        </div>
+        <div className="sv-card__list">
+          {features.length > 0 ? (
+            <>
+              <span className="sv-list-label">이 지도의 기록</span>
+              {features.map(renderFeatureRow)}
+            </>
+          ) : (
+            <p className="sv-empty">아직 담긴 기록이 없어요.</p>
+          )}
+        </div>
+      </aside>
+
+      {/* 데스크톱 — 우측 요약 정보창 (기록 미노출) */}
+      {selectedFeature && selectedMeta ? (
+        <aside className="sv-info" aria-label={`${selectedFeature.title || selectedMeta.label} 요약`}>
+          <div className="sv-info__head">
+            <span className={`sv-info__icon sv-tile--${selectedMeta.cls}`} aria-hidden="true">
+              <selectedMeta.Icon size={17} />
+            </span>
+            <span className="sv-info__titles">
+              <em className={`sv-kind sv-kind--${selectedMeta.cls}`}>{selectedMeta.label}</em>
+              <b>{selectedFeature.title || selectedMeta.label}</b>
+            </span>
+            <button type="button" className="sv-info__close" onClick={clearSelection} aria-label="닫기">
+              <X size={14} />
+            </button>
+          </div>
+          {renderSummaryBody()}
+        </aside>
+      ) : null}
+
+      {/* 데스크톱 — 우하단 보기 컨트롤 */}
+      <div className="sv-ctl">
+        <div className="sv-ctl__group">
+          <button type="button" onClick={() => mapApiRef.current?.zoomIn?.()} aria-label="확대"><Plus size={16} /></button>
+          <button type="button" onClick={() => mapApiRef.current?.zoomOut?.()} aria-label="축소"><Minus size={16} /></button>
+        </div>
+        <div className="sv-ctl__group">
+          <button type="button" onClick={handleLocate} aria-label="내 위치"><Navigation size={15} /></button>
+        </div>
+      </div>
+
+      {/* 모바일 — 내 위치 (우중단, 시트 회피) */}
+      <button type="button" className="sv-round sv-locate-m" onClick={handleLocate} aria-label="내 위치">
+        <Navigation size={15} />
+      </button>
+
+      {/* 모바일 — 하단 시트: peek 요약 / 목록 전체 / 피처 요약 */}
+      <div className={`sv-sheet${selectedFeature ? " is-detail" : listExpanded ? " is-expanded" : ""}`}>
+        <button
+          type="button"
+          className="sv-sheet__handle"
+          aria-label={listExpanded ? "목록 접기" : "목록 전체 보기"}
+          onClick={() => {
+            if (selectedFeature) clearSelection()
+            else setListExpanded((v) => !v)
+          }}
+        />
+        {selectedFeature && selectedMeta ? (
+          <>
+            <div className="sv-sheet__feature-head">
+              <span className={`sv-info__icon sv-tile--${selectedMeta.cls}`} aria-hidden="true">
+                <selectedMeta.Icon size={17} />
+              </span>
+              <span className="sv-info__titles">
+                <em className={`sv-kind sv-kind--${selectedMeta.cls}`}>{selectedMeta.label}</em>
+                <b>{selectedFeature.title || selectedMeta.label}</b>
+              </span>
+              <button type="button" className="sv-info__close" onClick={clearSelection} aria-label="닫기">
+                <X size={14} />
+              </button>
+            </div>
+            {renderSummaryBody()}
+          </>
+        ) : listExpanded ? (
+          <div className="sv-sheet__list">
+            <span className="sv-list-label">기록 목록 ({features.length})</span>
+            {features.map(renderFeatureRow)}
+          </div>
+        ) : (
+          <>
+            <div className="sv-sheet__head">
+              <b>{map.title}</b>
+              {map.description ? <span>{map.description}</span> : null}
+            </div>
+            {features.length > 0 ? (
+              <div className="sv-sheet__chips">
+                {features.map((feature) => {
+                  const meta = getTypeMeta(feature)
+                  return (
+                    <button
+                      key={feature.id}
+                      type="button"
+                      className="sv-fchip"
+                      onClick={() => selectAndFocus(feature)}
+                    >
+                      <i className={`sv-dot--${meta.cls}`} aria-hidden="true" />
+                      {feature.title || meta.label}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+          </>
+        )}
+        {onSaveToApp ? (
+          <button type="button" className="sv-cta sv-cta--sheet" onClick={handleSave} disabled={savingToApp}>
+            📍 {saveLabel}
+          </button>
+        ) : null}
+      </div>
+
+      {toastMsg ? <div className="sv-toast">{toastMsg}</div> : null}
     </div>
   )
 }

@@ -6,6 +6,12 @@
  *   - 배너 높이는 콘텐츠에 맞춤 — 내부 세로 스크롤바 없이 한 배너에 다 보이게.
  *     (뷰포트를 넘칠 때만 안전용 스크롤이 동작하되 스크롤바는 표시하지 않는다)
  * 스코프: body.loca-editor-open (편집기 활성 시에만 — 공유 뷰어 미영향)
+ *
+ * ⚠ 도크 규칙은 데스크톱(≥720px) 전용.
+ *   width: min(360px, 100vw−360px) 이 모바일에서 0~70px로 붕괴하므로
+ *   (2026-07-17 핫픽스) 미디어쿼리로 스코프 — 모바일은 base 규칙
+ *   (map-editor-overlays.css 의 중앙 고정 모달 + 백드롭)으로 폴백한다.
+ *   정식 모바일 UI(하단 시트 정보창)는 Focused Map P2 에서 교체 예정.
  * ============================================================ */
 
 @keyframes dockIn {
@@ -13,62 +19,72 @@
   100% { opacity: 1; transform: none; }
 }
 
-/* 백드롭 제거 — 지도가 항상 보이게 */
-body.loca-editor-open .res-backdrop,
-body.loca-editor-open .fes-backdrop,
-body.loca-editor-open .map-feature-summary-backdrop {
-  display: none !important;
+@media (min-width: 720px) {
+  /* 백드롭 제거 — 지도가 항상 보이게 */
+  body.loca-editor-open .res-backdrop,
+  body.loca-editor-open .fes-backdrop,
+  body.loca-editor-open .map-feature-summary-backdrop {
+    display: none !important;
+  }
+
+  /* 우측 도크 위치 (세 배너 공통) — 위 고정, 높이는 콘텐츠 맞춤 */
+  body.loca-editor-open .map-feature-summary-wrap,
+  body.loca-editor-open .res-sheet,
+  body.loca-editor-open .fes-sheet--v2 {
+    position: fixed !important;
+    left: auto !important;
+    right: 92px !important;
+    top: 150px !important;
+    bottom: auto !important;
+    height: auto !important;
+    max-height: calc(100dvh - 165px) !important;
+    transform: none !important;
+    width: min(360px, calc(100vw - 360px)) !important;
+    max-width: none !important;
+    margin: 0 !important;
+    animation: dockIn 0.26s cubic-bezier(0.2, 1.4, 0.4, 1) both !important;
+  }
+
+  /* 카드 표면 — 화이트 카드 + 은은한 보더 + 플로팅 그림자 */
+  body.loca-editor-open .map-feature-summary-wrap > .fpc,
+  body.loca-editor-open .res-sheet,
+  body.loca-editor-open .fes-sheet--v2 {
+    background: #fff !important;
+    border: 1px solid rgba(20, 12, 0, 0.1) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 32px rgba(20, 12, 0, 0.18) !important;
+    max-height: calc(100dvh - 165px) !important;
+    overflow-y: auto !important;
+    scrollbar-width: none;
+  }
+  body.loca-editor-open .map-feature-summary-wrap > .fpc::-webkit-scrollbar,
+  body.loca-editor-open .res-sheet::-webkit-scrollbar,
+  body.loca-editor-open .fes-sheet--v2::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 내부 스크롤 영역 해제 — 한 배너에 콘텐츠가 다 보이게 (배너 전체가 늘어난다) */
+  body.loca-editor-open .fpc-memo-list.is-scrollable {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  body.loca-editor-open .fpc-record-banner__list,
+  body.loca-editor-open .fpc-record-detail__body,
+  body.loca-editor-open .res-body {
+    overflow-y: visible !important;
+    flex: 0 0 auto !important;
+  }
 }
 
-/* 우측 도크 위치 (세 배너 공통) — 위 고정, 높이는 콘텐츠 맞춤 */
-body.loca-editor-open .map-feature-summary-wrap,
-body.loca-editor-open .res-sheet,
-body.loca-editor-open .fes-sheet--v2 {
-  position: fixed !important;
-  left: auto !important;
-  right: 92px !important;
-  top: 150px !important;
-  bottom: auto !important;
-  height: auto !important;
-  max-height: calc(100dvh - 165px) !important;
-  transform: none !important;
-  width: min(360px, calc(100vw - 360px)) !important;
-  max-width: none !important;
-  margin: 0 !important;
-  animation: dockIn 0.26s cubic-bezier(0.2, 1.4, 0.4, 1) both !important;
+/* 모바일(<720px) 폴백 보정 — base 중앙 모달을 화면 폭에 맞춤 */
+@media (max-width: 719px) {
+  body.loca-editor-open .map-feature-summary-wrap {
+    width: min(calc(100vw - 24px), 520px) !important;
+  }
 }
 
-/* 카드 표면 — 화이트 카드 + 은은한 보더 + 플로팅 그림자 */
-body.loca-editor-open .map-feature-summary-wrap > .fpc,
-body.loca-editor-open .res-sheet,
-body.loca-editor-open .fes-sheet--v2 {
-  background: #fff !important;
-  border: 1px solid rgba(20, 12, 0, 0.1) !important;
-  border-radius: 16px !important;
-  box-shadow: 0 12px 32px rgba(20, 12, 0, 0.18) !important;
-  max-height: calc(100dvh - 165px) !important;
-  overflow-y: auto !important;
-  scrollbar-width: none;
-}
-body.loca-editor-open .map-feature-summary-wrap > .fpc::-webkit-scrollbar,
-body.loca-editor-open .res-sheet::-webkit-scrollbar,
-body.loca-editor-open .fes-sheet--v2::-webkit-scrollbar {
-  display: none;
-}
-
-/* 내부 스크롤 영역 해제 — 한 배너에 콘텐츠가 다 보이게 (배너 전체가 늘어난다) */
-body.loca-editor-open .fpc-memo-list.is-scrollable {
-  max-height: none !important;
-  overflow-y: visible !important;
-}
-body.loca-editor-open .fpc-record-banner__list,
-body.loca-editor-open .fpc-record-detail__body,
-body.loca-editor-open .res-body {
-  overflow-y: visible !important;
-  flex: 0 0 auto !important;
-}
-
-/* 상호배타 — 기록 > 편집 > 마커 우선, 한 번에 하나만 (포털은 body 직속) */
+/* 상호배타 — 기록 > 편집 > 마커 우선, 한 번에 하나만 (포털은 body 직속)
+ * 모바일에서도 유효: 겹침 대신 항상 최상위 배너 하나만 보인다 */
 body.loca-editor-open:has(.res-sheet) .map-feature-summary-wrap,
 body.loca-editor-open:has(.res-sheet) .fes-sheet--v2,
 body.loca-editor-open:has(.fes-sheet--v2) .map-feature-summary-wrap {

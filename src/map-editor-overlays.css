@@ -6823,7 +6823,7 @@ img.collab-item__avatar {
 }
 
 .editor-mode-guide--pin { border-color: rgba(255, 107, 53, 0.25); }
-.editor-mode-guide--route { border-color: rgba(15, 110, 86, 0.25); }
+.editor-mode-guide--route { border-color: rgba(156, 123, 200, 0.35); }
 .editor-mode-guide--area { border-color: rgba(133, 79, 11, 0.25); }
 .editor-mode-guide--relocate { border-color: rgba(45, 74, 62, 0.25); }
 
@@ -7159,19 +7159,9 @@ img.collab-item__avatar {
   overscroll-behavior: contain;
 }
 
-.map-editor--summary-open .map-feature-summary-wrap {
-  left: 50%;
-  right: auto;
-  bottom: auto;
-}
-
-.map-editor--summary-open .map-feature-summary-wrap > .fpc {
-  max-height: min(calc(88dvh - 60px), 620px);
-}
-
-.map-editor--summary-open .map-feature-summary-wrap--comments > .fpc {
-  max-height: min(calc(100dvh - 300px), 440px);
-}
+/* (.map-editor--summary-open .map-feature-summary-wrap 계열 규칙은 제거됨 —
+ * 팝업 래퍼는 createPortal(document.body)라 섹션 하위 선택자가 매치되지 않는다.
+ * 실제 포지셔닝: 이 파일의 base .map-feature-summary-wrap + editor-banner-dock.css) */
 
 .map-editor--summary-open .editor-mode-guide,
 .map-editor--summary-open .map-filter-bar--upper,

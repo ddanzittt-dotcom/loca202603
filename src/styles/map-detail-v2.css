@@ -173,7 +173,7 @@
   background: var(--accent);
 }
 .me-bar--v2 .me-bar__counter--route .me-bar__counter-dot {
-  background: var(--sage);
+  background: var(--lilac, #9C7BC8);
 }
 .me-bar--v2 .me-bar__counter--area .me-bar__counter-dot {
   background: var(--cocoa);
@@ -423,17 +423,10 @@
   font-weight: 600;
 }
 
-/* ===== Map drawer polish from the 11-state detail redesign ===== */
-.map-editor--v2 .map-feature-summary-wrap {
-  left: 12px;
-  right: 12px;
-  bottom: calc(116px + env(safe-area-inset-bottom, 0px));
-}
-
-.map-editor--v2.map-editor--record-panel-open .map-feature-summary-wrap {
-  bottom: calc(164px + env(safe-area-inset-bottom, 0px));
-}
-
+/* ===== Map drawer polish from the 11-state detail redesign =====
+ * (마커 팝업 포지셔닝 규칙은 제거됨 — 팝업 래퍼는 createPortal(document.body)로
+ *  렌더되어 .map-editor--v2 하위 선택자가 매치되지 않는다. 실제 포지셔닝은
+ *  map-editor-overlays.css base + editor-banner-dock.css 가 담당.) */
 .map-editor--v2 .map-list-bar {
   left: 12px;
   right: 12px;
@@ -626,7 +619,7 @@
 }
 
 .map-editor--v2 .me-fab--route {
-  color: var(--sage, #5C7A4E);
+  color: #5B3E85;
 }
 
 .map-editor--v2 .me-fab--area {
@@ -703,15 +696,15 @@
   color: #1B1B18;
 }
 
-/* 도구 알약(장소/길/영역) 활성 = 공통 오렌지 → 타입색 (장소 빨강 / 길 초록 / 영역 코코아) */
+/* 도구 알약(장소/길/영역) 활성 = 공통 오렌지 → 타입색 (장소 빨강 / 길 라일락 / 영역 코코아) */
 .map-editor--v2 .me-fab--pin.is-active {
   background: #E5493A !important;
   border-color: #E5493A !important;
   color: #fff !important;
 }
 .map-editor--v2 .me-fab--route.is-active {
-  background: #12B981 !important;
-  border-color: #12B981 !important;
+  background: var(--lilac, #9C7BC8) !important;
+  border-color: var(--lilac, #9C7BC8) !important;
   color: #fff !important;
 }
 .map-editor--v2 .me-fab--area.is-active {
