@@ -175,6 +175,13 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
       const map = mapRef.current
       if (map) map.setLevel(Math.min(14, map.getLevel() + 1), { animate: true })
     },
+    // 조준점(리티클) 방식 그리기 — 현재 지도 중심 좌표
+    getCenter() {
+      const map = mapRef.current
+      const c = map?.getCenter?.()
+      if (!c) return null
+      return { lat: c.getLat(), lng: c.getLng() }
+    },
   }), [])
 
   useEffect(() => { onMapTapRef.current = onMapTap }, [onMapTap])
@@ -244,6 +251,48 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
       })
     }
   }, [draftMode])
+
+  // 조준점 → 마지막 점 고무줄 가이드선 (지도를 움직이면 실시간으로 따라옴)
+  useEffect(() => {
+    const map = mapRef.current
+    const kakaoMaps = getKakaoMaps()
+    if (!map || !kakaoMaps || !mapReady) return undefined
+    const drawing = (draftMode === "route" || draftMode === "area") && draftPoints.length >= 1
+    if (!drawing) return undefined
+
+    const color = draftMode === "area" ? DEFAULT_AREA_DRAW_COLOR : DEFAULT_ROUTE_DRAW_COLOR
+    const last = draftPoints[draftPoints.length - 1]
+    const lastLatLng = new kakaoMaps.LatLng(last[1], last[0])
+    const first = draftPoints[0]
+    const firstLatLng = new kakaoMaps.LatLng(first[1], first[0])
+
+    // 마지막 점 → 조준점(중심)
+    const guide = new kakaoMaps.Polyline({
+      path: [lastLatLng, map.getCenter()],
+      strokeColor: color, strokeWeight: 3, strokeStyle: "dot", strokeOpacity: 0.95,
+    })
+    guide.setMap(map)
+    // 영역: 조준점 → 첫 점(닫히는 변) 옅게 미리보기
+    let closeGuide = null
+    if (draftMode === "area" && draftPoints.length >= 2) {
+      closeGuide = new kakaoMaps.Polyline({
+        path: [map.getCenter(), firstLatLng],
+        strokeColor: color, strokeWeight: 2, strokeStyle: "dot", strokeOpacity: 0.4,
+      })
+      closeGuide.setMap(map)
+    }
+    const update = () => {
+      const c = map.getCenter()
+      guide.setPath([lastLatLng, c])
+      if (closeGuide) closeGuide.setPath([c, firstLatLng])
+    }
+    kakaoMaps.event.addListener(map, "center_changed", update)
+    return () => {
+      kakaoMaps.event.removeListener(map, "center_changed", update)
+      guide.setMap(null)
+      if (closeGuide) closeGuide.setMap(null)
+    }
+  }, [draftMode, draftPoints, mapReady])
 
   // SDK 로드 + 지도 init (마운트 시 1회)
   useEffect(() => {
@@ -709,6 +758,16 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
           draft.setMap(map)
           layersRef.current.push(draft)
         }
+      }
+
+      // 드래프트 꼭짓점 점 — 탭한(찍은) 자리 표시, 첫 점은 강조(영역 닫기 기준점)
+      if ((draftMode === "route" || draftMode === "area") && draftPoints.length > 0) {
+        const dotColor = draftMode === "area" ? DEFAULT_AREA_DRAW_COLOR : DEFAULT_ROUTE_DRAW_COLOR
+        draftPoints.forEach(([dLng, dLat], index) => {
+          const isFirst = index === 0
+          const html = `<div class="loca-draft-dot${isFirst ? " loca-draft-dot--first" : ""}" style="--draft-dot:${dotColor}">${isFirst ? "<span></span>" : ""}</div>`
+          pushOverlay({ lat: dLat, lng: dLng, html, xAnchor: 0.5, yAnchor: 0.5, zIndex: 8000 })
+        })
       }
 
       // 내 위치

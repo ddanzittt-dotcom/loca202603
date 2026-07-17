@@ -352,18 +352,18 @@ export function MapEditorScreen({
     }
     if (editorMode === "route") {
       return {
-        title: "\uAE38 \uC0DD\uC131 \uBAA8\uB4DC",
+        title: "\uAE38 \uADF8\uB9AC\uAE30",
         description: draftPoints.length > 0
-          ? `${draftPoints.length}\uAC1C \uC9C0\uC810\uC744 \uC120\uD0DD\uD588\uC5B4\uC694. \uC6B0\uCE21 \uD558\uB2E8 \uBC84\uD2BC\uC73C\uB85C \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`
-          : "\uC9C0\uB3C4\uC5D0\uC11C \uC21C\uC11C\uB300\uB85C \uC9C0\uC810\uC744 \uD0ED\uD574 \uAE38\uC744 \uADF8\uB824 \uBCF4\uC138\uC694.",
+          ? `${draftPoints.length}\uAC1C \uC810 \u00B7 \uACC4\uC18D \uD0ED\uD574 \uC787\uAC70\uB098 \uC644\uC131\uC744 \uB204\uB974\uC138\uC694.`
+          : "\uC9C0\uB3C4\uB97C \uD0ED\uD574 \uC21C\uC11C\uB300\uB85C \uC810\uC744 \uCC0D\uC73C\uC138\uC694.",
       }
     }
     if (editorMode === "area") {
       return {
-        title: "\uC601\uC5ED \uC0DD\uC131 \uBAA8\uB4DC",
+        title: "\uC601\uC5ED \uADF8\uB9AC\uAE30",
         description: draftPoints.length > 0
-          ? `${draftPoints.length}\uAC1C \uAF2D\uC9D3\uC810\uC744 \uC120\uD0DD\uD588\uC5B4\uC694. 3\uAC1C \uC774\uC0C1 \uC120\uD0DD \uD6C4 \uC644\uB8CC\uD574 \uC8FC\uC138\uC694.`
-          : "\uC601\uC5ED\uC758 \uAF2D\uC9D3\uC810\uC744 \uC21C\uC11C\uB300\uB85C \uC120\uD0DD\uD574 \uACBD\uACC4\uB97C \uB9CC\uB4E4\uC5B4 \uBCF4\uC138\uC694.",
+          ? `${draftPoints.length}\uAC1C \uAF2D\uC9D3\uC810 \u00B7 3\uAC1C \uC774\uC0C1\uC774\uBA74 \uC644\uC131\uD560 \uC218 \uC788\uC5B4\uC694.`
+          : "\uC9C0\uB3C4\uB97C \uD0ED\uD574 \uAF2D\uC9D3\uC810\uC744 \uC21C\uC11C\uB300\uB85C \uCC0D\uC73C\uC138\uC694.",
       }
     }
     if (editorMode === "relocate") {
@@ -473,7 +473,7 @@ export function MapEditorScreen({
   }, [showExternalPlaceSearch, trimmedExternalSearchQuery, mapCenter, myLocation])
 
   return (
-    <section className={`map-editor map-editor--v2${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}`}>
+    <section className={`map-editor map-editor--v2${summaryOpen ? " map-editor--summary-open" : ""}${stripOpen && features.length > 0 ? " map-editor--record-panel-open" : ""}${!readOnly && isDrawing ? " map-editor--drawing" : ""}`}>
       {/* 상단 헤더 — v2: 2줄 (제목/액션 행 + 카운터 점 행) */}
       <div className="me-bar me-bar--v2">
         <div className="me-bar__card">
@@ -750,13 +750,32 @@ export function MapEditorScreen({
             </button>
           </div>
         ) : null}
-        {!readOnly && isDrawing && draftPoints.length > 0 ? (
-          <div className="draft-bar draft-bar--compact">
-            <button className="button button--ghost" type="button" onClick={onUndoDraft}>
-              마지막 점 취소
+        {/* 길·영역 그리기 액션 바 — 하단 고정 (탭으로 찍고, 여기서 되돌리기/완성) */}
+        {!readOnly && isDrawing ? (
+          <div className={`draw-actionbar draw-actionbar--${editorMode}`}>
+            <button
+              className="draw-actionbar__ghost"
+              type="button"
+              onClick={() => onModeChange("browse")}
+              aria-label="그리기 나가기"
+            >
+              <X size={16} strokeWidth={2.4} />
             </button>
-            <button className="button button--primary" type="button" onClick={editorMode === "area" ? onCompleteArea : onCompleteRoute}>
-              {editorMode === "area" ? "영역 완성하기" : "길 완성하기"}
+            <button
+              className="draw-actionbar__ghost"
+              type="button"
+              onClick={onUndoDraft}
+              disabled={draftPoints.length === 0}
+            >
+              되돌리기
+            </button>
+            <button
+              className="draw-actionbar__done"
+              type="button"
+              onClick={editorMode === "area" ? onCompleteArea : onCompleteRoute}
+              disabled={editorMode === "area" ? draftPoints.length < 3 : draftPoints.length < 2}
+            >
+              {editorMode === "area" ? "영역 완성" : "길 완성"}
             </button>
           </div>
         ) : null}

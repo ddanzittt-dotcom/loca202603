@@ -454,6 +454,100 @@ body.loca-editor-open .editor-mode-guide {
   box-shadow: var(--eis-shadow-soft) !important;
 }
 
+/* ════════════════ 길·영역 그리기 (탭 방식 + 가이드 보강) ════════════════ */
+/* 그리는 동안 기록 트레이만 감춤(하단 액션 바 자리) — 도구 도크는 유지 */
+body.loca-editor-open .map-editor--drawing .map-list-bar {
+  display: none !important;
+}
+
+/* 하단 액션 바 — 나가기 · 되돌리기 · 완성 */
+body.loca-editor-open .draw-actionbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 92;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 20px);
+  padding: 6px;
+  background: var(--eis-surface);
+  border: var(--eis-border);
+  border-radius: 16px;
+  box-shadow: var(--eis-shadow);
+}
+body.loca-editor-open .draw-actionbar__ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(27, 22, 16, 0.12);
+  border-radius: 11px;
+  background: #fff;
+  color: #3F3A33;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+body.loca-editor-open .draw-actionbar__ghost:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+body.loca-editor-open .draw-actionbar__ghost:not(:disabled):active { transform: translateY(1px); }
+
+/* 완성 — 주 액션(엠버). 점이 모자라면 비활성 */
+body.loca-editor-open .draw-actionbar__done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 11px;
+  background: #FF4D1A;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(255, 77, 26, 0.34);
+}
+body.loca-editor-open .draw-actionbar__done:disabled {
+  background: #fff;
+  color: #C2B8A6;
+  border: 1px solid rgba(27, 22, 16, 0.12);
+  box-shadow: none;
+  cursor: default;
+}
+body.loca-editor-open .draw-actionbar__done:not(:disabled):active { transform: translateY(1px); }
+
+/* 모드 가이드 — 그리는 중에는 액션 바 바로 위 캡션으로 (기본은 전역 display:none) */
+body.loca-editor-open .map-editor--drawing .editor-mode-guide {
+  display: flex !important;
+  align-items: center;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  text-align: center;
+  z-index: 92 !important;
+  padding: 8px 14px !important;
+}
+body.loca-editor-open .map-editor--drawing .editor-mode-guide strong {
+  font-size: 12px;
+}
+body.loca-editor-open .map-editor--drawing .editor-mode-guide span {
+  font-size: 11px;
+}
+
 /* ════════════════ 데스크톱 ≥960px — 워크벤치 ════════════════ */
 @media (min-width: 960px) {
   /* 뷰포트 전체 = 세로 플렉스: 상단 밴드 + (여백) + 지도 프레임 */

@@ -3,6 +3,23 @@
   height: 100%;
 }
 
+/* 길·영역 그리는 중 찍은 꼭짓점 점 (첫 점은 흰 채움+색 링으로 시작점 강조) */
+.loca-draft-dot {
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--draft-dot, #FF4D1A);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(20, 12, 0, 0.4);
+}
+.loca-draft-dot--first {
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border: 3px solid var(--draft-dot, #FF4D1A);
+}
+
 .map-canvas__fallback {
   position: absolute;
   inset: 0;

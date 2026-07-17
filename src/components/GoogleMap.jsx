@@ -348,7 +348,41 @@ export const GoogleMap = forwardRef(function GoogleMap({
       strokeDashArray: [4, 4],
     })
 
-    return () => line.setMap(null)
+    // 꼭짓점 점 (찍은 자리 표시, 첫 점 강조)
+    const dots = path.map((position, index) => new window.google.maps.Marker({
+      position,
+      map,
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: index === 0 ? 6 : 5,
+        fillColor: index === 0 ? "#fff" : color,
+        fillOpacity: 1,
+        strokeColor: color,
+        strokeWeight: index === 0 ? 3 : 2,
+      },
+      zIndex: 8000,
+    }))
+
+    // 조준점(중심) → 마지막 점 고무줄 가이드선
+    const last = path[path.length - 1]
+    const guide = new window.google.maps.Polyline({
+      path: [last, map.getCenter()],
+      map,
+      strokeColor: color,
+      strokeOpacity: 0.9,
+      strokeWeight: 2,
+      strokeDashArray: [2, 6],
+    })
+    const listener = map.addListener("center_changed", () => {
+      guide.setPath([last, map.getCenter()])
+    })
+
+    return () => {
+      line.setMap(null)
+      dots.forEach((dot) => dot.setMap(null))
+      guide.setMap(null)
+      if (listener) window.google.maps.event.removeListener(listener)
+    }
   }, [draftPoints, draftMode])
 
   // ?ъ빱???ъ씤???대룞
@@ -418,6 +452,12 @@ export const GoogleMap = forwardRef(function GoogleMap({
     zoomOut() {
       const map = mapRef.current
       if (map) map.setZoom(Math.max(2, (map.getZoom() || 14) - 1))
+    },
+    getCenter() {
+      const map = mapRef.current
+      const c = map?.getCenter?.()
+      if (!c) return null
+      return { lat: c.lat(), lng: c.lng() }
     },
     capture: () => null, // Google Maps??罹≪쿂 ?쒗븳
   }))
