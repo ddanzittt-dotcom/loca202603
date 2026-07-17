@@ -1,10 +1,13 @@
-// 내 주변 생물 — iNaturalist 관측(observation) 프록시.
-// "요즘 이 근처에서 발견된 동식물"을 종(taxon)별로 dedup해 좌표·사진과 함께 내려준다.
+// 내 주변 생물 — iNaturalist 관측(observation) 프록시 + GBIF 보충 (스펙 v3.3 D5 하이브리드).
+// "이 동네에서 관찰된 적 있는 동식물"을 종(taxon)별로 dedup해 좌표·사진과 함께 내려준다.
+// * iNat = 주력 (한글 종명 locale=ko + 사진 + 실시간성), GBIF = 보충 (iNat 제외 국내 기관 관측
+//   — 국립생물자원관 등. 누적 관측이라 도심 "0" 민감성을 완화한다).
 // * 서식지가 아니라 "관측 기록"이다 (누군가 그날 거기서 촬영). UI 문구도 그렇게.
-// * 사진은 유저 기여물(CC-BY-NC) — attribution 을 함께 내려보내 표시용으로만 쓴다.
+// * 사진은 기여물(CC 계열) — attribution 을 함께 내려보내 표시용으로만 쓴다.
 // 무료·키 불필요. isAppRequest 가드 + 엣지 캐시로 남용/쿼터 보호.
 
 import { isAppRequest } from "./_lib/appRequest.js"
+import { fetchGbifSupplement } from "./_lib/gbif.js"
 
 const INAT_URL = "https://api.inaturalist.org/v1/observations"
 const DEFAULT_RADIUS_KM = 5
@@ -60,6 +63,35 @@ function upgradePhoto(url, size) {
   return String(url || "").replace(/square\.(jpe?g|png)/i, `${size}.$1`).replace(/^http:/, "https:")
 }
 
+// GBIF 원시 레코드(_lib/gbif.js) → iNat 정규화와 동일한 아이템 형태
+function normalizeGbif(record, location) {
+  const meta = TAXON_META[record.taxonGroup] || { label: "동물", emoji: "🐾" }
+  return {
+    id: `gbif-${record.key}`,
+    type: "wildlife",
+    source: "gbif",
+    taxonId: record.speciesKey,
+    title: record.vernacular || record.scientific, // 한글명 보강 실패 시 학명 표기
+    scientific: record.scientific,
+    taxonGroup: record.taxonGroup,
+    category: meta.label,
+    emoji: meta.emoji,
+    photo: record.photoUrl,
+    photoLarge: record.photoUrl,
+    attribution: record.rightsHolder ? `ⓒ ${record.rightsHolder}` : "",
+    photoLicense: record.photoLicense,
+    place: record.datasetName || "",
+    observedOn: record.observedOn,
+    qualityGrade: "",
+    uri: record.key ? `https://www.gbif.org/occurrence/${record.key}` : "",
+    lat: record.lat,
+    lng: record.lng,
+    distKm: location && Number.isFinite(record.lat) && Number.isFinite(record.lng)
+      ? Math.round(haversine(location.lat, location.lng, record.lat, record.lng) * 10) / 10
+      : null,
+  }
+}
+
 function normalize(obs, location) {
   const taxon = obs.taxon || {}
   const coords = obs.geojson && Array.isArray(obs.geojson.coordinates) ? obs.geojson.coordinates : null
@@ -70,6 +102,7 @@ function normalize(obs, location) {
   return {
     id: `inat-${obs.id}`,
     type: "wildlife",
+    source: "inat",
     taxonId: taxon.id || null,
     title: taxon.preferred_common_name || taxon.name || "이름 미상",
     scientific: taxon.name || "",
@@ -149,6 +182,9 @@ export default async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600")
 
   try {
+    // GBIF 보충은 iNat 와 병렬로 — 누적 관측이라 처음부터 최대 반경으로 (fail-soft [])
+    const gbifPromise = fetchGbifSupplement(location, MAX_RADIUS_KM).catch(() => [])
+
     let raw = await fetchObservations(location, radiusKm)
     let items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
     // 주변이 한산하면 반경 확장
@@ -156,10 +192,25 @@ export default async function handler(req, res) {
       raw = await fetchObservations(location, MAX_RADIUS_KM)
       items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
     }
-    items = items
+
+    // GBIF 보충 병합 — iNat 에 이미 있는 종(학명 기준)은 제외, GBIF 안에서도 종당 1건
+    const gbifRaw = await gbifPromise
+    const seenSpecies = new Set(items.map((item) => (item.scientific || "").toLowerCase()).filter(Boolean))
+    const gbifItems = []
+    for (const record of gbifRaw) {
+      const speciesKey = (record.scientific || "").toLowerCase()
+      if (!speciesKey || seenSpecies.has(speciesKey)) continue
+      seenSpecies.add(speciesKey)
+      gbifItems.push(normalizeGbif(record, location))
+    }
+
+    const merged = [...items, ...gbifItems]
       .sort((a, b) => (b.observedOn || "").localeCompare(a.observedOn || ""))
       .slice(0, RESULT_LIMIT)
-    return res.status(200).json({ items, source: "inaturalist" })
+    return res.status(200).json({
+      items: merged,
+      sources: { inat: items.length, gbif: gbifItems.length },
+    })
   } catch (error) {
     return res.status(502).json({ items: [], error: `${error.name}: ${error.message}` })
   }

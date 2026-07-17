@@ -25,6 +25,8 @@
     "ingest:lifelong": "node scripts/ingest/ingest-lifelong.mjs",
     "ingest:libraries": "node scripts/ingest/ingest-libraries.mjs",
     "ingest:villages": "node scripts/ingest/ingest-farmvillages.mjs",
+    "ingest:trails": "node scripts/ingest/ingest-trails.mjs",
+    "ingest:heritage": "node scripts/ingest/ingest-heritage.mjs",
     "preview:host": "vite preview --host 127.0.0.1 --port 4173",
     "cap:copy": "npm run build && npx cap copy",
     "cap:sync": "npm run build && npx cap sync",

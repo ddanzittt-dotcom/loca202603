@@ -199,7 +199,7 @@ export function wildlifeSortKey(item) {
 const EVENT_SOURCE_LABELS = { tourapi: "관광공사", culture: "문화포털", kopis: "KOPIS", festival: "공공데이터" }
 
 export function curationSourceLabel(type, item) {
-  if (type === "wildlife") return "iNaturalist"
+  if (type === "wildlife") return item?.source === "gbif" ? "GBIF" : "iNaturalist"
   return EVENT_SOURCE_LABELS[item?.source] || item?.sourceLabel || ""
 }
 
@@ -241,6 +241,7 @@ const PLACE_KIND_TO_CATEGORY = {
   lifelong: "culture",
   library: "culture",
   farmvillage: "nature",
+  trail: "route",
 }
 
 export function placeToPrefill(place) {

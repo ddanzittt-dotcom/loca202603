@@ -121,7 +121,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {data.uri ? (
               <a className="xdt-link" href={data.uri} target="_blank" rel="noreferrer noopener">
                 <ExternalLink size={13} strokeWidth={2.4} aria-hidden="true" />
-                iNaturalist
+                {data.source === "gbif" ? "GBIF" : "iNaturalist"}
               </a>
             ) : <span />}
             <button
@@ -210,6 +210,8 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             <InfoRow label="휴관" value={catalogDetail?.closeDay} />
             <InfoRow label="체험" value={catalogDetail?.kind} />
             <InfoRow label="시설" value={catalogDetail?.facilities} />
+            <InfoRow label="경유" value={catalogDetail?.course} />
+            <InfoRow label="관리" value={catalogDetail?.admin} />
             {isEvent ? <InfoRow label="시간" value={detail?.playTime} /> : <InfoRow label="이용" value={detail?.useTime} />}
             {isEvent ? <InfoRow label="요금" value={detail?.useTimeFestival} /> : <InfoRow label="요금" value={detail?.useFee} />}
             {!isEvent ? <InfoRow label="휴무" value={detail?.restDate} /> : null}

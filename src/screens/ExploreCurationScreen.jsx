@@ -103,7 +103,8 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
     prefill = eventToPrefill(item)
   } else if (type === "place") {
     const isRoute = item.group === "route"
-    const routeMeta = isRoute ? formatRouteMeta(item) : ""
+    // 걷기길(trail)은 포인트 카드지만 총길이·소요시간을 표기한다 (스펙 D4-A)
+    const routeMeta = isRoute || item.routeDistanceKm ? formatRouteMeta(item) : ""
     thumb = item.image
       ? <img src={item.image} alt="" loading="lazy" />
       : (

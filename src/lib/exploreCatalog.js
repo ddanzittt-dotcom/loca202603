@@ -33,6 +33,8 @@ const SOURCE_LABELS = {
   lifelong: "공공데이터",
   library: "공공데이터",
   farmvillage: "공공데이터",
+  trail: "공공데이터",
+  heritage: "국가유산청",
   durunubi: "두루누비",
 }
 
@@ -44,6 +46,8 @@ const SOURCE_KINDS = {
   lifelong: "lifelong",
   library: "library",
   farmvillage: "farmvillage",
+  trail: "trail",
+  heritage: "history", // 역사 스프라이트·culture 채집 카테고리 재사용
 }
 
 // "3.21~5.23" — 강좌 교육기간 카드 표기
