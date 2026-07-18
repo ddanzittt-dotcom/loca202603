@@ -1,16 +1,14 @@
 import { useEffect, useState } from "react"
-import { AlertTriangle, Bell, BellOff, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2, UserX } from "lucide-react"
+import { AlertTriangle, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, RotateCcw, Trash2, UserX } from "lucide-react"
 import { buildLegalDocumentUrl, normalizeSlugInput, isValidSlug, SLUG_MIN, SLUG_MAX } from "../lib/appUtils"
 import { checkSlugAvailable } from "../lib/mapService"
-import { updatePassword } from "../lib/auth"
+import { updatePassword, getMyConsentState, recordMyConsent } from "../lib/auth"
 import { PixelAvatar, avatarCharOf, avatarCharSentinel } from "../components/PixelAvatar"
 import "../styles/account-v2.css"
 
 // 내 정보 관리 — 우상단 계정 버튼 전용 화면 (2026-07 프로필→대시보드 개편 1단계)
-// 계정 정보 / 개인정보 수정(구 프로필 편집 시트) / 비밀번호 변경 / 화면·알림 / 데이터 / 약관
+// 계정 정보 / 개인정보 수정(구 프로필 편집 시트) / 비밀번호 변경 / 마케팅 수신 동의 / 데이터 / 약관
 
-const PROFILE_ALIAS_SUGGESTIONS = ["성수 카페 탐험가", "동네 산책러", "주말 미식가", "서울 골목 탐험가"]
-const PROFILE_ALIAS_MAX = 15
 const PROFILE_BIO_MAX = 80
 
 const PROVIDER_LABELS = {
@@ -43,20 +41,6 @@ function friendlyPasswordError(error) {
   return "비밀번호를 변경하지 못했어요. 잠시 후 다시 시도해 주세요."
 }
 
-function getThemeMode() {
-  return localStorage.getItem("loca.themeMode") || "light"
-}
-
-function applyThemeMode(mode) {
-  localStorage.setItem("loca.themeMode", mode)
-  if (mode === "dark") document.documentElement.setAttribute("data-theme", "dark")
-  else document.documentElement.removeAttribute("data-theme")
-}
-
-function readJsonSetting(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)) } catch { return fallback }
-}
-
 export function AccountScreen({
   user,
   authUser,
@@ -78,10 +62,8 @@ export function AccountScreen({
 
   // ── 개인정보 폼 ──
   const [editName, setEditName] = useState(user.name || "")
-  const [editAlias, setEditAlias] = useState((user.alias || user.tagline || user.ho || "").slice(0, PROFILE_ALIAS_MAX))
   const [editHandle, setEditHandle] = useState((user.handle || "").replace(/^@/, ""))
   const [editBio, setEditBio] = useState((user.bio || "").slice(0, PROFILE_BIO_MAX))
-  const [editLink, setEditLink] = useState(user.link || "")
   const [editChar, setEditChar] = useState(() => avatarCharOf(user) || "male")
   const [profileDirty, setProfileDirty] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
@@ -126,10 +108,8 @@ export function AccountScreen({
   useEffect(() => {
     if (profileDirty) return
     setEditName(user.name || "")
-    setEditAlias((user.alias || user.tagline || user.ho || "").slice(0, PROFILE_ALIAS_MAX))
     setEditHandle((user.handle || "").replace(/^@/, ""))
     setEditBio((user.bio || "").slice(0, PROFILE_BIO_MAX))
-    setEditLink(user.link || "")
     setEditChar(avatarCharOf(user) || "male")
   }, [profileDirty, user])
 
@@ -138,10 +118,8 @@ export function AccountScreen({
     setter(value)
   }
   const setName = markDirty(setEditName)
-  const setAlias = markDirty(setEditAlias)
   const setHandle = markDirty(setEditHandle)
   const setBio = markDirty(setEditBio)
-  const setLink = markDirty(setEditLink)
   const pickChar = markDirty(setEditChar)
 
   const saveProfile = async () => {
@@ -149,10 +127,8 @@ export function AccountScreen({
     try {
       await onUpdateProfile?.({
         name: editName.trim() || user.name,
-        alias: editAlias.trim(),
         bio: editBio,
         handle: editHandle,
-        link: editLink,
         // 아바타 = 남/여 도트 캐릭터 (센티넬로 저장, 사진 아바타 대체)
         emoji: avatarCharSentinel(editChar),
         avatarUrl: null,
@@ -194,18 +170,34 @@ export function AccountScreen({
     }
   }
 
-  // ── 화면·알림 ──
-  const [themeMode, setThemeMode] = useState(getThemeMode)
-  const [appSettings, setAppSettings] = useState(() => readJsonSetting("loca.appSettings", {}))
+  // ── 마케팅 수신 동의 ──
+  // 가입 후에도 언제든 철회/재동의할 수 있어야 한다(정보통신망법). record_my_consent(073) 재사용.
+  const [marketingConsent, setMarketingConsent] = useState(null) // null = 로딩 중
+  const [marketingSaving, setMarketingSaving] = useState(false)
 
   useEffect(() => {
-    applyThemeMode(themeMode)
-  }, [themeMode])
+    if (!cloudMode) return undefined
+    let alive = true
+    getMyConsentState()
+      .then((state) => { if (alive) setMarketingConsent(Boolean(state?.marketing_consent)) })
+      .catch(() => { if (alive) setMarketingConsent(false) })
+    return () => { alive = false }
+  }, [cloudMode])
 
-  const updateSetting = (key, value) => {
-    const next = { ...appSettings, [key]: value }
-    setAppSettings(next)
-    localStorage.setItem("loca.appSettings", JSON.stringify(next))
+  const toggleMarketing = async (next) => {
+    if (marketingSaving) return
+    const prev = marketingConsent
+    setMarketingConsent(next)
+    setMarketingSaving(true)
+    try {
+      await recordMyConsent(next)
+      showToast?.(next ? "마케팅 정보 수신에 동의했어요." : "마케팅 정보 수신 동의를 해제했어요.")
+    } catch {
+      setMarketingConsent(prev)
+      showToast?.("설정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.")
+    } finally {
+      setMarketingSaving(false)
+    }
   }
 
   // ── 회원탈퇴 ──
@@ -286,16 +278,6 @@ export function AccountScreen({
               <input value={editName} onChange={(event) => setName(event.target.value)} maxLength={30} />
             </label>
             <label className="acct-field">
-              <span className="acct-field__label-row">
-                <span className="acct-field__label">나를 표현하는 별명</span>
-                <span className="acct-field__count">{editAlias.length} / {PROFILE_ALIAS_MAX}</span>
-              </span>
-              <input value={editAlias} onChange={(event) => setAlias(event.target.value)} maxLength={PROFILE_ALIAS_MAX} />
-            </label>
-            <div className="acct-chips" aria-label="별명 예시">
-              {PROFILE_ALIAS_SUGGESTIONS.map((item) => <button key={item} type="button" onClick={() => setAlias(item)}>{item}</button>)}
-            </div>
-            <label className="acct-field">
               <span className="acct-field__label">아이디</span>
               <input
                 value={editHandle}
@@ -314,10 +296,6 @@ export function AccountScreen({
                 <span className="acct-field__count">{editBio.length} / {PROFILE_BIO_MAX}</span>
               </span>
               <textarea value={editBio} onChange={(event) => setBio(event.target.value)} rows={3} maxLength={PROFILE_BIO_MAX} />
-            </label>
-            <label className="acct-field">
-              <span className="acct-field__label">외부 링크</span>
-              <input value={editLink} onChange={(event) => setLink(event.target.value)} type="url" placeholder="https://" />
             </label>
           </div>
           <button className="acct-save" type="button" onClick={saveProfile} disabled={!profileDirty || profileSaving || !handleReady}>
@@ -352,21 +330,21 @@ export function AccountScreen({
           )}
         </article>
 
-        <article className="acct-card" aria-label="화면과 알림 설정">
-          <h2>화면 · 알림</h2>
-          <div className="acct-theme-row">
-            {[{ id: "light", icon: Sun, label: "라이트" }, { id: "dark", icon: Moon, label: "다크" }].map((mode) => (
-              <button key={mode.id} className={`acct-theme-btn${themeMode === mode.id ? " is-active" : ""}`} type="button" onClick={() => setThemeMode(mode.id)}>
-                <mode.icon size={17} aria-hidden="true" />
-                <span>{mode.label}</span>
-              </button>
-            ))}
-          </div>
-          <label className="acct-toggle-row">
-            <span className="acct-toggle-label">{appSettings.notifications !== false ? <Bell size={15} aria-hidden="true" /> : <BellOff size={15} aria-hidden="true" />}전체 알림</span>
-            <input type="checkbox" checked={appSettings.notifications !== false} onChange={(event) => updateSetting("notifications", event.target.checked)} />
-          </label>
-        </article>
+        {cloudMode ? (
+          <article className="acct-card" aria-label="마케팅 수신 동의">
+            <h2>마케팅 수신</h2>
+            <label className="acct-toggle-row">
+              <span className="acct-toggle-label">이벤트·혜택 등 마케팅 정보 수신</span>
+              <input
+                type="checkbox"
+                checked={marketingConsent === true}
+                disabled={marketingConsent === null || marketingSaving}
+                onChange={(event) => toggleMarketing(event.target.checked)}
+              />
+            </label>
+            <p className="acct-note">선택 항목이에요. 서비스 이용에 필요한 안내는 이 설정과 무관하게 전송될 수 있어요.</p>
+          </article>
+        ) : null}
 
         <article className="acct-card" aria-label="데이터 관리">
           <h2>데이터</h2>
