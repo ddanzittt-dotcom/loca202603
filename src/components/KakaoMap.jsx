@@ -34,7 +34,7 @@ const BASE_ZOOM = 15.5
 const PLACE_LABEL_MIN_ZOOM = 15
 const PUBLIC_CLUSTER_ONLY_MAX_ZOOM = 13
 // 개인 지도: 이 줌 미만에서만 공격적 클러스터(뭉침). 낮출수록 더 멀리 줌아웃해야 통합됨.
-const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = 11
+const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = 9
 const VIEWPORT_CULL_FEATURE_THRESHOLD = 180
 const zoomScale = (zoom) => {
   const s = Math.pow(1.17, zoom - BASE_ZOOM)

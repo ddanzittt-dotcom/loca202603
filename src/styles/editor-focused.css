@@ -45,6 +45,16 @@ body.loca-editor-open :is(
 ) :is(button, input, textarea, select) {
   font-family: inherit !important;
 }
+/* 픽셀 스킨(.app-shell--soft-social)이 DungGeunMo 를 흘려보내는 잔여 요소 —
+   카운터(장소·길·영역)·목록 카운트·카드 제목을 프리텐다드로 되돌린다 (버튼이 아니라 상속 규칙에 안 걸림) */
+body.loca-editor-open .me-bar__counter,
+body.loca-editor-open .me-bar__counter-label,
+body.loca-editor-open .me-bar__counter strong,
+body.loca-editor-open .map-list-bar__count,
+body.loca-editor-open .map-place-card .me-strip-info strong,
+body.loca-editor-open .map-list-empty strong {
+  font-family: var(--font-sans, "Pretendard Variable", Pretendard, -apple-system, "Malgun Gothic", sans-serif) !important;
+}
 
 /* ── 기록/편집 배너가 떠 있으면 도구 도크 숨김 (마커 카드는 base .map-editor--summary-open 규칙) ── */
 body.loca-editor-open:has(.res-sheet) .me-fabs,
