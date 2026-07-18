@@ -20,6 +20,10 @@ const TAXON_FILTERS = [
   { key: 6, group: "Plantae" }, // kingdom Plantae
 ]
 
+// 박제·표본·화석 등 본질적으로 죽은 개체 레코드는 제외 ("죽은 것 제외"와 같은 취지).
+// 관측(HUMAN/MACHINE_OBSERVATION), 살아있는 표본(LIVING_SPECIMEN) 등은 유지.
+const DEAD_BASIS = new Set(["PRESERVED_SPECIMEN", "FOSSIL_SPECIMEN", "MATERIAL_SAMPLE", "MATERIAL_CITATION"])
+
 // CC 라이선스 URL만 허용 (전보류 제외) — iNat 쪽 필터와 같은 취지
 function isAllowedLicense(license) {
   return /creativecommons\.org/i.test(String(license || ""))
@@ -88,6 +92,7 @@ export async function fetchGbifSupplement(location, radiusKm) {
   const records = []
   for (const record of results) {
     if (record.datasetKey === INAT_DATASET_KEY) continue // iNat 몫은 직접 호출이 담당 (중복 방지)
+    if (DEAD_BASIS.has(String(record.basisOfRecord || "").toUpperCase())) continue // 박제·표본(죽은 것) 제외
     const lat = Number(record.decimalLatitude)
     const lng = Number(record.decimalLongitude)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue

@@ -185,21 +185,36 @@ function dedupeByTaxon(items) {
   return [...byTaxon.values()]
 }
 
+// "죽음"으로 명시된 관측 제외 — iNat "Alive or Dead" 어노테이션(속성 17)의 Dead(값 19).
+// 어노테이션이 드물어(관측의 ~8%대) 명시된 것만 걸러진다(로드킬 등 미표시는 못 거름).
+// 반대표로 뒤집힌(vote_score<0) 건은 실제 죽음이 아닐 수 있어 유지한다.
+const ANNO_ALIVE_DEAD = 17
+const ANNO_VALUE_DEAD = 19
+function isDeadObservation(obs) {
+  const annos = Array.isArray(obs?.annotations) ? obs.annotations : []
+  return annos.some((a) =>
+    a?.controlled_attribute_id === ANNO_ALIVE_DEAD
+    && a?.controlled_value_id === ANNO_VALUE_DEAD
+    && (a?.vote_score == null || a.vote_score >= 0),
+  )
+}
+
 // 한 분류군(동물 또는 식물)을 종 dedup 해 확보 — 한산하면 반경 확장, 목표 미만이면 부족할 때만 2페이지.
 async function fetchGroup(location, radiusKm, taxa, targetCount) {
+  const toItems = (r) => dedupeByTaxon(r.filter((o) => !isDeadObservation(o)).map((obs) => normalize(obs, location)))
   let effRadius = radiusKm
   let raw = await fetchObservations(location, effRadius, 1, taxa)
-  let items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+  let items = toItems(raw)
   if (items.length < SPARSE_THRESHOLD && effRadius < MAX_RADIUS_KM) {
     effRadius = MAX_RADIUS_KM
     raw = await fetchObservations(location, effRadius, 1, taxa)
-    items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+    items = toItems(raw)
   }
   for (let page = 2; page <= MAX_PAGES && items.length < targetCount && raw.length >= PAGE_SIZE * (page - 1); page += 1) {
     const more = await fetchObservations(location, effRadius, page, taxa)
     if (!more.length) break
     raw = [...raw, ...more]
-    items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+    items = toItems(raw)
   }
   return items
 }
