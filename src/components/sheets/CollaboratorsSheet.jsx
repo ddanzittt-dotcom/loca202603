@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { BottomSheet, Spinner, EmptyState } from "../ui"
+import { PixelAvatar, avatarCharOf } from "../PixelAvatar"
 import {
   getCollaborators,
   addCollaborator,
@@ -27,6 +28,16 @@ const collaboratorMeta = (collaborator) => {
 function CollaboratorAvatar({ person }) {
   if (person?.avatarUrl) {
     return <img className="collab-item__avatar" src={person.avatarUrl} alt="" />
+  }
+  // 아바타가 도트 캐릭터 센티넬(loca-char:male|female)이면 PixelAvatar 로 렌더.
+  // (센티넬 문자열이 그대로 텍스트로 새어나오지 않도록 — 대시보드와 동일 처리)
+  const char = avatarCharOf(person)
+  if (char) {
+    return (
+      <span className="collab-item__avatar collab-item__avatar--char">
+        <PixelAvatar char={char} />
+      </span>
+    )
   }
   return <span className="collab-item__avatar">{person?.emoji || person?.nickname?.slice(0, 1) || "U"}</span>
 }
