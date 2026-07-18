@@ -190,6 +190,8 @@ export function normalizeFeature(row, memos = [], photos = []) {
     emojiKind,
     emojiPixelId: row.emoji_pixel_id || null,
     emojiPhotoUrl: row.emoji_photo_url || null,
+    emojiPhotoFocusX: Number.isFinite(Number(row.emoji_photo_focus_x)) ? Number(row.emoji_photo_focus_x) : null,
+    emojiPhotoFocusY: Number.isFinite(Number(row.emoji_photo_focus_y)) ? Number(row.emoji_photo_focus_y) : null,
     tags: row.tags || [],
     note: row.note || "",
     highlight: Boolean(row.highlight),
@@ -238,6 +240,14 @@ export function toFeatureInsert(feature = {}, fallbackType = "pin") {
     updated_at: new Date().toISOString(),
   }
 
+  // 표지 사진 초점 — 값이 있을 때만 포함 (컬럼 미적용 DB에서도 일반 생성이 깨지지 않게)
+  if (emojiKind === "photo" && Number.isFinite(Number(feature.emojiPhotoFocusX))) {
+    payload.emoji_photo_focus_x = Math.min(100, Math.max(0, Math.round(Number(feature.emojiPhotoFocusX))))
+  }
+  if (emojiKind === "photo" && Number.isFinite(Number(feature.emojiPhotoFocusY))) {
+    payload.emoji_photo_focus_y = Math.min(100, Math.max(0, Math.round(Number(feature.emojiPhotoFocusY))))
+  }
+
   if ("isSample" in feature) payload.is_sample = Boolean(feature.isSample)
   if ("sampleBatch" in feature) payload.sample_batch = feature.sampleBatch || null
   if ("sampleKey" in feature) payload.sample_key = feature.sampleKey || null
@@ -271,6 +281,16 @@ export function toFeaturePatch(updates = {}) {
     payload.emoji = kind === "unicode"
       ? (updates.emoji || getDefaultEmoji(updates.type))
       : encodeLegacyEmojiDescriptor(kind, kind === "pixel" ? updates.emojiPixelId : updates.emojiPhotoUrl, updates.type)
+  }
+
+  // 표지 사진 초점 — 값이 명시된 경우에만 컬럼을 건드린다 (0~100 정수, null=중앙 리셋)
+  if ("emojiPhotoFocusX" in updates) {
+    payload.emoji_photo_focus_x = Number.isFinite(Number(updates.emojiPhotoFocusX))
+      ? Math.min(100, Math.max(0, Math.round(Number(updates.emojiPhotoFocusX)))) : null
+  }
+  if ("emojiPhotoFocusY" in updates) {
+    payload.emoji_photo_focus_y = Number.isFinite(Number(updates.emojiPhotoFocusY))
+      ? Math.min(100, Math.max(0, Math.round(Number(updates.emojiPhotoFocusY)))) : null
   }
 
   if ("tags" in updates) payload.tags = updates.tags || []

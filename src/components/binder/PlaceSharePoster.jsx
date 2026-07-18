@@ -1,6 +1,6 @@
 import { FeatureEmoji } from "../FeatureEmoji"
 import { getPlaceType } from "../../lib/placeTypes"
-import { representativePhoto, cardArtFeature, looksLikeAddress, formatDotDate, regionLabel } from "../../lib/binderCardData"
+import { representativePhoto, cardArtFeature, looksLikeAddress, formatDotDate, regionLabel, photoFocusPosition } from "../../lib/binderCardData"
 
 // 인스타 공유용 홀로 컬렉터 카드 — 1080×1350 (피드 4:5).
 // 화면 밖에서 렌더되어 html2canvas 로 캡처된다(사용자에겐 안 보임).
@@ -30,7 +30,14 @@ export function PlaceSharePoster({ feature, dexNo, innerRef }) {
 
           <div className="csp-art">
             {photo ? (
-              <img src={photo} alt="" crossOrigin="anonymous" />
+              // img + object-position 은 html2canvas 가 초점을 무시하고 중앙 크롭해버린다
+              // → 캡처가 안정적으로 지원하는 background-position 으로 초점을 적용 (useCORS 로 로드)
+              <div
+                className="csp-art__photo"
+                role="img"
+                aria-label=""
+                style={{ backgroundImage: `url("${photo}")`, backgroundPosition: photoFocusPosition(feature) }}
+              />
             ) : (
               <FeatureEmoji feature={cardArtFeature(feature)} size={300} unicodeFontSize={220} />
             )}

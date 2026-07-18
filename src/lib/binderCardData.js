@@ -19,6 +19,16 @@ export function representativePhoto(feature) {
   return null
 }
 
+// 표지 사진 초점 → CSS object-position/background-position 값.
+// 바인더 카드 앞·뒷면과 공유 카드가 같은 초점을 공유한다. 저장값 없으면 중앙.
+export function photoFocusPosition(feature) {
+  const x = Number(feature?.emojiPhotoFocusX)
+  const y = Number(feature?.emojiPhotoFocusY)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return "50% 50%"
+  const clamp = (n) => Math.min(100, Math.max(0, n))
+  return `${clamp(x)}% ${clamp(y)}%`
+}
+
 // 이름(+태그) 키워드로 도트형 픽셀 이모지 추정 — 사진 없을 때 카드 아트
 const PIN_KEYWORD_ICONS = [
   [/카페|커피|coffee|로스터|브루잉|에스프레소|라떼|아메리카노/i, "px-cafe"],

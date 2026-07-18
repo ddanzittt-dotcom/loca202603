@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
 import { getPlaceType } from "../../lib/placeTypes"
-import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate } from "../../lib/binderCardData"
+import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate, photoFocusPosition } from "../../lib/binderCardData"
 import { PlaceSharePoster } from "./PlaceSharePoster"
 import { holoTiltMove, holoTiltLeave } from "./holoTilt"
 import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
@@ -51,7 +51,7 @@ export function PlaceCardFront({ feature, dexNo, big = false }) {
       </div>
       <div className="bd-sl-art">
         {photo ? (
-          <img src={photo} alt="" loading="lazy" />
+          <img src={photo} alt="" loading="lazy" style={{ objectPosition: photoFocusPosition(feature) }} />
         ) : (
           <FeatureEmoji feature={cardArtFeature(feature)} className="bd-sl-emoji" size={big ? 128 : 88} />
         )}
@@ -98,6 +98,95 @@ function RecordItem({ group, onPromoteCover, isCover }) {
   )
 }
 
+// ── 표지 사진 위치(초점) 조정 시트 ──
+// 프레임 안의 사진을 드래그해 초점을 정한다. 초점(0~100%)은 카드 앞·뒷면과
+// 공유 카드가 공유 — object-position 이라 프레임 비율이 달라도 같은 지점이 중심이 된다.
+function clampFocus(value) {
+  return Math.min(100, Math.max(0, value))
+}
+
+function PhotoFocusSheet({ photo, initialFocus, saving, onSave, onClose }) {
+  const [focus, setFocus] = useState(initialFocus)
+  const frameRef = useRef(null)
+  const imgDimsRef = useRef(null) // { w, h } — 원본 픽셀 크기
+  const dragRef = useRef(null) // { sx, sy, fx, fy, ovX, ovY }
+
+  // cover 스케일에서 프레임 밖으로 넘치는 픽셀 수 — 드래그 이동량↔초점 % 를 1:1 로 잇는다
+  const computeOverflow = () => {
+    const frame = frameRef.current
+    const dims = imgDimsRef.current
+    if (!frame || !dims || !dims.w || !dims.h) return { x: 0, y: 0 }
+    const fw = frame.clientWidth
+    const fh = frame.clientHeight
+    const scale = Math.max(fw / dims.w, fh / dims.h)
+    return { x: dims.w * scale - fw, y: dims.h * scale - fh }
+  }
+
+  const handlePointerDown = (event) => {
+    event.preventDefault()
+    // 이미 떼진 포인터면 캡처가 예외를 던질 수 있다 — 드래그 시작은 계속돼야 한다
+    try { event.currentTarget.setPointerCapture?.(event.pointerId) } catch { /* 무시 */ }
+    const overflow = computeOverflow()
+    dragRef.current = { sx: event.clientX, sy: event.clientY, fx: focus.x, fy: focus.y, ovX: overflow.x, ovY: overflow.y }
+  }
+
+  const handlePointerMove = (event) => {
+    const drag = dragRef.current
+    if (!drag) return
+    const next = { x: drag.fx, y: drag.fy }
+    // 오른쪽으로 끌면 사진이 오른쪽으로 따라오도록 (object-position % 는 반대 방향)
+    if (drag.ovX > 1) next.x = clampFocus(drag.fx - ((event.clientX - drag.sx) / drag.ovX) * 100)
+    if (drag.ovY > 1) next.y = clampFocus(drag.fy - ((event.clientY - drag.sy) / drag.ovY) * 100)
+    setFocus(next)
+  }
+
+  const endDrag = () => { dragRef.current = null }
+
+  return (
+    <div className="bd-focus-ov" onClick={onClose} role="presentation">
+      <div className="bd-focus-panel" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="사진 위치 조정">
+        <div className="bd-focus-head">
+          <span className="bd-focus-title">사진 위치 조정</span>
+          <button type="button" className="bd-headclose" onClick={onClose} aria-label="닫기">✕</button>
+        </div>
+        <div
+          ref={frameRef}
+          className="bd-focus-frame"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
+          <img
+            src={photo}
+            alt="표지 사진 미리보기"
+            draggable={false}
+            style={{ objectPosition: `${focus.x}% ${focus.y}%` }}
+            onLoad={(event) => {
+              imgDimsRef.current = { w: event.target.naturalWidth, h: event.target.naturalHeight }
+            }}
+          />
+          <span className="bd-focus-grid" aria-hidden="true" />
+        </div>
+        <p className="bd-focus-hint">사진을 드래그해서 카드에 보일 부분을 맞춰주세요.</p>
+        <div className="bd-focus-acts">
+          <button type="button" className="bd-mini" onClick={() => setFocus({ x: 50, y: 50 })}>가운데로</button>
+          <span className="bd-focus-spacer" />
+          <button type="button" className="bd-mini" onClick={onClose}>취소</button>
+          <button
+            type="button"
+            className="bd-mini bd-mini--red"
+            disabled={saving}
+            onClick={() => onSave({ x: Math.round(focus.x), y: Math.round(focus.y) })}
+          >
+            {saving ? "저장 중…" : "저장"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // 타자기 효과 (reduced-motion 이면 즉시, 클릭하면 즉시 완료)
 // 키(=현재 텍스트) 기반 진행 상태 — effect 안 동기 setState 금지 규칙 대응
 function useTypewriter(text, active) {
@@ -135,6 +224,7 @@ export function PlaceFlipCard({
   onAddRecord,
   onSetPhoto,
   onSetCoverUrl,
+  onSetPhotoFocus,
   onUpdateCard,
   showToast,
 }) {
@@ -168,6 +258,11 @@ export function PlaceFlipCard({
   const [share, setShare] = useState(null) // null | { loading: true } | { blob, url }
   const shareRef = useRef(null)
   shareRef.current = share
+  // 표지 사진 위치(초점) 조정 시트
+  const [focusOpen, setFocusOpen] = useState(false)
+  const [focusSaving, setFocusSaving] = useState(false)
+  const focusOpenRef = useRef(false)
+  focusOpenRef.current = focusOpen
 
   const type = getPlaceType(feature || {})
   const note = `${feature?.note || ""}`.trim()
@@ -208,7 +303,8 @@ export function PlaceFlipCard({
   useEffect(() => {
     const handleKey = (event) => {
       if (event.key !== "Escape") return
-      if (shareRef.current) closeSharePreview()
+      if (focusOpenRef.current) setFocusOpen(false)
+      else if (shareRef.current) closeSharePreview()
       else onClose?.()
     }
     window.addEventListener("keydown", handleKey)
@@ -253,6 +349,21 @@ export function PlaceFlipCard({
       showToast?.("표지 변경에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setPhotoBusy(false)
+    }
+  }
+
+  // 초점 저장 — 두 카드(바인더·공유)가 공유하는 값이라 한 번만 저장하면 된다
+  const handleSaveFocus = async (nextFocus) => {
+    if (!onSetPhotoFocus || focusSaving) return
+    setFocusSaving(true)
+    try {
+      await onSetPhotoFocus(nextFocus)
+      setFocusOpen(false)
+      showToast?.("사진 위치를 저장했어요")
+    } catch {
+      showToast?.("위치 저장에 실패했어요. 잠시 후 다시 시도해주세요.")
+    } finally {
+      setFocusSaving(false)
     }
   }
 
@@ -412,8 +523,18 @@ export function PlaceFlipCard({
 
             <div className="bd-backhero" style={{ backgroundColor: `${type.color}22` }}>
               {heroPhoto
-                ? <img src={heroPhoto} alt={`${name} 사진`} />
+                ? <img src={heroPhoto} alt={`${name} 사진`} style={{ objectPosition: photoFocusPosition(feature) }} />
                 : <FeatureEmoji feature={cardArtFeature(feature)} size={72} unicodeFontSize={48} />}
+              {heroPhoto && onSetPhotoFocus ? (
+                <button
+                  type="button"
+                  className="bd-heroupload bd-heroupload--focus"
+                  onClick={() => setFocusOpen(true)}
+                  disabled={photoBusy}
+                >
+                  🎯 위치 조정
+                </button>
+              ) : null}
               {onSetPhoto ? (
                 <>
                   <button
@@ -596,6 +717,20 @@ export function PlaceFlipCard({
         <PlaceSharePoster feature={feature} dexNo={dexNo} innerRef={posterRef} />
       </div>
     </div>
+
+    {/* 표지 사진 위치 조정 시트 */}
+    {focusOpen && heroPhoto ? (
+      <PhotoFocusSheet
+        photo={heroPhoto}
+        initialFocus={{
+          x: Number.isFinite(Number(feature.emojiPhotoFocusX)) ? Number(feature.emojiPhotoFocusX) : 50,
+          y: Number.isFinite(Number(feature.emojiPhotoFocusY)) ? Number(feature.emojiPhotoFocusY) : 50,
+        }}
+        saving={focusSaving}
+        onSave={handleSaveFocus}
+        onClose={() => setFocusOpen(false)}
+      />
+    ) : null}
 
     {/* 공유 미리보기 — 상단 공유 버튼을 누르면 실제 카드(시안)를 보여주고 그 아래에서 공유/저장 */}
     {share ? (

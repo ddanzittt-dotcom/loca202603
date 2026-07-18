@@ -2374,14 +2374,15 @@ export default function App() {
               const meta = await uploadMediaToCloud(createId("photo"), blob, "photos").catch(() => null)
               if (meta?.publicUrl) {
                 url = meta.publicUrl
-                await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url }).catch(() => {})
+                // 새 사진이면 이전 사진 기준 초점은 무의미 — 중앙으로 리셋
+                await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null }).catch(() => {})
               }
             }
             if (!url) {
               // 로컬 모드 또는 업로드 실패 — 압축된 data URL 로 즉시 반영(로컬 저장에 유지)
               url = await blobToDataUrl(blob)
             }
-            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url })
+            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
             setPlaceCardFeature((current) => (current ? patch(current) : current))
           }}
@@ -2390,9 +2391,19 @@ export default function App() {
             if (!url) return
             const featureId = placeCardFeature.id || placeCardFeature.feature_id
             if (cloudMode) {
-              await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url }).catch(() => {})
+              await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null }).catch(() => {})
             }
-            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url })
+            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null })
+            setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
+            setPlaceCardFeature((current) => (current ? patch(current) : current))
+          }}
+          onSetPhotoFocus={async ({ x, y }) => {
+            // 표지 사진 초점 저장 — 바인더 카드·공유 카드가 같은 초점을 공유한다
+            const featureId = placeCardFeature.id || placeCardFeature.feature_id
+            if (cloudMode) {
+              await updateFeature(featureId, { emojiPhotoFocusX: x, emojiPhotoFocusY: y })
+            }
+            const patch = (feature) => ({ ...feature, emojiPhotoFocusX: x, emojiPhotoFocusY: y })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
             setPlaceCardFeature((current) => (current ? patch(current) : current))
           }}
