@@ -594,7 +594,7 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
               <span>{active.emptySub}</span>
             </div>
           ) : (
-            active.entries.slice(0, 60).map(({ item, type }) => (
+            active.entries.slice(0, activeTab === "nature" ? 80 : 60).map(({ item, type }) => (
               <ListRow
                 key={`${type}-${item.id}`}
                 item={item}

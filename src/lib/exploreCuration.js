@@ -115,6 +115,9 @@ function startOfToday() {
 // 상태 배지 임계값 — 종료 7일 안이면 "마감 임박", 관측 30일 안이면 "최근 관측" (스펙 v3.3 §5)
 const CLOSING_SOON_DAYS = 7
 const RECENT_OBSERVATION_DAYS = 30
+// 생물 정렬 임계 — 관측 6개월(180일) 이내는 "최근 그룹"으로 묶어 거리순, 그 이후는 최신순.
+// ⚠️ api/wildlife.js 의 60종 컷도 동일 규칙을 써야 근처의 오래된 종이 컷에서 안 잘린다.
+const WILDLIFE_RECENT_DAYS = 180
 
 // 행사 상태 배지: 마감 임박(종료 임박) / 진행중 / D-N(시작 전) / null(판정 불가)
 export function eventDdayBadge(event) {
@@ -187,12 +190,15 @@ export function formatObservedAgo(item) {
   return { recent: false, label: `${date.getMonth() + 1}.${date.getDate()} 관측` }
 }
 
-// ④ 정렬 키 — 거리 우선 + 최근 관측 가중 (60일당 +1km, 최대 +6km 상당 페널티)
+// ④ 정렬 키 — 2단계.
+//   ① 관측 6개월(WILDLIFE_RECENT_DAYS) 이내 = "최근 그룹" → 거리순 (키 = 거리, 대략 0~30)
+//   ② 그보다 오래됐거나 날짜 미상 = 그 뒤에 최신순 (키 = 1e5 + 경과일, 미상은 맨 뒤)
+// 1e5 오프셋이 최근 그룹(거리 최대 ~30)보다 훨씬 커서 항상 최근 그룹이 앞에 온다.
 export function wildlifeSortKey(item) {
   const dist = Number.isFinite(item?.distKm) ? item.distKm : 30
   const days = observedDaysAgo(item)
-  const agePenalty = days == null ? 6 : Math.min(days, 365) / 60
-  return dist + agePenalty
+  if (days != null && days <= WILDLIFE_RECENT_DAYS) return dist
+  return 1e5 + (days == null ? 1e6 : days)
 }
 
 // 카드 소스 배지 라벨 — 카드에는 출처+상태 배지만 단다 (스펙 v3.3 §5)

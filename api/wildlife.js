@@ -14,7 +14,7 @@ const DEFAULT_RADIUS_KM = 5
 const MIN_RADIUS_KM = 1
 const MAX_RADIUS_KM = 15
 const SPARSE_THRESHOLD = 8
-const RESULT_LIMIT = 60
+const RESULT_LIMIT = 80
 const GRID_DEG = 0.01 // ~1.1km — 좌표 그리드 스냅 단위 (같은 동네 = 같은 쿼리 = 캐시 공유)
 
 // 명시적 CC 라이선스가 있는 사진만 — CC0/CC-BY 계열 + CC-BY-NC(비상업).
@@ -148,6 +148,22 @@ async function fetchObservations(location, radiusKm) {
   return Array.isArray(data.results) ? data.results : []
 }
 
+// 정렬 규칙 — 클라이언트 src/lib/exploreCuration.js 의 wildlifeSortKey 와 동일한 2단계.
+//   ① 관측 6개월(WILDLIFE_RECENT_DAYS) 이내 = 거리순(최근 그룹)  ② 그 이후/미상 = 최신순
+// 이 순서로 정렬한 뒤 상위 RESULT_LIMIT 만 남겨, 근처의 최근 종이 컷에서 안 잘리게 한다.
+const WILDLIFE_RECENT_DAYS = 180
+function wildlifeDaysAgo(observedOn) {
+  const t = Date.parse(String(observedOn || ""))
+  if (Number.isNaN(t)) return null
+  return Math.max(0, Math.round((Date.now() - t) / 86400000))
+}
+function wildlifeSortKey(item) {
+  const dist = Number.isFinite(item?.distKm) ? item.distKm : 30
+  const days = wildlifeDaysAgo(item?.observedOn)
+  if (days != null && days <= WILDLIFE_RECENT_DAYS) return dist
+  return 1e5 + (days == null ? 1e6 : days)
+}
+
 // 종(taxon)별로 하나만 — 사진 있는 최신 관측 우선, 없으면 첫 관측
 function dedupeByTaxon(items) {
   const byTaxon = new Map()
@@ -205,7 +221,7 @@ export default async function handler(req, res) {
     }
 
     const merged = [...items, ...gbifItems]
-      .sort((a, b) => (b.observedOn || "").localeCompare(a.observedOn || ""))
+      .sort((a, b) => wildlifeSortKey(a) - wildlifeSortKey(b))
       .slice(0, RESULT_LIMIT)
     return res.status(200).json({
       items: merged,
