@@ -294,12 +294,13 @@ export function ShareSheet({
     setShareToggling(true)
     try {
       if (placement.isPublished) {
-        const didTurnOff = await onUnpublishMap(map.id)
-        if (didTurnOff === false) onClose?.()
-        else {
-          showToast?.("링크 공유를 껐어요. 다시 켜면 새 링크가 만들어져요.")
-          onClose?.()
-        }
+        // 끄기 = 회수. 결과를 기억시키지 않고 행동하는 순간에 보여준다.
+        const confirmed = window.confirm(
+          "공유 링크를 끌까요?\n지금까지 공유한 링크가 더 이상 열리지 않고, 공개·프로필 노출도 함께 꺼져요.\n다시 켜면 새 링크가 만들어져요.",
+        )
+        if (!confirmed) return
+        await onUnpublishMap(map.id)
+        onClose?.()
       } else {
         // 켤 때는 시트를 유지해 방금 만든 링크를 바로 복사/공유할 수 있게 한다.
         const enableShare = onEnsureShareLink || onPublishMap
@@ -308,7 +309,7 @@ export function ShareSheet({
     } finally {
       setShareToggling(false)
     }
-  }, [canToggleShare, map?.id, onClose, onEnsureShareLink, onPublishMap, onUnpublishMap, placement.isPublished, shareToggling, showToast])
+  }, [canToggleShare, map?.id, onClose, onEnsureShareLink, onPublishMap, onUnpublishMap, placement.isPublished, shareToggling])
 
   // 공개 토글 — 검색·탐색·프로필 노출 (ON: public+프로필, OFF: 링크 공유 상태로 강등)
   const isPublic = map?.visibility === "public"

@@ -162,7 +162,7 @@ export function useMapCRUD({
   const deleteMap = useCallback(async (directMapId) => {
     const targetId = directMapId || mapSheet?.id
     if (!targetId) return
-    if (!directMapId && !window.confirm("이 지도를 삭제할까요? 지도에 담긴 장소 카드는 '내 장소'에 그대로 남고, 발행·공유만 해제돼요.")) return
+    if (!directMapId && !window.confirm("이 지도를 삭제할까요? 지도에 담긴 장소 카드는 '내 장소'에 그대로 남고, 공유·공개만 해제돼요.")) return
 
     try {
       if (cloudMode) {
@@ -386,7 +386,7 @@ export function useMapCRUD({
         if (current.source === "own" && (current.id === idOrPostId || current.id === targetMapId)) return null
         return current
       })
-      showToast("링크 공유를 중지했어요. 프로필에서도 내려갔어요.")
+      showToast("링크 공유를 껐어요. 다시 켜면 새 링크가 만들어져요.")
     } catch (error) {
       console.error("Failed to unpublish map", error)
       showToast(friendlySupabaseError(error))

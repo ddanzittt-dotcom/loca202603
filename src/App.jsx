@@ -1215,6 +1215,15 @@ export default function App() {
 
   const handleMapEditorBack = useCallback(() => {
     if (!confirmDiscardEditorDraft()) return
+    // 🌍 공개 지도는 편집을 마치고 나갈 때 스냅샷을 자동 갱신한다 (공개 = 최신을 보여주겠다는 의도).
+    // 링크 공유(unlisted)는 공유 시트를 여는 시점에만 갱신 — 보여줄 시점을 사용자가 정한다.
+    if (
+      cloudMode && activeMapSource === "local"
+      && activeMap?.isPublished && activeMap?.visibility === "public"
+      && (!activeMap?.userRole || activeMap.userRole === "owner")
+    ) {
+      refreshShareSnapshot(activeMap.id)
+    }
     if (activeMapSource === "community" || activeMapSource === "shared") {
       setActiveTab("maps")
     }
@@ -1225,7 +1234,7 @@ export default function App() {
     setMapsView("list")
     resetEditorState()
     setActiveMapSource("local")
-  }, [activeMapSource, confirmDiscardEditorDraft, maps, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
+  }, [activeMap, activeMapSource, cloudMode, confirmDiscardEditorDraft, maps, refreshShareSnapshot, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView])
 
   const recoverToHome = useCallback(() => {
     setSharedMapData(null)
@@ -1491,16 +1500,13 @@ export default function App() {
     return await publishMap(mapId)
   }, [maps, publishMap, refreshShareSnapshot])
 
+  // 링크 끄기 — ShareSheet 의 confirm 이 링크·공개·프로필 해제를 한 번에 안내하므로 바로 실행한다.
+  // (unpublish 가 프로필 노출도 함께 내린다)
   const handleMapEditorUnpublish = useCallback(async (mapId) => {
     if (!mapId) return false
-    const isOnProfile = shares.some((share) => share.mapId === mapId)
-    if (isOnProfile) {
-      requestProfilePlacement("removeForUnpublish", mapId)
-      return false
-    }
     await unpublish(mapId)
     return true
-  }, [requestProfilePlacement, shares, unpublish])
+  }, [unpublish])
 
   const handleSaveSharedMap = useCallback(async () => {
     if (savingSharedMap) return
