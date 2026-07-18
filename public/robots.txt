@@ -4,6 +4,7 @@ Allow: /
 Disallow: /admin
 Disallow: /account
 Disallow: /api/
+Disallow: /shared
 
 # 검색엔진 사이트맵
 Sitemap: https://loca.im/sitemap.xml
