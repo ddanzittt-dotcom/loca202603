@@ -113,13 +113,36 @@
 .loca-title__foot {
   position: absolute;
   bottom: 10px;
+  left: 0;
+  right: 0;
   z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  padding: 0 14px;
   font-family: "DungGeunMo", monospace;
   font-size: 10px;
   color: #f6efdb;
   text-shadow: 1px 1px 0 #1f1a12;
   letter-spacing: 0.1em;
 }
+
+.loca-title__legal {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10px;
+  color: #f6efdb;
+  text-shadow: 1px 1px 0 #1f1a12;
+  letter-spacing: 0.1em;
+}
+.loca-title__legal:hover { text-decoration: underline; }
+/* 개인정보처리방침은 법령상 타 링크와 구분되게 표시 (색상 강조) */
+.loca-title__legal--privacy { color: #ffd338; }
 
 @media (max-width: 520px) {
   .loca-title__menu { flex-direction: column; align-items: stretch; width: min(84vw, 320px); }

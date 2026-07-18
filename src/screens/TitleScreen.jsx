@@ -1,7 +1,12 @@
 import { useEffect, useRef } from "react"
 import { PixelWordmark } from "../components/PixelWordmark"
 import { drawPixelArtToCanvas, findPixelArt } from "../lib/pixelEmojiCatalog"
+import { buildLegalDocumentUrl } from "../lib/appUtils"
 import "../styles/title-screen.css"
+
+function openLegalDoc(kind) {
+  window.open(buildLegalDocumentUrl(kind), "_blank", "noopener,noreferrer")
+}
 
 // LOCA 타이틀 화면 — 고양이 삼총사(검정 로카냥·치즈냥·흰냥)가 큰길을 따라 동쪽으로
 // 무한 질주하는 라이브 배경(Dave the Diver 감성). 네트워크 0 · 매번 동일.
@@ -260,7 +265,14 @@ export function TitleScreen({ onEnter, onExploreGame, onLogin }) {
           </button>
         ) : null}
       </div>
-      <div className="loca-title__foot">© 2026 LOCA · LOCA.IM</div>
+      <div className="loca-title__foot">
+        <span>© 2026 LOCA · LOCA.IM</span>
+        <span aria-hidden="true">·</span>
+        <button type="button" className="loca-title__legal" onClick={() => openLegalDoc("terms")}>이용약관</button>
+        <span aria-hidden="true">·</span>
+        {/* 개인정보보호법 시행령 §31③ — 첫 화면 하단 게재 + 명칭 사용 + 색상으로 타 링크와 구분 */}
+        <button type="button" className="loca-title__legal loca-title__legal--privacy" onClick={() => openLegalDoc("privacy")}>개인정보처리방침</button>
+      </div>
     </div>
   )
 }
