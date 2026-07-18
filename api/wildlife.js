@@ -15,6 +15,8 @@ const MIN_RADIUS_KM = 1
 const MAX_RADIUS_KM = 15
 const SPARSE_THRESHOLD = 8
 const RESULT_LIMIT = 80
+const PAGE_SIZE = 200          // iNat per_page (최대치)
+const MAX_PAGES = 2            // 종 수가 상한 미만이고 더 있으면 최대 2페이지까지만 확장
 const GRID_DEG = 0.01 // ~1.1km — 좌표 그리드 스냅 단위 (같은 동네 = 같은 쿼리 = 캐시 공유)
 
 // 명시적 CC 라이선스가 있는 사진만 — CC0/CC-BY 계열 + CC-BY-NC(비상업).
@@ -125,12 +127,13 @@ function normalize(obs, location) {
   }
 }
 
-async function fetchObservations(location, radiusKm) {
+async function fetchObservations(location, radiusKm, page = 1) {
   const params = new URLSearchParams({
     lat: String(location.lat),
     lng: String(location.lng),
     radius: String(radiusKm),
-    per_page: "200",
+    per_page: String(PAGE_SIZE),
+    page: String(page),
     photos: "true",
     locale: "ko",
     order_by: "observed_on",
@@ -201,11 +204,22 @@ export default async function handler(req, res) {
     // GBIF 보충은 iNat 와 병렬로 — 누적 관측이라 처음부터 최대 반경으로 (fail-soft [])
     const gbifPromise = fetchGbifSupplement(location, MAX_RADIUS_KM).catch(() => [])
 
-    let raw = await fetchObservations(location, radiusKm)
+    let effRadius = radiusKm
+    let raw = await fetchObservations(location, effRadius)
     let items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
-    // 주변이 한산하면 반경 확장
-    if (items.length < SPARSE_THRESHOLD && radiusKm < MAX_RADIUS_KM) {
-      raw = await fetchObservations(location, MAX_RADIUS_KM)
+    // 주변이 한산하면(종<8) 반경 확장
+    if (items.length < SPARSE_THRESHOLD && effRadius < MAX_RADIUS_KM) {
+      effRadius = MAX_RADIUS_KM
+      raw = await fetchObservations(location, effRadius)
+      items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+    }
+    // 최근 1페이지(200건)만으론 종 수가 상한(RESULT_LIMIT) 미만이고, 더 가져올 게 있으면
+    // 부족할 때만 다음 페이지를 추가로 합친다(최대 MAX_PAGES). 좌표·사진 있는 관측 그대로 유지.
+    // (도심처럼 관측은 많은데 최근 200건이 같은 종을 반복해 종 수가 적은 경우 보강)
+    for (let page = 2; page <= MAX_PAGES && items.length < RESULT_LIMIT && raw.length >= PAGE_SIZE * (page - 1); page += 1) {
+      const more = await fetchObservations(location, effRadius, page)
+      if (!more.length) break
+      raw = [...raw, ...more]
       items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
     }
 
