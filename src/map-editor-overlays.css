@@ -1573,6 +1573,22 @@
   color: var(--primary) !important;
 }
 
+/* 공유 링크 표시 박스 — 복사할 짧은 주소를 눈으로 확인시킨다 */
+.share-sheet__url {
+  margin: 2px 2px 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-strong, #1f1a12);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .share-sheet__hint {
   text-align: center;
   color: #667085;
