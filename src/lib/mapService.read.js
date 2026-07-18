@@ -928,14 +928,28 @@ export async function listPublicMapFeatureSummaries(mapIds = []) {
   return data || []
 }
 
+// 아이디(slug) 중복확인 — is_slug_available RPC(boolean)만 호출한다.
+// 형식이 맞고 아무도 안 쓰면 true. 프로필/이메일 등은 노출되지 않는다.
+export async function checkSlugAvailable(slug) {
+  const trimmed = (slug || "").trim()
+  if (!trimmed) return false
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("is_slug_available", { p_slug: trimmed })
+  if (error) throw error
+  return Boolean(data)
+}
+
 export async function searchUsersForInvite(query) {
-  if (!query || query.trim().length < 2) return []
+  // 아이디(slug)로 검색 — 유일값이라 닉네임 대비 동명이인 혼동이 없다.
+  // 입력 앞의 @ 는 제거하고 소문자 정규화(slug 는 저장 시 소문자).
+  const raw = (query || "").trim().replace(/^@+/, "").toLowerCase()
+  if (raw.length < 2) return []
   const supabase = requireSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from("profiles")
     .select("id, nickname, avatar_url, slug")
-    .ilike("nickname", `%${query.trim()}%`)
+    .ilike("slug", `${raw}%`) // 접두 일치 — 아이디를 다 입력하면 사실상 정확 매칭
     .limit(10)
 
   if (error) throw error

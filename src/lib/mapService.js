@@ -29,6 +29,7 @@ export {
   getFollowingIds,
   listPublicMapFeatureSummaries,
   searchUsersForInvite,
+  checkSlugAvailable,
   listCollaborationInvites,
   checkCollaboratorAccess,
   checkAdminRole,

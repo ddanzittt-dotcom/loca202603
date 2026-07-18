@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { AlertTriangle, Bell, BellOff, ChevronRight, Download, ExternalLink, Eye, KeyRound, LogOut, Moon, RotateCcw, Sun, Trash2, UserX } from "lucide-react"
-import { buildLegalDocumentUrl } from "../lib/appUtils"
+import { buildLegalDocumentUrl, normalizeSlugInput, isValidSlug, SLUG_MIN, SLUG_MAX } from "../lib/appUtils"
+import { checkSlugAvailable } from "../lib/mapService"
 import { updatePassword } from "../lib/auth"
 import { PixelAvatar, avatarCharOf, avatarCharSentinel } from "../components/PixelAvatar"
 import "../styles/account-v2.css"
@@ -84,6 +85,42 @@ export function AccountScreen({
   const [editChar, setEditChar] = useState(() => avatarCharOf(user) || "male")
   const [profileDirty, setProfileDirty] = useState(false)
   const [profileSaving, setProfileSaving] = useState(false)
+  const [handleStatus, setHandleStatus] = useState("idle") // idle|current|checking|available|taken|invalid|error
+
+  // 현재 저장된 아이디(변경 안 하면 형식과 무관하게 그대로 허용).
+  const currentHandleRaw = (user.handle || "").replace(/^@/, "")
+
+  // 아이디(slug) 실시간 중복확인 — 값을 실제로 바꿨을 때만.
+  useEffect(() => {
+    if (!profileDirty || editHandle === currentHandleRaw) { setHandleStatus("current"); return undefined }
+    if (!isValidSlug(editHandle)) { setHandleStatus("invalid"); return undefined }
+    if (!cloudMode) { setHandleStatus("idle"); return undefined } // 로컬 모드: 중복확인 불가, 형식만 검사
+    setHandleStatus("checking")
+    const timer = window.setTimeout(async () => {
+      try {
+        const ok = await checkSlugAvailable(editHandle)
+        setHandleStatus(ok ? "available" : "taken")
+      } catch {
+        setHandleStatus("error")
+      }
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [editHandle, profileDirty, currentHandleRaw, cloudMode])
+
+  const handleReady = !["checking", "taken", "invalid"].includes(handleStatus)
+
+  const handleHint =
+    handleStatus === "invalid" ? `아이디는 영문 소문자·숫자·밑줄(_) ${SLUG_MIN}~${SLUG_MAX}자로 입력해요.`
+    : handleStatus === "checking" ? "확인 중..."
+    : handleStatus === "taken" ? "이미 사용 중인 아이디예요."
+    : handleStatus === "available" ? "사용 가능한 아이디예요."
+    : handleStatus === "error" ? "중복 확인을 못 했어요. 저장 시 다시 확인돼요."
+    : ""
+
+  const handleHintColor =
+    handleStatus === "available" ? "#12B981"
+    : (handleStatus === "taken" || handleStatus === "invalid") ? "#EF4444"
+    : "#667085"
 
   // 클라우드 프로필이 뒤늦게 로드되면 편집 전 폼에 반영
   useEffect(() => {
@@ -260,7 +297,16 @@ export function AccountScreen({
             </div>
             <label className="acct-field">
               <span className="acct-field__label">아이디</span>
-              <input value={editHandle} onChange={(event) => setHandle(event.target.value)} />
+              <input
+                value={editHandle}
+                onChange={(event) => setHandle(normalizeSlugInput(event.target.value))}
+                placeholder="loca_kim"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={SLUG_MAX}
+              />
+              {handleHint ? <small style={{ fontSize: "0.78rem", color: handleHintColor }}>{handleHint}</small> : null}
             </label>
             <label className="acct-field">
               <span className="acct-field__label-row">
@@ -274,7 +320,7 @@ export function AccountScreen({
               <input value={editLink} onChange={(event) => setLink(event.target.value)} type="url" placeholder="https://" />
             </label>
           </div>
-          <button className="acct-save" type="button" onClick={saveProfile} disabled={!profileDirty || profileSaving}>
+          <button className="acct-save" type="button" onClick={saveProfile} disabled={!profileDirty || profileSaving || !handleReady}>
             {profileSaving ? "저장 중..." : "개인정보 저장"}
           </button>
         </article>

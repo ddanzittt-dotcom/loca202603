@@ -8,12 +8,9 @@ import {
   friendlySupabaseError,
 } from "../../lib/mapService"
 
-const ROLE_OPTIONS = [
-  { value: "editor", label: "편집자", description: "장소를 추가, 수정, 삭제할 수 있어요." },
-  { value: "viewer", label: "뷰어", description: "지도를 볼 수만 있어요." },
-]
-
-const roleLabel = (role) => ROLE_OPTIONS.find((item) => item.value === role)?.label || "뷰어"
+// 초대는 편집자만 추가한다 — 뷰어 자격은 공유 링크를 넘기면 자동으로 얻으므로 여기선 다루지 않는다.
+// (아래 라벨은 과거에 추가된 뷰어 협업자를 목록에서 표시할 때만 쓰인다.)
+const roleLabel = (role) => (role === "viewer" ? "뷰어" : "편집자")
 
 const statusLabel = (status) => {
   if (status === "pending") return "초대 대기"
@@ -48,7 +45,6 @@ export function CollaboratorsSheet({
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [adding, setAdding] = useState(null)
-  const [inviteRole, setInviteRole] = useState("editor")
 
   const canManageCollaborators = mapRole === "owner"
 
@@ -73,7 +69,6 @@ export function CollaboratorsSheet({
     loadCollaborators()
     setSearchQuery("")
     setSearchResults([])
-    setInviteRole("editor")
   }, [loadCollaborators, open])
 
   useEffect(() => {
@@ -110,8 +105,8 @@ export function CollaboratorsSheet({
     if (!canManageCollaborators || !mapId) return
     setAdding(user.id)
     try {
-      await addCollaborator(mapId, user.id, inviteRole)
-      showToast?.(`${user.nickname}님을 ${roleLabel(inviteRole)}로 초대했어요.`)
+      await addCollaborator(mapId, user.id, "editor")
+      showToast?.(`${user.nickname}님을 편집자로 초대했어요.`)
       setSearchQuery("")
       setSearchResults([])
       await loadCollaborators()
@@ -136,7 +131,7 @@ export function CollaboratorsSheet({
   }
 
   const subtitle = useMemo(() => {
-    if (canManageCollaborators) return "내 지도에 함께 기록할 사람을 초대하고 권한을 관리해요."
+    if (canManageCollaborators) return "상대의 아이디로 검색해 내 지도에 함께 기록할 편집자를 초대해요."
     return "이 지도에 함께 참여 중인 사람들을 확인할 수 있어요."
   }, [canManageCollaborators])
 
@@ -149,28 +144,16 @@ export function CollaboratorsSheet({
               <input
                 className="collab-search__input"
                 type="text"
-                placeholder="닉네임으로 검색"
+                placeholder="아이디로 검색 (예: @loca_kim)"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
               />
               <div className="collab-search__hint">
-                {searching ? "검색 중..." : "2글자 이상 입력하면 사용자를 찾을 수 있어요."}
+                {searching ? "검색 중..." : "상대의 아이디를 2글자 이상 입력하면 찾을 수 있어요. 초대하면 편집자로 추가돼요."}
               </div>
-            </div>
-
-            <div className="collab-role-tabs" role="radiogroup" aria-label="초대 권한">
-              {ROLE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`collab-role-chip${inviteRole === option.value ? " is-active" : ""}`}
-                  aria-pressed={inviteRole === option.value}
-                  onClick={() => setInviteRole(option.value)}
-                >
-                  <strong>{option.label}</strong>
-                  <span>{option.description}</span>
-                </button>
-              ))}
             </div>
 
             {searchResults.length > 0 ? (

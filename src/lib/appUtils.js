@@ -521,3 +521,24 @@ export function getFeatureCenter(feature) {
     zoom: 15,
   }
 }
+
+// ─── 공개 아이디(slug) 규칙 — 회원가입·내 정보 관리 공용 ───
+// 서버(migration 077)의 is_slug_available / generate_unique_profile_slug 규칙과 반드시 일치시킨다.
+export const SLUG_MIN = 2
+export const SLUG_MAX = 20
+
+// 입력을 아이디 형식으로 정규화: @ 제거 → 소문자 → 공백을 _ 로 → 허용문자 외 제거 → 최대 길이.
+export function normalizeSlugInput(raw = "") {
+  return String(raw ?? "")
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, SLUG_MAX)
+}
+
+// 아이디가 형식 규칙(소문자·숫자·밑줄 2~20자)을 만족하는가.
+export function isValidSlug(slug = "") {
+  return new RegExp(`^[a-z0-9_]{${SLUG_MIN},${SLUG_MAX}}$`).test(slug)
+}

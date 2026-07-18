@@ -44,14 +44,17 @@ export async function signInWithEmail(email, password, captchaToken) {
   return data
 }
 
-export async function signUpWithEmail(email, password, nickname, captchaToken, consent = {}) {
+export async function signUpWithEmail(email, password, nickname, captchaToken, consent = {}, slug = "") {
   const supabase = requireSupabase()
+  const normalizedSlug = (slug || "").trim()
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         name: nickname,
+        // 가입 폼에서 고른 공개 아이디 — handle_new_user() 트리거(077)가 profiles.slug 로 사용한다.
+        ...(normalizedSlug ? { slug: normalizedSlug } : {}),
         // 동의 기록 — handle_new_user() 트리거(059)가 profiles 로 복사한다.
         terms_agreed: Boolean(consent.terms),
         privacy_agreed: Boolean(consent.privacy),
