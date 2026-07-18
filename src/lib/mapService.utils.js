@@ -52,6 +52,20 @@ export function createSlugCandidate(value = "") {
   return slug || `map-${Date.now().toString(36)}`
 }
 
+// 공유 링크용 짧은 랜덤 slug (loca.im/s/xxxxxxx).
+// 제목 기반 한글 slug 는 URL 인코딩으로 3배 길어져 공유 링크에는 쓰지 않는다.
+// 혼동되기 쉬운 문자(l·1·o·0·i)는 제외 — 구두로 불러줄 때 오타 방지.
+export function createShortShareSlug(length = 7) {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
+  const bytes = new Uint8Array(length)
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes)
+  } else {
+    for (let i = 0; i < length; i += 1) bytes[i] = Math.floor(Math.random() * 256)
+  }
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join("")
+}
+
 export function getDefaultEmoji(type) {
   if (type === "route") return "🛣️"
   if (type === "area") return "🟩"

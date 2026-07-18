@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { Check, ChevronDown, GripVertical, Lock, MoreHorizontal, MoveVertical, Pencil, Search as SearchIcon, Trash2, Users, X } from "lucide-react"
+import { Check, ChevronDown, GripVertical, Link2, Lock, MoreHorizontal, MoveVertical, Pencil, Search as SearchIcon, Trash2, Users, X } from "lucide-react"
 import { EmptyState, SkeletonCard } from "../components/ui"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { generateMiniMapSvg } from "../lib/miniMapPreview"
@@ -24,12 +24,14 @@ function formatRelativeDate(dateStr) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일`
 }
 
+// 상태 3단계: 공개(public — 검색·탐색 노출) / 링크 공유 중(linked — 링크 아는 사람만) / 비공개(private — 나만).
+// "공개" 필터에는 public 만 들어간다 — 링크만 켠 지도가 "공개"로 보이던 혼란을 없앤다.
 function getMapStatus(map, placement) {
   const collabCount = Number(map.collabCount ?? map.collab_count ?? map.collaboratorCount ?? map.collaborator_count ?? 0)
   if (collabCount > 0 || (map.userRole && map.userRole !== "owner")) return "collab"
-  if (placement.isDraft) return "draft"
-  if (!placement.isPublished || map?.visibility === "private" || map?.privacy === "private") return "private"
-  return "published"
+  if (placement.isPublished && map?.visibility === "public") return "public"
+  if (placement.isPublished) return "linked"
+  return "private"
 }
 
 function getCollabCount(map) {
@@ -37,8 +39,15 @@ function getCollabCount(map) {
 }
 
 function StatusBadge({ status, collabCount }) {
-  if (status === "published") return null
-  if (status === "draft") return <span className="maps-v3-status maps-v3-status--draft">작성 중</span>
+  if (status === "public") return <span className="maps-v3-status maps-v3-status--public">공개</span>
+  if (status === "linked") {
+    return (
+      <span className="maps-v3-status maps-v3-status--linked">
+        <Link2 size={8} strokeWidth={2.8} aria-hidden="true" />
+        링크 공유
+      </span>
+    )
+  }
   if (status === "private") {
     return (
       <span className="maps-v3-status maps-v3-status--private">
@@ -294,8 +303,8 @@ export function MapsListScreen({
 
   const counts = useMemo(() => ({
     all: mapEntries.length,
-    public: mapEntries.filter((entry) => entry.status === "published" || entry.status === "collab").length,
-    private: mapEntries.filter((entry) => entry.status === "draft" || entry.status === "private").length,
+    public: mapEntries.filter((entry) => entry.status === "public" || entry.status === "collab").length,
+    private: mapEntries.filter((entry) => entry.status === "linked" || entry.status === "private").length,
   }), [mapEntries])
 
   const orderedEntries = useMemo(() => [...mapEntries].sort(sortMapEntries), [mapEntries])
@@ -304,8 +313,8 @@ export function MapsListScreen({
     const normalized = debouncedQuery.trim().toLowerCase()
     return mapEntries
       .filter((entry) => {
-        if (filter === "public" && !(entry.status === "published" || entry.status === "collab")) return false
-        if (filter === "private" && !(entry.status === "draft" || entry.status === "private")) return false
+        if (filter === "public" && !(entry.status === "public" || entry.status === "collab")) return false
+        if (filter === "private" && !(entry.status === "linked" || entry.status === "private")) return false
         return normalized ? entry.searchable.includes(normalized) : true
       })
       .sort(sortMapEntries)

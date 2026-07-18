@@ -130,14 +130,20 @@ export function ShareSheet({
   capturing,
   onPublishMap,
   onUnpublishMap,
+  onEnsureShareLink,
+  onSetMapPublic,
+  autoEnable = false,
   showToast,
 }) {
   const qrPreviewRef = useRef(null)
+  const autoLinkTriedRef = useRef(false)
   const [copied, setCopied] = useState(false)
   const [copying, setCopying] = useState(false)
   const [kakaoSharing, setKakaoSharing] = useState(false)
   const [qrDownloading, setQrDownloading] = useState(false)
   const [shareToggling, setShareToggling] = useState(false)
+  const [autoLinking, setAutoLinking] = useState(false)
+  const [publicToggling, setPublicToggling] = useState(false)
 
   const cleanUrl = getCleanShareUrl(rawShareUrl)
   const qrUrl = cleanUrl || null
@@ -175,6 +181,8 @@ export function ShareSheet({
       setKakaoSharing(false)
       setQrDownloading(false)
       setShareToggling(false)
+      setAutoLinking(false)
+      setPublicToggling(false)
     }
   }, [open])
 
@@ -259,8 +267,28 @@ export function ShareSheet({
   const canToggleShare = canManageShare && (
     placement.isPublished
       ? typeof onUnpublishMap === "function"
-      : typeof onPublishMap === "function"
+      : typeof (onEnsureShareLink || onPublishMap) === "function"
   )
+
+  // 공유 시트를 여는 것 = 공유 의도.
+  // 링크가 없으면 자동으로 만들고(링크 아는 사람만 보는 상태), 이미 있으면 스냅샷만 조용히 갱신한다(주소 유지).
+  useEffect(() => {
+    if (!open) {
+      autoLinkTriedRef.current = false
+      return
+    }
+    if (autoLinkTriedRef.current) return
+    if (!autoEnable || !map?.id || !canManageShare) return
+    if (typeof onEnsureShareLink !== "function") return
+    autoLinkTriedRef.current = true
+    if (placement.isPublished) {
+      onEnsureShareLink(map.id)
+      return
+    }
+    setAutoLinking(true)
+    Promise.resolve(onEnsureShareLink(map.id)).finally(() => setAutoLinking(false))
+  }, [open, autoEnable, canManageShare, map?.id, onEnsureShareLink, placement.isPublished])
+
   const handleToggleShare = useCallback(async () => {
     if (!map?.id || shareToggling || !canToggleShare) return
     setShareToggling(true)
@@ -269,17 +297,31 @@ export function ShareSheet({
         const didTurnOff = await onUnpublishMap(map.id)
         if (didTurnOff === false) onClose?.()
         else {
-          showToast?.("링크 공유를 껐어요.")
+          showToast?.("링크 공유를 껐어요. 다시 켜면 새 링크가 만들어져요.")
           onClose?.()
         }
       } else {
-        const didTurnOn = await onPublishMap(map.id)
-        if (didTurnOn) onClose?.()
+        // 켤 때는 시트를 유지해 방금 만든 링크를 바로 복사/공유할 수 있게 한다.
+        const enableShare = onEnsureShareLink || onPublishMap
+        await enableShare(map.id)
       }
     } finally {
       setShareToggling(false)
     }
-  }, [canToggleShare, map?.id, onClose, onPublishMap, onUnpublishMap, placement.isPublished, shareToggling, showToast])
+  }, [canToggleShare, map?.id, onClose, onEnsureShareLink, onPublishMap, onUnpublishMap, placement.isPublished, shareToggling, showToast])
+
+  // 공개 토글 — 검색·탐색·프로필 노출 (ON: public+프로필, OFF: 링크 공유 상태로 강등)
+  const isPublic = map?.visibility === "public"
+  const canTogglePublic = canManageShare && typeof onSetMapPublic === "function"
+  const handleTogglePublic = useCallback(async () => {
+    if (!map?.id || publicToggling || !canTogglePublic) return
+    setPublicToggling(true)
+    try {
+      await onSetMapPublic(map.id, !isPublic)
+    } finally {
+      setPublicToggling(false)
+    }
+  }, [canTogglePublic, isPublic, map?.id, onSetMapPublic, publicToggling])
 
   return (
     <BottomSheet open={open} title="공유 링크" onClose={onClose}>
@@ -287,7 +329,7 @@ export function ShareSheet({
         <div className="share-sheet__publish">
           <div className="share-sheet__publish-copy">
             <strong>링크 공유</strong>
-            <span>링크 공유를 켜면 누구나 링크로 보고 저장할 수 있어요.</span>
+            <span>링크를 아는 사람만 볼 수 있어요. 검색·탐색에는 노출되지 않아요.</span>
           </div>
           <button
             className={`share-sheet__publish-toggle${placement.isPublished ? " is-active" : ""}`}
@@ -299,6 +341,23 @@ export function ShareSheet({
             {shareToggling ? "..." : placement.isPublished ? "ON" : "OFF"}
           </button>
         </div>
+        {typeof onSetMapPublic === "function" ? (
+          <div className="share-sheet__publish">
+            <div className="share-sheet__publish-copy">
+              <strong>검색·탐색에 공개</strong>
+              <span>{isPublic ? "검색 결과·탐색·내 프로필에 노출되고 있어요." : "켜면 검색 결과·탐색·내 프로필에 노출돼요."}</span>
+            </div>
+            <button
+              className={`share-sheet__publish-toggle${isPublic ? " is-active" : ""}`}
+              type="button"
+              onClick={handleTogglePublic}
+              disabled={!canTogglePublic || publicToggling || autoLinking}
+              aria-pressed={isPublic}
+            >
+              {publicToggling ? "..." : isPublic ? "ON" : "OFF"}
+            </button>
+          </div>
+        ) : null}
         {qrUrl ? (
           <div className="share-sheet__qr-section">
             <canvas
@@ -323,11 +382,11 @@ export function ShareSheet({
             className="share-sheet__action-btn share-sheet__action-btn--copy"
             type="button"
             onClick={handleCopyUrl}
-            disabled={!cleanUrl || copying}
+            disabled={!cleanUrl || copying || autoLinking}
           >
             <span className="share-sheet__action-icon">🔗</span>
             <span className="share-sheet__action-label">
-              {copying ? "복사 중..." : copied ? "복사 완료" : "링크 복사"}
+              {autoLinking ? "링크 만드는 중..." : copying ? "복사 중..." : copied ? "복사 완료" : "링크 복사"}
             </span>
           </button>
 

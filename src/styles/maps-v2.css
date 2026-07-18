@@ -302,6 +302,20 @@
   color: var(--ink-soft);
   border: 1px solid var(--line);
 }
+.maps-library-screen--v2 .maps-v3-status--public {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 7px;
+  border-radius: 5px;
+  letter-spacing: -0.01em;
+}
+.maps-library-screen--v2 .maps-v3-status--linked {
+  background: var(--bg-deep);
+  color: var(--ink-strong);
+  border: 1px solid var(--line-strong);
+}
 
 /* ---------- 검색 + 필터 row v2 ---------- */
 .maps-library-screen--v2 .maps-v3-search {

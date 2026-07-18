@@ -5102,6 +5102,16 @@ img.collab-item__avatar {
   color: #2D4A3E;
 }
 
+.maps-v3-status--public {
+  background: #FF6B35;
+  color: #fff;
+}
+
+.maps-v3-status--linked {
+  background: #E3EEF9;
+  color: #24557E;
+}
+
 .maps-v3-card__info {
   display: block;
   padding: 11px 13px 13px;

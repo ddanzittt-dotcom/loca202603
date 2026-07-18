@@ -898,8 +898,11 @@ export default function App() {
     if (activeMap.slug) {
       return buildSlugShareUrl(activeMap.slug, "link")
     }
+    // 클라우드 모드는 공유 시트가 열릴 때 자동으로 짧은 링크를 만들므로 긴 데이터 URL 을 쓰지 않는다.
+    // (데모/로컬 전용 fallback — 서버가 없어 자체 포함 URL 만 가능)
+    if (cloudMode) return ""
     return buildMapShareUrl(activeMap, activeFeatures)
-  }, [activeFeatures, activeMap])
+  }, [activeFeatures, activeMap, cloudMode])
 
   const featureEmojiChoices = featureSheet
     ? featureSheet.type === "route"
@@ -930,7 +933,7 @@ export default function App() {
     openMapEditor,
     saveMapSheet, deleteMap: deleteMapAction, reorderMaps,
     importSharedMapToLocal, importMapBundleToLocal,
-    publishMap, unpublish, addMapToProfile, removeMapFromProfile,
+    publishMap, refreshShareSnapshot, setMapPublic, unpublish, addMapToProfile, removeMapFromProfile,
     openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
     maps, setMaps, features, setFeatures, shares, setShares,
@@ -1474,6 +1477,19 @@ export default function App() {
     }
     return publishedMapId
   }, [publishMap, requestProfilePlacement])
+
+  // 공유 시트가 열릴 때 링크를 보장한다: 없으면 자동 생성(unlisted), 있으면 스냅샷만 조용히 갱신.
+  // 프로필 노출 제안 없이 링크만 만든다 — 공유 의도와 프로필 공개 의도는 분리.
+  const handleEnsureShareLink = useCallback(async (mapId) => {
+    if (!mapId) return null
+    const targetMap = maps.find((item) => item.id === mapId)
+    if (!targetMap) return null
+    if (targetMap.slug && targetMap.isPublished) {
+      refreshShareSnapshot(mapId)
+      return mapId
+    }
+    return await publishMap(mapId)
+  }, [maps, publishMap, refreshShareSnapshot])
 
   const handleMapEditorUnpublish = useCallback(async (mapId) => {
     if (!mapId) return false
@@ -2115,6 +2131,9 @@ export default function App() {
             placementRow={findPlacementForMap(activeMap?.id, shares)}
             onPublishMap={handleMapEditorPublish}
             onUnpublishMap={handleMapEditorUnpublish}
+            onEnsureShareLink={handleEnsureShareLink}
+            onSetMapPublic={setMapPublic}
+            shareAutoEnable={cloudMode && activeMapSource === "local" && !mapEditorReadOnly}
             onAddMapToProfile={(mapId) => requestProfilePlacement("add", mapId)}
             onRemoveMapFromProfile={(mapId) => requestProfilePlacement("remove", mapId)}
             onCloseFeatureSummary={() => {

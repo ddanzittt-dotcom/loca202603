@@ -14,6 +14,7 @@ import {
   removeMapFromProfile as removeMapFromProfileRecord,
 } from "../lib/mapService"
 import { toEditableFeature } from "./useFeatureEditing"
+import { createShortShareSlug } from "../lib/mapService.utils"
 import { syncFeatureListLocalMediaToCloud } from "../lib/mediaCloudSync"
 
 export function useMapCRUD({
@@ -299,7 +300,9 @@ export function useMapCRUD({
     await importMapBundleToLocal(sharedMapData, { toastMessage: "공유 지도를 내 라이브러리에 저장했어요." })
   }, [importMapBundleToLocal, sharedMapData])
 
-  // 발행 = 공개 링크(/s/:slug) 를 가진 상태로 전환. 프로필 노출을 자동으로 하지 않는다.
+  // 링크 공유 켜기 = 짧은 랜덤 링크(/s/xxxxxxx) 를 가진 상태로 전환.
+  // visibility 는 unlisted — 링크를 아는 사람만 볼 수 있고, 검색·탐색·사이트맵에는 노출되지 않는다.
+  // (공개 전환·프로필 노출은 별도 액션)
   const publishMap = useCallback(async (mapId) => {
     const effectiveMapId = mapId ?? publishSheet?.selectedMapId
     if (!effectiveMapId) return showToast("링크를 켤 지도를 먼저 선택해 주세요.")
@@ -319,9 +322,10 @@ export function useMapCRUD({
             return synced ? { ...feature, photos: synced.photos } : feature
           }))
         }
+        // 링크를 껐다 다시 켜면 새 slug 가 발급된다(회수한 옛 링크는 되살아나지 않음).
         const { map: publishedMap } = await publishMapRecord(effectiveMapId, {
-          title: targetMap?.title,
-          visibility: "public",
+          slug: createShortShareSlug(),
+          visibility: "unlisted",
         })
         setMaps((current) => current.map((item) => (item.id === effectiveMapId ? publishedMap : item)))
       } else {
@@ -334,7 +338,7 @@ export function useMapCRUD({
       }
       logEvent("map_publish", { map_id: effectiveMapId })
       setPublishSheet(null)
-      showToast("링크 공유를 켰어요.")
+      showToast("공유 링크를 만들었어요. 링크를 아는 사람만 볼 수 있어요.")
       return effectiveMapId
     } catch (error) {
       console.error("Failed to publish map", error)
@@ -342,6 +346,23 @@ export function useMapCRUD({
       return null
     }
   }, [cloudMode, features, maps, publishSheet, setFeatures, setMaps, setPublishSheet, showToast])
+
+  // 링크 공유 중인 지도의 스냅샷을 조용히 갱신한다 (주소 유지, 내용만 최신화).
+  // 공유 시트를 열 때마다 호출 — 실패해도 사용자 흐름을 막지 않는다.
+  const refreshShareSnapshot = useCallback(async (mapId) => {
+    if (!cloudMode || !mapId) return
+    const targetMap = maps.find((item) => item.id === mapId)
+    if (!targetMap?.slug || !targetMap?.isPublished) return
+    try {
+      const { map: refreshedMap } = await publishMapRecord(mapId, {
+        slug: targetMap.slug,
+        visibility: targetMap.visibility || "unlisted",
+      })
+      setMaps((current) => current.map((item) => (item.id === mapId ? refreshedMap : item)))
+    } catch (error) {
+      console.warn("Failed to refresh share snapshot", error)
+    }
+  }, [cloudMode, maps, setMaps])
 
   // 발행 중단 = is_published=false + publication row 삭제(프로필에서도 내려감).
   // 인자: mapId 또는 postId(shares 항목의 id). 두 경로 모두 지원한다.
@@ -372,17 +393,19 @@ export function useMapCRUD({
     }
   }, [cloudMode, setMaps, setSelectedPostRef, setShares, shares, showToast])
 
-  // 프로필에 올리기 = publication row 생성 (발행된 지도 한정).
-  const addMapToProfile = useCallback(async (mapId) => {
+  // 프로필에 올리기 = publication row 생성 (링크 공유 중인 지도 한정).
+  // options.assumePublished: 같은 호출 안에서 방금 링크를 만들어 maps state 가 아직 낡았을 때(공개 토글) 가드 우회.
+  // options.silent: 공개 토글에 흡수되어 호출될 때 개별 토스트 생략.
+  const addMapToProfile = useCallback(async (mapId, { assumePublished = false, silent = false } = {}) => {
     if (!mapId) return false
     const targetMap = maps.find((item) => item.id === mapId)
     if (!targetMap) return false
-    if (!targetMap.isPublished) {
+    if (!assumePublished && !targetMap.isPublished) {
       showToast("먼저 링크 공유를 켜 주세요.")
       return false
     }
     if (shares.some((share) => share.mapId === mapId)) {
-      showToast("이미 프로필에 올라간 지도예요.")
+      if (!silent) showToast("이미 프로필에 올라간 지도예요.")
       return false
     }
     try {
@@ -405,7 +428,7 @@ export function useMapCRUD({
         ])
       }
       logEvent("map_add_to_profile", { map_id: mapId })
-      showToast("프로필에 올렸어요.")
+      if (!silent) showToast("프로필에 올렸어요.")
       return true
     } catch (error) {
       console.error("Failed to add map to profile", error)
@@ -414,7 +437,7 @@ export function useMapCRUD({
     }
   }, [cloudMode, maps, setShares, shares, showToast])
 
-  const removeMapFromProfile = useCallback(async (mapId) => {
+  const removeMapFromProfile = useCallback(async (mapId, { silent = false } = {}) => {
     if (!mapId) return false
     const shareRow = shares.find((share) => share.mapId === mapId)
     if (!shareRow) return false
@@ -429,7 +452,7 @@ export function useMapCRUD({
         if (current.source === "own" && current.id === shareRow.id) return null
         return current
       })
-      showToast("프로필에서 내렸어요.")
+      if (!silent) showToast("프로필에서 내렸어요.")
       return true
     } catch (error) {
       console.error("Failed to remove map from profile", error)
@@ -437,6 +460,51 @@ export function useMapCRUD({
       return false
     }
   }, [cloudMode, setSelectedPostRef, setShares, shares, showToast])
+
+  // 공개 토글 = 검색·탐색·프로필 노출을 한 번에 켜고 끈다.
+  // ON: visibility=public (링크 없으면 새로 생성) + 프로필 노출 + 스냅샷 갱신.
+  // OFF: unlisted 로 강등 — 링크를 아는 사람은 계속 볼 수 있다(완전 차단은 링크 공유 끄기).
+  const setMapPublic = useCallback(async (mapId, isPublic) => {
+    if (!mapId) return false
+    const targetMap = maps.find((item) => item.id === mapId)
+    if (!targetMap) return false
+    try {
+      if (cloudMode) {
+        const { map: updatedMap } = await publishMapRecord(mapId, {
+          slug: targetMap.slug || createShortShareSlug(),
+          visibility: isPublic ? "public" : "unlisted",
+        })
+        setMaps((current) => current.map((item) => (item.id === mapId ? updatedMap : item)))
+      } else {
+        const now = new Date().toISOString()
+        setMaps((current) => current.map((item) => (
+          item.id === mapId
+            ? {
+                ...item,
+                visibility: isPublic ? "public" : "unlisted",
+                isPublished: true,
+                publishedAt: item.publishedAt || now,
+                updatedAt: now,
+                slug: item.slug || `local-${mapId}`,
+              }
+            : item
+        )))
+      }
+      logEvent(isPublic ? "map_set_public" : "map_set_unlisted", { map_id: mapId })
+      if (isPublic) {
+        await addMapToProfile(mapId, { assumePublished: true, silent: true })
+        showToast("지도를 공개했어요. 검색·탐색과 프로필에 노출돼요.")
+      } else {
+        await removeMapFromProfile(mapId, { silent: true })
+        showToast("공개를 껐어요. 링크를 아는 사람은 계속 볼 수 있어요.")
+      }
+      return true
+    } catch (error) {
+      console.error("Failed to toggle map public visibility", error)
+      showToast(friendlySupabaseError(error))
+      return false
+    }
+  }, [addMapToProfile, cloudMode, maps, removeMapFromProfile, setMaps, showToast])
 
   const openFeatureFromPlaces = useCallback((featureId, options) => {
     const feature = features.find((item) => (item.id || item.feature_id) === featureId)
@@ -490,6 +558,8 @@ export function useMapCRUD({
     importMapBundleToLocal,
     importSharedMapToLocal,
     publishMap,
+    refreshShareSnapshot,
+    setMapPublic,
     unpublish,
     addMapToProfile,
     removeMapFromProfile,

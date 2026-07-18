@@ -157,6 +157,9 @@ export function MapEditorScreen({
   shareUrl = "",
   onPublishMap,
   onUnpublishMap,
+  onEnsureShareLink,
+  onSetMapPublic,
+  shareAutoEnable = false,
   coachmarkStep = 0,
   onCoachmarkNext,
   onCoachmarkSkip,
@@ -998,6 +1001,9 @@ export function MapEditorScreen({
         capturing={capturing}
         onPublishMap={onPublishMap}
         onUnpublishMap={onUnpublishMap}
+        onEnsureShareLink={onEnsureShareLink}
+        onSetMapPublic={onSetMapPublic}
+        autoEnable={shareAutoEnable}
         onOpenImageShare={async () => {
           if (capturing || !naverMapRef.current) return
           setCapturing(true)

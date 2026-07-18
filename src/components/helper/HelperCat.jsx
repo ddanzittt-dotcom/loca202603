@@ -217,7 +217,7 @@ const HELP_TOPICS = [
   { step: 1, emoji: "📍", label: "장소 채집하는 법" },
   { step: 2, emoji: "🗂️", label: "카드에 기록 남기는 법" },
   { step: 3, emoji: "🗺️", label: "지도 만드는 법" },
-  { step: 4, emoji: "📣", label: "발행·공유하는 법" },
+  { step: 4, emoji: "📣", label: "공유하는 법" },
 ]
 
 // 랜덤 말풍선 — 이따금 로카냥이 말을 건다
