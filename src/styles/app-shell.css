@@ -5183,7 +5183,8 @@
   .app-shell--tab-explore .web-section--explore.screen--scroll {
     display: flex;
     flex-direction: column;
-    min-height: 100dvh;
+    /* 지도가 뷰포트 하단까지 꽉 차 답답하지 않게 높이를 살짝 줄인다 (하단 여백은 아래 규칙에서) */
+    min-height: calc(100dvh - 16px);
   }
   .app-shell--tab-explore .web-section--explore .web-section__inner {
     flex: 1 1 auto;
@@ -5272,10 +5273,11 @@
     margin: 0 -2px;
   }
 
-  /* 페이지 자체 스크롤 제거 — 지도는 고정, 내부 목록만 스크롤 */
+  /* 페이지 자체 스크롤 제거 — 지도는 고정, 내부 목록만 스크롤.
+     하단 여백을 넉넉히 둬서 지도가 뷰포트 바닥에 붙지 않고 배경이 보이게 한다. */
   .app-shell--tab-explore .web-section--explore.screen--scroll {
     overflow: hidden;
-    padding-bottom: 12px;
+    padding-bottom: 56px;
   }
 
   /* 제목 밴드 압축 — 세로 폭을 줄여 지도가 한 화면에 들어오게 */
