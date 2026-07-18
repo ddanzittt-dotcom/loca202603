@@ -70,17 +70,25 @@ describe("eventTimeKey (① 시간순 — 마감 임박 먼저)", () => {
   })
 })
 
-describe("wildlifeSortKey (④ 거리순 + 최근 관측 가중)", () => {
-  it("같은 거리면 최근 관측이 앞", () => {
-    const fresh = { distKm: 2, observedOn: iso(-1) }
-    const stale = { distKm: 2, observedOn: iso(-200) }
-    expect(wildlifeSortKey(fresh)).toBeLessThan(wildlifeSortKey(stale))
+describe("wildlifeSortKey (④ 2단계 — 관측 6개월 이내는 거리순, 그 이후는 최신순)", () => {
+  it("최근 그룹(6개월 이내)끼리는 신선도 무관 거리순", () => {
+    const nearOlder = { distKm: 1, observedOn: iso(-170) }
+    const farToday = { distKm: 10, observedOn: iso(0) }
+    expect(wildlifeSortKey(nearOlder)).toBeLessThan(wildlifeSortKey(farToday))
   })
 
-  it("가중이 거리를 압도하지 않는다 (1km 오래된 관측 < 10km 오늘 관측)", () => {
+  it("6개월 넘은 관측은 아무리 가까워도 최근 그룹 뒤", () => {
     const nearOld = { distKm: 1, observedOn: iso(-300) }
-    const farNew = { distKm: 10, observedOn: iso(0) }
-    expect(wildlifeSortKey(nearOld)).toBeLessThan(wildlifeSortKey(farNew))
+    const farRecent = { distKm: 30, observedOn: iso(-10) }
+    expect(wildlifeSortKey(farRecent)).toBeLessThan(wildlifeSortKey(nearOld))
+  })
+
+  it("오래된 그룹끼리는 거리 무관 최신순, 날짜 미상은 맨 뒤", () => {
+    const old300 = { distKm: 20, observedOn: iso(-300) }
+    const old400 = { distKm: 1, observedOn: iso(-400) }
+    const unknown = { distKm: 1, observedOn: "" }
+    expect(wildlifeSortKey(old300)).toBeLessThan(wildlifeSortKey(old400))
+    expect(wildlifeSortKey(old400)).toBeLessThan(wildlifeSortKey(unknown))
   })
 })
 
