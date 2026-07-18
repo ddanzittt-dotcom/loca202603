@@ -192,6 +192,7 @@ function WebPageFrame({
   action,
   stats,
   socialCue,
+  onBrand,
   children,
 }) {
   const frameClassName = ["screen screen--scroll web-section", className].filter(Boolean).join(" ")
@@ -201,6 +202,17 @@ function WebPageFrame({
       <div className="web-section__inner">
         <div className="web-section__head">
           <div className="web-section__headline">
+            {/* 모바일 전용 인라인 로고 — 콘텐츠와 함께 스크롤되어 사라진다 (데스크톱은 상단 배너에 로고). 클릭 → 타이틀 화면 */}
+            {onBrand ? (
+              <button
+                type="button"
+                className="web-section__brand"
+                onClick={onBrand}
+                aria-label="LOCA 시작 화면"
+              >
+                <PixelWordmark height={16} shadow="#E3DCC9" />
+              </button>
+            ) : null}
             {eyebrow ? <span className="web-section__eyebrow">{eyebrow}</span> : null}
             <h1 className="web-section__title">{title}</h1>
             {description ? <p className="web-section__description">{description}</p> : null}
@@ -1974,6 +1986,7 @@ export default function App() {
             eyebrow="EXPLORE"
             title="탐색"
             description="지금 내 주변에서 기록할만한 행사와 공간을 찾아요."
+            onBrand={() => setShowTitle(true)}
           >
             <ExploreCurationScreen
               showToast={showToast}
@@ -1990,6 +2003,7 @@ export default function App() {
             className="web-section--maps maps-library-screen--v2"
             eyebrow="MY MAPS"
             title="내 지도"
+            onBrand={() => setShowTitle(true)}
             description={`모은 지도 ${b2cMaps.length}개`}
             action={(
               <button className="web-section__action" type="button" onClick={openMapBuilder}>
@@ -2038,6 +2052,7 @@ export default function App() {
             className="web-section--places maps-library-screen--v2"
             eyebrow="MY PLACES"
             title="내 장소"
+            onBrand={() => setShowTitle(true)}
             description={`모은 장소 ${b2cFeatures.length}개`}
             action={(
               <button className="web-section__action" type="button" onClick={() => setCollectSheetOpen(true)}>
@@ -2192,6 +2207,7 @@ export default function App() {
             eyebrow="DASHBOARD"
             title="내 대시보드"
             description="내가 다닌 곳과 쌓은 기록을 한눈에 봐요."
+            onBrand={() => setShowTitle(true)}
           >
             <DashboardScreen
               user={viewerProfile}
@@ -2217,6 +2233,7 @@ export default function App() {
             eyebrow="ACCOUNT"
             title="내 정보 관리"
             description="로그인 정보와 개인정보, 앱 설정을 한곳에서 관리해요."
+            onBrand={() => setShowTitle(true)}
           >
             <AccountScreen
               user={viewerProfile}
@@ -2252,18 +2269,6 @@ export default function App() {
         <Suspense fallback={null}>
           <WalkModeScreen onExit={exitWalk} onCollect={handleWalkCollect} />
         </Suspense>
-      ) : null}
-
-      {/* 모바일 좌상단 loca. 로고 (데스크톱은 상단 네비에 로고가 있어 숨김). 클릭 → 타이틀 화면 */}
-      {!shouldHideBottomNav && !isMapEditorLayout && !showWalk ? (
-        <button
-          type="button"
-          className="loca-mobile-brand"
-          onClick={() => setShowTitle(true)}
-          aria-label="LOCA 시작 화면"
-        >
-          <PixelWordmark height={18} shadow="#E3DCC9" />
-        </button>
       ) : null}
 
       {/* 로그인 후 우상단 내 계정 버튼 (지도 편집·산책 모드 중에는 숨김) */}

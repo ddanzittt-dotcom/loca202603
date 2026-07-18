@@ -303,11 +303,15 @@
 /* ----- BottomNavV2 ----- */
 .loca-v2-bottomnav {
   position: fixed;
-  left: 50%;
-  right: auto;
+  /* 센터링은 left/right + margin auto — 인앱 웹뷰(스레드 등)의 fixed+transform 렌더 버그 회피 */
+  left: 0;
+  right: 0;
   bottom: 14px;
   width: min(calc(100% - 24px), 760px);
-  height: 68px;
+  margin: 0 auto;
+  /* 폰트 확대(웹뷰 텍스트 부스팅)로 탭이 커져도 캡슐이 같이 늘어나게 고정 높이 금지 */
+  height: auto;
+  min-height: 68px;
   box-sizing: border-box;
   padding: 6px max(6px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-right));
   /* 탭 수와 무관하게 균등 분배 (구 5칸 그리드는 탭 2개일 때 왼쪽으로 몰렸음) */
@@ -320,7 +324,6 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   box-shadow: 0 18px 48px rgba(48, 38, 24, 0.16);
-  transform: translateX(-50%);
   z-index: 50;
 }
 
@@ -396,6 +399,7 @@
     bottom: auto;
     width: min(calc(100% - 72px), 960px);
     height: 64px;
+    min-height: 0; /* 모바일 캡슐의 min-height(68px) 해제 — 배너 높이는 고정값 사용 */
     padding: 6px;
   }
 
@@ -1106,9 +1110,14 @@
     top: 76px;
   }
 
-  /* 필터탭도 지도와 같은 높이(58px 배너 아래)에서 고정 */
+  /* 필터탭도 지도와 같은 높이(58px 배너 아래)에서 고정 — sticky 는 데스크톱 전용 (모바일은 스크롤과 함께 사라짐) */
   .app-shell--tab-explore .xc-tabs {
+    position: sticky;
     top: 72px;
+    z-index: 4;
+    /* 목록이 뒤로 비쳐 겹쳐 보이지 않게 불투명 배경 + 아래 경계 그림자 */
+    background: #FBF4E4;
+    box-shadow: 0 7px 7px -6px rgba(31, 26, 18, 0.3);
   }
 
   .web-section.maps-library-screen--v2 .maps-v3-view,
@@ -1252,33 +1261,32 @@
   }
 }
 
-/* 모바일 좌상단 loca. 로고 버튼 — 데스크톱(네비에 로고 있음)에선 숨김 */
-.loca-mobile-brand {
-  position: fixed;
-  top: 14px;
-  left: 16px;
-  z-index: 45;
-  display: inline-flex;
+/* 모바일 헤더 인라인 로고 — 제목 위에 함께 놓여 스크롤하면 같이 사라진다.
+   데스크톱(상단 배너에 로고 있음)에선 숨김. 클릭 → 타이틀 화면 */
+.web-section__brand {
+  appearance: none;
+  -webkit-appearance: none;
+  display: flex;
   align-items: center;
-  height: 38px;
-  padding: 0 13px;
-  border: 1px solid rgba(23, 24, 23, 0.12);
-  border-radius: 999px;
-  background: #ffffff;
-  box-shadow: 0 4px 14px rgba(23, 24, 23, 0.08);
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: 0;
   cursor: pointer;
 }
-.loca-mobile-brand svg {
+.web-section__brand svg {
   display: block;
-  height: 18px;
+  height: 16px;
   width: auto;
 }
-.loca-mobile-brand:focus-visible {
+.web-section__brand:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 @media (min-width: 960px) {
-  .loca-mobile-brand { display: none; }
+  .web-section__brand { display: none; }
 }
 
 .account-menu__trigger {
@@ -5280,18 +5288,13 @@
   }
 }
 
-/* ── 탐색 필터탭 + 세로 목록 (매물목록형) ── */
+/* ── 탐색 필터탭 + 세로 목록 (매물목록형) ──
+   모바일은 고정하지 않는다 — 스크롤하면 제목과 함께 자연스럽게 사라짐. sticky 는 데스크톱(960~)에서만. */
 .xc-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 4;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 8px 0 10px;
-  /* 목록이 뒤로 비쳐 겹쳐 보이지 않게 불투명 배경 + 아래 경계 그림자 */
-  background: #FBF4E4;
-  box-shadow: 0 7px 7px -6px rgba(31, 26, 18, 0.3);
 }
 
 .xc-tab {
