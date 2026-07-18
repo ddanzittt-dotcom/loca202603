@@ -144,7 +144,7 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
         {item.place ? <span>{String(item.place).split(",")[0]}</span> : null}
       </span>
     )
-    registerLabel = "발견 기록"
+    registerLabel = "발견 장소"
     prefill = wildlifeToPrefill(item)
   }
 

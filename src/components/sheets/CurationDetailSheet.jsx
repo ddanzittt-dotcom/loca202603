@@ -184,7 +184,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
               onClick={() => onRegister?.(wildlifeToPrefill(data))}
             >
               <Plus size={14} strokeWidth={2.6} aria-hidden="true" />
-              발견 기록
+              발견 장소
             </button>
           </footer>
         </section>
