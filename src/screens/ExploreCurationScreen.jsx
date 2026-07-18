@@ -86,7 +86,7 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
   let thumb = null
   let badge = null
   let meta = null
-  let registerLabel = "카드로 등록"
+  let registerLabel = "카드로 담기"
   let prefill = null
 
   if (type === "event") {
@@ -130,7 +130,7 @@ function ListRow({ item, type, onRegister, onOpen, anchorId }) {
         {shortAddress(item.addr) ? <span>{shortAddress(item.addr)}</span> : null}
       </span>
     )
-    registerLabel = isRoute ? "길 카드로 등록" : "카드로 등록"
+    registerLabel = isRoute ? "길 카드로 담기" : "카드로 담기"
     prefill = isRoute ? routeToPrefill(item) : placeToPrefill(item)
   } else {
     const observed = formatObservedAgo(item)

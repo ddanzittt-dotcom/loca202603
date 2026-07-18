@@ -41,7 +41,7 @@ export function NewFindBurst({ feature, dexNo, onDone }) {
         </div>
         <p className="nfb-title">새로운 곳 발견!</p>
         <p className="nfb-name">{name}</p>
-        <p className="nfb-no">No.{dexNo || "000"} 등록 완료</p>
+        <p className="nfb-no">No.{dexNo || "000"} 채집 완료</p>
         <button type="button" className="nfb-btn" onClick={() => onDone?.()}>카드 보기</button>
       </div>
     </div>

@@ -109,7 +109,7 @@ export function MapBuilderSheet({
             </label>
 
             {visibleCards.length > 0 ? (
-              <div className="mbld-grid" role="group" aria-label="등록한 카드">
+              <div className="mbld-grid" role="group" aria-label="모은 카드">
                 {visibleCards.map(({ feature, key, dexNo }) => {
                   const type = getPlaceType(feature)
                   const isOn = selected.has(key)
@@ -160,7 +160,7 @@ export function MapBuilderSheet({
           <div className="mbld-empty">
             <Sparkles size={26} strokeWidth={1.8} aria-hidden="true" />
             <strong>아직 담을 카드가 없어요</strong>
-            <p>먼저 장소를 등록하면 여기서 골라 지도로 묶을 수 있어요.</p>
+            <p>먼저 카드를 모으면 여기서 골라 지도로 묶을 수 있어요.</p>
             <button type="button" className="mbld-ghost" onClick={onStartBlank}>
               빈 지도로 시작
             </button>

@@ -772,7 +772,7 @@ function RecordEditModalContent({ feature, mode, initialDraft, submitting, messa
           {isOwnEdit ? <CheckCircle2 size={20} /> : <MessageCircle size={20} />}
         </span>
         <h2>{isOwnEdit ? "내 기록을 수정할까요?" : "수정 요청하기"}</h2>
-        <p>{isOwnEdit ? "내가 남긴 기록은 바로 수정할 수 있어요." : "다른 사람이 남긴 기록은 운영자가 확인할 수 있도록 수정 요청으로 접수됩니다."}</p>
+        <p>{isOwnEdit ? "내가 남긴 기록은 바로 수정할 수 있어요." : "다른 사람이 남긴 기록은 로카가 확인한 뒤 반영되도록 수정 요청으로 받아요."}</p>
 
         {!isRoute ? (
           <>
@@ -1162,7 +1162,7 @@ function CommunityWebPage({ view, onOpenSubmit, onSaved }) {
       clearDraft()
       onOpenSubmit(false)
       const doneCopy = submittedStatus === "approved"
-        ? "기록이 공개되었어요. 모두의 지도에서 바로 볼 수 있습니다."
+        ? "기록이 공개되었어요. 모두의 지도에서 바로 볼 수 있어요."
         : "기록이 접수되었어요. 검수 후 모두의 지도에 공개됩니다."
       setSubmissionMessage(near.message ? `${doneCopy} ${near.message}` : doneCopy)
     } catch (error) {
@@ -1277,7 +1277,7 @@ function CommunityWebPage({ view, onOpenSubmit, onSaved }) {
         window.setTimeout(closeRecordEdit, 450)
       } else {
         await requestCommunityRecordEditAnonymous(recordEditTarget, input)
-        setRecordEditMessage("수정 요청이 접수되었어요. 운영자가 확인할 수 있습니다.")
+        setRecordEditMessage("수정 요청을 받았어요. 로카가 확인한 뒤 반영돼요.")
         window.setTimeout(closeRecordEdit, 750)
       }
     } catch (error) {
@@ -1930,7 +1930,7 @@ function StorageConnectModal({ open, onClose, onConnected }) {
         ) : (
           <>
             <span className="public-kicker">connect saved box</span>
-            <h2>저장함을 연결하세요.</h2>
+            <h2>저장함을 연결해 주세요.</h2>
             <p>지금 저장한 추천지도와 장소·길을 다른 기기와 앱에서도 이어볼 수 있습니다.</p>
             <p>LOCA 앱이 준비되면 같은 계정으로 웹에서 저장한 지도를 확인할 수 있어요.</p>
             <div className="public-connect-benefit">

@@ -92,7 +92,7 @@ export function useMapCRUD({
   }, [communityMapId, resetEditorState, setActiveMapId, setActiveMapSource, setActiveTab, setFitTrigger, setMapsView])
 
   const saveMapSheet = useCallback(async () => {
-    if (!mapSheet?.title.trim()) return showToast("지도 이름을 입력하세요.")
+    if (!mapSheet?.title.trim()) return showToast("지도 이름을 지어 주세요.")
 
     try {
       if (mapSheet.mode === "create") {

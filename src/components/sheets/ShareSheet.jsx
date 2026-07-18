@@ -58,7 +58,7 @@ export function ShareSheet({
       setTimeout(() => setCopied(false), 1800)
     } catch {
       if (showToast) showToast("클립보드 복사에 실패했어요.")
-      else prompt("복사하세요:", cleanUrl)
+      else prompt("주소를 복사해 주세요:", cleanUrl)
     } finally {
       setCopying(false)
     }

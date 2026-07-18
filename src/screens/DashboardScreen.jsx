@@ -342,7 +342,7 @@ export function DashboardScreen({
               </div>
             </button>
           )) : (
-            <div className="dash-sleeve">주소가 있는 카드를 등록하면 동네가 채워져요</div>
+            <div className="dash-sleeve">주소가 있는 카드를 담으면 동네가 채워져요</div>
           )}
         </DashPanel>
 
@@ -380,7 +380,7 @@ export function DashboardScreen({
 
         {/* ④ 최근 등록 */}
         <DashPanel
-          title="최근 등록"
+          title="최근 채집"
           right={<button type="button" className="dpanel-more" onClick={() => onOpenPlaces?.()}>전체 보기</button>}
           className="drecent"
         >
@@ -395,7 +395,7 @@ export function DashboardScreen({
               <PlaceCardFront feature={feature} dexNo={dexNoByFeatureId.get(feature.id)} mapTitle={mapTitleById.get(feature.mapId) || null} />
             </button>
           )) : (
-            <div className="dash-sleeve">첫 장소를 등록하면 카드가 여기 꽂혀요</div>
+            <div className="dash-sleeve">첫 카드를 담으면 여기 꽂혀요</div>
           )}
         </DashPanel>
 
@@ -405,7 +405,7 @@ export function DashboardScreen({
             <div className="chrono">
               {chronicle.map(([mk, m], i) => {
                 const parts = []
-                if (m.cards) parts.push(<span key="c">카드 <b>{m.cards}장</b> 등록</span>)
+                if (m.cards) parts.push(<span key="c">카드 <b>{m.cards}장</b> 채집</span>)
                 if (m.recs) parts.push(<span key="r">기록 <b>{m.recs}개</b></span>)
                 if (m.towns.length) parts.push(<span key="t">새 동네 <b>{m.towns.join(", ")}</b></span>)
                 return (
@@ -418,7 +418,7 @@ export function DashboardScreen({
               })}
             </div>
           ) : (
-            <div className="dash-sleeve">{hasRecords ? "" : "등록을 시작하면 여정이 기록돼요"}</div>
+            <div className="dash-sleeve">{hasRecords ? "" : "첫 카드를 담으면 여정이 시작돼요"}</div>
           )}
           <div className="chrono-foot">
             <span className="cf-lb">가장 최근 기록</span>

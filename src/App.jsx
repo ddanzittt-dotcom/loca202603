@@ -282,7 +282,7 @@ function AccountMenu({ email, onOpenAccount, onSignOut }) {
                 onOpenAccount?.()
               }}
             >
-              내 정보 관리
+              내 정보
             </button>
             {onSignOut ? (
               <button
@@ -323,7 +323,7 @@ function SignedInScreen({ user, onOpenMaps, onOpenProfile, onSignOut }) {
           </button>
           <button type="button" onClick={onOpenProfile}>
             <User size={17} strokeWidth={2.1} aria-hidden="true" />
-            내 대시보드
+            내 수첩
           </button>
           {onSignOut ? (
             <button type="button" className="is-ghost" onClick={onSignOut}>
@@ -617,7 +617,7 @@ export default function App() {
   }, [])
 
   const handleAuthSuccess = useCallback((mode) => {
-    showToast(mode === "signup" ? "회원가입이 완료되었어요." : "로그인했어요.")
+    showToast(mode === "signup" ? "가입 완료! 만나서 반가워요." : "로그인했어요.")
     setActiveTab("maps")
     setMapsView("list")
     setActiveMapSource("local")
@@ -1896,7 +1896,7 @@ export default function App() {
       return false
     }
     if (!Number.isFinite(spot?.lat) || !Number.isFinite(spot?.lng)) {
-      showToast("이 생물은 위치 정보가 없어 카드로 등록할 수 없어요")
+      showToast("이 생물은 위치 정보가 없어 카드로 담을 수 없어요")
       return false
     }
     // exploreCuration.wildlifeToPrefill 과 동일 형태 (여기 인라인해 explore 청크를 메인에 안 끌어옴)
@@ -1970,7 +1970,7 @@ export default function App() {
             <WebAuthLayout>
                 <AuthScreen
                   title="로그인"
-                  subtitle="내 지도와 친구와 모은 장소를 웹에서 이어보세요"
+                  subtitle="모은 카드와 내 지도를 어디서든 이어봐요"
                   onSuccess={handleAuthSuccess}
                 />
             </WebAuthLayout>
@@ -2057,7 +2057,7 @@ export default function App() {
             action={(
               <button className="web-section__action" type="button" onClick={() => setCollectSheetOpen(true)}>
                 <Database size={16} strokeWidth={2.2} aria-hidden="true" />
-                등록하기
+                담기
               </button>
             )}
           >
@@ -2204,8 +2204,8 @@ export default function App() {
         {!showPersonalLoading && !showPersonalGate && activeTab === "profile" ? (
           <WebPageFrame
             className="web-section--dashboard"
-            eyebrow="DASHBOARD"
-            title="내 대시보드"
+            eyebrow="FIELD NOTE"
+            title="내 수첩"
             description="내가 다닌 곳과 쌓은 기록을 한눈에 봐요."
             onBrand={() => setShowTitle(true)}
           >
@@ -2231,8 +2231,8 @@ export default function App() {
           <WebPageFrame
             className="web-section--account"
             eyebrow="ACCOUNT"
-            title="내 정보 관리"
-            description="로그인 정보와 개인정보, 앱 설정을 한곳에서 관리해요."
+            title="내 정보"
+            description="로그인 정보와 개인정보, 앱 설정을 한곳에서 챙겨요."
             onBrand={() => setShowTitle(true)}
           >
             <AccountScreen
@@ -2462,7 +2462,7 @@ export default function App() {
             setNewFindCard(collected)
           } else {
             setPlaceCardFeature(collected)
-            showToast("등록했어요")
+            showToast("카드로 담았어요")
           }
         }}
       />

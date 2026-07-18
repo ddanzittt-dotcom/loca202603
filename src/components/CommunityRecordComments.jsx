@@ -172,7 +172,7 @@ export function CommunityRecordComments({ feature, className = "" }) {
           disabled={submitting}
         />
         <button type="button" onClick={submitComment} disabled={!body.trim() || submitting}>
-          등록
+          남기기
         </button>
       </div>
       {message ? <p className="public-record-comments__message">{message}</p> : null}

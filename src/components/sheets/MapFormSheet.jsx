@@ -7,7 +7,7 @@ export function MapFormSheet({ mapSheet, setMapSheet, onSave, onDelete, onClose 
     <BottomSheet
       open={Boolean(mapSheet)}
       title={isCreate ? "새 지도 만들기" : "지도 수정"}
-      subtitle="지도 이름과 설명을 입력하세요."
+      subtitle="지도 이름과 설명을 적어 주세요."
       onClose={onClose}
     >
       {mapSheet ? (

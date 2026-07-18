@@ -142,7 +142,7 @@ export function PublishSheet({
                       }}>{statusLabel}</span>
                     </div>
                     <p className="pub-card__desc" style={{ margin: 0 }}>
-                      {isEmpty ? "장소를 먼저 추가해주세요." : (mapItem.description || "설명이 아직 없어요.")}
+                      {isEmpty ? "장소를 먼저 담아 주세요." : (mapItem.description || "설명이 아직 없어요.")}
                     </p>
                   </div>
 

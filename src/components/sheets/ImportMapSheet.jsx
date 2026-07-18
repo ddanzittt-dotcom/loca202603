@@ -168,7 +168,7 @@ export function ImportMapSheet({ open, onClose, onImport, showToast }) {
                 onKeyDown={(e) => { if (e.key === "Enter" && code.trim()) handleImport() }}
               />
             </label>
-            <p className="import-map-sheet__hint">공유 링크가 `/s/my-map-slug`라면 `my-map-slug`를 입력하세요.</p>
+            <p className="import-map-sheet__hint">공유 링크가 `/s/my-map-slug`라면 `my-map-slug`를 입력해 주세요.</p>
             <div className="import-map-sheet__code-actions">
               <button className="button button--ghost" type="button" onClick={() => setMode(null)}>돌아가기</button>
               <button

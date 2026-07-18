@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "LOCA",
+  "name": "LOCA 로카 — 좋아하는 곳을 카드로",
   "short_name": "LOCA",
-  "description": "지도 제작, 장소 기록, 프로필 공개를 한 화면에서 관리하는 웹 지도 작업 공간",
+  "description": "좋아하는 곳이 카드가 돼요. 카드를 모아 내 동네 도감과 나만의 지도를 만들어요.",
   "start_url": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],

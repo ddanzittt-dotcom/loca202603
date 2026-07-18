@@ -5,7 +5,7 @@ export function SharePlaceSheet({ pendingSharePlace, maps, features, onSaveToMap
     <BottomSheet
       open={Boolean(pendingSharePlace)}
       title="장소 저장"
-      subtitle={pendingSharePlace ? `${pendingSharePlace.title || "공유된 장소"}를 저장할 지도를 선택하세요.` : undefined}
+      subtitle={pendingSharePlace ? `${pendingSharePlace.title || "공유된 장소"}를 담을 지도를 골라 주세요.` : undefined}
       onClose={onClose}
     >
       {pendingSharePlace ? (

@@ -640,7 +640,7 @@ export function WalkModeScreen({ onExit, onCollect }) {
                     if (proceeded !== false) eng()?.take(modalSpot)
                     setModalSpot(null)
                   }}
-                >카드로 등록</button>
+                >카드로 채집</button>
               </div>
             </div>
           </div>

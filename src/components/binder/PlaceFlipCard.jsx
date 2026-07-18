@@ -332,7 +332,7 @@ export function PlaceFlipCard({
       await onSetPhoto(file)
       showToast?.("사진을 바꿨어요")
     } catch {
-      showToast?.("사진 등록에 실패했어요. 잠시 후 다시 시도해주세요.")
+      showToast?.("사진 담기에 실패했어요. 잠시 후 다시 시도해 주세요.")
     } finally {
       setPhotoBusy(false)
     }
@@ -543,7 +543,7 @@ export function PlaceFlipCard({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={photoBusy}
                   >
-                    📷 사진 {heroPhoto ? "변경" : "등록"}
+                    📷 사진 {heroPhoto ? "변경" : "담기"}
                   </button>
                   <input
                     ref={fileInputRef}
@@ -637,7 +637,7 @@ export function PlaceFlipCard({
               )}
 
               <div className="bd-spec">
-                <div><span>등록일</span><b>{registered || "—"}</b></div>
+                <div><span>채집일</span><b>{registered || "—"}</b></div>
                 <div><span>주소</span><b>{addressText}</b></div>
               </div>
 

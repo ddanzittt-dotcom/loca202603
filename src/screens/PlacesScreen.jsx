@@ -136,11 +136,11 @@ export function PlacesScreen({
 
       {recordFeatures.length === 0 ? (
         <div className="pl-empty">
-          <p className="pl-empty__title">아직 등록한 장소가 없어요</p>
-          <p className="pl-empty__desc">첫 장소를 등록하면 카드가 되어 여기 꽂혀요</p>
+          <p className="pl-empty__title">아직 모은 장소가 없어요</p>
+          <p className="pl-empty__desc">오늘 다녀온 곳부터 한 장 어때요?</p>
           {onCreateRecord ? (
             <button className="pl-empty__action" type="button" onClick={onCreateRecord}>
-              + 등록하기
+              + 담기
             </button>
           ) : null}
         </div>

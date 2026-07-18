@@ -129,7 +129,7 @@ export function useSocialProfile({
       setSelectedFeatureId(nextFeature.id)
       setFeatureSheet(toEditableFeature(nextFeature))
       setEditorMode("browse")
-      showToast("장소가 저장되었어요.")
+      showToast("장소를 담았어요.")
     } else {
       setPendingSharePlace(null)
       setActiveTab("maps")
@@ -137,7 +137,7 @@ export function useSocialProfile({
       setActiveMapId(targetMapId)
       setActiveMapSource("local")
       setEditorMode("pin")
-      showToast("지도를 탭해서 위치를 지정하세요")
+      showToast("지도를 탭해서 위치를 골라 주세요")
     }
   }, [cloudMode, pendingSharePlace, setFeatures, showToast, touchMap, setPendingSharePlace, setActiveTab, setMapsView, setActiveMapId, setActiveMapSource, setSelectedFeatureId, setFeatureSheet, setEditorMode])
 

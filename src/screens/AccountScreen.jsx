@@ -325,7 +325,7 @@ export function AccountScreen({
             <p className="acct-note">
               {cloudMode
                 ? `${PROVIDER_LABELS[provider] || "소셜"} 로그인 계정은 비밀번호를 사용하지 않아요.`
-                : "로그인하면 비밀번호를 관리할 수 있어요."}
+                : "로그인하면 비밀번호를 바꿀 수 있어요."}
             </p>
           )}
         </article>
@@ -346,7 +346,7 @@ export function AccountScreen({
           </article>
         ) : null}
 
-        <article className="acct-card" aria-label="데이터 관리">
+        <article className="acct-card" aria-label="내 데이터">
           <h2>데이터</h2>
           {canImportLocalData ? (
             <button type="button" className="acct-link-row" onClick={onImportLocalData}><Download size={15} aria-hidden="true" />로컬 데이터 가져오기<ChevronRight size={14} aria-hidden="true" /></button>

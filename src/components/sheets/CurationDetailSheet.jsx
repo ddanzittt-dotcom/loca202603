@@ -315,7 +315,7 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
           ) : <span />}
           <button type="button" className="xdt-register" onClick={() => onRegister?.(prefill)}>
             <Plus size={14} strokeWidth={2.6} aria-hidden="true" />
-            {isRoute ? "길 카드로 등록" : "카드로 등록"}
+            {isRoute ? "길 카드로 담기" : "카드로 담기"}
           </button>
         </footer>
       </section>

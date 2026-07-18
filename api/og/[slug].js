@@ -24,10 +24,10 @@ export default async function handler(req, res) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL
   const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
 
+  const DEFAULT_DESCRIPTION = "좋아하는 곳을 모아 만든 지도예요."
   let title = "LOCA 지도"
-  let description = "로컬 큐레이션 지도를 확인해보세요."
+  let description = DEFAULT_DESCRIPTION
   let pinCount = 0
-  let category = "personal"
 
   if (supabaseUrl && supabaseKey) {
     try {
@@ -35,14 +35,13 @@ export default async function handler(req, res) {
 
       const { data: mapRow } = await supabase
         .from("maps")
-        .select("title, description, theme, category")
+        .select("title, description, theme")
         .eq("slug", slug)
         .maybeSingle()
 
       if (mapRow) {
         title = mapRow.title || title
         description = mapRow.description || description
-        category = mapRow.category || category
       }
 
       const { count } = await supabase
@@ -56,9 +55,11 @@ export default async function handler(req, res) {
     }
   }
 
-  const ogDescription = description !== "로컬 큐레이션 지도를 확인해보세요."
+  const ogDescription = description !== DEFAULT_DESCRIPTION
     ? description
-    : `${pinCount > 0 ? `${pinCount}개의 장소가 등록된 ` : ""}${category === "event" ? "이벤트 " : ""}지도를 확인해보세요.`
+    : pinCount > 0
+      ? `좋아하는 곳 ${pinCount}곳을 모아 만든 지도예요.`
+      : DEFAULT_DESCRIPTION
   const canonicalUrl = `https://${req.headers.host}/s/${encodeURIComponent(slug)}`
 
   // OG 이미지: 카카오톡/페이스북은 SVG 를 렌더하지 못하므로 정적 PNG 를 쓴다.

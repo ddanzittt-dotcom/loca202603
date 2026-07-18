@@ -109,9 +109,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     try {
       await navigator.clipboard.writeText(shareUrl)
       logEvent("share_click", { map_id: map.id, meta: { method: "link" } })
-      showViewerToast("링크가 복사되었어요!")
+      showViewerToast("링크를 복사했어요!")
     } catch {
-      prompt("복사하세요", shareUrl)
+      prompt("주소를 복사해 주세요", shareUrl)
     }
     setShareOpen(false)
   }, [shareUrl, map.id, showViewerToast])
@@ -164,9 +164,9 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     // 카카오 SDK가 없으면 클립보드 복사로 대체
     try {
       await navigator.clipboard.writeText(shareUrl)
-      showViewerToast("링크가 복사되었어요. 카카오톡에 붙여넣어 주세요.")
+      showViewerToast("링크를 복사했어요. 카카오톡에 붙여넣어 주세요.")
     } catch {
-      prompt("카카오톡에 붙여넣으세요:", shareUrl)
+      prompt("카카오톡에 붙여넣어 주세요:", shareUrl)
     }
     setShareOpen(false)
   }, [shareUrl, map, showViewerToast])

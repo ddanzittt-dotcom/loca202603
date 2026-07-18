@@ -107,7 +107,7 @@ export function getRecommendSearchOgMeta(query = "", origin = "") {
 export function applyPublicOgMeta(meta = {}) {
   if (typeof document === "undefined") return
   const title = compactText(meta.title, "LOCA")
-  const description = compactText(meta.description, "나만의 장소를 기록하고 공유하세요.")
+  const description = compactText(meta.description, "좋아하는 곳을 카드로 모아 나만의 지도를 만들어요.")
   const image = meta.image || absoluteUrl(PUBLIC_OG_FALLBACK_IMAGE)
   const url = meta.url || getCurrentUrl()
 

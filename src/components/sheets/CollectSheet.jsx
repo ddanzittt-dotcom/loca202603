@@ -263,7 +263,7 @@ export function CollectSheet({
       onClose?.()
     } catch (error) {
       console.error("collect failed", error)
-      showToast?.("등록에 실패했어요. 잠시 후 다시 시도해주세요.")
+      showToast?.("카드로 담지 못했어요. 잠시 후 다시 시도해 주세요.")
     } finally {
       setSaving(false)
     }
@@ -275,11 +275,11 @@ export function CollectSheet({
         className="clt-sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="장소 등록"
+        aria-label="장소 담기"
         onClick={(event) => event.stopPropagation()}
       >
         <header className="clt-head">
-          <strong>{step === "pick" ? "어디를 등록할까요?" : isNewFind ? "새로운 곳 발견!" : "등록된 곳이에요"}</strong>
+          <strong>{step === "pick" ? "어디를 담을까요?" : isNewFind ? "새로운 곳 발견!" : "이미 지도에 있는 곳이에요"}</strong>
           <button type="button" className="clt-close" onClick={onClose} aria-label="닫기">
             <X size={15} strokeWidth={2.4} />
           </button>
@@ -329,7 +329,7 @@ export function CollectSheet({
                 📍 {pickedAddress || "찍은 위치"}
               </p>
             ) : (
-              <p className="clt-hint">지도를 눌러 위치를 고르거나, 위에서 검색하세요.</p>
+              <p className="clt-hint">지도를 눌러 위치를 고르거나, 위에서 검색해 보세요.</p>
             )}
 
             <button
@@ -338,7 +338,7 @@ export function CollectSheet({
               disabled={!point || checkingNearby}
               onClick={confirmPoint}
             >
-              {checkingNearby ? "주변을 살피는 중…" : "이 위치로 등록하기"}
+              {checkingNearby ? "주변을 살피는 중…" : "이 위치로 담기"}
             </button>
           </>
         ) : (
@@ -351,8 +351,8 @@ export function CollectSheet({
                 <em>{isNewFind ? "NEW FIND" : "SPOT"}</em>
                 <p>
                   {isNewFind
-                    ? "지도에 등록되지 않은 곳이에요. 내가 처음 발견한 곳!"
-                    : `${selectedSpot?.categoryName || categoryLabel(categoryId)} · 등록된 장소를 카드로 담아요.`}
+                    ? "아직 지도에 없는 곳이에요. 내가 처음 발견한 곳!"
+                    : `${selectedSpot?.categoryName || categoryLabel(categoryId)} · 이 장소를 카드로 담아요.`}
                 </p>
               </div>
             </div>
@@ -419,7 +419,7 @@ export function CollectSheet({
             {candidates.length > 0 ? (
               <div className="clt-field">
                 <span className="clt-field__label">이 장소가 맞나요? (아니면 다시 선택)</span>
-                <div className="clt-candidates" role="radiogroup" aria-label="주변 등록 장소">
+                <div className="clt-candidates" role="radiogroup" aria-label="주변 장소 후보">
                   {candidates.slice(0, 4).map((candidate) => (
                     <button
                       key={`${candidate.name}-${candidate.lat}`}
@@ -448,7 +448,7 @@ export function CollectSheet({
                     }}
                   >
                     <strong>여기가 아니에요</strong>
-                    <span>내가 발견한 곳으로 직접 등록</span>
+                    <span>내가 발견한 곳으로 담기</span>
                   </button>
                 </div>
               </div>
@@ -457,7 +457,7 @@ export function CollectSheet({
             <div className="clt-actions">
               <button type="button" className="clt-ghost" onClick={() => setStep("pick")}>위치 다시 고르기</button>
               <button type="button" className="clt-primary" disabled={saving || !name.trim()} onClick={handleSave}>
-                {saving ? "등록 중…" : "등록하기"}
+                {saving ? "담는 중…" : "담기"}
               </button>
             </div>
           </>

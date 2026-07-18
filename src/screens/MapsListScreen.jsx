@@ -209,7 +209,7 @@ function MapsV3Card({
                   {typeof onCollaborate === "function" ? (
                     <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onCollaborate?.(item.map.id) }}>
                       <Users size={13} />
-                      협업자 관리
+                      함께 만들기
                     </button>
                   ) : null}
                   <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onStartReorder?.(item.map.id) }}>
@@ -436,7 +436,7 @@ export function MapsListScreen({
             variant="character"
             characterImage={characterImage || "/characters/cloud_lv1.svg"}
             title="첫 지도를 만들어볼까요"
-            description="가봤던 곳, 좋았던 곳을 지도에 모아보세요"
+            description="아끼는 카드만 골라 엮으면 나만의 지도가 돼요"
             action="새 지도 만들기"
             onAction={onCreate}
           />

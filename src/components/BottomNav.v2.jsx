@@ -20,7 +20,7 @@ export function BottomNavV2({ tab, onTabChange, authed = false, onBrandClick }) 
       { id: "explore", label: "탐색", Icon: Compass },
       { id: "maps", label: "내 지도", Icon: Map },
       { id: "places", label: "내 장소", Icon: MapPin },
-      { id: "profile", label: "내 대시보드", Icon: LayoutDashboard },
+      { id: "profile", label: "내 수첩", Icon: LayoutDashboard },
     ]
     : [
       { id: "explore", label: "탐색", Icon: Compass },

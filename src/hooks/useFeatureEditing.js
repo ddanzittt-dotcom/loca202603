@@ -270,7 +270,7 @@ export function useFeatureEditing({
       return false
     }
     if ((sourceFeature.createdBy || null) === (currentUserId || me.id)) {
-      showToast("내가 등록한 장소는 바로 수정할 수 있어요.")
+      showToast("내가 담은 장소는 바로 수정할 수 있어요.")
       return false
     }
 
@@ -326,7 +326,7 @@ export function useFeatureEditing({
     if (featureSheet?.cloudPending) return showToast("저장 준비 중이에요. 잠시 후 다시 눌러 주세요.")
     if (!featureSheet?.title.trim()) return showToast("이름을 입력해 주세요.")
     if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
-      showToast("내가 등록한 장소만 직접 수정할 수 있어요. 수정 요청을 이용해 주세요.")
+      showToast("내가 담은 장소만 직접 수정할 수 있어요. 수정 요청을 이용해 주세요.")
       return
     }
     const trimmedTitle = featureSheet.title.trim().slice(0, 100)
@@ -442,7 +442,7 @@ export function useFeatureEditing({
   const deleteFeature = useCallback(async () => {
     if (!featureSheet?.id || !window.confirm("이 항목을 삭제할까요?")) return
     if (activeMapSource === "community" && (featureSheet.createdBy || null) !== (currentUserId || me.id)) {
-      showToast("내가 등록한 장소만 삭제할 수 있어요.")
+      showToast("내가 담은 장소만 삭제할 수 있어요.")
       return
     }
     if (activeMapSource === "community") {

@@ -125,7 +125,7 @@ export function useInstallPrompt() {
   let installHint = "브라우저 메뉴에서 '앱 설치' 또는 '홈 화면에 추가'를 사용할 수 있어요."
   if (isStandalone) installHint = "이미 홈 화면에 설치되어 있어요."
   else if (deferredPrompt) installHint = "버튼을 눌러 홈 화면에 바로 설치할 수 있어요."
-  else if (isIOS && isSafari) installHint = "Safari 공유 메뉴에서 '홈 화면에 추가'를 선택하세요."
+  else if (isIOS && isSafari) installHint = "Safari 공유 메뉴에서 '홈 화면에 추가'를 눌러 주세요."
 
   const promptInstall = async () => {
     if (!deferredPrompt) return false

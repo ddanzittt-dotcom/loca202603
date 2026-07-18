@@ -147,7 +147,7 @@ export function CollaboratorsSheet({
   }, [canManageCollaborators])
 
   return (
-    <BottomSheet open={open} title="협업자 관리" subtitle={subtitle} onClose={onClose}>
+    <BottomSheet open={open} title="함께 만드는 사람들" subtitle={subtitle} onClose={onClose}>
       <div style={{ padding: "0 16px 16px" }}>
         {canManageCollaborators ? (
           <>

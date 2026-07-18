@@ -48,12 +48,12 @@ export function PlaceSharePoster({ feature, dexNo, innerRef }) {
 
           <div className={`csp-desc${desc ? "" : " csp-desc--empty"}`}>
             <span className="csp-desc__k">설명</span>
-            <p>{desc || "이곳에 대한 한 줄 기록을 남겨보세요."}</p>
+            <p>{desc || "아직 한 줄 기록을 붙이기 전이에요."}</p>
           </div>
 
           <div className="csp-stats">
             <span>{region ? "지역" : "타입"} · <b>{region || type.label}</b></span>
-            {registered ? <span>수집 · <b>{registered}</b></span> : null}
+            {registered ? <span>채집 · <b>{registered}</b></span> : null}
           </div>
 
           <div className="csp-foot">

@@ -553,7 +553,7 @@ export function MapEditorScreen({
                           setSearching(false)
                         }
                       }}
-                      placeholder="주소 또는 장소를 검색하세요"
+                      placeholder="어디를 찾아볼까요?"
                     />
                     {externalSearchQuery ? (
                       <button
@@ -611,7 +611,7 @@ export function MapEditorScreen({
                       <Link2 size={16} color="#2D4A3E" />
                     </button>
                     {typeof onOpenCollaborators === "function" ? (
-                      <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="협업자 관리">
+                      <button className="me-bar__share me-bar__collab" type="button" onClick={onOpenCollaborators} aria-label="함께 만들기">
                         <Users size={16} color="#2D4A3E" />
                       </button>
                     ) : null}
@@ -1037,7 +1037,7 @@ export function MapEditorScreen({
         <CoachMark
           step={2}
           totalSteps={3}
-          title="지도에 등록한 항목을 바로 확인할 수 있어요"
+          title="지도에 담은 항목을 바로 확인할 수 있어요"
           description="지도에 남긴 장소를 누르면 설명과 사진을 미리보기로 확인할 수 있습니다."
           nextLabel="시작하기"
           onNext={() => onCoachmarkNext?.(0)}
