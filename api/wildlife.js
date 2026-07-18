@@ -45,6 +45,10 @@ const TAXON_META = {
 }
 // iNaturalist iconic_taxa 파라미터로 소스에서 필터 (곤충 등 제외)
 const ALLOWED_TAXA = Object.keys(TAXON_META)
+// 식물이 관측을 압도하므로 동물을 전용으로 따로 확보해 목표 비율(50:50)로 섞는다.
+const PLANT_TAXA = ["Plantae"]
+const ANIMAL_TAXA = ALLOWED_TAXA.filter((t) => t !== "Plantae")
+const ANIMAL_TARGET = 40 // RESULT_LIMIT 의 절반 — 동물에 우선 배정할 슬롯
 
 function toNumber(value) {
   const next = Number(value)
@@ -127,7 +131,7 @@ function normalize(obs, location) {
   }
 }
 
-async function fetchObservations(location, radiusKm, page = 1) {
+async function fetchObservations(location, radiusKm, page = 1, taxa = ALLOWED_TAXA) {
   const params = new URLSearchParams({
     lat: String(location.lat),
     lng: String(location.lng),
@@ -138,7 +142,7 @@ async function fetchObservations(location, radiusKm, page = 1) {
     locale: "ko",
     order_by: "observed_on",
     order: "desc",
-    iconic_taxa: ALLOWED_TAXA.join(","), // 새/동물/식물만 — 곤충·거미·버섯 제외
+    iconic_taxa: taxa.join(","), // 새/동물/식물만 — 곤충·거미·버섯 제외 (동물/식물 분리 조회에도 사용)
   })
   let resp
   try {
@@ -181,6 +185,25 @@ function dedupeByTaxon(items) {
   return [...byTaxon.values()]
 }
 
+// 한 분류군(동물 또는 식물)을 종 dedup 해 확보 — 한산하면 반경 확장, 목표 미만이면 부족할 때만 2페이지.
+async function fetchGroup(location, radiusKm, taxa, targetCount) {
+  let effRadius = radiusKm
+  let raw = await fetchObservations(location, effRadius, 1, taxa)
+  let items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+  if (items.length < SPARSE_THRESHOLD && effRadius < MAX_RADIUS_KM) {
+    effRadius = MAX_RADIUS_KM
+    raw = await fetchObservations(location, effRadius, 1, taxa)
+    items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+  }
+  for (let page = 2; page <= MAX_PAGES && items.length < targetCount && raw.length >= PAGE_SIZE * (page - 1); page += 1) {
+    const more = await fetchObservations(location, effRadius, page, taxa)
+    if (!more.length) break
+    raw = [...raw, ...more]
+    items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
+  }
+  return items
+}
+
 export default async function handler(req, res) {
   if (!isAppRequest(req)) {
     return res.status(403).json({ items: [], error: "forbidden" })
@@ -204,42 +227,37 @@ export default async function handler(req, res) {
     // GBIF 보충은 iNat 와 병렬로 — 누적 관측이라 처음부터 최대 반경으로 (fail-soft [])
     const gbifPromise = fetchGbifSupplement(location, MAX_RADIUS_KM).catch(() => [])
 
-    let effRadius = radiusKm
-    let raw = await fetchObservations(location, effRadius)
-    let items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
-    // 주변이 한산하면(종<8) 반경 확장
-    if (items.length < SPARSE_THRESHOLD && effRadius < MAX_RADIUS_KM) {
-      effRadius = MAX_RADIUS_KM
-      raw = await fetchObservations(location, effRadius)
-      items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
-    }
-    // 최근 1페이지(200건)만으론 종 수가 상한(RESULT_LIMIT) 미만이고, 더 가져올 게 있으면
-    // 부족할 때만 다음 페이지를 추가로 합친다(최대 MAX_PAGES). 좌표·사진 있는 관측 그대로 유지.
-    // (도심처럼 관측은 많은데 최근 200건이 같은 종을 반복해 종 수가 적은 경우 보강)
-    for (let page = 2; page <= MAX_PAGES && items.length < RESULT_LIMIT && raw.length >= PAGE_SIZE * (page - 1); page += 1) {
-      const more = await fetchObservations(location, effRadius, page)
-      if (!more.length) break
-      raw = [...raw, ...more]
-      items = dedupeByTaxon(raw.map((obs) => normalize(obs, location)))
-    }
+    // 동물·식물을 각각 전용으로 확보(목표 50:50) — 식물이 관측을 압도해 동물이 파묻히는 걸 막는다.
+    // 동물은 목표(ANIMAL_TARGET)까지, 식물은 상한까지 채울 만큼 종을 모은다.
+    const animals = await fetchGroup(location, radiusKm, ANIMAL_TAXA, ANIMAL_TARGET)
+    const plants = await fetchGroup(location, radiusKm, PLANT_TAXA, RESULT_LIMIT)
 
-    // GBIF 보충 병합 — iNat 에 이미 있는 종(학명 기준)은 제외, GBIF 안에서도 종당 1건
+    // GBIF 보충 — iNat 에 없는 종만 동물/식물 풀에 각각 합류 (종당 1건)
     const gbifRaw = await gbifPromise
-    const seenSpecies = new Set(items.map((item) => (item.scientific || "").toLowerCase()).filter(Boolean))
-    const gbifItems = []
+    const seenSpecies = new Set([...animals, ...plants].map((item) => (item.scientific || "").toLowerCase()).filter(Boolean))
     for (const record of gbifRaw) {
       const speciesKey = (record.scientific || "").toLowerCase()
       if (!speciesKey || seenSpecies.has(speciesKey)) continue
       seenSpecies.add(speciesKey)
-      gbifItems.push(normalizeGbif(record, location))
+      const item = normalizeGbif(record, location)
+      if (PLANT_TAXA.includes(item.taxonGroup)) plants.push(item)
+      else if (ANIMAL_TAXA.includes(item.taxonGroup)) animals.push(item)
     }
 
-    const merged = [...items, ...gbifItems]
+    // 목표 50:50 — 동물 최대 ANIMAL_TARGET, 나머지를 식물로. 한쪽이 모자라면 다른 쪽으로 상한까지 채움.
+    animals.sort((a, b) => wildlifeSortKey(a) - wildlifeSortKey(b))
+    plants.sort((a, b) => wildlifeSortKey(a) - wildlifeSortKey(b))
+    let animalsTake = Math.min(ANIMAL_TARGET, animals.length)
+    let plantsTake = Math.min(RESULT_LIMIT - animalsTake, plants.length)
+    if (animalsTake + plantsTake < RESULT_LIMIT) {
+      // 식물이 모자라면(드묾) 동물로 상한까지 보충
+      animalsTake = Math.min(animals.length, RESULT_LIMIT - plantsTake)
+    }
+    const merged = [...animals.slice(0, animalsTake), ...plants.slice(0, plantsTake)]
       .sort((a, b) => wildlifeSortKey(a) - wildlifeSortKey(b))
-      .slice(0, RESULT_LIMIT)
     return res.status(200).json({
       items: merged,
-      sources: { inat: items.length, gbif: gbifItems.length },
+      sources: { animals: animals.length, plants: plants.length, shown: { animals: animalsTake, plants: plantsTake } },
     })
   } catch (error) {
     return res.status(502).json({ items: [], error: `${error.name}: ${error.message}` })
