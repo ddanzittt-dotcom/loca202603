@@ -980,7 +980,7 @@ export default function App() {
 
   const {
     focusFeature, focusFeatureOnly, openFeatureDetail,
-    saveFeatureSheet, requestCommunityFeatureUpdate, requestCommunityFeatureUpdateById, deleteFeature,
+    saveFeatureSheet, requestCommunityFeatureUpdate, requestCommunityFeatureUpdateById, deleteFeature, deleteFeaturesByIds,
     addMemo, updateMemo, deleteMemo, createHandleMapTap, completeRoute, completeArea,
     startRelocatePin, importCommunityFeatureToMine, unimportCommunityFeature,
   } = useFeatureEditing({
@@ -2083,6 +2083,7 @@ export default function App() {
                 if (feature) setPlaceCardFeature(feature)
               }}
               onCreateRecord={() => setCollectSheetOpen(true)}
+              onDeleteFeatures={deleteFeaturesByIds}
               embedded
             />
           </WebPageFrame>

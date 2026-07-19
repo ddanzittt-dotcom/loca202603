@@ -711,12 +711,12 @@ export function FeatureEditSheet({
         ) : null}
 
         {/* --- 액션 --- */}
+        {/* 삭제(카드 완전 삭제)는 제거 — 카드가 사라지면 안 되므로. 지도에서만 빼려면
+            요약 카드의 "지도에서 빼기"를 쓴다(카드는 바인더에 유지). 저장을 전폭으로. */}
         <div className="fes-action">
-          {canDelete ? (
-            <button type="button" className="fes-btn fes-btn--danger" onClick={onDelete}>삭제</button>
-          ) : (
+          {!canDelete ? (
             <button type="button" className="fes-btn fes-btn--ghost" onClick={onClose}>닫기</button>
-          )}
+          ) : null}
           <button
             type="button"
             className="fes-btn fes-btn--primary"

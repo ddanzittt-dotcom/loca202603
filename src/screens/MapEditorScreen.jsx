@@ -829,7 +829,6 @@ export function MapEditorScreen({
                 typeof onRemoveFeatureFromMap === "function"
                   && isSummaryAuthor
                   && !communityMode
-                  && selectedFeatureSummary.type === "pin"
                   ? () => onRemoveFeatureFromMap(selectedFeatureSummary.id)
                   : undefined
               }

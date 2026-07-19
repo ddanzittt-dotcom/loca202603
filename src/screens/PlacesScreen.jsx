@@ -25,6 +25,7 @@ export function PlacesScreen({
   features,
   onOpenFeature,
   onCreateRecord,
+  onDeleteFeatures,
   embedded = false,
   title = "장소",
   subtitle = "저장한 장소와 길을 빠르게 찾기",
@@ -34,6 +35,10 @@ export function PlacesScreen({
   const [page, setPage] = useState(0)
   const [pageAnim, setPageAnim] = useState(0)
   const [pageSize, setPageSize] = useState(initialPageSize)
+  // 카드 지우기(다중 선택 삭제) 모드
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [deleting, setDeleting] = useState(false)
 
   // 외부에서 검색어를 주입하면(동네 타일 클릭 등) 반영
   useEffect(() => {
@@ -111,6 +116,26 @@ export function PlacesScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safePage, pageCount])
 
+  const exitSelectMode = () => { setSelectMode(false); setSelectedIds(new Set()) }
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+  const handleDeleteSelected = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0 || deleting || typeof onDeleteFeatures !== "function") return
+    if (!window.confirm(`선택한 카드 ${ids.length}장을 삭제할까요?\n담긴 지도에서도 빠지고 되돌릴 수 없어요.`)) return
+    setDeleting(true)
+    try {
+      await onDeleteFeatures(ids)
+      exitSelectMode()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const Wrapper = embedded ? "div" : "section"
   const searching = query.trim().length > 0
 
@@ -163,6 +188,19 @@ export function PlacesScreen({
               <span className="bd-pg">{safePage + 1} / {pageCount}</span>
               <button type="button" onClick={() => goPage(safePage + 1)} disabled={safePage >= pageCount - 1} aria-label="다음 페이지">▶</button>
             </div>
+            {typeof onDeleteFeatures === "function" ? (
+              selectMode ? (
+                <div className="bd-selctrl">
+                  <span className="bd-selctrl__n">{selectedIds.size}장 선택</span>
+                  <button type="button" className="bd-selctrl__del" disabled={selectedIds.size === 0 || deleting} onClick={handleDeleteSelected}>
+                    {deleting ? "지우는 중…" : "삭제"}
+                  </button>
+                  <button type="button" className="bd-selctrl__cancel" onClick={exitSelectMode} disabled={deleting}>취소</button>
+                </div>
+              ) : (
+                <button type="button" className="bd-cardclear" onClick={() => setSelectMode(true)}>🗑 카드 지우기</button>
+              )
+            ) : null}
           </div>
 
           {filteredFeatures.length === 0 ? (
@@ -172,25 +210,34 @@ export function PlacesScreen({
             </div>
           ) : (
             <div key={pageAnim} className="bd-grid bd-grid--flip">
-              {pageFeatures.map((feature) => (
-                <button
-                  key={feature.id}
-                  type="button"
-                  className="bd-card bd-card--holo"
-                  onClick={() => onOpenFeature(feature.id)}
-                  onPointerMove={holoTiltMove}
-                  onPointerLeave={holoTiltLeave}
-                  aria-label={`${(feature.title || "").trim() || "이름 없는 장소"} 카드 열기`}
-                >
-                  <span className="bd-shine" aria-hidden="true" />
-                  <span className="bd-glare" aria-hidden="true" />
-                  <PlaceCardFront
-                    feature={feature}
-                    dexNo={dexNoByFeatureId.get(feature.id)}
-                    mapTitle={mapTitleById.get(feature.mapId) || null}
-                  />
-                </button>
-              ))}
+              {pageFeatures.map((feature) => {
+                const picked = selectMode && selectedIds.has(feature.id)
+                return (
+                  <button
+                    key={feature.id}
+                    type="button"
+                    className={`bd-card bd-card--holo${selectMode ? " bd-card--select" : ""}${picked ? " is-picked" : ""}`}
+                    onClick={() => (selectMode ? toggleSelect(feature.id) : onOpenFeature(feature.id))}
+                    onPointerMove={selectMode ? undefined : holoTiltMove}
+                    onPointerLeave={selectMode ? undefined : holoTiltLeave}
+                    aria-pressed={selectMode ? picked : undefined}
+                    aria-label={selectMode
+                      ? `${(feature.title || "").trim() || "이름 없는 장소"} ${picked ? "선택 해제" : "선택"}`
+                      : `${(feature.title || "").trim() || "이름 없는 장소"} 카드 열기`}
+                  >
+                    {selectMode ? (
+                      <span className={`bd-card__pick${picked ? " is-on" : ""}`} aria-hidden="true">{picked ? "✓" : ""}</span>
+                    ) : null}
+                    <span className="bd-shine" aria-hidden="true" />
+                    <span className="bd-glare" aria-hidden="true" />
+                    <PlaceCardFront
+                      feature={feature}
+                      dexNo={dexNoByFeatureId.get(feature.id)}
+                      mapTitle={mapTitleById.get(feature.mapId) || null}
+                    />
+                  </button>
+                )
+              })}
               {Array.from({ length: sleeveCount }).map((_, index) => (
                 <div key={`sleeve-${index}`} className="bd-sleeve" aria-hidden="true">
                   <span>빈 슬롯</span>

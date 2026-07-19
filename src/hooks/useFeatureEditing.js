@@ -499,6 +499,35 @@ export function useFeatureEditing({
     touchMap,
   ])
 
+  // 바인더(내 장소)에서 여러 카드를 한 번에 삭제 — id 목록 기준(개인 카드 전용).
+  // 카드가 담긴 지도에서도 함께 빠진다(map_features 삭제 → 배치 CASCADE).
+  const deleteFeaturesByIds = useCallback(async (ids) => {
+    const list = Array.isArray(ids) ? ids : [ids]
+    const targets = list.map((id) => features.find((feature) => feature.id === id)).filter(Boolean)
+    if (targets.length === 0) return
+    let deleted = 0
+    let failed = 0
+    for (const feature of targets) {
+      if (cloudMode) {
+        try {
+          await deleteFeatureRecord(feature.id, feature.mapId, { lastKnownUpdatedAt: feature.updatedAt || null })
+        } catch (error) {
+          console.error("Failed to delete feature", error)
+          failed += 1
+          continue
+        }
+      }
+      setFeatures((current) => current.filter((item) => item.id !== feature.id))
+      await cleanupFeatureMedia(feature, cloudMode)
+      deleted += 1
+    }
+    setFeatureSheet((current) => (current && list.includes(current.id) ? null : current))
+    setSelectedFeatureId((current) => (list.includes(current) ? null : current))
+    setSelectedFeatureSummaryId((current) => (list.includes(current) ? null : current))
+    if (deleted > 0) showToast(failed > 0 ? `${deleted}장 삭제 · ${failed}장 실패` : `카드 ${deleted}장을 지웠어요.`)
+    else if (failed > 0) showToast("카드를 지우지 못했어요.")
+  }, [features, cloudMode, setFeatures, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId, showToast])
+
   const addMemo = useCallback(async (featureId, text, photoFiles = [], options = {}) => {
     const trimmedText = `${text || ""}`.trim()
     const selectedFiles = Array.isArray(photoFiles) ? photoFiles : []
@@ -1102,6 +1131,7 @@ export function useFeatureEditing({
     requestCommunityFeatureUpdate,
     requestCommunityFeatureUpdateById,
     deleteFeature,
+    deleteFeaturesByIds,
     addMemo,
     updateMemo,
     deleteMemo,
