@@ -125,6 +125,11 @@ describe("normalizeMemo", () => {
     expect(result.userId).toBe("u1")
     expect(result.userName).toBe("홍길동")
     expect(result.text).toBe("좋아요")
+    expect(result.mapId).toBe(null) // 출처 지도 없음 = 수첩 메모
+  })
+  it("출처 지도 태그 매핑", () => {
+    const result = normalizeMemo({ id: "memo2", user_id: "u1", user_name: "홍길동", created_at: "2026-04-05", text: "여기 좋다", map_id: "map-abc" })
+    expect(result.mapId).toBe("map-abc")
   })
 })
 

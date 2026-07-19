@@ -506,6 +506,8 @@ export function useFeatureEditing({
     const trimmedText = `${text || ""}`.trim()
     const selectedFiles = Array.isArray(photoFiles) ? photoFiles : []
     const recordId = `${options?.recordId || ""}`.trim()
+    // 기록의 출처 지도 — 지도 편집에서 남기면 그 지도 id, 바인더에서 남기면 null(수첩 메모)
+    const memoMapId = `${options?.mapId || ""}`.trim() || null
     if (!trimmedText && selectedFiles.length === 0) return
 
     let uploadedPhotoUrls = []
@@ -540,7 +542,7 @@ export function useFeatureEditing({
     let memo
     if (cloudMode) {
       try {
-        memo = await addFeatureMemoRecord(featureId, trimmedText, currentUserName || me.name, uploadedPhotoUrls, { recordId })
+        memo = await addFeatureMemoRecord(featureId, trimmedText, currentUserName || me.name, uploadedPhotoUrls, { recordId, mapId: memoMapId })
       } catch (error) {
         console.error("Failed to save memo to cloud", error)
         showToast("메모 저장에 실패했어요.")
@@ -555,6 +557,7 @@ export function useFeatureEditing({
         text: trimmedText,
         photos: uploadedPhotoUrls,
         recordId: recordId || null,
+        mapId: memoMapId,
       }
     }
     if (recordId && !memo.recordId) {

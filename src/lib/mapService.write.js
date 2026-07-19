@@ -474,6 +474,7 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
   const user = await requireUser()
   const supabase = requireSupabase()
   const recordId = `${options?.recordId || ""}`.trim()
+  const mapId = `${options?.mapId || ""}`.trim() // 기록의 출처 지도 (없으면 수첩 메모)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("nickname")
@@ -493,6 +494,9 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
   }
   if (recordId) {
     payload.record_id = recordId
+  }
+  if (mapId) {
+    payload.map_id = mapId
   }
   if (normalizedPhotoUrls.length > 0) {
     payload.photo_urls = normalizedPhotoUrls
@@ -515,6 +519,20 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
       .single())
   }
 
+  // map_id 컬럼이 아직 없으면(마이그레이션 080 미적용) 태그 없이 저장 — 저장 자체는 성공시킨다
+  let mapIdUnsupported = false
+  if (error && getMissingColumnName(error) === "map_id") {
+    mapIdUnsupported = true
+    const retryPayload = { ...payload }
+    delete retryPayload.map_id
+    if (recordIdUnsupported) delete retryPayload.record_id
+    ;({ data, error } = await supabase
+      .from("feature_memos")
+      .insert(retryPayload)
+      .select("*")
+      .single())
+  }
+
   const shouldFallbackWithoutPhotoColumn = Boolean(error)
     && normalizedPhotoUrls.length > 0
     && (
@@ -530,6 +548,9 @@ export async function addFeatureMemo(featureId, text, userNameOverride = "", pho
     }
     if (recordId && !recordIdUnsupported) {
       fallbackPayload.record_id = recordId
+    }
+    if (mapId && !mapIdUnsupported) {
+      fallbackPayload.map_id = mapId
     }
     const fallback = await supabase
       .from("feature_memos")

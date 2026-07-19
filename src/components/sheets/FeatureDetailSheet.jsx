@@ -5,7 +5,7 @@ import { FeatureEmoji } from "../FeatureEmoji"
 import { DiaryBanner } from "../visuals/DiaryBanner"
 import { RecordEntrySheet } from "./RecordEntrySheet"
 import { createId } from "../../lib/appUtils"
-import { buildFeatureRecordGroups, summarizeRecordGroup } from "../../lib/featureRecordGroups"
+import { buildFeatureRecordGroups, summarizeRecordGroup, scopeFeatureMemos } from "../../lib/featureRecordGroups"
 
 const DAY_OF_WEEK_KO = ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
 
@@ -122,6 +122,7 @@ export function FeatureDetailSheet({
   featureSheet,
   activeMapSource,
   readOnly = false,
+  currentMapId = null,
   currentUserId = "me",
   onClose,
   onEdit,
@@ -142,10 +143,11 @@ export function FeatureDetailSheet({
   const canEdit = !readOnly && (activeMapSource === "local" || (isCommunity && feature?.createdBy === currentUserId))
   const canRequestEdit = isCommunity && !readOnly && !isPublicCommunityRecord && !canEdit && typeof onRequestCommunityUpdate === "function"
 
+  // 지도 뷰에서는 그 지도에서 남긴 기록만 (currentMapId 있을 때). 수첩 메모(mapId=null)는 제외.
   const recordGroups = useMemo(() => {
     if (!feature) return []
-    return buildFeatureRecordGroups(feature)
-  }, [feature])
+    return buildFeatureRecordGroups(scopeFeatureMemos(feature, currentMapId))
+  }, [feature, currentMapId])
 
   if (!feature) return null
 

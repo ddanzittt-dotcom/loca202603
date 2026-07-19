@@ -219,6 +219,8 @@ export function PlaceFlipCard({
   feature,
   dexNo,
   mapTitle,
+  maps = [],
+  currentUserId = "",
   onClose,
   onOpenOnMap,
   onAddRecord,
@@ -296,11 +298,68 @@ export function PlaceFlipCard({
     flipped,
   )
 
-  const recordGroups = useMemo(() => {
-    if (!feature) return []
-    return [...buildFeatureRecordGroups(feature)]
-      .sort((a, b) => new Date(b.dateValue || 0) - new Date(a.dateValue || 0))
-  }, [feature])
+  // 지도명 조회 — 각 기록 섹션 헤더 라벨용
+  const mapTitleById = useMemo(() => {
+    const lookup = new Map()
+    ;(maps || []).forEach((mp) => { if (mp?.id) lookup.set(mp.id, mp.title || "지도") })
+    return lookup
+  }, [maps])
+
+  // 바인더 카드 기록 = "내가 쓴 것만"(currentUserId) 을 출처 지도별로 묶는다.
+  //  - mapId 있는 메모 → 그 지도 섹션(지도명 마킹)
+  //  - mapId 없는 메모 + 지도에 안 묶인 카드 사진 → "수첩 기록" 섹션(바인더 전용)
+  //  - 지도 태그가 하나도 없으면(데모/로컬/레거시) 섹션 헤더 없이 평면 목록으로 렌더
+  const recordSections = useMemo(() => {
+    if (!feature) return { sections: [], total: 0, grouped: false }
+    const mine = (feature.memos || []).filter((memo) => (
+      !currentUserId || (memo.userId || memo.user_id) === currentUserId
+    ))
+    const byMap = new Map()
+    mine.forEach((memo) => {
+      const key = memo.mapId || "__notebook__"
+      if (!byMap.has(key)) byMap.set(key, [])
+      byMap.get(key).push(memo)
+    })
+    // 지도에 안 묶인 카드 사진(standalone)은 수첩 버킷으로
+    const standalonePhotos = Array.isArray(feature.photos) ? feature.photos : []
+    if (standalonePhotos.length && !byMap.has("__notebook__")) byMap.set("__notebook__", [])
+
+    const sections = [...byMap.entries()].map(([key, memos]) => {
+      const isNotebook = key === "__notebook__"
+      const groups = buildFeatureRecordGroups({ memos, photos: isNotebook ? standalonePhotos : [] })
+        .sort((a, b) => new Date(b.dateValue || 0) - new Date(a.dateValue || 0))
+      return {
+        key,
+        isNotebook,
+        title: isNotebook ? "수첩 기록" : (mapTitleById.get(key) || "함께 만든 지도"),
+        groups,
+        lastDate: groups[0]?.dateValue || null,
+      }
+    }).filter((section) => section.groups.length > 0)
+
+    sections.sort((a, b) => {
+      if (a.isNotebook !== b.isNotebook) return a.isNotebook ? 1 : -1 // 수첩은 맨 아래
+      return new Date(b.lastDate || 0) - new Date(a.lastDate || 0)
+    })
+    const total = sections.reduce((sum, section) => sum + section.groups.length, 0)
+    // 지도 태그된 섹션이 하나라도 있으면 그룹 UI, 아니면(수첩만) 평면
+    const grouped = sections.some((section) => !section.isNotebook)
+    return { sections, total, grouped }
+  }, [feature, currentUserId, mapTitleById])
+
+  // 섹션 접기/펼치기 — 카드가 바뀌면 첫(가장 최근) 섹션만 펼친 상태로 초기화
+  const [expandedSections, setExpandedSections] = useState(() => new Set())
+  useEffect(() => {
+    setExpandedSections(new Set(recordSections.sections.slice(0, 1).map((section) => section.key)))
+    // feature.id 바뀔 때만 초기화 (같은 카드 내 토글은 유지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feature?.id])
+  const toggleSection = (key) => setExpandedSections((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
 
   useEffect(() => {
     const handleKey = (event) => {
@@ -321,6 +380,11 @@ export function PlaceFlipCard({
   if (!feature) return null
 
   const heroPhoto = representativePhoto(feature)
+  // 기록 그룹의 사진 중 현재 표지와 같은 게 있으면 표지 뱃지 표시
+  const isCoverGroup = (group) => Boolean(heroPhoto) && (group.photos || []).some((photo) => {
+    const src = typeof photo === "string" ? photo : photo?.url || photo?.src || photo?.cloudUrl || ""
+    return src && src === heroPhoto
+  })
   const name = (feature.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature.createdAt || feature.updatedAt)
   const cardTags = (feature.tags || []).map((tag) => `${tag || ""}`.trim()).filter(Boolean)
@@ -683,7 +747,7 @@ export function PlaceFlipCard({
 
               <div className="bd-tl">
                 <div className="bd-tlhead">
-                  <span className="bd-tlt">기록 {recordGroups.length}</span>
+                  <span className="bd-tlt">기록 {recordSections.total}</span>
                   {onAddRecord && !recFormOpen ? (
                     <button type="button" className="bd-mini" onClick={() => setRecFormOpen(true)}>+ 기록 추가</button>
                   ) : null}
@@ -718,18 +782,43 @@ export function PlaceFlipCard({
                   </div>
                 ) : null}
 
-                {recordGroups.length > 0 ? (
-                  recordGroups.slice(0, 8).map((group) => (
-                    <RecordItem
-                      key={group.id}
-                      group={group}
-                      onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
-                      isCover={Boolean(heroPhoto) && (group.photos || []).some((photo) => {
-                        const src = typeof photo === "string" ? photo : photo?.url || photo?.src || photo?.cloudUrl || ""
-                        return src && src === heroPhoto
-                      })}
-                    />
-                  ))
+                {recordSections.total > 0 ? (
+                  recordSections.grouped ? (
+                    recordSections.sections.map((section) => {
+                      const open = expandedSections.has(section.key)
+                      return (
+                        <div className={`bd-recsec${section.isNotebook ? " bd-recsec--notebook" : ""}`} key={section.key}>
+                          <button type="button" className="bd-recsec__head" onClick={() => toggleSection(section.key)} aria-expanded={open}>
+                            <span className="bd-recsec__badge">{section.isNotebook ? "수첩" : "지도"}</span>
+                            <span className="bd-recsec__title">{section.title}</span>
+                            <span className="bd-recsec__count">기록 {section.groups.length}</span>
+                            <span className="bd-recsec__chev" aria-hidden="true">{open ? "▾" : "▸"}</span>
+                          </button>
+                          {open ? (
+                            <div className="bd-recsec__body">
+                              {section.groups.slice(0, 12).map((group) => (
+                                <RecordItem
+                                  key={group.id}
+                                  group={group}
+                                  onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
+                                  isCover={isCoverGroup(group)}
+                                />
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )
+                    })
+                  ) : (
+                    recordSections.sections[0].groups.slice(0, 8).map((group) => (
+                      <RecordItem
+                        key={group.id}
+                        group={group}
+                        onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
+                        isCover={isCoverGroup(group)}
+                      />
+                    ))
+                  )
                 ) : (
                   <p className="bd-tlempty">아직 기록이 없어요. 첫 기록을 남겨보세요.</p>
                 )}

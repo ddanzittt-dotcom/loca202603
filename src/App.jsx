@@ -41,6 +41,7 @@ import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
 import { createMap as createMapRecord, deleteMap as deleteMapRecord, placeFeaturesInMap, removeFeatureFromMap, updateMap as updateMapRecord, updateProfile } from "./lib/mapService.write"
 import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlacements"
+import { scopeFeatureMemos } from "./lib/featureRecordGroups"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 import { CONSENT_VERSION, getMyConsentState, recordMyConsent } from "./lib/auth"
@@ -755,10 +756,16 @@ export default function App() {
     (feature, mapId) => featureInMap(placementsByMap, feature, mapId),
     [placementsByMap],
   )
-  const activeFeatures = useMemo(
-    () => (effectiveActiveMapId ? activeFeaturePool.filter((feature) => isFeatureInMap(feature, effectiveActiveMapId)) : []),
-    [activeFeaturePool, effectiveActiveMapId, isFeatureInMap],
-  )
+  // 지도 뷰에서는 그 지도에서 남긴 기록만 보이도록 memos 를 스코프한다.
+  // 내 클라우드 지도에 한해 적용(데모/공유/커뮤니티는 기존대로 전체 표시).
+  // 수첩 메모(mapId=null)는 여기서 걸러져 바인더 전용이 된다.
+  const scopeMemosToActiveMap = cloudMode && activeMapSource === "local"
+  const activeFeatures = useMemo(() => {
+    if (!effectiveActiveMapId) return []
+    const inMap = activeFeaturePool.filter((feature) => isFeatureInMap(feature, effectiveActiveMapId))
+    if (!scopeMemosToActiveMap) return inMap
+    return inMap.map((feature) => scopeFeatureMemos(feature, effectiveActiveMapId))
+  }, [activeFeaturePool, effectiveActiveMapId, isFeatureInMap, scopeMemosToActiveMap])
   useEffect(() => {
     if (activeMapSource !== "community" || activeMapId !== "community-map") return
     if (!communityMapId || communityMapId === "community-map") return
@@ -890,8 +897,9 @@ export default function App() {
   }, [communityFeed, ownPosts, selectedPostRef])
   const selectedFeatureSummary = useMemo(() => {
     if (!selectedFeatureSummaryId) return null
-    return activeFeaturePool.find((feature) => feature.id === selectedFeatureSummaryId) || null
-  }, [activeFeaturePool, selectedFeatureSummaryId])
+    const found = activeFeaturePool.find((feature) => feature.id === selectedFeatureSummaryId) || null
+    return scopeMemosToActiveMap ? scopeFeatureMemos(found, effectiveActiveMapId) : found
+  }, [activeFeaturePool, selectedFeatureSummaryId, scopeMemosToActiveMap, effectiveActiveMapId])
   const inlineRecordFeature = useMemo(() => {
     if (!inlineRecordFeatureId) return null
     return activeFeaturePool.find((feature) => feature.id === inlineRecordFeatureId) || null
@@ -2136,7 +2144,7 @@ export default function App() {
               setFeatureSheetMode("edit")
               openFeatureDetail(featureId)
             }}
-            onAddMemo={addMemo}
+            onAddMemo={(memoFeatureId, memoText, memoPhotoFiles, memoOptions) => addMemo(memoFeatureId, memoText, memoPhotoFiles, { ...memoOptions, mapId: activeMap?.id || null })}
             photoInputRef={photoInputRef}
             onPhotoSelected={handlePhotoSelected}
             onDeletePhoto={handleDeletePhoto}
@@ -2343,6 +2351,8 @@ export default function App() {
           feature={placeCardFeature}
           dexNo={placeCardDexNo}
           mapTitle={b2cMaps.find((mapItem) => mapItem.id === (placeCardFeature.mapId || placeCardFeature.map_id))?.title || ""}
+          maps={b2cMaps}
+          currentUserId={viewerProfile?.id || ""}
           collectorHandle={viewerProfile?.handle || ""}
           onClose={() => setPlaceCardFeature(null)}
           showToast={showToast}
@@ -2533,7 +2543,7 @@ export default function App() {
               photoInputRef={photoInputRef}
               onPhotoSelected={handlePhotoSelected}
               onDeletePhoto={handleDeletePhoto}
-              onAddMemo={addMemo}
+              onAddMemo={(memoFeatureId, memoText, memoPhotoFiles, memoOptions) => addMemo(memoFeatureId, memoText, memoPhotoFiles, { ...memoOptions, mapId: activeMap?.id || null })}
             />
           )
         }
@@ -2542,6 +2552,7 @@ export default function App() {
             featureSheet={featureSheet} setFeatureSheet={setFeatureSheet}
             activeMapSource={activeMapSource} featureEmojiChoices={featureEmojiChoices}
             readOnly={mapEditorReadOnly}
+            currentMapId={scopeMemosToActiveMap ? effectiveActiveMapId : null}
             currentUserId={viewerProfile.id}
             onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null); setFeatureSheetMode("detail") }}
             onEdit={canDirectlyEdit ? () => setFeatureSheetMode("edit") : undefined}
@@ -2549,7 +2560,7 @@ export default function App() {
             onRelocatePin={activeMapSource === "local" && !mapEditorReadOnly ? startRelocatePin : undefined}
             photoInputRef={photoInputRef}
             onPhotoSelected={handlePhotoSelected} onDeletePhoto={handleDeletePhoto}
-            memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={addMemo} onUpdateMemo={updateMemo}
+            memoText={memoText} onMemoTextChange={setMemoText} onAddMemo={(memoFeatureId, memoText, memoPhotoFiles, memoOptions) => addMemo(memoFeatureId, memoText, memoPhotoFiles, { ...memoOptions, mapId: activeMap?.id || null })} onUpdateMemo={updateMemo}
             onRequestCommunityUpdate={requestCommunityFeatureUpdate}
           />
         )

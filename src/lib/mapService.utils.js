@@ -156,6 +156,7 @@ export function normalizeMemo(row) {
     text: row.text,
     photos,
     recordId: row.record_id || null,
+    mapId: row.map_id || null, // 기록의 출처 지도 (없으면 수첩 메모)
   }
 }
 

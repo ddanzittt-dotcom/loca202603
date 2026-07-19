@@ -4428,6 +4428,69 @@
   color: #1B1B18;
 }
 .bd-tlempty { font-size: 12.5px; color: #8A8574; }
+
+/* 기록 섹션 — 출처 지도별 그룹(접기/펼치기). 수첩 기록은 별도 톤 */
+.bd-recsec {
+  border: 1.5px solid rgba(27, 27, 24, 0.16);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  background: rgba(255, 253, 244, 0.6);
+}
+.bd-recsec--notebook { background: rgba(245, 196, 27, 0.08); }
+.bd-recsec__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.bd-recsec__head:hover { background: rgba(27, 27, 24, 0.04); }
+.bd-recsec__badge {
+  flex-shrink: 0;
+  font-family: "DungGeunMo", monospace;
+  font-size: 9.5px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 4px;
+  border: 1.5px solid #1B1B18;
+  background: #F5C41B;
+  color: #1B1B18;
+}
+.bd-recsec--notebook .bd-recsec__badge { background: #FFFDF4; color: #7A5A00; }
+.bd-recsec__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #1B1B18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bd-recsec__count {
+  flex-shrink: 0;
+  font-family: "DungGeunMo", monospace;
+  font-size: 10.5px;
+  color: #8A8574;
+}
+.bd-recsec__chev {
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: #8A8574;
+}
+.bd-recsec__body {
+  padding: 8px 9px 3px;
+  border-top: 1.5px dashed rgba(27, 27, 24, 0.14);
+}
+
 .bd-rec {
   display: flex;
   gap: 10px;

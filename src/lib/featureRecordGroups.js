@@ -1,5 +1,21 @@
 const RECORD_GROUP_WINDOW_MS = 15 * 60 * 1000
 
+// 지도 뷰 스코프 — 그 지도에서 남긴 기록(memo.mapId === mapId)만.
+// mapId 가 없으면(비대상 컨텍스트) 원본 그대로 둔다. 수첩 메모(mapId=null)는
+// 특정 지도 컨텍스트에서 걸러진다 → 바인더 전용.
+export function memosForMap(memos, mapId) {
+  if (!mapId) return memos || []
+  return (memos || []).filter((memo) => memo?.mapId === mapId)
+}
+
+// 피처의 memos 를 특정 지도 스코프로 좁힌 얕은 복사본. 바뀔 게 없으면 원본 반환.
+export function scopeFeatureMemos(feature, mapId) {
+  if (!feature || !mapId) return feature
+  const memos = feature.memos || []
+  const scoped = memos.filter((memo) => memo?.mapId === mapId)
+  return scoped.length === memos.length ? feature : { ...feature, memos: scoped }
+}
+
 export function recordDateValue(item) {
   return item?.date || item?.createdAt || item?.updatedAt || item?.capturedAt || item?.recordedAt || ""
 }
