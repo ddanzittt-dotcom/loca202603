@@ -1,368 +1,224 @@
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { X } from "lucide-react"
 import { Share } from "@capacitor/share"
 import QRCode from "qrcode"
+import { generatePixelMapSvg } from "../lib/pixelMapThumb"
 
+// LOCA 지도 공유 카드 — 시안 19a "웜 크림 도트맵 카드" 앞면 단일 렌더러.
+// 지시서 v1.0 (2026-07-19) 구현. 4:5 피드용 1080×1350, 라이트 팔레트 고정.
+// 원본 432×540 → ×2.5. 아래 수치는 모두 출력(1080) 기준으로 S 를 곱해 계산한다.
 const CANVAS_W = 1080
 const CANVAS_H = 1350
+const S = 2.5
 
-function drawBrandLogo(ctx, x, y, size, align = "center") {
-  ctx.save()
-  ctx.font = `900 ${size}px Pretendard Variable`
-  ctx.textBaseline = "middle"
-  ctx.textAlign = align
-  ctx.fillStyle = "#101010"
-  const word = "loca"
-  const wordWidth = ctx.measureText(word).width
-  const dotWidth = ctx.measureText(".").width
-  const startX = align === "center" ? x - (wordWidth + dotWidth) / 2 : x - wordWidth - dotWidth
-  ctx.textAlign = "left"
-  ctx.fillText(word, startX, y)
-  ctx.fillStyle = "#ff4b2e"
-  ctx.fillText(".", startX + wordWidth, y)
-  ctx.restore()
+const PAD_TOP = 30 * S // 75
+const PAD_X = 30 * S // 75
+const PAD_BOTTOM = 24 * S // 60
+const CONTENT_W = CANVAS_W - PAD_X * 2 // 930
+
+const COL = {
+  bg: "#F6F3EC",
+  title: "#2B2721",
+  countLabel: "#5A564A",
+  handle: "#9A9284",
+  desc: "#7A7466",
+  line: "#CFC8B8",
+  dotPin: "#E0679A", // 장소
+  dotRoute: "#8FA88A", // 길
+  dotArea: "#C9A13C", // 영역
+  brandDot: "#E0679A",
+  qrFg: "#2B2721",
+  qrBg: "#FFFFFF",
+  qrBorder: "#CFC8B8",
 }
 
-const FRAMES = [
-  { id: "magazine", label: "매거진" },
-  { id: "cute", label: "큐트맵" },
-  { id: "pastel", label: "파스텔" },
-  { id: "sunset", label: "선셋" },
-  { id: "ocean", label: "오션" },
-  { id: "forest", label: "포레스트" },
-  { id: "candy", label: "캔디팝" },
-]
+const F_SANS = "'Pretendard Variable', Pretendard, sans-serif"
+const F_SERIF = "'Gowun Batang', 'Pretendard Variable', serif"
 
-const STICKER_PALETTE = ["❤️", "⭐", "📍", "🎉", "🔥", "✈️", "🍽️", "☕", "🌸", "🎵", "💫", "🏔️", "🌊", "🎈", "✨"]
+// 지도명: 8자 초과 26px, 11자 초과 22px 로 단계 축소 (원본 기준 × S).
+function titleFontSize(title) {
+  const len = [...(title || "")].length
+  if (len > 11) return 22 * S
+  if (len > 8) return 26 * S
+  return 30 * S
+}
 
-function drawMapImage(ctx, mapImage, x, y, w, h, radius) {
-  ctx.save()
-  if (radius > 0) {
-    ctx.beginPath()
-    ctx.roundRect(x, y, w, h, radius)
-    ctx.clip()
+// 한글은 공백이 없어 글자 단위로 접는다. 최대 maxLines 줄, 넘치면 … 로 말줄임.
+function wrapDesc(ctx, text, maxWidth, maxLines) {
+  const raw = (text || "").replace(/\s+/g, " ").trim()
+  if (!raw) return []
+  const chars = [...raw]
+  const lines = []
+  let line = ""
+  let overflow = false
+  for (let i = 0; i < chars.length; i += 1) {
+    const test = line + chars[i]
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line)
+      line = chars[i]
+      if (lines.length >= maxLines) {
+        line = ""
+        overflow = i < chars.length - 1
+        break
+      }
+    } else {
+      line = test
+    }
   }
-  if (mapImage) {
-    const srcRatio = mapImage.width / mapImage.height
+  if (line && lines.length < maxLines) lines.push(line)
+  if (overflow && lines.length) {
+    let last = lines[lines.length - 1]
+    while (last && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1)
+    lines[lines.length - 1] = `${last}…`
+  }
+  return lines
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + rr, y)
+  ctx.arcTo(x + w, y, x + w, y + h, rr)
+  ctx.arcTo(x + w, y + h, x, y + h, rr)
+  ctx.arcTo(x, y + h, x, y, rr)
+  ctx.arcTo(x, y, x + w, y, rr)
+  ctx.closePath()
+}
+
+// 도트맵을 object-fit: cover + nearest-neighbor(픽셀) 로 지도 영역에 채운다.
+function drawDotMap(ctx, img, x, y, w, h, radius) {
+  ctx.save()
+  roundRectPath(ctx, x, y, w, h, radius)
+  ctx.clip()
+  if (img && img.width && img.height) {
+    ctx.imageSmoothingEnabled = false
+    const srcRatio = img.width / img.height
     const dstRatio = w / h
-    let sx = 0, sy = 0, sw = mapImage.width, sh = mapImage.height
-    if (srcRatio > dstRatio) { sw = mapImage.height * dstRatio; sx = (mapImage.width - sw) / 2 }
-    else { sh = mapImage.width / dstRatio; sy = (mapImage.height - sh) / 2 }
-    ctx.drawImage(mapImage, sx, sy, sw, sh, x, y, w, h)
+    let sx = 0
+    let sy = 0
+    let sw = img.width
+    let sh = img.height
+    if (srcRatio > dstRatio) {
+      sw = img.height * dstRatio
+      sx = (img.width - sw) / 2
+    } else {
+      sh = img.width / dstRatio
+      sy = (img.height - sh) / 2
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
   } else {
-    ctx.fillStyle = "#e5e7eb"
+    ctx.fillStyle = "#E7E0CA"
     ctx.fillRect(x, y, w, h)
   }
   ctx.restore()
 }
 
-function drawTitle(ctx, title, x, y, color, size, maxW) {
-  ctx.fillStyle = color
-  ctx.font = `bold ${size}px Pretendard Variable`
-  ctx.textAlign = "center"
-  ctx.fillText(title || "LOCA", x, y, maxW)
-}
-
-function drawStickers(ctx, stickers) {
-  ctx.save()
-  ctx.globalAlpha = 1
-  ctx.globalCompositeOperation = "source-over"
-  ctx.fillStyle = "#000"
-  stickers.forEach((s) => {
-    ctx.font = `${s.size}px Pretendard Variable`
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText(s.emoji, s.x, s.y)
-  })
-  ctx.restore()
-}
-
-// Shared layout constants
-const MAP_X = 60
-const MAP_Y = 60
-const MAP_W = CANVAS_W - 120 // 960
-const MAP_H = 1040
-const FOOTER_Y = MAP_Y + MAP_H + 30 // 1130
-
-function drawTagsOrTitle(ctx, title, features, colors, titleColor) {
-  // Always draw title first
-  drawTitle(ctx, title, CANVAS_W / 2, FOOTER_Y + 50, titleColor || colors[0], 42, 700)
-  // Then draw tags below title
-  const tags = (features || []).filter((f) => f.type === "pin").slice(0, 6)
-  if (tags.length > 0) {
-    const tagH = 42, tagGap = 8, maxPerRow = 3, rows = []
-    for (let i = 0; i < tags.length; i += maxPerRow) rows.push(tags.slice(i, i + maxPerRow))
-    let tagIdx = 0
-    rows.forEach((row, ri) => {
-      ctx.font = "bold 24px Pretendard Variable"
-      const widths = row.map((f) => ctx.measureText(`${f.emoji} ${f.title}`).width + 36)
-      const totalW = widths.reduce((a, b) => a + b, 0) + (row.length - 1) * tagGap
-      let startX = (CANVAS_W - totalW) / 2
-      row.forEach((f, ci) => {
-        const tw = widths[ci]
-        const ty = FOOTER_Y + 80 + ri * (tagH + tagGap)
-        ctx.fillStyle = colors[tagIdx % colors.length]
-        ctx.beginPath(); ctx.roundRect(startX, ty, tw, tagH, tagH / 2); ctx.fill()
-        ctx.fillStyle = "#fff"
-        ctx.font = "bold 24px Pretendard Variable"
-        ctx.textAlign = "center"; ctx.textBaseline = "middle"
-        ctx.fillText(`${f.emoji} ${f.title}`, startX + tw / 2, ty + tagH / 2, tw - 14)
-        startX += tw + tagGap
-        tagIdx++
-      })
-    })
-    ctx.textBaseline = "alphabetic"
-  }
-  ctx.textAlign = "start"
-}
-
-function drawCloud(ctx, cx, cy, s, color) {
-  ctx.fillStyle = color || "rgba(255,255,255,0.7)"
-  ctx.beginPath(); ctx.arc(cx, cy, s * 30, 0, Math.PI * 2); ctx.fill()
-  ctx.beginPath(); ctx.arc(cx - s * 22, cy + s * 8, s * 22, 0, Math.PI * 2); ctx.fill()
-  ctx.beginPath(); ctx.arc(cx + s * 25, cy + s * 6, s * 24, 0, Math.PI * 2); ctx.fill()
-}
-
-const framePainters = {
-  magazine(ctx, mapImage, title, theme) {
-    ctx.fillStyle = "#101014"
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    drawMapImage(ctx, mapImage, 0, 0, CANVAS_W, CANVAS_H, 0)
-    const grad = ctx.createLinearGradient(0, CANVAS_H * 0.5, 0, CANVAS_H)
-    grad.addColorStop(0, "rgba(0,0,0,0)")
-    grad.addColorStop(0.5, "rgba(0,0,0,0.5)")
-    grad.addColorStop(1, "rgba(0,0,0,0.85)")
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    ctx.fillStyle = theme || "#4F46E5"
-    ctx.fillRect(80, FOOTER_Y - 10, 60, 5)
-    ctx.fillStyle = "#fff"
-    ctx.font = "bold 56px Pretendard Variable"
-    ctx.textAlign = "left"
-    ctx.fillText(title || "LOCA", 80, FOOTER_Y + 50, CANVAS_W - 160)
-    ctx.textAlign = "start"
-  },
-
-  cute(ctx, mapImage, title, theme, features) {
-    const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
-    sky.addColorStop(0, "#7EC8E3"); sky.addColorStop(0.3, "#A8E6CF")
-    sky.addColorStop(0.6, "#FFD3B6"); sky.addColorStop(1, "#FF9A76")
-    ctx.fillStyle = sky
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    drawCloud(ctx, 120, 30, 1.0); drawCloud(ctx, 500, 20, 0.7)
-    ctx.fillStyle = "#fff"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 8, MAP_Y - 8, MAP_W + 16, MAP_H + 16, 28); ctx.fill()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 22)
-    drawTagsOrTitle(ctx, title, features, ["#FF6B6B", "#4ECDC4", "#FFE66D", "#A8E6CF", "#FF8A5C", "#6C5CE7"], "#2d2d2d")
-    ctx.font = "40px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🌿", 30, 30); ctx.fillText("🌸", 40, CANVAS_H - 30); ctx.fillText("⭐", CANVAS_W - 40, CANVAS_H - 30)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-
-  pastel(ctx, mapImage, title, theme, features) {
-    const bg = ctx.createLinearGradient(0, 0, CANVAS_W, CANVAS_H)
-    bg.addColorStop(0, "#FFDEE9"); bg.addColorStop(0.5, "#E8D5F5"); bg.addColorStop(1, "#B5DEFF")
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    // soft circles
-    ctx.globalAlpha = 0.15; ctx.fillStyle = "#fff"
-    ctx.beginPath(); ctx.arc(200, 100, 180, 0, Math.PI * 2); ctx.fill()
-    ctx.beginPath(); ctx.arc(CANVAS_W - 150, CANVAS_H - 200, 220, 0, Math.PI * 2); ctx.fill()
-    ctx.globalAlpha = 1
-    // white card
-    ctx.save()
-    ctx.shadowColor = "rgba(0,0,0,0.06)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 8
-    ctx.fillStyle = "rgba(255,255,255,0.85)"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 10, MAP_Y - 10, MAP_W + 20, MAP_H + 20, 32); ctx.fill()
-    ctx.restore()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 24)
-    drawTagsOrTitle(ctx, title, features, ["#E491B2", "#9B7ED8", "#6CB4EE", "#F0A6CA", "#B8A9C9", "#88C9D4"], "#5B4A6F")
-    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🦋", 35, 35); ctx.fillText("🌷", CANVAS_W - 35, 40); ctx.fillText("💜", 35, CANVAS_H - 35)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-
-  sunset(ctx, mapImage, title, theme, features) {
-    const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
-    bg.addColorStop(0, "#1a1a2e"); bg.addColorStop(0.3, "#16213e")
-    bg.addColorStop(0.6, "#e94560"); bg.addColorStop(1, "#ffb347")
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    // stars
-    ctx.fillStyle = "rgba(255,255,255,0.5)"
-    for (let i = 0; i < 30; i++) {
-      const sx = 40 + (i * 137) % (CANVAS_W - 80)
-      const sy = 10 + (i * 89) % 40
-      ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill()
-    }
-    // map with glow border
-    ctx.save()
-    ctx.shadowColor = "rgba(233,69,96,0.3)"; ctx.shadowBlur = 30
-    ctx.fillStyle = "rgba(255,255,255,0.1)"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 6, MAP_Y - 6, MAP_W + 12, MAP_H + 12, 22); ctx.fill()
-    ctx.restore()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 18)
-    drawTagsOrTitle(ctx, title, features, ["#e94560", "#ffb347", "#ff6b6b", "#ffd166", "#ef476f", "#fca311"], "#fff")
-    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🌅", 35, 35); ctx.fillText("✨", CANVAS_W - 35, CANVAS_H - 35)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-
-  ocean(ctx, mapImage, title, theme, features) {
-    const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
-    bg.addColorStop(0, "#E0F7FA"); bg.addColorStop(0.4, "#80DEEA")
-    bg.addColorStop(0.8, "#0097A7"); bg.addColorStop(1, "#006064")
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    // wave pattern
-    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 3
-    for (let wy = 20; wy < CANVAS_H; wy += 60) {
-      ctx.beginPath()
-      for (let wx = 0; wx <= CANVAS_W; wx += 5) {
-        const y2 = wy + Math.sin(wx * 0.015 + wy * 0.1) * 12
-        wx === 0 ? ctx.moveTo(wx, y2) : ctx.lineTo(wx, y2)
-      }
-      ctx.stroke()
-    }
-    ctx.fillStyle = "#fff"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 8, MAP_Y - 8, MAP_W + 16, MAP_H + 16, 26); ctx.fill()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
-    drawTagsOrTitle(ctx, title, features, ["#00BCD4", "#0097A7", "#26C6DA", "#4DD0E1", "#00ACC1", "#0088A3"], "#fff")
-    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🐚", 35, 30); ctx.fillText("🌊", CANVAS_W - 35, 35); ctx.fillText("🐠", 35, CANVAS_H - 30)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-
-  forest(ctx, mapImage, title, theme, features) {
-    const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_H)
-    bg.addColorStop(0, "#E8F5E9"); bg.addColorStop(0.4, "#A5D6A7")
-    bg.addColorStop(0.8, "#388E3C"); bg.addColorStop(1, "#1B5E20")
-    ctx.fillStyle = bg
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    // tree silhouettes at bottom
-    ctx.fillStyle = "rgba(27,94,32,0.15)"
-    const drawTree = (tx, th) => {
-      ctx.beginPath()
-      ctx.moveTo(tx, CANVAS_H); ctx.lineTo(tx - th * 0.3, CANVAS_H - th * 0.6)
-      ctx.lineTo(tx - th * 0.15, CANVAS_H - th * 0.6); ctx.lineTo(tx - th * 0.35, CANVAS_H - th)
-      ctx.lineTo(tx + th * 0.35, CANVAS_H - th); ctx.lineTo(tx + th * 0.15, CANVAS_H - th * 0.6)
-      ctx.lineTo(tx + th * 0.3, CANVAS_H - th * 0.6); ctx.lineTo(tx, CANVAS_H)
-      ctx.fill()
-    }
-    drawTree(80, 200); drawTree(250, 160); drawTree(CANVAS_W - 100, 220); drawTree(CANVAS_W - 250, 140)
-    // map
-    ctx.save()
-    ctx.shadowColor = "rgba(0,0,0,0.1)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6
-    ctx.fillStyle = "rgba(255,255,255,0.9)"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 8, MAP_Y - 8, MAP_W + 16, MAP_H + 16, 26); ctx.fill()
-    ctx.restore()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
-    drawTagsOrTitle(ctx, title, features, ["#4CAF50", "#2E7D32", "#81C784", "#66BB6A", "#388E3C", "#43A047"], "#fff")
-    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🌲", 35, 30); ctx.fillText("🍃", CANVAS_W - 35, 35); ctx.fillText("🌿", 35, CANVAS_H - 30); ctx.fillText("🦌", CANVAS_W - 40, CANVAS_H - 30)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-
-  candy(ctx, mapImage, title, theme, features) {
-    ctx.fillStyle = "#FFF8E1"
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-    // polka dots
-    const dotColors = ["rgba(255,105,135,0.12)", "rgba(255,193,7,0.12)", "rgba(129,212,250,0.12)", "rgba(206,147,216,0.12)"]
-    for (let dy = 30; dy < CANVAS_H; dy += 70) {
-      for (let dx = 30; dx < CANVAS_W; dx += 70) {
-        ctx.fillStyle = dotColors[((dy / 70 | 0) + (dx / 70 | 0)) % dotColors.length]
-        ctx.beginPath(); ctx.arc(dx + (dy % 140 === 0 ? 0 : 35), dy, 16, 0, Math.PI * 2); ctx.fill()
-      }
-    }
-    // map with colorful border
-    ctx.save()
-    ctx.shadowColor = "rgba(255,105,135,0.15)"; ctx.shadowBlur = 20
-    ctx.strokeStyle = "#FF6987"; ctx.lineWidth = 6; ctx.setLineDash([16, 10])
-    ctx.beginPath(); ctx.roundRect(MAP_X - 12, MAP_Y - 12, MAP_W + 24, MAP_H + 24, 28); ctx.stroke()
-    ctx.setLineDash([])
-    ctx.restore()
-    ctx.fillStyle = "#fff"
-    ctx.beginPath(); ctx.roundRect(MAP_X - 6, MAP_Y - 6, MAP_W + 12, MAP_H + 12, 24); ctx.fill()
-    drawMapImage(ctx, mapImage, MAP_X, MAP_Y, MAP_W, MAP_H, 20)
-    drawTagsOrTitle(ctx, title, features, ["#FF6987", "#FFC107", "#81D4FA", "#CE93D8", "#FFB74D", "#AED581"], "#E65100")
-    ctx.font = "36px Pretendard Variable"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
-    ctx.fillText("🍭", 35, 30); ctx.fillText("🍬", CANVAS_W - 35, 35); ctx.fillText("🎀", 35, CANVAS_H - 30); ctx.fillText("🧁", CANVAS_W - 40, CANVAS_H - 30)
-    ctx.textAlign = "start"; ctx.textBaseline = "alphabetic"
-  },
-}
-
-function drawQrCode(ctx, qrImg) {
-  if (!qrImg) return
-  const size = 120
-  const x = CANVAS_W - MAP_X - size
-  const y = FOOTER_Y + 10
-  ctx.save()
-  ctx.fillStyle = "rgba(255,255,255,0.92)"
-  ctx.beginPath()
-  ctx.roundRect(x - 8, y - 8, size + 16, size + 16, 14)
-  ctx.fill()
-  ctx.drawImage(qrImg, x, y, size, size)
-  ctx.restore()
-}
-
-function drawFrame(ctx, frame, mapImage, title, theme, stickers, features, frameImg, qrImg) {
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
-  ctx.save()
-  if (frame.frameImage && frameImg) {
-    const r = frame.mapRect
-    drawMapImage(ctx, mapImage, r.x, r.y, r.w, r.h, 0)
-    ctx.drawImage(frameImg, 0, 0, CANVAS_W, CANVAS_H)
-  } else {
-    const painter = framePainters[frame.id]
-    if (painter) {
-      painter(ctx, mapImage, title, theme, features)
-    } else {
-      ctx.fillStyle = "#fff"
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
-      drawMapImage(ctx, mapImage, 50, 50, CANVAS_W - 100, CANVAS_H - 250, 0)
-      drawTitle(ctx, title, CANVAS_W / 2, CANVAS_H - 120, "#101828", 44, CANVAS_W - 120)
-    }
-  }
-  ctx.restore()
-  drawQrCode(ctx, qrImg)
-  drawStickers(ctx, stickers)
-}
-
-export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [], shareUrl = "", onClose, showToast }) {
+export function MapShareEditor({ map, features = [], handle = "", shareUrl = "", onClose }) {
   const canvasRef = useRef(null)
-  const previewRef = useRef(null)
-  const [frameId, setFrameId] = useState("magazine")
-  const [stickers, setStickers] = useState([])
-  const [dragging, setDragging] = useState(null)
+  const [title, setTitle] = useState(map?.title || "")
+  const [desc, setDesc] = useState(map?.description || "")
+  const [dotImage, setDotImage] = useState(null)
   const [qrImage, setQrImage] = useState(null)
+  const [fontsReady, setFontsReady] = useState(false)
+  const [fontTick, setFontTick] = useState(0)
+  const [sharing, setSharing] = useState(false)
 
-  const frame = FRAMES.find((f) => f.id === frameId) || FRAMES[0]
+  const mapId = map?.id || "loca"
 
-  // Generate QR code image with logo
+  const counts = useMemo(() => {
+    const c = { pin: 0, route: 0, area: 0 }
+    for (const f of features || []) {
+      if (f?.type === "pin") c.pin += 1
+      else if (f?.type === "route") c.route += 1
+      else if (f?.type === "area") c.area += 1
+    }
+    return c
+  }, [features])
+
+  const pinPoints = useMemo(() => (
+    (features || [])
+      .filter((f) => f?.type === "pin" && Number.isFinite(Number(f.lat)) && Number.isFinite(Number(f.lng)))
+      .map((f) => ({ lat: Number(f.lat), lng: Number(f.lng) }))
+  ), [features])
+
+  // 폰트 준비:
+  // 1) Pretendard(본문)를 먼저 로드하고 즉시 렌더(캔버스 폴백 방지).
+  // 2) 보조 세리프 Gowun Batang 은 jsdelivr(@fontsource, CSP 상 cdn.jsdelivr.net 허용)에서
+  //    지연 로드해 완료되면 @핸들만 세리프로 다시 그린다. 실패하면 Pretendard 로 폴백.
   useEffect(() => {
-    if (!shareUrl) return
+    let alive = true
+    const run = async () => {
+      try {
+        if (document.fonts?.load) {
+          await Promise.allSettled([
+            document.fonts.load(`900 75px 'Pretendard Variable'`),
+            document.fonts.load(`600 30px 'Pretendard Variable'`),
+          ])
+          await document.fonts.ready
+        }
+      } catch { /* 폰트 API 미지원 — 기본 폰트로 진행 */ }
+      if (alive) setFontsReady(true)
+
+      // Gowun Batang best-effort (지연 로드 → 완료 시 재렌더)
+      try {
+        const id = "loca-gowun-batang-font"
+        let link = document.getElementById(id)
+        if (!link) {
+          link = document.createElement("link")
+          link.id = id
+          link.rel = "stylesheet"
+          link.href = "https://cdn.jsdelivr.net/npm/@fontsource/gowun-batang/400.css"
+          link.crossOrigin = "anonymous"
+          document.head.appendChild(link)
+        }
+        if (!link.sheet) {
+          await new Promise((res) => { link.addEventListener("load", res, { once: true }); link.addEventListener("error", res, { once: true }) })
+        }
+        if (document.fonts?.load) await document.fonts.load(`400 30px 'Gowun Batang'`)
+        if (alive) setFontTick((t) => t + 1)
+      } catch { /* Gowun 로드 실패 — Pretendard 폴백 유지 */ }
+    }
+    run()
+    return () => { alive = false }
+  }, [])
+
+  // 도트맵 스냅샷: 지도 id 시드 + 실제 핀 좌표. SVG → Image 로 1회 래스터화.
+  useEffect(() => {
+    // 소스 비율을 카드 지도 영역(대략 1.15:1)에 맞춰 object-fit: cover 크롭을 최소화.
+    const svg = generatePixelMapSvg(mapId, pinPoints, { width: 360, height: 312, cell: 8 })
+    const img = new Image()
+    img.decoding = "async"
+    let alive = true
+    img.onload = () => { if (alive) setDotImage(img) }
+    img.onerror = () => { if (alive) setDotImage(null) }
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+    return () => { alive = false }
+  }, [mapId, pinPoints])
+
+  // QR — 공유 링크. 에러 보정 M, 전경 #2B2721 / 배경 #FFF.
+  useEffect(() => {
+    let alive = true
+    if (!shareUrl) {
+      queueMicrotask(() => { if (alive) setQrImage(null) })
+      return () => { alive = false }
+    }
     const qrUrl = shareUrl.includes("utm_source")
       ? shareUrl.replace(/utm_source=[^&]+/, "utm_source=qr")
       : shareUrl + (shareUrl.includes("?") ? "&" : "?") + "utm_source=qr"
     const qrCanvas = document.createElement("canvas")
-    QRCode.toCanvas(qrCanvas, qrUrl, { width: 140, margin: 1, errorCorrectionLevel: "H", color: { dark: "#000", light: "#fff" } })
-      .then(() => {
-        // Draw the same wordmark used in the home tab.
-        const ctx = qrCanvas.getContext("2d")
-        const logoSize = Math.round(140 * 0.15)
-        const cx = 70, cy = 70
-        ctx.fillStyle = "#ffffff"
-        ctx.beginPath()
-        ctx.arc(cx, cy, logoSize * 0.75, 0, Math.PI * 2)
-        ctx.fill()
-        drawBrandLogo(ctx, cx, cy, Math.round(logoSize * 0.58))
-        setQrImage(qrCanvas)
-      })
+    QRCode.toCanvas(qrCanvas, qrUrl, {
+      width: 220,
+      margin: 0,
+      errorCorrectionLevel: "M",
+      color: { dark: COL.qrFg, light: COL.qrBg },
+    })
+      .then(() => { if (alive) setQrImage(qrCanvas) })
       .catch((err) => {
         console.warn("QR 코드 생성 실패", err)
-        if (showToast) showToast("QR 코드를 만들지 못했어요.")
+        if (alive) setQrImage(null)
       })
-  }, [shareUrl, showToast])
+    return () => { alive = false }
+  }, [shareUrl])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -370,136 +226,217 @@ export function MapShareEditor({ mapImage, mapTitle, mapTheme, mapFeatures = [],
     canvas.width = CANVAS_W
     canvas.height = CANVAS_H
     const ctx = canvas.getContext("2d")
-    drawFrame(ctx, frame, mapImage, mapTitle, mapTheme, stickers, mapFeatures, null, qrImage)
-  }, [frame, mapImage, mapTitle, mapTheme, stickers, mapFeatures, qrImage])
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H)
+
+    // 카드 배경
+    ctx.fillStyle = COL.bg
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H)
+
+    // ── 지도 설명 줄 미리 계산 (지도 영역 높이 산정에 필요)
+    ctx.font = `400 ${13 * S}px ${F_SANS}`
+    const descLineH = 13 * S * 1.6
+    const descLines = wrapDesc(ctx, desc, CONTENT_W, 2)
+    const descH = descLines.length * descLineH
+
+    // ── 세로 레이아웃 계산
+    const titleFont = titleFontSize(title)
+    const titleBandH = titleFont * 1.02
+    const mapTop = PAD_TOP + titleBandH + 16 * S
+
+    const countRowH = 12 * S
+    const footerH = 44 * S
+    let bottomStack = 16 * S + countRowH // map→count margin + count row
+    if (descLines.length) bottomStack += 10 * S + descH // count→desc margin + desc
+    bottomStack += 16 * S + footerH + PAD_BOTTOM // →footer margin + footer + bottom pad
+    const mapH = Math.max(120, CANVAS_H - mapTop - bottomStack)
+    const mapW = CONTENT_W
+
+    // ── ① 지도명 (중앙, 폰트만으로 강조, 1줄)
+    ctx.textAlign = "center"
+    ctx.textBaseline = "top"
+    ctx.fillStyle = COL.title
+    ctx.font = `900 ${titleFont}px ${F_SANS}`
+    try { ctx.letterSpacing = `${-0.5 * S}px` } catch { /* 미지원 무시 */ }
+    ctx.fillText(title || "제목 없는 지도", CANVAS_W / 2, PAD_TOP, CONTENT_W)
+    try { ctx.letterSpacing = "0px" } catch { /* noop */ }
+
+    // ── ② 지도 영역 (도트맵)
+    drawDotMap(ctx, dotImage, PAD_X, mapTop, mapW, mapH, 8 * S)
+
+    // ── ③ 카운트 줄
+    const countCenterY = mapTop + mapH + 16 * S + countRowH / 2
+    const items = []
+    if (counts.pin > 0) items.push({ label: `장소 ${counts.pin}`, color: COL.dotPin })
+    if (counts.route > 0) items.push({ label: `길 ${counts.route}`, color: COL.dotRoute })
+    if (counts.area > 0) items.push({ label: `영역 ${counts.area}`, color: COL.dotArea })
+
+    ctx.textBaseline = "middle"
+    ctx.textAlign = "left"
+    ctx.font = `600 ${12 * S}px ${F_SANS}`
+    const dotD = 8 * S
+    let cursorX = PAD_X
+    items.forEach((it, i) => {
+      ctx.fillStyle = it.color
+      ctx.beginPath()
+      ctx.arc(cursorX + dotD / 2, countCenterY, dotD / 2, 0, Math.PI * 2)
+      ctx.fill()
+      const labelX = cursorX + dotD + 6 * S
+      ctx.fillStyle = COL.countLabel
+      ctx.fillText(it.label, labelX, countCenterY)
+      cursorX = labelX + ctx.measureText(it.label).width + (i < items.length - 1 ? 14 * S : 0)
+    })
+
+    // @핸들 (우측 끝 고정, 보조 세리프)
+    ctx.font = `400 ${12 * S}px ${F_SERIF}`
+    const handleText = handle || ""
+    const handleW = handleText ? ctx.measureText(handleText).width : 0
+    const handleX = CANVAS_W - PAD_X - handleW
+
+    // 연결선 — 남는 폭 전체, 최소 12px(원본) 미만이면 생략
+    const lineStart = cursorX + (items.length ? 14 * S : 0)
+    const lineEnd = (handleText ? handleX : CANVAS_W - PAD_X) - (handleText ? 14 * S : 0)
+    if (lineEnd - lineStart >= 12 * S) {
+      ctx.strokeStyle = COL.line
+      ctx.lineWidth = S
+      ctx.beginPath()
+      ctx.moveTo(lineStart, countCenterY)
+      ctx.lineTo(lineEnd, countCenterY)
+      ctx.stroke()
+    }
+    if (handleText) {
+      ctx.fillStyle = COL.handle
+      ctx.font = `400 ${12 * S}px ${F_SERIF}`
+      ctx.textAlign = "left"
+      ctx.fillText(handleText, handleX, countCenterY)
+    }
+
+    // ── ④ 지도 설명
+    if (descLines.length) {
+      const descTop = mapTop + mapH + 16 * S + countRowH + 10 * S
+      ctx.fillStyle = COL.desc
+      ctx.font = `400 ${13 * S}px ${F_SANS}`
+      ctx.textAlign = "left"
+      ctx.textBaseline = "top"
+      descLines.forEach((ln, i) => {
+        ctx.fillText(ln, PAD_X, descTop + i * descLineH + (descLineH - 13 * S) / 2)
+      })
+    }
+
+    // ── ⑤ 푸터 (좌: LOCA 로고 / 우: QR)
+    const footerBottom = CANVAS_H - PAD_BOTTOM
+    // 로고
+    ctx.textAlign = "left"
+    ctx.textBaseline = "alphabetic"
+    ctx.fillStyle = COL.title
+    ctx.font = `900 ${16 * S}px ${F_SANS}`
+    try { ctx.letterSpacing = `${2 * S}px` } catch { /* noop */ }
+    const logoBaseline = footerBottom - 6 * S
+    ctx.fillText("LOCA", PAD_X, logoBaseline)
+    const logoW = ctx.measureText("LOCA").width
+    try { ctx.letterSpacing = "0px" } catch { /* noop */ }
+    const sq = 7 * S
+    ctx.fillStyle = COL.brandDot
+    ctx.fillRect(PAD_X + logoW + 4 * S, logoBaseline - sq, sq, sq)
+
+    // QR 박스
+    const qrBox = 44 * S
+    const qrX = CANVAS_W - PAD_X - qrBox
+    const qrY = footerBottom - qrBox
+    ctx.fillStyle = COL.qrBg
+    roundRectPath(ctx, qrX, qrY, qrBox, qrBox, 6 * S)
+    ctx.fill()
+    ctx.strokeStyle = COL.qrBorder
+    ctx.lineWidth = S
+    roundRectPath(ctx, qrX, qrY, qrBox, qrBox, 6 * S)
+    ctx.stroke()
+    if (qrImage) {
+      const qpad = 5 * S
+      ctx.save()
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(qrImage, qrX + qpad, qrY + qpad, qrBox - qpad * 2, qrBox - qpad * 2)
+      ctx.restore()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fontTick: Gowun Batang 로드 후 @핸들 재렌더 트리거
+  }, [title, desc, counts, handle, dotImage, qrImage, fontTick])
 
   useEffect(() => {
+    if (!fontsReady) return
     render()
-  }, [render])
-
-  const getCanvasPos = (e) => {
-    const rect = canvasRef.current?.getBoundingClientRect()
-    if (!rect) return null
-    const touch = e.touches ? e.touches[0] : e
-    const scaleX = CANVAS_W / rect.width
-    const scaleY = CANVAS_H / rect.height
-    return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY }
-  }
-
-  const handlePointerDown = (e) => {
-    const pos = getCanvasPos(e)
-    if (!pos) return
-    const hit = [...stickers].reverse().findIndex((s) => Math.abs(s.x - pos.x) < s.size / 2 && Math.abs(s.y - pos.y) < s.size / 2)
-    if (hit >= 0) {
-      setDragging(stickers.length - 1 - hit)
-    }
-  }
-
-  const handlePointerMove = (e) => {
-    if (dragging === null) return
-    const pos = getCanvasPos(e)
-    if (!pos) return
-    setStickers((prev) => prev.map((s, i) => (i === dragging ? { ...s, x: pos.x, y: pos.y } : s)))
-  }
-
-  const handlePointerUp = () => {
-    setDragging(null)
-  }
-
-  const addSticker = (emoji) => {
-    setStickers((prev) => [...prev, { emoji, x: CANVAS_W / 2, y: CANVAS_H / 2, size: 80 }])
-  }
-
-  const removeLastSticker = () => {
-    setStickers((prev) => prev.slice(0, -1))
-  }
+  }, [render, fontsReady])
 
   const handleExport = async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || sharing) return
+    setSharing(true)
     canvas.toBlob(async (blob) => {
-      if (!blob) return
+      if (!blob) { setSharing(false); return }
+      const filename = `${(title || "LOCA").replace(/[\\/:*?"<>|]/g, "_")}.png`
       try {
-        const reader = new FileReader()
-        reader.onloadend = async () => {
-          try {
-            await Share.share({
-              title: mapTitle,
-              files: [reader.result],
-              dialogTitle: "지도 이미지 공유하기",
-            })
-            return
-          } catch (err) {
-            if (err?.message === "Share canceled") return
-            // fallback to download below
-          }
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+        try {
+          await Share.share({ title: title || "LOCA", files: [dataUrl], dialogTitle: "지도 이미지 공유하기" })
+          setSharing(false)
+          return
+        } catch (err) {
+          if (err?.message === "Share canceled") { setSharing(false); return }
+          // 네이티브 공유 실패 → 아래 다운로드 폴백
         }
-        reader.readAsDataURL(blob)
-        return
       } catch {
-        // fallback to download below
+        /* dataURL 실패 → 다운로드 폴백 */
       }
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `${mapTitle || "LOCA"}.png`
+      a.download = filename
       a.click()
       URL.revokeObjectURL(url)
+      setSharing(false)
     }, "image/png")
   }
 
   return (
     <div className="share-editor">
       <header className="share-editor__header">
-        <button className="share-editor__close" type="button" onClick={onClose} aria-label="??"><X size={18} /></button>
+        <button className="share-editor__close" type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         <strong className="share-editor__heading">이미지 공유</strong>
-        <button className="share-editor__export" type="button" onClick={handleExport}>공유</button>
+        <button className="share-editor__export" type="button" onClick={handleExport} disabled={sharing}>
+          {sharing ? "..." : "공유"}
+        </button>
       </header>
 
-      <div className="share-editor__preview" ref={previewRef}>
-        <canvas
-          ref={canvasRef}
-          className="share-editor__canvas"
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
-        />
+      <div className="share-editor__preview">
+        <canvas ref={canvasRef} className="share-editor__canvas" width={CANVAS_W} height={CANVAS_H} />
       </div>
 
       <div className="share-editor__controls">
-        <div className="share-editor__section">
-          <label className="share-editor__label">프레임</label>
-          <div className="share-editor__frame-list">
-            {FRAMES.map((f) => (
-              <button
-                key={f.id}
-                className={`share-editor__frame-chip${frameId === f.id ? " is-active" : ""}`}
-                type="button"
-                onClick={() => setFrameId(f.id)}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+        <div className="share-editor__field">
+          <label className="share-editor__label" htmlFor="share-title">지도명</label>
+          <input
+            id="share-title"
+            className="share-editor__input"
+            type="text"
+            value={title}
+            maxLength={30}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="제목 없는 지도"
+          />
         </div>
-
-        <div className="share-editor__section">
-          <div className="share-editor__sticker-header">
-            <label className="share-editor__label">스티커</label>
-            {stickers.length > 0 ? (
-              <button className="share-editor__undo" type="button" onClick={removeLastSticker}>되돌리기</button>
-            ) : null}
-          </div>
-          <div className="share-editor__sticker-list">
-            {STICKER_PALETTE.map((emoji) => (
-              <button key={emoji} className="share-editor__sticker-btn" type="button" onClick={() => addSticker(emoji)}>
-                {emoji}
-              </button>
-            ))}
-          </div>
+        <div className="share-editor__field">
+          <label className="share-editor__label" htmlFor="share-desc">지도 설명</label>
+          <textarea
+            id="share-desc"
+            className="share-editor__input share-editor__input--area"
+            value={desc}
+            maxLength={80}
+            rows={2}
+            onChange={(e) => setDesc(e.target.value)}
+            placeholder="한 줄 소개를 남겨 보세요 (최대 2줄)"
+          />
         </div>
       </div>
     </div>

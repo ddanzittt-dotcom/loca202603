@@ -189,7 +189,6 @@ export function MapEditorScreen({
   const [summaryRecordDraft, setSummaryRecordDraft] = useState(null)
   const [mapCenter, setMapCenter] = useState(() => focusPoint || myLocation || DEFAULT_MAP_CENTER)
   // v2: 펼침형 FAB — 평소 + 1개만, 탭하면 도구 3개 stagger 펼침.
-  const [capturing, setCapturing] = useState(false)
   const naverMapRef = useRef(null)
   const stripRef = useRef(null)
   const stripDragRef = useRef({ startX: 0, scrollLeft: 0, dragging: false })
@@ -998,26 +997,15 @@ export function MapEditorScreen({
         map={map}
         shareUrl={shareUrl}
         onClose={() => setShareOpen(false)}
-        capturing={capturing}
         onPublishMap={onPublishMap}
         onUnpublishMap={onUnpublishMap}
         onEnsureShareLink={onEnsureShareLink}
         onSetMapPublic={onSetMapPublic}
         autoEnable={shareAutoEnable}
-        onOpenImageShare={async () => {
-          if (capturing || !naverMapRef.current) return
-          setCapturing(true)
-          try {
-            const canvas = await naverMapRef.current.capture()
-            if (canvas) {
-              setShareOpen(false)
-              onOpenShareEditor?.(canvas)
-            }
-          } catch (err) {
-            console.error("공유용 지도를 캡처하는 중 오류가 발생했습니다.", err)
-          } finally {
-            setCapturing(false)
-          }
+        onOpenImageShare={() => {
+          // 이미지 카드는 도트맵으로 그리므로 실지도 캡처가 필요 없다 (에디터에서 생성).
+          setShareOpen(false)
+          onOpenShareEditor?.()
         }}
         showToast={showToast}
       />

@@ -3,7 +3,7 @@ import { BottomSheet } from "../ui"
 import { logEvent } from "../../lib/analytics"
 import { getProfilePlacementState } from "../../lib/mapPlacement"
 
-// 공유 = 링크 공유만. (QR·카카오·이미지 공유는 2026-07 정리 — 필요 시 git 이력 참조)
+// 공유 = 링크 복사 + 이미지 공유(도트맵 카드). (QR·카카오 공유는 2026-07 정리 — 필요 시 git 이력 참조)
 
 function getCleanShareUrl(shareUrl) {
   if (!shareUrl) return ""
@@ -25,6 +25,7 @@ export function ShareSheet({
   onUnpublishMap,
   onEnsureShareLink,
   onSetMapPublic,
+  onOpenImageShare,
   autoEnable = false,
   showToast,
 }) {
@@ -180,6 +181,19 @@ export function ShareSheet({
               {autoLinking ? "링크 만드는 중..." : copying ? "복사 중..." : copied ? "복사 완료" : "링크 복사"}
             </span>
           </button>
+          {typeof onOpenImageShare === "function" ? (
+            <button
+              className="share-sheet__action-btn share-sheet__action-btn--image"
+              type="button"
+              onClick={() => {
+                logEvent("share_click", { map_id: map?.id, meta: { method: "image" } })
+                onOpenImageShare()
+              }}
+            >
+              <span className="share-sheet__action-icon">🖼️</span>
+              <span className="share-sheet__action-label">이미지 공유</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </BottomSheet>

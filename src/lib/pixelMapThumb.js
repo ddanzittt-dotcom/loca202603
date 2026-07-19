@@ -2,9 +2,9 @@
 // 지도 id 로 시드된 결정적 픽셀 지형 + 실제 핀 좌표(있으면)로 빨간 핀을 찍는다.
 // 프로토타입 habitat2/mapThumb 이식.
 
-const W = 280
-const H = 132
-const CELL = 8
+const DEFAULT_W = 280
+const DEFAULT_H = 132
+const DEFAULT_CELL = 8
 
 function hashSeed(input) {
   const str = String(input || "seed")
@@ -16,7 +16,13 @@ function hashSeed(input) {
   return (Math.abs(h) % 2147483647) || 7
 }
 
-export function generatePixelMapSvg(seedInput, points = []) {
+// opts.width/height/cell 로 크기를 덮어쓸 수 있다(기본값은 목록 썸네일용 280×132).
+// 공유 카드처럼 canvas 로 래스터화하는 곳을 위해 SVG 루트에 명시적 width/height 를 넣는다
+// (속성이 없으면 일부 브라우저에서 intrinsic size 가 0 이 되어 drawImage 가 실패한다).
+export function generatePixelMapSvg(seedInput, points = [], opts = {}) {
+  const W = Math.max(1, Math.round(opts.width || DEFAULT_W))
+  const H = Math.max(1, Math.round(opts.height || DEFAULT_H))
+  const CELL = Math.max(2, Math.round(opts.cell || DEFAULT_CELL))
   const seed = hashSeed(seedInput)
   let s = seed
   const rand = () => { s = (s * 16807 + 11) % 2147483647; return s / 2147483647 }
@@ -74,5 +80,5 @@ export function generatePixelMapSvg(seedInput, points = []) {
     out += `<rect x="${p.x - 1.5}" y="${p.y - 1.5}" width="3" height="3" fill="#FFFDF4"/>`
   }
 
-  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" role="img" aria-label="지도 미리보기" style="width:100%;height:100%;display:block">${out}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" role="img" aria-label="지도 미리보기" style="width:100%;height:100%;display:block">${out}</svg>`
 }

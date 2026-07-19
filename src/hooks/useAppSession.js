@@ -30,7 +30,7 @@ export function useAppSession({
   setSelectedFeatureId, setSelectedFeatureSummaryId,
   setFeatureSheet, setEditorMode, setDraftPoints,
   setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef,
-  setSharedMapData, setShareEditorImage,
+  setSharedMapData, setShareEditorOpen,
   showToast, routeAtLoad,
 }) {
   const [authReady, setAuthReady] = useState(!hasSupabaseEnv)
@@ -200,8 +200,8 @@ export function useAppSession({
     setSelectedUserId(null)
     setSelectedPostRef(null)
     if (!keepSharedViewer) setSharedMapData(null)
-    setShareEditorImage(null)
-  }, [routeAtLoad?.type, setCollaborationInvites, setFeatures, setFollowed, setMaps, setPlacements, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorImage])
+    setShareEditorOpen(false)
+  }, [routeAtLoad?.type, setCollaborationInvites, setFeatures, setFollowed, setMaps, setPlacements, setShares, setViewerProfile, setActiveTab, setMapsView, setActiveMapSource, setActiveMapId, setSelectedFeatureId, setSelectedFeatureSummaryId, setFeatureSheet, setEditorMode, setDraftPoints, setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef, setSharedMapData, setShareEditorOpen])
 
   // 초기 세션 확인 + auth state 구독
   useEffect(() => {

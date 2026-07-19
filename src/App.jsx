@@ -413,7 +413,7 @@ export default function App() {
   const [selectedPostRef, setSelectedPostRef] = useState(null)
   const [placesInitialQuery, setPlacesInitialQuery] = useState(null) // 대시보드 동네 도감 → 내 장소 진입 검색어
   const [memoText, setMemoText] = useState("")
-  const [shareEditorImage, setShareEditorImage] = useState(null)
+  const [shareEditorOpen, setShareEditorOpen] = useState(false)
   const [recordSheetOpen, setRecordSheetOpen] = useState(false)
   const [recordSheetInitialView, setRecordSheetInitialView] = useState("target")
   const [recordTargetMapId, setRecordTargetMapId] = useState(null)
@@ -538,7 +538,7 @@ export default function App() {
     setSelectedFeatureId, setSelectedFeatureSummaryId,
     setFeatureSheet, setEditorMode, setDraftPoints,
     setMapSheet, setPublishSheet, setSelectedUserId, setSelectedPostRef,
-    setSharedMapData, setShareEditorImage,
+    setSharedMapData, setShareEditorOpen,
     showToast, routeAtLoad,
   })
 
@@ -2159,7 +2159,7 @@ export default function App() {
             onImportCommunityFeature={handleImportCommunityFeatureRequest}
             onUnimportCommunityFeature={unimportCommunityFeature}
             onRequestCommunityUpdateFromSummary={requestCommunityFeatureUpdateById}
-            onOpenShareEditor={(canvas) => setShareEditorImage(canvas)}
+            onOpenShareEditor={() => setShareEditorOpen(true)}
             onUpdateMemo={updateMemo}
             onDeleteMemo={deleteMemo}
             placementRow={findPlacementForMap(activeMap?.id, shares)}
@@ -2647,12 +2647,11 @@ export default function App() {
         onToggleFollow={toggleFollow}
         mapFeatures={selectedPost ? features.filter((f) => f.mapId === selectedPost.mapId) : []}
       />
-      {shareEditorImage ? (
+      {shareEditorOpen && activeMap ? (
         <Suspense fallback={null}>
           <MapShareEditor
-            mapImage={shareEditorImage} mapTitle={activeMap?.title || "LOCA"}
-            mapTheme={activeMap?.theme} mapFeatures={activeFeatures}
-            shareUrl={shareUrl} onClose={() => setShareEditorImage(null)} showToast={showToast}
+            map={activeMap} features={activeFeatures} handle={viewerProfile?.handle || ""}
+            shareUrl={shareUrl} onClose={() => setShareEditorOpen(false)} showToast={showToast}
           />
         </Suspense>
       ) : null}
