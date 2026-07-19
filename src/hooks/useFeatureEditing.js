@@ -179,8 +179,9 @@ export function useFeatureEditing({
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
     triggerSelectionFeedback()
-    if (selectedFeatureSummaryId === featureId) {
-      // open detail on second tap
+    // 두 번째 탭에 상세(전체화면)를 여는 건 장소(핀)만 — 길·영역을 더블클릭했을 때
+    // 뜨던 어색한 전체화면을 없앤다. 길·영역은 요약 카드까지만(편집/기록은 요약 버튼으로).
+    if (selectedFeatureSummaryId === featureId && feature.type === "pin") {
       setSelectedFeatureId(featureId)
       setSelectedFeatureSummaryId(featureId)
       setFeatureSheet(toEditableFeature(feature))
@@ -1004,7 +1005,7 @@ export function useFeatureEditing({
       if (canPersistCommunityInCloud) {
         createFeatureOptimistically(nextFeature, {
           setPool: setCommunityMapFeatures,
-          successToast: "길을 저장했어요.",
+          successToast: "여기에 저장했고, 카드도 만들어졌어요.",
           failureToast: "길을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
           onCreated: () => {
@@ -1018,7 +1019,7 @@ export function useFeatureEditing({
       if (canPersistLocalInCloud) {
         createFeatureOptimistically(nextFeature, {
           setPool: setFeatures,
-          successToast: "길을 저장했어요.",
+          successToast: "여기에 저장했고, 카드도 만들어졌어요.",
           failureToast: "길을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
         })
@@ -1034,7 +1035,7 @@ export function useFeatureEditing({
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
     setFeatureSheet(toEditableFeature(nextFeature))
-    showToast("길을 저장했어요.")
+    showToast("여기에 저장했고, 카드도 만들어졌어요.")
   }
 
   const completeArea = async (draftPoints) => {
@@ -1060,7 +1061,7 @@ export function useFeatureEditing({
       if (canPersistCommunityInCloud) {
         createFeatureOptimistically(nextFeature, {
           setPool: setCommunityMapFeatures,
-          successToast: "영역을 저장했어요.",
+          successToast: "여기에 저장했고, 카드도 만들어졌어요.",
           failureToast: "영역을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
           onCreated: () => {
@@ -1074,7 +1075,7 @@ export function useFeatureEditing({
       if (canPersistLocalInCloud) {
         createFeatureOptimistically(nextFeature, {
           setPool: setFeatures,
-          successToast: "영역을 저장했어요.",
+          successToast: "여기에 저장했고, 카드도 만들어졌어요.",
           failureToast: "영역을 저장하지 못했어요.",
           onBeforeOpen: () => setDraftPoints([]),
         })
@@ -1090,7 +1091,7 @@ export function useFeatureEditing({
     setEditorMode("browse")
     setSelectedFeatureId(nextFeature.id)
     setFeatureSheet(toEditableFeature(nextFeature))
-    showToast("영역을 저장했어요.")
+    showToast("여기에 저장했고, 카드도 만들어졌어요.")
   }
 
   return {

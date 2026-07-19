@@ -284,6 +284,9 @@ export function CollectSheet({
             <X size={15} strokeWidth={2.4} />
           </button>
         </header>
+        {step === "pick" ? (
+          <p className="clt-note">여기선 <b>장소</b> 카드를 담아요. <b>길·영역</b>은 지도를 만들어 맵핑해 주세요.</p>
+        ) : null}
 
         {step === "pick" ? (
           <>

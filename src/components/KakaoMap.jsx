@@ -104,29 +104,6 @@ const DRAW_MODE_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 const DEFAULT_ROUTE_DRAW_COLOR = getDefaultFeatureStyle("route").color
 const DEFAULT_AREA_DRAW_COLOR = getDefaultFeatureStyle("area").color
 
-// 길 라벨 거리 병기용 — [[lng,lat], ...] haversine 합산
-const routePointsLengthKm = (points) => {
-  if (!Array.isArray(points) || points.length < 2) return null
-  const R = 6371
-  const toRad = (deg) => (deg * Math.PI) / 180
-  let km = 0
-  for (let i = 1; i < points.length; i += 1) {
-    const [lng1, lat1] = points[i - 1]
-    const [lng2, lat2] = points[i]
-    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) continue
-    const dLat = toRad(lat2 - lat1)
-    const dLng = toRad(lng2 - lng1)
-    const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-    km += 2 * R * Math.asin(Math.min(1, Math.sqrt(s)))
-  }
-  return km > 0 ? km : null
-}
-
-const formatRouteLengthLabel = (km) => {
-  if (!Number.isFinite(km) || km <= 0) return ""
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
-}
-
 // HTML 문자열 → CustomOverlay content 엘리먼트 (+선택 클릭 바인딩)
 const makeOverlayElement = (html, onClick) => {
   const wrap = document.createElement("div")
@@ -699,7 +676,6 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
               lat: routeLabelPoint.lat, lng: routeLabelPoint.lng,
               html: createFeatureTagContent({
                 feature, type: "route", color: routeColor, isSelected: isRouteSelected,
-                metaText: formatRouteLengthLabel(routePointsLengthKm(routePoints)),
               }),
               onClick: makeSelectHandler(feature.id),
               xAnchor: 0.5, yAnchor: 1, zIndex: isRouteSelected ? 250 : 55,

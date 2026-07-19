@@ -140,7 +140,7 @@ export function PlacesScreen({
           <p className="pl-empty__desc">오늘 다녀온 곳부터 한 장 어때요?</p>
           {onCreateRecord ? (
             <button className="pl-empty__action" type="button" onClick={onCreateRecord}>
-              + 담기
+              + 카드 만들기
             </button>
           ) : null}
         </div>

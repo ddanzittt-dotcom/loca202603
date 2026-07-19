@@ -2451,6 +2451,19 @@
   color: #1F1A12;
 }
 
+/* 담기 안내 — 길·영역은 지도에서 맵핑하라는 힌트 */
+.clt-note {
+  margin: -4px 0 12px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(245, 196, 27, 0.14);
+  border: 1px solid rgba(122, 90, 0, 0.18);
+  color: #5B5340;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.clt-note b { color: #7A5A00; font-weight: 700; }
+
 .clt-close {
   width: 30px;
   height: 30px;

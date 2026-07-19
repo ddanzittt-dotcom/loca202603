@@ -2068,8 +2068,8 @@ export default function App() {
             description={`모은 장소 ${b2cFeatures.length}개`}
             action={(
               <button className="web-section__action" type="button" onClick={() => setCollectSheetOpen(true)}>
-                <Database size={16} strokeWidth={2.2} aria-hidden="true" />
-                담기
+                <Plus size={16} strokeWidth={2.4} aria-hidden="true" />
+                카드 만들기
               </button>
             )}
           >
