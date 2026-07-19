@@ -956,7 +956,7 @@ export default function App() {
     publishMap, refreshShareSnapshot, setMapPublic, unpublish, addMapToProfile, removeMapFromProfile,
     openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
-    maps, setMaps, features, setFeatures, shares, setShares,
+    maps, setMaps, features, setFeatures, placementsByMap, shares, setShares,
     cloudMode, mapSheet, setMapSheet, setFeatureSheet,
     setMapsView, setActiveTab, setActiveMapSource, setActiveMapId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
@@ -2023,6 +2023,7 @@ export default function App() {
             <MapsListScreen
               maps={b2cMaps}
               features={b2cFeatures}
+              placements={placementsByMap}
               shares={b2cShares}
               loading={cloudLoading}
               characterImage="/characters/cloud_lv1.svg"
@@ -2602,7 +2603,7 @@ export default function App() {
       ) : null}
       <PublishSheet
         publishSheet={publishSheet} setPublishSheet={setPublishSheet}
-        candidates={profileUploadCandidates} features={b2cFeatures}
+        candidates={profileUploadCandidates} features={b2cFeatures} placements={placementsByMap}
         onPublish={handlePublishSubmit}
         onAddToProfile={(mapId) => {
           // 이미 링크 공유 중인 지도: 공통 confirm 으로 바로 전환.

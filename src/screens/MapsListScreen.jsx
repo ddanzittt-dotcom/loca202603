@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Check, ChevronDown, GripVertical, Link2, Lock, MoreHorizontal, MoveVertical, Pencil, Search as SearchIcon, Trash2, Users, X } from "lucide-react"
 import { EmptyState, SkeletonCard } from "../components/ui"
+import { countFeatureTypes, formatFeatureCounts } from "../lib/featureCounts"
 import { getProfilePlacementState } from "../lib/mapPlacement"
 import { generateMiniMapSvg } from "../lib/miniMapPreview"
 import { generatePixelMapSvg } from "../lib/pixelMapThumb"
@@ -75,15 +76,39 @@ function getInviteRoleLabel(role) {
   return role === "editor" ? "편집자" : "보기 전용"
 }
 
-function groupFeaturesByMapId(features = []) {
-  return features.reduce((acc, feature) => {
+// 스칼라 홈 지도(mapId)로 묶은 인덱스 + id 조회용 인덱스.
+// 지도 소속은 스칼라 mapId 와 M:N 배치(placements)의 합집합이므로 두 인덱스를 함께 쓴다.
+function buildFeatureIndex(features = []) {
+  const byMapId = new Map()
+  const byId = new Map()
+  for (const feature of features) {
+    const id = feature?.id ?? feature?.feature_id
+    if (id != null) byId.set(id, feature)
     const mapId = feature?.mapId
-    if (!mapId) return acc
-    const list = acc.get(mapId)
+    if (!mapId) continue
+    const list = byMapId.get(mapId)
     if (list) list.push(feature)
-    else acc.set(mapId, [feature])
-    return acc
-  }, new Map())
+    else byMapId.set(mapId, [feature])
+  }
+  return { byMapId, byId }
+}
+
+// 한 지도에 담긴 기록 전체 — 스칼라 mapId + M:N 배치(placements)를 중복 없이 합친다.
+function getMapFeatures(mapId, byMapId, byId, placements) {
+  const scalar = byMapId.get(mapId) || []
+  const placedIds = placements?.[mapId]
+  if (!Array.isArray(placedIds) || placedIds.length === 0) return scalar
+  const seen = new Set(scalar.map((feature) => feature.id ?? feature.feature_id))
+  const merged = scalar.slice()
+  for (const fid of placedIds) {
+    if (fid == null || seen.has(fid)) continue
+    const feature = byId.get(fid)
+    if (feature) {
+      merged.push(feature)
+      seen.add(fid)
+    }
+  }
+  return merged
 }
 
 function CollaborationInviteBanner({ invites = [], onAccept, onReject }) {
@@ -131,7 +156,7 @@ function MapsV3Card({
   onDragStart,
   onDragEnter,
 }) {
-  const isEmpty = item.placeCount === 0
+  const isEmpty = item.featureCount === 0
   const [menuOpen, setMenuOpen] = useState(false)
   const canManage = item.map.canManage !== false
 
@@ -226,7 +251,7 @@ function MapsV3Card({
           ) : null}
         </span>
         <span className="maps-v3-card__meta">
-          <span>{item.placeCount} 장소</span>
+          <span>{item.countLabel}</span>
           <i aria-hidden="true" />
           <span>{item.updatedLabel}</span>
         </span>
@@ -238,6 +263,7 @@ function MapsV3Card({
 export function MapsListScreen({
   maps,
   features,
+  placements = {},
   shares = [],
   characterImage,
   onCreate,
@@ -269,14 +295,15 @@ export function MapsListScreen({
     return () => window.clearTimeout(timer)
   }, [query])
 
-  const featuresByMapId = useMemo(() => groupFeaturesByMapId(features), [features])
+  const featureIndex = useMemo(() => buildFeatureIndex(features), [features])
   const shareByMapId = useMemo(() => new Map(shares.map((share) => [share.mapId, share])), [shares])
 
   const mapEntries = useMemo(() => (
     maps.map((map, index) => {
       const placementRow = shareByMapId.get(map.id) || null
       const placement = getProfilePlacementState(map, placementRow)
-      const mapFeatures = featuresByMapId.get(map.id) || []
+      const mapFeatures = getMapFeatures(map.id, featureIndex.byMapId, featureIndex.byId, placements)
+      const typeCounts = countFeatureTypes(mapFeatures)
       const status = getMapStatus(map, placement)
       return {
         map,
@@ -284,7 +311,9 @@ export function MapsListScreen({
         placement,
         status,
         collabCount: getCollabCount(map),
-        placeCount: mapFeatures.length,
+        featureCount: mapFeatures.length,
+        typeCounts,
+        countLabel: formatFeatureCounts(typeCounts),
         updatedLabel: formatRelativeDate(map.updatedAt || map.updated_at || map.modifiedAt || map.modified_at),
         pinPoints: mapFeatures
           .filter((feature) => feature.type === "pin" && Number.isFinite(Number(feature.lat)) && Number.isFinite(Number(feature.lng)))
@@ -299,7 +328,7 @@ export function MapsListScreen({
         ].filter(Boolean).join(" ").toLowerCase(),
       }
     })
-  ), [featuresByMapId, maps, shareByMapId])
+  ), [featureIndex, maps, placements, shareByMapId])
 
   const counts = useMemo(() => ({
     all: mapEntries.length,

@@ -16,12 +16,14 @@ import {
 import { toEditableFeature } from "./useFeatureEditing"
 import { createShortShareSlug } from "../lib/mapService.utils"
 import { syncFeatureListLocalMediaToCloud } from "../lib/mediaCloudSync"
+import { featureInMap } from "../lib/featurePlacements"
 
 export function useMapCRUD({
   maps,
   setMaps,
   features,
   setFeatures,
+  placementsByMap = {},
   shares,
   setShares,
   cloudMode,
@@ -308,9 +310,10 @@ export function useMapCRUD({
     if (!effectiveMapId) return showToast("링크를 켤 지도를 먼저 선택해 주세요.")
     const targetMap = maps.find((item) => item.id === effectiveMapId)
     if (targetMap?.isPublished) return showToast("이미 링크 공유 중인 지도예요.")
-    const mapFeatures = features.filter((f) => f.mapId === effectiveMapId)
+    // 지도 소속 = 스칼라 mapId + M:N 배치(placements) 합집합. 장소·길·영역 어느 것이든 하나라도 담겼으면 공유 가능.
+    const mapFeatures = features.filter((f) => featureInMap(placementsByMap, f, effectiveMapId))
     const mapFeatureCount = mapFeatures.length
-    if (mapFeatureCount === 0) return showToast("장소를 추가해야 링크를 켤 수 있어요.")
+    if (mapFeatureCount === 0) return showToast("장소·길·영역을 하나라도 담아야 링크를 켤 수 있어요.")
 
     try {
       if (cloudMode) {
@@ -345,7 +348,7 @@ export function useMapCRUD({
       showToast(friendlySupabaseError(error))
       return null
     }
-  }, [cloudMode, features, maps, publishSheet, setFeatures, setMaps, setPublishSheet, showToast])
+  }, [cloudMode, features, maps, placementsByMap, publishSheet, setFeatures, setMaps, setPublishSheet, showToast])
 
   // 링크 공유 중인 지도의 스냅샷을 조용히 갱신한다 (주소 유지, 내용만 최신화).
   // 공유 시트를 열 때마다 호출 — 실패해도 사용자 흐름을 막지 않는다.

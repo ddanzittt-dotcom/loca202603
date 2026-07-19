@@ -1,6 +1,8 @@
 import { BottomSheet } from "../ui"
 import { Check } from "lucide-react"
 import { getProfilePlacementState } from "../../lib/mapPlacement"
+import { featureInMap } from "../../lib/featurePlacements"
+import { countFeatureTypes, formatFeatureCounts } from "../../lib/featureCounts"
 
 // "지도 공개" 시트
 // - 링크 공유가 꺼진 지도: 링크 공유 후 프로필 공개 제안.
@@ -22,6 +24,7 @@ export function PublishSheet({
   setPublishSheet,
   candidates = [],
   features,
+  placements = {},
   onPublish,
   onAddToProfile,
   onOfferAddToProfile,
@@ -35,7 +38,7 @@ export function PublishSheet({
 
   const selectedMap = candidates.find((mapItem) => mapItem.id === publishSheet?.selectedMapId) || null
   const selectedPlacement = selectedMap ? getProfilePlacementState(selectedMap, null) : null
-  const selectedMapFeatures = selectedMap ? features.filter((f) => f.mapId === selectedMap.id) : []
+  const selectedMapFeatures = selectedMap ? features.filter((f) => featureInMap(placements, f, selectedMap.id)) : []
   const selectedNeedsPublish = Boolean(selectedPlacement?.canPublish)
   const selectedAddsDirectly = Boolean(selectedPlacement?.isPublished)
   const canSubmit = Boolean(selectedMap) && selectedMapFeatures.length > 0 && !publishing
@@ -108,8 +111,9 @@ export function PublishSheet({
         <div className="form-stack">
           <div className="card-list">
             {candidates.map((mapItem) => {
-              const mapFeatures = features.filter((f) => f.mapId === mapItem.id)
-              const pinCount = mapFeatures.filter((f) => f.type === "pin").length
+              const mapFeatures = features.filter((f) => featureInMap(placements, f, mapItem.id))
+              const typeCounts = countFeatureTypes(mapFeatures)
+              const pinCount = typeCounts.pin
               const isActive = publishSheet?.selectedMapId === mapItem.id
               const isEmpty = mapFeatures.length === 0
               const placement = getProfilePlacementState(mapItem, null)
@@ -141,8 +145,13 @@ export function PublishSheet({
                         background: statusBg, color: statusColor,
                       }}>{statusLabel}</span>
                     </div>
+                    {!isEmpty ? (
+                      <p className="pub-card__desc" style={{ margin: "0 0 2px", fontWeight: 600, color: "#8A6A3A" }}>
+                        {formatFeatureCounts(typeCounts)}
+                      </p>
+                    ) : null}
                     <p className="pub-card__desc" style={{ margin: 0 }}>
-                      {isEmpty ? "장소를 먼저 담아 주세요." : (mapItem.description || "설명이 아직 없어요.")}
+                      {isEmpty ? "장소·길·영역을 먼저 담아 주세요." : (mapItem.description || "설명이 아직 없어요.")}
                     </p>
                   </div>
 
