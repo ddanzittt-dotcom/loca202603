@@ -24,6 +24,7 @@ export function useMapCRUD({
   features,
   setFeatures,
   placementsByMap = {},
+  setLocalMapOrder,
   shares,
   setShares,
   cloudMode,
@@ -204,12 +205,24 @@ export function useMapCRUD({
 
     setMaps((current) => current.map(applyOrder))
 
+    // 협업 지도(비소유)는 소유자의 map.config 를 못 건드리므로(RLS: maps_update_owner)
+    // 내 브라우저 로컬 순서 오버라이드에 기록한다. 소유 지도만 클라우드 config 에 저장.
+    const localOrderUpdates = {}
+    for (const [mapId, index] of orderById) {
+      const mapItem = maps.find((item) => item.id === mapId)
+      if (mapItem && mapItem.canManage === false) localOrderUpdates[mapId] = index
+    }
+    if (Object.keys(localOrderUpdates).length && typeof setLocalMapOrder === "function") {
+      setLocalMapOrder((current) => ({ ...(current || {}), ...localOrderUpdates }))
+    }
+
     try {
       if (cloudMode) {
         await Promise.all(
           orderedIds.map((mapId, index) => {
             const mapItem = maps.find((item) => item.id === mapId)
-            if (!mapItem) return null
+            // 소유 지도만 클라우드 저장 — 협업 지도는 위에서 로컬 오버라이드로 처리했다.
+            if (!mapItem || mapItem.canManage === false) return null
             return updateMapRecord(mapId, {
               config: {
                 ...(mapItem.config || {}),
@@ -225,7 +238,7 @@ export function useMapCRUD({
       setMaps(previousMaps)
       showToast(friendlySupabaseError(error))
     }
-  }, [cloudMode, maps, setMaps, showToast])
+  }, [cloudMode, maps, setLocalMapOrder, setMaps, showToast])
 
   const importMapBundleToLocal = useCallback(async (bundle, options = {}) => {
     if (!bundle?.map) return

@@ -60,14 +60,18 @@ function StatusBadge({ status, collabCount }) {
   return <span className="maps-v3-status maps-v3-status--collab">함께 {collabCount}</span>
 }
 
-function getMapListOrder(map, fallbackIndex = 0) {
+// 목록 순서: 내가 소유한 지도는 map.config.listOrder(클라우드 저장)로,
+// 협업 지도는 소유자 config 를 못 건드리므로 내 브라우저 로컬 오버라이드(localOrder)로 정한다.
+function getMapListOrder(map, localOrder, fallbackIndex = 0) {
+  const override = Number(localOrder?.[map?.id])
+  if (Number.isFinite(override)) return override
   const raw = map?.config?.listOrder ?? map?.config?.list_order
   const value = Number(raw)
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER + fallbackIndex
 }
 
 function sortMapEntries(a, b) {
-  const orderDiff = getMapListOrder(a.map, a.index) - getMapListOrder(b.map, b.index)
+  const orderDiff = a.listOrder - b.listOrder
   if (orderDiff !== 0) return orderDiff
   return new Date(b.map.updatedAt || b.map.updated_at || 0) - new Date(a.map.updatedAt || a.map.updated_at || 0)
 }
@@ -206,7 +210,7 @@ function MapsV3Card({
             </button>
           ) : null}
           <strong className="maps-v3-card__title">{item.map.title || "이름 없는 지도"}</strong>
-          {canManage && !reorderMode ? (
+          {!reorderMode ? (
             <span className="maps-v3-card__more">
               <button
                 className="maps-v3-card__more-btn"
@@ -227,24 +231,30 @@ function MapsV3Card({
                   role="menu"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit?.(item.map.id) }}>
-                    <Pencil size={13} />
-                    지도명 변경
-                  </button>
-                  {typeof onCollaborate === "function" ? (
+                  {/* 소유자만: 이름 변경·함께 만들기·삭제 (협업 지도는 소유자 화면에서만). */}
+                  {canManage ? (
+                    <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit?.(item.map.id) }}>
+                      <Pencil size={13} />
+                      지도명 변경
+                    </button>
+                  ) : null}
+                  {canManage && typeof onCollaborate === "function" ? (
                     <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onCollaborate?.(item.map.id) }}>
                       <Users size={13} />
                       함께 만들기
                     </button>
                   ) : null}
+                  {/* 위치 변경은 내 목록 순서라 협업 지도도 가능. */}
                   <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onStartReorder?.(item.map.id) }}>
                     <MoveVertical size={13} />
                     지도 위치 변경
                   </button>
-                  <button className="is-danger" type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete?.(item.map.id, item.map.title) }}>
-                    <Trash2 size={13} />
-                    지도 삭제
-                  </button>
+                  {canManage ? (
+                    <button className="is-danger" type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete?.(item.map.id, item.map.title) }}>
+                      <Trash2 size={13} />
+                      지도 삭제
+                    </button>
+                  ) : null}
                 </span>
               ) : null}
             </span>
@@ -264,6 +274,7 @@ export function MapsListScreen({
   maps,
   features,
   placements = {},
+  localOrder = {},
   shares = [],
   characterImage,
   onCreate,
@@ -310,6 +321,7 @@ export function MapsListScreen({
         index,
         placement,
         status,
+        listOrder: getMapListOrder(map, localOrder, index),
         collabCount: getCollabCount(map),
         featureCount: mapFeatures.length,
         typeCounts,
@@ -328,7 +340,7 @@ export function MapsListScreen({
         ].filter(Boolean).join(" ").toLowerCase(),
       }
     })
-  ), [featureIndex, maps, placements, shareByMapId])
+  ), [featureIndex, localOrder, maps, placements, shareByMapId])
 
   const counts = useMemo(() => ({
     all: mapEntries.length,

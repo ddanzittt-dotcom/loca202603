@@ -351,6 +351,8 @@ export default function App() {
   // 지도-기록 M:N 배치(050): { [mapId]: featureId[] } — 한 카드가 여러 지도에 담긴 관계.
   // 스칼라 feature.mapId(홈 지도)와 병존하며, 지도 소속 판정은 둘의 합집합으로 한다.
   const [placementsByMap, setPlacementsByMap] = useLocalStorageState("loca.mobile.placements", {})
+  // 협업 지도의 "내 목록 순서" — 소유자 config 를 못 건드리므로 브라우저 로컬에 저장 (지도 id 는 전역 고유라 계정 간 충돌 없음).
+  const [localMapOrder, setLocalMapOrder] = useLocalStorageState("loca.mobile.mapListOrder", {})
   const [shares, setShares] = useLocalStorageState("loca.mobile.shares", sharesSeed)
   const [followed, setFollowed] = useLocalStorageState("loca.mobile.followed", [])
   const [communityPosts, setCommunityPosts] = useLocalStorageState("loca.mobile.communityPosts", communityPostsSeed)
@@ -956,7 +958,7 @@ export default function App() {
     publishMap, refreshShareSnapshot, setMapPublic, unpublish, addMapToProfile, removeMapFromProfile,
     openFeatureFromPlaces, handleTabChange,
   } = useMapCRUD({
-    maps, setMaps, features, setFeatures, placementsByMap, shares, setShares,
+    maps, setMaps, features, setFeatures, placementsByMap, setLocalMapOrder, shares, setShares,
     cloudMode, mapSheet, setMapSheet, setFeatureSheet,
     setMapsView, setActiveTab, setActiveMapSource, setActiveMapId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
@@ -2024,6 +2026,7 @@ export default function App() {
               maps={b2cMaps}
               features={b2cFeatures}
               placements={placementsByMap}
+              localOrder={localMapOrder}
               shares={b2cShares}
               loading={cloudLoading}
               characterImage="/characters/cloud_lv1.svg"
