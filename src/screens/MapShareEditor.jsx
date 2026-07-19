@@ -185,7 +185,8 @@ export function MapShareEditor({ map, features = [], handle = "", shareUrl = "",
   // 도트맵 스냅샷: 지도 id 시드 + 실제 핀 좌표. SVG → Image 로 1회 래스터화.
   useEffect(() => {
     // 소스 비율을 카드 지도 영역(대략 1.15:1)에 맞춰 object-fit: cover 크롭을 최소화.
-    const svg = generatePixelMapSvg(mapId, pinPoints, { width: 360, height: 312, cell: 8 })
+    // focus: 핀이 가장 몰린 곳(밀집 지역)을 중심으로 확대.
+    const svg = generatePixelMapSvg(mapId, pinPoints, { width: 360, height: 312, cell: 8, focus: true })
     const img = new Image()
     img.decoding = "async"
     let alive = true
