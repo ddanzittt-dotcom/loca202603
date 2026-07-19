@@ -3917,7 +3917,23 @@
   100% { opacity: 1; transform: none; }
 }
 @media (max-width: 640px) {
-  .bd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  /* 내 장소 바인더 — 양 옆 여백 최소화. 지도 탭처럼 web-section 패딩 하나만 남기고
+     내부 인셋(pl-screen 40px)·바인더 패딩·링 제본 눈금·그리드 좌측 패딩을 걷어내
+     바인더가 폭을 꽉 채우고 카드 2열이 넓게 보이도록 한다. */
+  .web-section--places.maps-library-screen--v2 .pl-screen--embedded {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .bd-binder {
+    padding: 16px 8px 14px;
+  }
+  .bd-binder::before { display: none; }
+  .bd-binderhead { padding-left: 2px; }
+  .bd-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-left: 0;
+  }
 }
 
 .bd-sleeve {
