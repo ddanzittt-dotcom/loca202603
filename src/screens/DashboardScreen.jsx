@@ -13,6 +13,7 @@ import "../styles/dashboard-v2.css"
 const TRAINER_ID_KEY = "loca.trainer_id"
 const RECENT_COUNT = 6
 const TOP_COUNT = 5
+const TOWN_PREVIEW = 6 // 대시보드 동네 도감 미리보기 개수 (나머지는 "더보기" 전체 페이지)
 
 const prefersReduced = typeof window !== "undefined"
   && window.matchMedia
@@ -36,20 +37,34 @@ function memoEntries(feature) {
     .map((memo) => ({ text: memo.text.trim(), date: memo.createdAt || memo.date || feature.createdAt || feature.updatedAt }))
 }
 
-// 동네 = 주소 첫 어절 계열. regionName(역지오코딩) 우선, 없으면 주소성 note 파싱.
+// 동네 = 기초자치단체(시·군·구) 한 단위로 묶는다. 읍·면·동까지 쪼개면 한 도시가
+// 여러 칸으로 흩어져(안서동·신부동·불당동…) 보기 어렵고, 반대로 시·도(서울특별시)로
+// 묶으면 너무 뭉뚝하다. 그 사이 "기초자치단체"가 규모가 고른 분류 단위다.
+//  - 도·특별자치도 산하 → 시/군 (천안시 — 일반구 서북구/동남구는 시로 합침)
+//  - 광역시·특별시 산하 → 자치구/군 (강남구·기장군)
+//  - 세종특별자치시 → 그 자체 (하위 기초단체 없음)
+function baseMunicipality(source) {
+  const words = `${source || ""}`.trim().split(/\s+/).filter(Boolean)
+  if (!words.length) return null
+  const wideIdx = words.findIndex((w) => /(특별시|광역시|특별자치시)$/.test(w))
+  if (wideIdx >= 0) {
+    if (/특별자치시$/.test(words[wideIdx])) return words[wideIdx] // 세종특별자치시
+    return words.slice(wideIdx + 1).find((w) => /(구|군)$/.test(w)) || words[wideIdx]
+  }
+  // 도·특별자치도 산하 — 시 우선(일반구 무시), 없으면 군, 그다음 구
+  return words.find((w) => /시$/.test(w))
+    || words.find((w) => /군$/.test(w))
+    || words.find((w) => /구$/.test(w))
+    || null
+}
+
+// regionName(역지오코딩) 우선, 없으면 주소성 note 파싱 → 기초자치단체로 환산.
 function townOf(feature) {
   const region = `${feature?.regionName || ""}`.trim()
-  if (region) {
-    const words = region.split(/\s+/)
-    return words.find((w) => /(동|읍|면)$/.test(w))
-      || words.find((w) => /(구|군|시)$/.test(w))
-      || words[words.length - 1]
-  }
+  if (region) return baseMunicipality(region)
   const note = `${feature?.note || ""}`.trim()
   if (note && note.length <= 60 && /(로|길)\s?\d|(동|리)\s?\d|번길|[가-힣]+(시|군)\s[가-힣]/.test(note)) {
-    const words = note.split(/\s+/)
-    // 행정구역 어절만 채택 — 없으면 null (상호명 words[0] 을 동네로 오인하지 않도록)
-    return words.find((w) => /(구|군|동|읍|면)$/.test(w)) || null
+    return baseMunicipality(note)
   }
   return null
 }
@@ -116,6 +131,27 @@ function DashPanel({ title, right, className = "", bodyStyle, children }) {
   )
 }
 
+// 동네 도감 타일 — 대시보드 미리보기와 전체 페이지에서 공용
+function TownCard({ tile, index, onOpen }) {
+  return (
+    <button type="button" className="town-card" onClick={onOpen}>
+      <div className="th">
+        <span className="no">TOWN.{pad2(index + 1)}</span>
+        <span className="n">카드 {tile.count}장</span>
+      </div>
+      <div className="tb">
+        <div className="nm">{tile.town}</div>
+        <div className="types">
+          {[...tile.types.values()].map((type) => (
+            <span key={type.id} className="tchip" style={{ background: type.color }} title={type.label}>{type.label.slice(0, 1)}</span>
+          ))}
+        </div>
+        {tile.last ? <div className="last">최근 기록 {formatDotDate(tile.last)}</div> : null}
+      </div>
+    </button>
+  )
+}
+
 export function DashboardScreen({
   user,
   maps = [],
@@ -162,6 +198,7 @@ export function DashboardScreen({
   })
   const [editingId, setEditingId] = useState(false)
   const [idDraft, setIdDraft] = useState("")
+  const [view, setView] = useState("main") // "main" | "all-towns"
   const sinceText = since ? formatDotDate(since) : null
   const displayId = trainerId || defaultTrainerId(since)
 
@@ -275,6 +312,26 @@ export function DashboardScreen({
   const handleText = (user.handle || user.username || user.name || "loca").replace(/^@/, "")
   const hasRecords = recordFeatures.length > 0
 
+  // ── 동네 도감 전체 페이지 (더보기) ──
+  if (view === "all-towns") {
+    return (
+      <section className="screen screen--scroll dashboard-screen dash-alltowns">
+        <div className="dash">
+          <div className="dash-subhead">
+            <button type="button" className="dash-back" onClick={() => setView("main")}>← 대시보드</button>
+            <div className="dash-subhead__title">동네 도감 전체</div>
+            <div className="dash-subhead__meta">동네 {townTiles.length}곳 · 카드 {recordFeatures.length}장</div>
+          </div>
+          <div className="town-grid town-grid--all">
+            {townTiles.map((tile, i) => (
+              <TownCard key={tile.town} tile={tile} index={i} onOpen={() => onOpenPlaces?.(tile.town)} />
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="screen screen--scroll dashboard-screen">
       <div className="dash">
@@ -319,28 +376,21 @@ export function DashboardScreen({
           </div>
         </div>
 
-        {/* ② 동네 도감 */}
+        {/* ② 동네 도감 — 미리보기 6곳, 나머지는 "더보기" 전체 페이지 */}
         <DashPanel
           title="동네 도감"
-          right={<span className="rt">{townTiles.length > 0 ? `동네 ${townTiles.length}곳 · 카드 ${recordFeatures.length}장` : ""}</span>}
+          right={(
+            <>
+              <span className="rt">{townTiles.length > 0 ? `동네 ${townTiles.length}곳 · 카드 ${recordFeatures.length}장` : ""}</span>
+              {townTiles.length > TOWN_PREVIEW ? (
+                <button type="button" className="dpanel-more" onClick={() => setView("all-towns")}>더보기 →</button>
+              ) : null}
+            </>
+          )}
           className="town-grid"
         >
-          {townTiles.length > 0 ? townTiles.map((tile, i) => (
-            <button key={tile.town} type="button" className="town-card" onClick={() => onOpenPlaces?.(tile.town)}>
-              <div className="th">
-                <span className="no">TOWN.{pad2(i + 1)}</span>
-                <span className="n">카드 {tile.count}장</span>
-              </div>
-              <div className="tb">
-                <div className="nm">{tile.town}</div>
-                <div className="types">
-                  {[...tile.types.values()].map((type) => (
-                    <span key={type.id} className="tchip" style={{ background: type.color }} title={type.label}>{type.label.slice(0, 1)}</span>
-                  ))}
-                </div>
-                {tile.last ? <div className="last">최근 기록 {formatDotDate(tile.last)}</div> : null}
-              </div>
-            </button>
+          {townTiles.length > 0 ? townTiles.slice(0, TOWN_PREVIEW).map((tile, i) => (
+            <TownCard key={tile.town} tile={tile} index={i} onOpen={() => onOpenPlaces?.(tile.town)} />
           )) : (
             <div className="dash-sleeve">주소가 있는 카드를 담으면 동네가 채워져요</div>
           )}

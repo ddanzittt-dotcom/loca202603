@@ -20,7 +20,7 @@
 .dash {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
@@ -264,12 +264,16 @@
   cursor: pointer;
 }
 
+/* 카운트(.rt) 뒤에 붙는 더보기는 .rt 가 이미 우측으로 밀어놨으니 여백 리셋 */
+.rt + .dpanel-more { margin-left: 0; }
+.dpanel-more:hover { text-decoration: underline; }
+
 .dpanel-body { padding: 16px; }
 
 .dcols {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 18px;
 }
 
 @media (max-width: 720px) {
@@ -293,6 +297,44 @@
 }
 
 .dash-sleeve--sm { min-height: 72px; }
+
+/* ── 동네 도감 전체 페이지 (더보기) ── */
+.dash-subhead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dash-back {
+  border: 2.5px solid var(--px-ink);
+  border-radius: 10px;
+  background: var(--px-yellow);
+  box-shadow: var(--px-hard);
+  padding: 7px 13px;
+  font-family: var(--px-font);
+  font-size: 12px;
+  color: var(--px-ink);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dash-back:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--px-ink); }
+
+.dash-subhead__title {
+  font-family: var(--px-font);
+  font-size: 20px;
+  color: var(--px-ink);
+}
+
+.dash-subhead__meta {
+  margin-left: auto;
+  font-family: var(--px-font);
+  font-size: 11px;
+  color: var(--px-khaki);
+}
+
+.town-grid--all { margin-top: 2px; }
 
 /* ── ② 동네 도감 ── */
 .town-grid {
