@@ -16,7 +16,8 @@ const SPECS = {
   feed: {
     S: 2.5, W: 432, H: 540,
     border: 11, roundOut: 28, roundIn: 18,
-    topMeta: 16, bottomStack: 22, sidePad: 24, gap: 8, dividerW: 44,
+    // 상단 메타가 테두리에 붙어 답답 → 아래로 내림(16→36, 스토리와 비슷한 여백감)
+    topMeta: 36, bottomStack: 22, sidePad: 24, gap: 8, dividerW: 44,
     spriteLeft: 150, spriteTop: 150,
     type: { meta: 12, enLabel: 12, title: 44, titleMin: 36, desc: 16, addr: 13, loca: 14 },
   },
@@ -144,7 +145,9 @@ function drawLine(ctx, text, cx, y, { sizePx, weight, lsPx, color, shadow }) {
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = shadow.offsetY
   }
-  ctx.fillText(text, cx, y)
+  // 캔버스 letterSpacing 은 마지막 글자 뒤에도 자간을 넣어 중앙정렬 텍스트가
+  // 자간/2 만큼 왼쪽으로 밀린다 → 그만큼 오른쪽으로 보정해야 다른 줄과 정렬된다.
+  ctx.fillText(text, cx + (lsPx || 0) / 2, y)
   ctx.shadowColor = "transparent"
   ctx.shadowBlur = 0
   ctx.shadowOffsetY = 0
