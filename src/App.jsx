@@ -1005,7 +1005,6 @@ export default function App() {
     activeMapId, activeMapSource, cloudMode,
     activeMapRole: activeMap?.userRole || "owner",
     setFeatures, featureSheet, setFeatureSheet,
-    selectedFeatureSummaryId,
     setSelectedFeatureId, setSelectedFeatureSummaryId,
     setEditorMode, setDraftPoints, setMemoText,
     activeFeaturePool, communityMapFeatures, setCommunityMapFeatures,

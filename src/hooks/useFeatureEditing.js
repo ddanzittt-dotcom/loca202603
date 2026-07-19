@@ -130,7 +130,6 @@ export function useFeatureEditing({
   setFeatures,
   featureSheet,
   setFeatureSheet,
-  selectedFeatureSummaryId,
   setSelectedFeatureId,
   setSelectedFeatureSummaryId,
   setEditorMode,
@@ -175,21 +174,15 @@ export function useFeatureEditing({
     }
   }, [activeMapId, showToast])
 
+  // 마커 탭은 타입과 무관하게 선택/요약 카드까지만 — 재탭(더블클릭)에 상세 전체화면을
+  // 열지 않는다. 편집/기록 진입은 요약 카드의 버튼으로.
   const focusFeature = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
     triggerSelectionFeedback()
-    // 두 번째 탭에 상세(전체화면)를 여는 건 장소(핀)만 — 길·영역을 더블클릭했을 때
-    // 뜨던 어색한 전체화면을 없앤다. 길·영역은 요약 카드까지만(편집/기록은 요약 버튼으로).
-    if (selectedFeatureSummaryId === featureId && feature.type === "pin") {
-      setSelectedFeatureId(featureId)
-      setSelectedFeatureSummaryId(featureId)
-      setFeatureSheet(toEditableFeature(feature))
-      return
-    }
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-  }, [activeFeaturePool, selectedFeatureSummaryId, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
+  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   // 목록(스트립)에서 피처를 눌러도 카메라를 이동시키지 않는다 — 선택/요약만 (지도 마커 탭과 동일).
   const focusFeatureOnly = useCallback((featureId) => {
