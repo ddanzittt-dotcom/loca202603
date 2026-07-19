@@ -327,7 +327,9 @@ export function MapEditorScreen({
         lat: pendingSearchPin.lat,
         lng: pendingSearchPin.lng,
         title: pendingSearchPin.title,
-        note: pendingSearchPin.note,
+        // 주소는 설명(note)에 자동으로 채우지 않는다 — 설명은 사용자 몫으로 비워 두고,
+        // 주소는 카드가 좌표로 자동 표시(직접 찍은 핀과 동일한 경험).
+        note: "",
       })
       setPendingSearchPin(null)
     } finally {

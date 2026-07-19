@@ -880,10 +880,11 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     }
   }, [draftPoints, features, fitTrigger, focusPoint, mapReady])
 
-  useEffect(() => {
-    if (!mapReady) return
-    lastFitTriggerRef.current = 0
-  }, [mapReady])
+  // NOTE: 예전엔 mapReady 시 lastFitTriggerRef 를 0 으로 되돌리는 effect 가 있었으나,
+  // 위 fitBounds effect 보다 나중에 실행돼 초기 fit 직후 추적값을 0 으로 덮었다.
+  // 그 탓에 "첫 피처 추가" 때 fitBounds 가 다시 돌아 focusPoint(초기 화면)로 카메라가
+  // 튀는 버그가 있었다. mapReady 는 인스턴스당 false→true 한 번뿐이라(재초기화는 리마운트로
+  // 새 ref) 이 리셋은 불필요·유해 → 제거. 초기 fit 은 ref 기본값(0)으로 이미 보장된다.
 
   return (
     <div className={`map-canvas map-canvas--${draftMode || "browse"}`} style={{ position: "relative" }}>
