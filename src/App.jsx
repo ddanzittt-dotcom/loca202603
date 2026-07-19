@@ -2368,10 +2368,19 @@ export default function App() {
               }
               if (!photoUrl) photoUrl = await blobToDataUrl(blob)
             }
+            let saved = null
             if (cloudMode) {
-              await addFeatureMemo(featureId, text, "", photoUrl ? [photoUrl] : [])
+              saved = await addFeatureMemo(featureId, text, "", photoUrl ? [photoUrl] : [])
             }
-            const newMemo = { id: createId("memo"), text, createdAt: new Date().toISOString(), photos: photoUrl ? [photoUrl] : [] }
+            // 바인더에서 남긴 기록 = 수첩 메모(mapId=null). "내가 쓴 것" 필터에 잡히도록 userId 포함.
+            const newMemo = saved || {
+              id: createId("memo"),
+              userId: viewerProfile?.id || null,
+              text,
+              date: new Date().toISOString(),
+              mapId: null,
+              photos: photoUrl ? [photoUrl] : [],
+            }
             const attach = (feature) => ({ ...feature, memos: [...(feature.memos || []), newMemo] })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? attach(feature) : feature)))
             setPlaceCardFeature((current) => (current ? attach(current) : current))
