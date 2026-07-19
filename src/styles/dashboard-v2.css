@@ -119,46 +119,6 @@
   flex-wrap: wrap;
 }
 
-.hi-idbtn {
-  border: none;
-  background: none;
-  padding: 0;
-  font-family: var(--px-font);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--px-khaki);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.hi-idpen {
-  font-style: normal;
-  color: var(--px-red);
-  font-family: Pretendard, sans-serif;
-}
-
-.hi-idedit {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.hi-idedit input {
-  width: 68px;
-  border: 2px solid var(--px-ink);
-  border-radius: 6px;
-  background: var(--px-card, #fff);
-  padding: 2px 6px;
-  font-family: var(--px-font);
-  font-size: 11px;
-  letter-spacing: 1px;
-  color: var(--px-ink);
-}
-
-.hi-idedit input:focus { outline: none; border-color: var(--px-red); }
-
 .hi-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(70px, 1fr));

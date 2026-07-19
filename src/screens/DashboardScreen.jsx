@@ -10,7 +10,6 @@ import "../styles/dashboard-v2.css"
 // ① 히어로 ID 카드 ② 동네 도감 ③ 자주 꺼낸 카드 | 지도별 현황 ④ 최근 등록 ⑤ 모험 연대기
 // 전부 파생값(장소·기록·지도·동네) — 대시보드 전용 저장 필드 없음.
 
-const TRAINER_ID_KEY = "loca.trainer_id"
 const RECENT_COUNT = 6
 const TOP_COUNT = 5
 const TOWN_PREVIEW = 6 // 대시보드 동네 도감 미리보기 개수 (나머지는 "더보기" 전체 페이지)
@@ -67,12 +66,6 @@ function townOf(feature) {
     return baseMunicipality(note)
   }
   return null
-}
-
-function defaultTrainerId(sinceValue) {
-  const d = new Date(sinceValue || NaN)
-  if (Number.isNaN(d.getTime())) return "000000"
-  return String(d.getFullYear()).slice(2) + pad2(d.getMonth() + 1) + pad2(d.getDate())
 }
 
 // ── 자릿수 롤링 오도미터 (지시서 §6) ──
@@ -192,26 +185,8 @@ export function DashboardScreen({
     { label: "동네", value: towns.size },
   ]
 
-  // ── 트레이너 ID (수정 가능, SINCE는 고정) ──
-  const [trainerId, setTrainerId] = useState(() => {
-    try { return localStorage.getItem(TRAINER_ID_KEY) || "" } catch { return "" }
-  })
-  const [editingId, setEditingId] = useState(false)
-  const [idDraft, setIdDraft] = useState("")
   const [view, setView] = useState("main") // "main" | "all-towns"
   const sinceText = since ? formatDotDate(since) : null
-  const displayId = trainerId || defaultTrainerId(since)
-
-  const openIdEdit = () => { setIdDraft(displayId); setEditingId(true) }
-  const commitId = () => {
-    const cleaned = idDraft.replace(/\D/g, "").slice(0, 6)
-    setTrainerId(cleaned)
-    try {
-      if (cleaned) localStorage.setItem(TRAINER_ID_KEY, cleaned)
-      else localStorage.removeItem(TRAINER_ID_KEY)
-    } catch { /* noop */ }
-    setEditingId(false)
-  }
 
   // ── 동네 도감 ──
   const townTiles = useMemo(() => {
@@ -344,26 +319,7 @@ export function DashboardScreen({
             <div className="hi-name">{user.name}</div>
             <div className="hi-handle">@{handleText}</div>
             <div className="hi-since">
-              {sinceText ? `SINCE ${sinceText}` : "SINCE —"} · ID
-              {editingId ? (
-                <span className="hi-idedit">
-                  No.
-                  <input
-                    autoFocus
-                    value={idDraft}
-                    inputMode="numeric"
-                    maxLength={6}
-                    onChange={(e) => setIdDraft(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    onBlur={commitId}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitId() }}
-                    aria-label="트레이너 ID"
-                  />
-                </span>
-              ) : (
-                <button type="button" className="hi-idbtn" onClick={openIdEdit} aria-label="트레이너 ID 수정">
-                  No.{displayId}<i className="hi-idpen" aria-hidden="true">✎</i>
-                </button>
-              )}
+              {sinceText ? `SINCE ${sinceText}` : "SINCE —"}
             </div>
           </div>
           <div className="hi-stats">
