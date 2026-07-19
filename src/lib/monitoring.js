@@ -35,6 +35,9 @@ const IGNORED_MESSAGES = [
   "NetworkError",
   "Failed to fetch",
   "AbortError",
+  // iOS 인앱 브라우저(카카오톡·네이버 등 WKWebView)가 주입한 스크립트가
+  // pagehide 시점에 해제된 네이티브 브리지를 호출하며 내는 잡음
+  "webkit.messageHandlers",
 ]
 
 export function initMonitoring() {
