@@ -66,12 +66,16 @@ export async function uploadFeatureEmojiPhoto(file, { fallbackToDataUrl = true }
   return { url: dataUrl, source: "data-url" }
 }
 
+// 최근 사진 목록 — 계정(uid)별 키로 분리한다 (계정 전환 시 목록 혼입 방지).
+// 비로그인은 기존 공용 키를 그대로 쓴다 (이 기기에서 만든 목록이므로 무방).
 const STORE_KEY = "loca.feature.emoji.photo.recent.v1"
 const MAX_PHOTOS = 18
 
-export function loadRecentPhotoEmojis() {
+const storeKey = (scopeId) => (scopeId ? `${STORE_KEY}.${scopeId}` : STORE_KEY)
+
+export function loadRecentPhotoEmojis(scopeId = "") {
   try {
-    const raw = localStorage.getItem(STORE_KEY)
+    const raw = localStorage.getItem(storeKey(scopeId))
     if (!raw) return []
     const arr = JSON.parse(raw)
     return Array.isArray(arr) ? arr.filter((u) => typeof u === "string").slice(0, MAX_PHOTOS) : []
@@ -80,23 +84,23 @@ export function loadRecentPhotoEmojis() {
   }
 }
 
-export function pushRecentPhotoEmoji(url) {
+export function pushRecentPhotoEmoji(url, scopeId = "") {
   if (!url) return
   try {
-    const current = loadRecentPhotoEmojis()
+    const current = loadRecentPhotoEmojis(scopeId)
     const next = [url, ...current.filter((u) => u !== url)].slice(0, MAX_PHOTOS)
-    localStorage.setItem(STORE_KEY, JSON.stringify(next))
+    localStorage.setItem(storeKey(scopeId), JSON.stringify(next))
   } catch {
     // Ignore localStorage quota and privacy-mode failures.
   }
 }
 
-export function removeRecentPhotoEmoji(url) {
+export function removeRecentPhotoEmoji(url, scopeId = "") {
   if (!url) return
   try {
-    const current = loadRecentPhotoEmojis()
+    const current = loadRecentPhotoEmojis(scopeId)
     const next = current.filter((u) => u !== url)
-    localStorage.setItem(STORE_KEY, JSON.stringify(next))
+    localStorage.setItem(storeKey(scopeId), JSON.stringify(next))
   } catch {
     // Ignore localStorage quota and privacy-mode failures.
   }

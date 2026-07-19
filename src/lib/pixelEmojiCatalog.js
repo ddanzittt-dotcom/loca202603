@@ -21,12 +21,14 @@ export const PIXEL_PALETTE = {
   X: "#2D4A3E", // brand secondary
 }
 
+// 이모지 선택기 픽셀 탭 서브카테고리 (감성 우선, 시설 후순위 순서).
 export const PIXEL_SUBSETS = [
-  { id: "symbol",   label: "심볼" },
-  { id: "nature",   label: "식물" },
-  { id: "food",     label: "음식" },
-  { id: "animal",   label: "동물" },
-  { id: "building", label: "장소" },
+  { id: "symbol", label: "심볼", icon: "px-heart" },
+  { id: "food",   label: "음식", icon: "px-cafe" },
+  { id: "nature", label: "자연", icon: "px-flower" },
+  { id: "place",  label: "장소", icon: "px-house" },
+  { id: "move",   label: "이동", icon: "px-route" },
+  { id: "town",   label: "시설", icon: "px-convenience" },
 ]
 
 export const PIXEL_ART = [
@@ -272,7 +274,7 @@ export const PIXEL_ART = [
     "............",
   ]},
   // -------------------- ANIMAL --------------------
-  { id: "px-cat", label: "고양이", sub: "animal", grid: [
+  { id: "px-cat", label: "고양이", sub: "nature", grid: [
     "............",
     "..k.....k...",
     ".kkk...kkk..",
@@ -286,7 +288,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-fish", label: "물고기", sub: "animal", grid: [
+  { id: "px-fish", label: "물고기", sub: "nature", grid: [
     "............",
     "............",
     "...bbbb.....",
@@ -300,7 +302,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-butterfly", label: "나비", sub: "animal", grid: [
+  { id: "px-butterfly", label: "나비", sub: "nature", grid: [
     "............",
     "..pp....pp..",
     ".pPpp..ppPp.",
@@ -314,7 +316,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-bird", label: "새", sub: "animal", grid: [
+  { id: "px-bird", label: "새", sub: "nature", grid: [
     "............",
     "...bbbb.....",
     "..biiiib....",
@@ -329,7 +331,7 @@ export const PIXEL_ART = [
     "............",
   ]},
   // -------------------- BUILDING --------------------
-  { id: "px-house", label: "집", sub: "building", grid: [
+  { id: "px-house", label: "집", sub: "place", grid: [
     "............",
     ".....R......",
     "....RRR.....",
@@ -343,7 +345,7 @@ export const PIXEL_ART = [
     "WcccccCCcccW",
     "WWWWWWCCWWWW",
   ]},
-  { id: "px-cafe", label: "카페", sub: "building", grid: [
+  { id: "px-cafe", label: "카페", sub: "food", grid: [
     "............",
     ".m.m.m......",
     ".m.m.m......",
@@ -357,7 +359,7 @@ export const PIXEL_ART = [
     "WccccccccccW",
     "WWWWWWWWWWWW",
   ]},
-  { id: "px-castle", label: "성", sub: "building", grid: [
+  { id: "px-castle", label: "성", sub: "place", grid: [
     "............",
     "C.C.CCCC.C.C",
     "CCCCCCCCCCCC",
@@ -371,7 +373,7 @@ export const PIXEL_ART = [
     "CCCCKKKKCCCC",
     "CCCCCCCCCCCC",
   ]},
-  { id: "px-tent", label: "텐트", sub: "building", grid: [
+  { id: "px-tent", label: "텐트", sub: "place", grid: [
     "............",
     "............",
     ".....C......",
@@ -386,7 +388,7 @@ export const PIXEL_ART = [
     "............",
   ]},
   // -------------------- PUBLIC MAP --------------------
-  { id: "px-noodle", label: "noodle", sub: "food", grid: [
+  { id: "px-noodle", label: "국수", sub: "food", grid: [
     "............",
     "...C....C...",
     "..C....C....",
@@ -400,7 +402,7 @@ export const PIXEL_ART = [
     "....CCCC....",
     "............",
   ]},
-  { id: "px-spicy-pork", label: "spicy pork", sub: "food", grid: [
+  { id: "px-spicy-pork", label: "제육", sub: "food", grid: [
     "............",
     "..rrrrrr....",
     ".rNNrNNr....",
@@ -414,7 +416,7 @@ export const PIXEL_ART = [
     "...WWWWWW...",
     "............",
   ]},
-  { id: "px-dog", label: "dog", sub: "animal", grid: [
+  { id: "px-dog", label: "강아지", sub: "nature", grid: [
     "............",
     "..C....C....",
     ".CcC..CcC...",
@@ -428,7 +430,7 @@ export const PIXEL_ART = [
     "...C..C.....",
     "............",
   ]},
-  { id: "px-toilet", label: "toilet", sub: "building", grid: [
+  { id: "px-toilet", label: "화장실", sub: "town", grid: [
     "............",
     "..BBBBBBBB..",
     ".BWWWWWWB...",
@@ -442,7 +444,7 @@ export const PIXEL_ART = [
     "..BBBBBB....",
     "............",
   ]},
-  { id: "px-bench", label: "bench", sub: "building", grid: [
+  { id: "px-bench", label: "벤치", sub: "place", grid: [
     "............",
     "............",
     ".CCCCCCCCCC.",
@@ -456,7 +458,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-book", label: "book", sub: "building", grid: [
+  { id: "px-book", label: "책방", sub: "place", grid: [
     "............",
     "..BBBBBBBB..",
     ".BiiiiiiBb..",
@@ -470,7 +472,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-market", label: "market", sub: "building", grid: [
+  { id: "px-market", label: "시장", sub: "place", grid: [
     "............",
     "....CCCC....",
     "...CddddC...",
@@ -484,7 +486,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-river", label: "river", sub: "nature", grid: [
+  { id: "px-river", label: "하천", sub: "nature", grid: [
     "............",
     "..bbbbbb....",
     ".bbiiiibb...",
@@ -498,7 +500,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-route", label: "route", sub: "symbol", grid: [
+  { id: "px-route", label: "길", sub: "move", grid: [
     "............",
     "..GG........",
     ".GggG.......",
@@ -512,7 +514,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-map", label: "map", sub: "symbol", grid: [
+  { id: "px-map", label: "지도", sub: "move", grid: [
     "............",
     "..CCCCCCCC..",
     ".CwggCbbdC..",
@@ -526,7 +528,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-park", label: "park", sub: "nature", grid: [
+  { id: "px-park", label: "공원", sub: "nature", grid: [
     "............",
     "....GGGG....",
     "...GggggG...",
@@ -540,7 +542,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-camera", label: "camera", sub: "symbol", grid: [
+  { id: "px-camera", label: "사진", sub: "place", grid: [
     "............",
     "..KKKKKKKK..",
     ".KWWWWWWWWK.",
@@ -554,7 +556,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-rice", label: "rice", sub: "food", grid: [
+  { id: "px-rice", label: "밥", sub: "food", grid: [
     "............",
     "...WWWWWW...",
     "..WyyyyyyW..",
@@ -568,7 +570,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-kimbap", label: "kimbap", sub: "food", grid: [
+  { id: "px-kimbap", label: "김밥", sub: "food", grid: [
     "............",
     "...KKKKKK...",
     "..KWWWWWWK..",
@@ -582,7 +584,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-burger", label: "burger", sub: "food", grid: [
+  { id: "px-burger", label: "버거", sub: "food", grid: [
     "............",
     "...yyyyyy...",
     "..yLLLLLLy..",
@@ -596,7 +598,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-pizza", label: "pizza", sub: "food", grid: [
+  { id: "px-pizza", label: "피자", sub: "food", grid: [
     "............",
     "..YYYYYYYY..",
     "...YLLLLY...",
@@ -610,7 +612,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-dumpling", label: "dumpling", sub: "food", grid: [
+  { id: "px-dumpling", label: "만두", sub: "food", grid: [
     "............",
     "....dddd....",
     "...dWWWWd...",
@@ -624,7 +626,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-icecream", label: "ice cream", sub: "food", grid: [
+  { id: "px-icecream", label: "아이스크림", sub: "food", grid: [
     "............",
     "....pppp....",
     "...pqqqqp...",
@@ -638,7 +640,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-beer", label: "beer", sub: "food", grid: [
+  { id: "px-beer", label: "맥주", sub: "food", grid: [
     "............",
     "..YYYYYY....",
     ".YLLLLYY....",
@@ -652,7 +654,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-tea", label: "tea", sub: "food", grid: [
+  { id: "px-tea", label: "차", sub: "food", grid: [
     "............",
     ".m.m.m......",
     "..m.m.......",
@@ -666,7 +668,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-restaurant", label: "restaurant", sub: "food", grid: [
+  { id: "px-restaurant", label: "맛집", sub: "food", grid: [
     "............",
     "..S.S...S...",
     "..S.S...S...",
@@ -680,7 +682,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-hospital", label: "hospital", sub: "building", grid: [
+  { id: "px-hospital", label: "병원", sub: "town", grid: [
     "............",
     "..WWWWWWWW..",
     ".WNNWWNNNW..",
@@ -694,7 +696,7 @@ export const PIXEL_ART = [
     ".WWWWKWWWW..",
     "............",
   ]},
-  { id: "px-pharmacy", label: "pharmacy", sub: "building", grid: [
+  { id: "px-pharmacy", label: "약국", sub: "town", grid: [
     "............",
     "...GGGGGG...",
     "..GWWWWWWG..",
@@ -708,7 +710,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-parking", label: "parking", sub: "building", grid: [
+  { id: "px-parking", label: "주차", sub: "town", grid: [
     "............",
     "..BBBBBBBB..",
     ".BWWWWWWWWB.",
@@ -722,7 +724,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-convenience", label: "store", sub: "building", grid: [
+  { id: "px-convenience", label: "편의점", sub: "town", grid: [
     "............",
     ".rrrrrrrrrr.",
     ".WWWWWWWWWW.",
@@ -736,7 +738,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-bank", label: "bank", sub: "building", grid: [
+  { id: "px-bank", label: "은행", sub: "town", grid: [
     "............",
     ".....B......",
     "....BBB.....",
@@ -750,7 +752,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-post", label: "post", sub: "building", grid: [
+  { id: "px-post", label: "우체국", sub: "town", grid: [
     "............",
     "..RRRRRRRR..",
     ".RWWWWWWWWR.",
@@ -764,7 +766,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-laundry", label: "laundry", sub: "building", grid: [
+  { id: "px-laundry", label: "세탁", sub: "town", grid: [
     "............",
     "..BBBBBBBB..",
     ".BWWWWWWWWB.",
@@ -778,7 +780,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-hotel", label: "hotel", sub: "building", grid: [
+  { id: "px-hotel", label: "숙소", sub: "place", grid: [
     "............",
     "..CCCCCCCC..",
     ".CWWWWWWWWC.",
@@ -792,7 +794,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-school", label: "school", sub: "building", grid: [
+  { id: "px-school", label: "학교", sub: "place", grid: [
     "............",
     "...BBBBBB...",
     "..BiiiiiiB..",
@@ -806,7 +808,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-playground", label: "playground", sub: "nature", grid: [
+  { id: "px-playground", label: "놀이터", sub: "place", grid: [
     "............",
     "...R....R...",
     "...R....R...",
@@ -820,7 +822,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-gallery", label: "gallery", sub: "building", grid: [
+  { id: "px-gallery", label: "전시", sub: "place", grid: [
     "............",
     "..CCCCCCCC..",
     ".CWWWWWWWWC.",
@@ -834,7 +836,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-music", label: "music", sub: "symbol", grid: [
+  { id: "px-music", label: "음악", sub: "place", grid: [
     "............",
     ".....BBBB...",
     ".....B..B...",
@@ -848,7 +850,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-gym", label: "gym", sub: "building", grid: [
+  { id: "px-gym", label: "운동", sub: "town", grid: [
     "............",
     "............",
     ".KK..KK..KK.",
@@ -862,7 +864,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-barber", label: "barber", sub: "building", grid: [
+  { id: "px-barber", label: "미용", sub: "town", grid: [
     "............",
     "...rrrrrr...",
     "..rWWWWWWr..",
@@ -876,7 +878,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-bus", label: "bus", sub: "symbol", grid: [
+  { id: "px-bus", label: "버스", sub: "move", grid: [
     "............",
     "..YYYYYYYY..",
     ".YWWWWWWWWY.",
@@ -890,7 +892,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-subway", label: "subway", sub: "symbol", grid: [
+  { id: "px-subway", label: "지하철", sub: "move", grid: [
     "............",
     "...BBBBBB...",
     "..BWWWWWWB..",
@@ -904,7 +906,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-bike", label: "bike", sub: "symbol", grid: [
+  { id: "px-bike", label: "자전거", sub: "move", grid: [
     "............",
     "............",
     "....KKK.....",
@@ -918,7 +920,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-car", label: "car", sub: "symbol", grid: [
+  { id: "px-car", label: "차량", sub: "move", grid: [
     "............",
     "............",
     "...rrrrrr...",
@@ -932,7 +934,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-bridge", label: "bridge", sub: "symbol", grid: [
+  { id: "px-bridge", label: "다리", sub: "move", grid: [
     "............",
     "............",
     "..BBBBBBBB..",
@@ -946,7 +948,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-crosswalk", label: "crosswalk", sub: "symbol", grid: [
+  { id: "px-crosswalk", label: "횡단보도", sub: "move", grid: [
     "............",
     ".WW..WW..WW.",
     "............",
@@ -960,7 +962,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-stairs", label: "stairs", sub: "symbol", grid: [
+  { id: "px-stairs", label: "계단", sub: "move", grid: [
     "............",
     "............",
     "........CC..",
@@ -974,7 +976,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-alley", label: "alley", sub: "symbol", grid: [
+  { id: "px-alley", label: "골목", sub: "move", grid: [
     "............",
     ".CCCC..CCCC.",
     ".CccC..CccC.",
@@ -988,7 +990,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-mountain", label: "mountain", sub: "nature", grid: [
+  { id: "px-mountain", label: "산", sub: "nature", grid: [
     "............",
     ".....G......",
     "....GgG.....",
@@ -1002,7 +1004,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-beach", label: "beach", sub: "nature", grid: [
+  { id: "px-beach", label: "바다", sub: "nature", grid: [
     "............",
     "..Y...Y.....",
     "...Y.Y......",
@@ -1016,7 +1018,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-lake", label: "lake", sub: "nature", grid: [
+  { id: "px-lake", label: "호수", sub: "nature", grid: [
     "............",
     "............",
     "..bbbbbbbb..",
@@ -1030,7 +1032,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-garden", label: "garden", sub: "nature", grid: [
+  { id: "px-garden", label: "정원", sub: "nature", grid: [
     "............",
     "..p.p..y.y..",
     ".pPpP.yyYy..",
@@ -1044,7 +1046,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-trash", label: "trash", sub: "symbol", grid: [
+  { id: "px-trash", label: "쓰레기통", sub: "town", grid: [
     "............",
     "...SSSSSS...",
     "..SSSSSSSS..",
@@ -1058,7 +1060,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-water", label: "water", sub: "symbol", grid: [
+  { id: "px-water", label: "급수대", sub: "town", grid: [
     "............",
     ".....b......",
     "....bBb.....",
@@ -1072,7 +1074,7 @@ export const PIXEL_ART = [
     "............",
     "............",
   ]},
-  { id: "px-wifi", label: "wifi", sub: "symbol", grid: [
+  { id: "px-wifi", label: "와이파이", sub: "town", grid: [
     "............",
     "..BBBBBBBB..",
     ".B........B.",

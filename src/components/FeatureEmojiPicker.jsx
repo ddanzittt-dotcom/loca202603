@@ -6,28 +6,25 @@ import {
   loadRecentEmojis as loadLegacyRecentUnicode,
 } from "../lib/emojiCatalog"
 import {
+  PIXEL_ART,
+  PIXEL_SUBSETS,
   findPixelArt,
   pixelArtToSvgString,
 } from "../lib/pixelEmojiCatalog"
-import { PUBLIC_PLACE_EMOJI_OPTIONS, getPublicPlaceEmojiOptionLabel } from "../utils/publicMapMarkers"
 import {
   uploadFeatureEmojiPhoto,
   loadRecentPhotoEmojis,
   pushRecentPhotoEmoji,
+  removeRecentPhotoEmoji,
 } from "../lib/featureEmojiPhoto"
 import { resolveFeatureEmoji } from "./FeatureEmoji"
 
+// 최근 사용 저장소 — 계정(uid)별로 분리한다 (계정 전환 시 목록 혼입 방지).
+// 비로그인은 기존 공용 키를 그대로 쓴다 (이 기기에서 만든 목록이므로 무방).
 const RECENT_STORE_V2 = "loca.feature.emoji.recent.v2"
 const RECENT_MAX = 18
 
 const BASIC_SUBS = EMOJI_TABS.filter((t) => t.id !== "recent")
-const PUBLIC_PIXEL_PICKER_ITEMS = PUBLIC_PLACE_EMOJI_OPTIONS
-  .map((option) => ({
-    kind: "pixel",
-    value: option.pixelId,
-    label: option.label,
-  }))
-  .filter((item) => item.value && findPixelArt(item.value))
 
 const BASIC_SUB_ICONS = {
   face: "😊",
@@ -41,19 +38,23 @@ const BASIC_SUB_ICONS = {
 const BASIC_SUB_LABELS = {
   face: "표정",
   food: "음식",
-  nature: "식물",
+  nature: "자연",
   animal: "동물",
   symbol: "심볼",
   object: "공간",
+}
+
+function recentStoreKey(scopeId) {
+  return scopeId ? `${RECENT_STORE_V2}.${scopeId}` : RECENT_STORE_V2
 }
 
 function descriptorEq(a, b) {
   return a && b && a.kind === b.kind && a.value === b.value
 }
 
-function loadRecentDescriptors() {
+function loadRecentDescriptors(scopeId) {
   try {
-    const raw = localStorage.getItem(RECENT_STORE_V2)
+    const raw = localStorage.getItem(recentStoreKey(scopeId))
     if (raw) {
       const arr = JSON.parse(raw)
       if (Array.isArray(arr)) {
@@ -65,29 +66,40 @@ function loadRecentDescriptors() {
   } catch {
     // Fall back to the legacy unicode-only store.
   }
+  if (scopeId) return []
   const legacy = loadLegacyRecentUnicode()
   return legacy.map((e) => ({ kind: "unicode", value: e }))
 }
 
-function pushRecentDescriptor(descriptor) {
-  if (!descriptor || !descriptor.kind || !descriptor.value) return
+function saveRecentDescriptors(list, scopeId) {
   try {
-    const current = loadRecentDescriptors()
-    const next = [descriptor, ...current.filter((d) => !descriptorEq(d, descriptor))].slice(0, RECENT_MAX)
-    localStorage.setItem(RECENT_STORE_V2, JSON.stringify(next))
+    localStorage.setItem(recentStoreKey(scopeId), JSON.stringify(list.slice(0, RECENT_MAX)))
   } catch {
     // Ignore localStorage quota and privacy-mode failures.
   }
 }
 
-export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode = false }) {
+function pushRecentDescriptor(descriptor, scopeId) {
+  if (!descriptor || !descriptor.kind || !descriptor.value) return
+  const current = loadRecentDescriptors(scopeId)
+  saveRecentDescriptors([descriptor, ...current.filter((d) => !descriptorEq(d, descriptor))], scopeId)
+}
+
+function purgeRecentDescriptor(descriptor, scopeId) {
+  if (!descriptor || !descriptor.kind || !descriptor.value) return
+  const current = loadRecentDescriptors(scopeId)
+  saveRecentDescriptors(current.filter((d) => !descriptorEq(d, descriptor)), scopeId)
+}
+
+export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode = false, userId = "" }) {
+  const scopeId = userId || ""
   const selectedDescriptor = useMemo(() => resolveFeatureEmoji(selectedEmoji), [selectedEmoji])
-  const initialRecent = useMemo(() => loadRecentDescriptors(), [])
-  const [recent, setRecent] = useState(initialRecent)
+  const [recent, setRecent] = useState(() => loadRecentDescriptors(scopeId))
   const [tab, setTab] = useState("pixel")
   const [basicSub, setBasicSub] = useState("face")
+  const [pixelSub, setPixelSub] = useState(PIXEL_SUBSETS[0]?.id || "symbol")
   const [query, setQuery] = useState("")
-  const [photoLib, setPhotoLib] = useState(() => loadRecentPhotoEmojis())
+  const [photoLib, setPhotoLib] = useState(() => loadRecentPhotoEmojis(scopeId))
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState("")
   const bodyRef = useRef(null)
@@ -110,13 +122,22 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
 
   const pick = (descriptor) => {
     if (!descriptor || !descriptor.value) return
-    pushRecentDescriptor(descriptor)
+    pushRecentDescriptor(descriptor, scopeId)
     setRecent((cur) => [descriptor, ...cur.filter((d) => !descriptorEq(d, descriptor))].slice(0, RECENT_MAX))
     if (descriptor.kind === "photo") {
-      pushRecentPhotoEmoji(descriptor.value)
+      pushRecentPhotoEmoji(descriptor.value, scopeId)
       setPhotoLib((cur) => [descriptor.value, ...cur.filter((u) => u !== descriptor.value)].slice(0, RECENT_MAX))
     }
     onSelect?.(descriptor)
+  }
+
+  // 라이브러리 목록에서만 제거한다 — 이미 카드에 적용된 사진에는 영향 없음.
+  const removePhotoFromLibrary = (url) => {
+    if (!url) return
+    removeRecentPhotoEmoji(url, scopeId)
+    setPhotoLib((cur) => cur.filter((u) => u !== url))
+    purgeRecentDescriptor({ kind: "photo", value: url }, scopeId)
+    setRecent((cur) => cur.filter((d) => !(d.kind === "photo" && d.value === url)))
   }
 
   const handleFilePicked = async (e) => {
@@ -144,8 +165,9 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
     const unicodeHits = EMOJI_CATALOG
       .filter((item) => item.n.includes(q) || item.e === q)
       .map((item) => ({ kind: "unicode", value: item.e, label: item.n }))
-    const pixelHits = PUBLIC_PIXEL_PICKER_ITEMS
-      .filter((item) => item.label.includes(q) || item.value.includes(q))
+    const pixelHits = PIXEL_ART
+      .filter((art) => art.label.includes(q) || art.id.includes(q))
+      .map((art) => ({ kind: "pixel", value: art.id, label: art.label }))
     return [...unicodeHits, ...pixelHits]
   }, [query])
 
@@ -167,7 +189,7 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
       }
       if (d.kind === "pixel") {
         const art = findPixelArt(d.value)
-        return { ...d, label: getPublicPlaceEmojiOptionLabel(d.value) || art?.label || "" }
+        return { ...d, label: art?.label || "" }
       }
       return { ...d, label: "내 사진" }
     })
@@ -185,9 +207,12 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
       .map((e) => ({ kind: "unicode", value: e.e, label: e.n }))
     bodyContent = <PickerGrid items={items} selected={selectedDescriptor} onPick={pick} empty="이모지가 없어요." />
   } else if (tab === "pixel") {
+    const items = PIXEL_ART
+      .filter((art) => art.sub === pixelSub)
+      .map((art) => ({ kind: "pixel", value: art.id, label: art.label }))
     bodyContent = (
       <PickerGrid
-        items={PUBLIC_PIXEL_PICKER_ITEMS}
+        items={items}
         selected={selectedDescriptor}
         onPick={pick}
         empty="픽셀 이모지가 없어요."
@@ -220,18 +245,28 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
           {photoLib.map((url) => {
             const isSel = selectedDescriptor.kind === "photo" && selectedDescriptor.value === url
             return (
-              <button
-                key={url}
-                type="button"
-                className={`fes-picker-cell fes-picker-photo-cell${isSel ? " is-selected" : ""}`}
-                onClick={() => pick({ kind: "photo", value: url })}
-                aria-label="사진 이모지"
-              >
-                <span
-                  className="fes-picker-photo-crop"
-                  style={{ backgroundImage: `url(${url})` }}
-                />
-              </button>
+              <div key={url} className="fes-picker-photo-wrap">
+                <button
+                  type="button"
+                  className={`fes-picker-cell fes-picker-photo-cell${isSel ? " is-selected" : ""}`}
+                  onClick={() => pick({ kind: "photo", value: url })}
+                  aria-label="사진 이모지"
+                >
+                  <span
+                    className="fes-picker-photo-crop"
+                    style={{ backgroundImage: `url(${url})` }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  className="fes-picker-photo-remove"
+                  onClick={() => removePhotoFromLibrary(url)}
+                  aria-label="목록에서 삭제"
+                  title="목록에서 삭제"
+                >
+                  <XIcon size={10} />
+                </button>
+              </div>
             )
           })}
         </div>
@@ -240,6 +275,7 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
   }
 
   const showBasicSubs = tab === "basic" && !searchResults
+  const showPixelSubs = tab === "pixel" && !searchResults
 
   return (
     <>
@@ -294,6 +330,27 @@ export function FeatureEmojiPicker({ selectedEmoji, onSelect, onClose, cloudMode
           </div>
         ) : null}
 
+        {showPixelSubs ? (
+          <div className="fes-picker-subtabs" role="tablist">
+            {PIXEL_SUBSETS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={pixelSub === s.id}
+                className={`fes-picker-subtab${pixelSub === s.id ? " is-active" : ""}`}
+                onClick={() => {
+                  setPixelSub(s.id)
+                  if (bodyRef.current) bodyRef.current.scrollTop = 0
+                }}
+              >
+                <PixelSubIcon pixelId={s.icon} fallback={s.label} />
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
         <div className="fes-picker-body" ref={bodyRef}>{bodyContent}</div>
 
         <input
@@ -331,6 +388,17 @@ function PixelTabIcon() {
     <span
       className="fes-picker-toptab-pixel"
       dangerouslySetInnerHTML={{ __html: pixelArtToSvgString(art, 20) }}
+    />
+  )
+}
+
+function PixelSubIcon({ pixelId, fallback }) {
+  const art = useMemo(() => findPixelArt(pixelId), [pixelId])
+  if (!art) return <span className="fes-picker-subtab-ic">{fallback}</span>
+  return (
+    <span
+      className="fes-picker-subtab-ic is-pixel"
+      dangerouslySetInnerHTML={{ __html: pixelArtToSvgString(art, 16) }}
     />
   )
 }

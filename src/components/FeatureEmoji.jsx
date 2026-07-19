@@ -130,15 +130,19 @@ export function resolvePlaceMarkerEmoji(feature) {
       : { kind: "unicode", value: fallback }
   }
 
+  // 사용자가 고른 유니코드 이모지는 지도에서도 그대로 보여준다.
   const emoji = typeof descriptor.value === "string" ? descriptor.value.trim() : ""
-  const displayEmoji = emoji && !isPinLikeEmoji(emoji)
-    ? emoji
-    : (getCategoryEmoji(feature) || fallback)
-  const pixelId = UNICODE_TO_PIXEL_ID[displayEmoji] || getPublicRecommendedPixelId(feature)
+  if (emoji && !isPinLikeEmoji(emoji)) {
+    return { kind: "unicode", value: emoji }
+  }
+
+  // 이모지 미선택(기본 핀)일 때만 카테고리/키워드 기반 픽셀 추천 폴백.
+  const fallbackEmoji = getCategoryEmoji(feature) || fallback
+  const pixelId = UNICODE_TO_PIXEL_ID[fallbackEmoji] || getPublicRecommendedPixelId(feature)
 
   return pixelId && findPixelArt(pixelId)
     ? { kind: "pixel", value: pixelId }
-    : { kind: "unicode", value: displayEmoji }
+    : { kind: "unicode", value: fallbackEmoji }
 }
 
 export function FeatureEmoji({
@@ -238,7 +242,7 @@ export function descriptorToDisplayText(descriptor) {
   if (d.kind === "unicode") return d.value
   if (d.kind === "pixel") {
     const art = findPixelArt(d.value)
-    return getPublicPlaceEmojiOptionLabel(d.value) || (art ? art.label : "도트 이모지")
+    return (art && art.label) || getPublicPlaceEmojiOptionLabel(d.value) || "도트 이모지"
   }
   if (d.kind === "photo") return "내 사진"
   return ""

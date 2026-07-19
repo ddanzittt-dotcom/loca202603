@@ -949,6 +949,32 @@
 }
 
 /* Photo cell */
+.fes-picker-photo-wrap {
+  position: relative;
+  aspect-ratio: 1;
+}
+.fes-picker-photo-wrap .fes-picker-photo-cell {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+.fes-picker-photo-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1A1A1A;
+  color: #FFFFFF;
+  border: 1.5px solid #FFFFFF;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+.fes-picker-photo-remove:hover { background: #C8431C; }
 .fes-picker-photo-cell {
   background: #FFFFFF;
   border: 0.5px solid rgba(0,0,0,0.06);

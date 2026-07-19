@@ -470,6 +470,8 @@ export function FeatureEditSheet({
   mapMode = "personal",
   mapTitle = "",
   readOnly = false,
+  cloudMode = false,
+  userId = "",
   onClose,
   onSave,
   onDelete,
@@ -731,6 +733,8 @@ export function FeatureEditSheet({
           selectedEmoji={emojiDescriptor}
           onSelect={setEmoji}
           onClose={() => setEmojiPickerOpen(false)}
+          cloudMode={cloudMode}
+          userId={userId}
         />
       ) : null}
 

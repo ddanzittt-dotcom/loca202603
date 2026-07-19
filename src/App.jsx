@@ -2549,6 +2549,8 @@ export default function App() {
               mapMode={isCommunityFeature ? "community" : "personal"}
               mapTitle={activeMap?.title || ""}
               readOnly={mapEditorReadOnly}
+              cloudMode={cloudMode}
+              userId={authUser?.id || ""}
               onClose={() => { setFeatureSheet(null); setSelectedFeatureId(null); setFeatureSheetMode("detail") }}
               onSave={saveFeatureSheet}
               onDelete={deleteFeature}
