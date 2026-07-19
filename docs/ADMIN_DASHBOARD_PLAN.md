@@ -72,8 +72,8 @@ LOCA에 쌓이는 데이터(장소 카드·기록·동네 태깅·협업·소비
 
 **지금 (①~⑥ 활성화)**
 - [x] Supabase 057 실행 + Vercel 승격 → loca.im/admin 확인
-- [ ] **Supabase 081 실행** (analytics v2 — KPI/시계열/지역 상세 RPC + view_logs_guard) → 적용 전엔 신규 섹션만 에러 카드
-- [ ] **region 전체 백필 배치** — 태깅률 100% (②정확도의 전제, 다음 작업 1순위 후보)
+- [x] Supabase 081·082 실행 (analytics v2 + 밀도 지도 RPC) — 사용자 적용 완료
+- [x] **region 백필 배치 도구 완비** — `npm run backfill:regions`(scripts/ingest/backfill-region-tags.mjs). 카카오 REST 역지오코딩, region 그룹 배치 UPDATE, is-null 가드. **2026-07-19 시점 좌표 카드 46건 태깅률 100%(미태깅 0)** — 데이터 증가 시 클라이언트 태깅이 놓친 카드용 안전망. SERVICE_ROLE+KAKAO_REST_KEY 필요, 라이브 프록시와 쿼터 공유라 심야 실행 권장
 
 **다음 (2~4주, 데이터 쌓이면)**
 - [x] ③⑤ 확장 (기간 선택 / 코호트) — 2026-07-19 v2

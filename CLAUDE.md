@@ -190,6 +190,7 @@ npm run preview       # 빌드 미리보기
 npm run lint          # ESLint
 npm test              # Vitest 1회 실행 (test:watch 으로 watch 모드)
 npm run ingest:parks  # 🚧 / markets / festivals / durunubi — 탐색 카탈로그(explore_catalog) 사전 적재, SERVICE_ROLE 필요 (v3 진행 중)
+npm run backfill:regions -- --dry-run  # map_features region 태깅 백필(미태깅 카드 역지오코딩). SERVICE_ROLE+KAKAO_REST_KEY 필요, 심야 실행 권장
 npm run cap:sync      # Capacitor 빌드+동기화
 npm run cap:android   # Android Studio 열기
 npm run cap:ios       # Xcode 열기
