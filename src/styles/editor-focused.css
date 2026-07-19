@@ -664,14 +664,20 @@ body.loca-editor-open .map-editor--drawing .editor-mode-guide span {
     right: 0 !important;
     z-index: 95;
   }
+  /* 검색 확인 카드 — 상단 주소창과 겹치지 않게 지도 하단 중앙으로 */
   body.loca-editor-open .search-pin-confirm {
-    top: 12px !important;
-    bottom: auto !important;
+    top: auto !important;
+    bottom: 16px !important;
     left: 50% !important;
     right: auto !important;
     width: min(440px, 90%);
     min-width: 300px;
     transform: translateX(-50%);
+  }
+  /* 좌하단 기록 목록 패널이 열려 있으면 그 오른쪽 영역 가운데로 (목록과 겹침 방지) */
+  body.loca-editor-open .map-editor--record-panel-open .search-pin-confirm {
+    left: calc(336px + (100% - 348px) / 2) !important;
+    width: min(440px, calc(100% - 360px)) !important;
   }
 
   /* 도구 도크 — 우하단 수직 (지도 프레임 안) */

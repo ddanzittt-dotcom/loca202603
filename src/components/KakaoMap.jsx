@@ -142,7 +142,7 @@ const makeOverlayElement = (html, onClick) => {
 export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
   const {
     features, selectedFeatureId, draftPoints, draftMode, focusPoint, fitTrigger,
-    onMapTap, onFeatureTap, showLabels = true, myLocation = null,
+    onMapTap, onFeatureTap, showLabels = true, myLocation = null, pendingPin = null,
     markerStyle = "default", showRouteBadge = false,
     onViewportChange,
   } = props
@@ -782,6 +782,12 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
         })
       }
 
+      // 검색으로 남길 예정인 위치 — "장소 남기기"가 어디에 찍히는지 표시
+      if (pendingPin && Number.isFinite(Number(pendingPin.lat)) && Number.isFinite(Number(pendingPin.lng))) {
+        const html = `<div class="loca-pending-pin"><span class="loca-pending-pin__pulse"></span><span class="loca-pending-pin__marker"></span></div>`
+        pushOverlay({ lat: Number(pendingPin.lat), lng: Number(pendingPin.lng), html, xAnchor: 0.5, yAnchor: 1, zIndex: 9500 })
+      }
+
       // 내 위치
       if (myLocation) {
         const h = myLocation.heading ?? 0
@@ -795,7 +801,7 @@ export const KakaoMap = forwardRef(function KakaoMap(props, ref) {
     } catch (e) {
       console.warn("카카오 지도 레이어 업데이트 실패:", e)
     }
-  }, [draftMode, draftPoints, features, mapReady, mapZoom, markerStyle, myLocation, onFeatureTap, selectedFeatureId, showLabels, showRouteBadge, viewportRenderVersion, zoomLevel])
+  }, [draftMode, draftPoints, features, mapReady, mapZoom, markerStyle, myLocation, pendingPin, onFeatureTap, selectedFeatureId, showLabels, showRouteBadge, viewportRenderVersion, zoomLevel])
 
   // 포커스 이동 (offsetX/offsetY: 정보창·시트가 가리지 않는 영역으로 중심 보정 — px)
   useEffect(() => {

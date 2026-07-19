@@ -638,6 +638,7 @@ export function MapEditorScreen({
             onViewportChange={handleViewportChange}
             showLabels={showLabels}
             myLocation={myLocation}
+            pendingPin={pendingSearchPin}
           />
         </MapErrorBoundary>
 

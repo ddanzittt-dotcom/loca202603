@@ -145,7 +145,6 @@ export function useFeatureEditing({
   maps,
   features,
   myLocation,
-  setFocusPoint,
   currentUserId = me.id,
   currentUserName = me.name,
   onCommunityRequestSubmitted = null,
@@ -191,17 +190,14 @@ export function useFeatureEditing({
     setSelectedFeatureSummaryId(featureId)
   }, [activeFeaturePool, selectedFeatureSummaryId, setFeatureSheet, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
+  // 목록(스트립)에서 피처를 눌러도 카메라를 이동시키지 않는다 — 선택/요약만 (지도 마커 탭과 동일).
   const focusFeatureOnly = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
     if (!feature) return
     triggerSelectionFeedback()
     setSelectedFeatureId(featureId)
     setSelectedFeatureSummaryId(featureId)
-    const center = getFeatureCenter(feature)
-    if (center && setFocusPoint && (center.lat !== 0 || center.lng !== 0)) {
-      setFocusPoint({ lat: center.lat, lng: center.lng, zoom: 16 })
-    }
-  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId, setFocusPoint])
+  }, [activeFeaturePool, setSelectedFeatureId, setSelectedFeatureSummaryId])
 
   const openFeatureDetail = useCallback((featureId) => {
     const feature = activeFeaturePool.find((item) => item.id === featureId)
