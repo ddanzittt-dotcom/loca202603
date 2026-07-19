@@ -477,7 +477,7 @@ export function MapsListScreen({
             variant="character"
             characterImage={characterImage || "/characters/cloud_lv1.svg"}
             title="첫 지도를 만들어볼까요"
-            description="아끼는 카드만 골라 엮으면 나만의 지도가 돼요"
+            description="좋아하는 카드만 골라 엮으면 나만의 지도가 돼요"
             action="새 지도 만들기"
             onAction={onCreate}
           />
