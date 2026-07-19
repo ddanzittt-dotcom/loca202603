@@ -579,7 +579,7 @@ export default function App() {
   // 회원가입/로그인 후 첫 진입 — 로카냥 튜토리얼 1회 자동 재생
   useEffect(() => {
     if (authUser && cloudDataReady && !isTutorialSeen("authed")) {
-      setTutorial({ step: 0, auto: "authed" })
+      setTutorial({ chapter: "intro", auto: "authed" })
     }
   }, [authUser, cloudDataReady])
 
@@ -1884,7 +1884,7 @@ export default function App() {
     if (showWalk) exitWalk()
     setActiveTab("explore")
     // 첫 입장이면 로카냥 튜토리얼 1회 자동 재생
-    if (!authUser && !isTutorialSeen("guest")) setTutorial({ step: 0, auto: "guest" })
+    if (!authUser && !isTutorialSeen("guest")) setTutorial({ chapter: "intro", auto: "guest" })
   }
   const handleTitleGame = () => {
     dismissTitle()
@@ -2316,7 +2316,7 @@ export default function App() {
           치즈냥은 Supabase 환경(이야기 보낼 곳)이 있을 때만 등장. onOpenFeedback/runSignal 은 피드백 시트 단계에서 연결. */}
       {!shouldHideBottomNav && !isMapEditorLayout && bottomNavTab !== "login" && !showWalk ? (
         <HelperCat
-          onOpenTutorial={(step) => setTutorial({ step, auto: null })}
+          onOpenTutorial={(chapter) => setTutorial({ chapter, auto: null })}
           showFeedbackCat={hasSupabaseEnv}
           onOpenFeedback={() => setFeedbackOpen(true)}
           runSignal={feedbackRunSignal}
@@ -2335,7 +2335,7 @@ export default function App() {
       {/* 로카냥 튜토리얼 오버레이 */}
       {tutorial ? (
         <TutorialDialog
-          startStep={tutorial.step}
+          chapter={tutorial.chapter}
           onClose={() => {
             if (tutorial.auto) markTutorialSeen(tutorial.auto)
             setTutorial(null)

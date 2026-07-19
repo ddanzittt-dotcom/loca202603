@@ -42,12 +42,15 @@ export function resetCoachmark() {
   remove(KEYS.coachmarkSeen)
 }
 
-// 도우미 고양이(로카냥) 튜토리얼 — 입장 직후(guest) / 로그인 첫 진입(authed) 각 1회 자동 재생
+// 도우미 고양이(로카냥) 튜토리얼 — 입장 직후(guest) / 로그인 첫 진입(authed) 각 1회 자동 재생.
+// 전용 버전: 가이드 전면 개편 시 이 값만 올리면 기존 사용자에게도 1회 재노출된다
+// (ONBOARDING_VERSION 을 올리면 웰컴·코치마크까지 재노출되므로 분리 — 2.0.0 = 2026-07 챕터형 개편)
+export const TUTORIAL_VERSION = "2.0.0"
 export function isTutorialSeen(mode) {
-  return read(`loca.tutorial_seen_${mode}`) === ONBOARDING_VERSION
+  return read(`loca.tutorial_seen_${mode}`) === TUTORIAL_VERSION
 }
 export function markTutorialSeen(mode) {
-  write(`loca.tutorial_seen_${mode}`, ONBOARDING_VERSION)
+  write(`loca.tutorial_seen_${mode}`, TUTORIAL_VERSION)
 }
 
 // 가입 직후 프로필(연령대·지역) 온보딩 1스텝 — 저장/건너뛰기 모두 1회로 종료.

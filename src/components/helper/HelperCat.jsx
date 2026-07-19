@@ -211,13 +211,15 @@ export function CheeseCatSprite({ size = 40, waving = false }) {
   )
 }
 
-// 도움말 메뉴 항목 → 튜토리얼 시작 스텝 인덱스 (TutorialDialog 의 TUTORIAL_STEPS 기준)
+// 도움말 메뉴 항목 → 튜토리얼 챕터 id (TutorialDialog 의 TUTORIAL_CHAPTERS 기준)
 const HELP_TOPICS = [
-  { step: 0, emoji: "📖", label: "처음부터 전체 사용법" },
-  { step: 1, emoji: "📍", label: "장소 채집하는 법" },
-  { step: 2, emoji: "🗂️", label: "카드에 기록 남기는 법" },
-  { step: 3, emoji: "🗺️", label: "지도 만드는 법" },
-  { step: 4, emoji: "📣", label: "공유하는 법" },
+  { chapter: "intro", emoji: "📖", label: "처음부터 전체 사용법" },
+  { chapter: "collect", emoji: "🧺", label: "장소 채집하는 법" },
+  { chapter: "binder", emoji: "🗂️", label: "카드에 기록 남기는 법" },
+  { chapter: "mapmaking", emoji: "🗺️", label: "지도 만드는 법" },
+  { chapter: "share", emoji: "📣", label: "공유하고 함께 만드는 법" },
+  { chapter: "explore", emoji: "🧭", label: "탐색 탭 안내" },
+  { chapter: "walk", emoji: "🐾", label: "산책 모드" },
 ]
 
 // 랜덤 말풍선 — 이따금 로카냥이 말을 건다
@@ -230,6 +232,11 @@ const IDLE_LINES = [
   "지도 만들기, 생각보다 쉬워!",
   "마음에 든 곳은 바로 채집해봐",
   "카드를 누르면 기록을 남길 수 있어",
+  "산책 모드 해봤어? 타이틀 화면에서 들어갈 수 있어",
+  "'내 수첩'의 동네 도감, 채워지고 있어?",
+  "새발견 카드엔 ★이 붙어. 몇 장 모았어?",
+  "카드 '공유'로 인스타 이미지도 만들 수 있다냥",
+  "지도는 친구랑 같이 만들 수도 있어!",
   "냐옹~",
 ]
 
@@ -365,13 +372,13 @@ export function HelperCat({ onOpenTutorial, onOpenFeedback, runSignal = 0, showF
           <span className="hcat-menu__title">뭐가 궁금해?</span>
           {HELP_TOPICS.map((topic) => (
             <button
-              key={topic.step}
+              key={topic.chapter}
               type="button"
               role="menuitem"
               className="hcat-menu__item"
               onClick={() => {
                 setMenuOpen(false)
-                onOpenTutorial?.(topic.step)
+                onOpenTutorial?.(topic.chapter)
               }}
             >
               <span aria-hidden="true">{topic.emoji}</span>
