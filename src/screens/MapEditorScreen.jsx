@@ -982,9 +982,7 @@ export function MapEditorScreen({
                             {feature.type === "pin" ? "장소" : feature.type === "route" ? "길" : "영역"}
                           </span>
                         </div>
-                        {feature.type === "pin" ? (
-                          <span className="me-strip-rec">기록 {buildFeatureRecordGroups(feature).length}</span>
-                        ) : null}
+                        <span className="me-strip-rec">기록 {buildFeatureRecordGroups(feature).length}</span>
                       </div>
                     ))}
                   </div>

@@ -31,7 +31,9 @@ const escapeHtml = (str) => {
 }
 
 const BASE_ZOOM = 15.5
-const PLACE_LABEL_MIN_ZOOM = 15
+// 장소(핀) 이름표를 보여줄 최소 줌 — 낮출수록 더 멀리 줌아웃해도 이름이 붙어 있는다.
+// (levelToZoom = 19 - level → 12 이면 카카오 레벨 7 이하까지 이름 유지. 개인지도 클러스터는 레벨 11↑)
+const PLACE_LABEL_MIN_ZOOM = 12
 const PUBLIC_CLUSTER_ONLY_MAX_ZOOM = 13
 // 개인 지도: 이 줌 미만에서만 공격적 클러스터(뭉침). 낮출수록 더 멀리 줌아웃해야 통합됨.
 const PERSONAL_CLUSTER_ONLY_MAX_ZOOM = 9
