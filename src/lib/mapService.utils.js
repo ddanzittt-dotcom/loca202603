@@ -173,6 +173,7 @@ export function normalizeMedia(row) {
     duration: row.duration_sec ?? null,
     date: row.created_at,
     recordId: row.record_id || null,
+    mapId: row.map_id || null,
   }
 }
 

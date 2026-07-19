@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FeatureEmoji } from "../FeatureEmoji"
-import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
+import { buildFeatureRecordGroups, formatRecordDate, recordEntryId } from "../../lib/featureRecordGroups"
+import { useResolvedMediaUrl } from "../../hooks/useResolvedMediaUrl"
 import { getPlaceType } from "../../lib/placeTypes"
 import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate, photoFocusPosition, regionLabel } from "../../lib/binderCardData"
 import { holoTiltMove, holoTiltLeave } from "./holoTilt"
@@ -61,39 +62,38 @@ export function PlaceCardFront({ feature, dexNo, big = false }) {
   )
 }
 
+// 기록 사진 한 장 — 로컬(IndexedDB)·원격(공개 URL) 모두 해석해서 표시
+function RecordPhoto({ photo }) {
+  const media = typeof photo === "string" ? { url: photo } : photo
+  const { src, markRemoteFailed } = useResolvedMediaUrl(media)
+  if (!src) return null
+  return <img className="bd-rec__photo" src={src} alt="기록 사진" loading="lazy" onError={markRemoteFailed} />
+}
+
 // ── 뒷면 기록 아이템 ──
-function RecordItem({ group, onPromoteCover, isCover }) {
+function RecordItem({ group }) {
   const text = (group.memos || [])
     .map((memo) => `${memo?.text || memo?.memo || memo?.content || ""}`.trim())
     .filter(Boolean)
     .join("\n")
-  const photo = (group.photos || [])[0]
-  const photoSrc = photo ? (typeof photo === "string" ? photo : photo.url || photo.src || photo.cloudUrl || "") : ""
+  const photos = Array.isArray(group.photos) ? group.photos : []
   return (
     <div className="bd-rec">
       <span className="bd-rec__dot" aria-hidden="true" />
       <div className="bd-rec__body">
         <time>{formatRecordDate(group.dateValue)}</time>
         {text ? <p>{text}</p> : <p className="bd-rec__only">사진 기록</p>}
+        {photos.length ? (
+          <div className="bd-rec__photos">
+            {photos.map((photo, index) => (
+              <RecordPhoto
+                key={photo?.id || photo?.localId || (typeof photo === "string" ? photo : photo?.url) || index}
+                photo={photo}
+              />
+            ))}
+          </div>
+        ) : null}
       </div>
-      {photoSrc ? (
-        <div className="bd-rec__photowrap">
-          <img className="bd-rec__photo" src={photoSrc} alt="기록 사진" />
-          {onPromoteCover ? (
-            isCover ? (
-              <span className="bd-rec__coverflag" aria-label="현재 표지">표지</span>
-            ) : (
-              <button
-                type="button"
-                className="bd-rec__cover"
-                onClick={() => onPromoteCover(photoSrc)}
-              >
-                표지로
-              </button>
-            )
-          ) : null}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -225,7 +225,6 @@ export function PlaceFlipCard({
   onOpenOnMap,
   onAddRecord,
   onSetPhoto,
-  onSetCoverUrl,
   onSetPhotoFocus,
   onUpdateCard,
   collectorHandle,
@@ -307,26 +306,42 @@ export function PlaceFlipCard({
 
   // 바인더 카드 기록 = "내가 쓴 것만"(currentUserId) 을 출처 지도별로 묶는다.
   //  - mapId 있는 메모 → 그 지도 섹션(지도명 마킹)
-  //  - mapId 없는 메모 + 지도에 안 묶인 카드 사진 → "수첩 기록" 섹션(바인더 전용)
+  //  - 지도 기록의 사진(같은 recordId 로 저장된 독립 사진)도 그 지도 섹션으로
+  //  - mapId 없는 메모 + 어느 지도 기록에도 안 걸리는 사진 → "수첩 기록" 섹션(바인더 전용)
   //  - 지도 태그가 하나도 없으면(데모/로컬/레거시) 섹션 헤더 없이 평면 목록으로 렌더
   const recordSections = useMemo(() => {
     if (!feature) return { sections: [], total: 0, grouped: false }
     const mine = (feature.memos || []).filter((memo) => (
       !currentUserId || (memo.userId || memo.user_id) === currentUserId
     ))
-    const byMap = new Map()
+    // recordId → mapId : 같은 기록의 메모가 어느 지도에서 남겨졌는지. 사진은 별도 경로
+    // (handlePhotoSelected)로 저장돼 mapId 를 안 갖지만 같은 recordId 를 공유하므로,
+    // 이 역참조로 사진도 메모와 같은 지도 섹션에 붙인다.
+    const recordMapId = new Map()
     mine.forEach((memo) => {
-      const key = memo.mapId || "__notebook__"
-      if (!byMap.has(key)) byMap.set(key, [])
-      byMap.get(key).push(memo)
+      const rid = recordEntryId(memo)
+      if (rid && memo.mapId) recordMapId.set(rid, memo.mapId)
     })
-    // 지도에 안 묶인 카드 사진(standalone)은 수첩 버킷으로
+    const byMap = new Map()
+    const bucketFor = (key) => {
+      if (!byMap.has(key)) byMap.set(key, { memos: [], photos: [] })
+      return byMap.get(key)
+    }
+    mine.forEach((memo) => {
+      bucketFor(memo.mapId || "__notebook__").memos.push(memo)
+    })
+    // 독립 사진(standalone) — 사진 자체의 mapId(083) 우선, 없으면 같은 record
+    // 메모의 mapId 역참조(083 미적용/레거시 폴백), 그래도 없으면 수첩.
     const standalonePhotos = Array.isArray(feature.photos) ? feature.photos : []
-    if (standalonePhotos.length && !byMap.has("__notebook__")) byMap.set("__notebook__", [])
+    standalonePhotos.forEach((photo) => {
+      const rid = recordEntryId(photo)
+      const mapId = photo?.mapId || photo?.map_id || (rid && recordMapId.get(rid)) || null
+      bucketFor(mapId || "__notebook__").photos.push(photo)
+    })
 
-    const sections = [...byMap.entries()].map(([key, memos]) => {
+    const sections = [...byMap.entries()].map(([key, { memos, photos }]) => {
       const isNotebook = key === "__notebook__"
-      const groups = buildFeatureRecordGroups({ memos, photos: isNotebook ? standalonePhotos : [] })
+      const groups = buildFeatureRecordGroups({ memos, photos })
         .sort((a, b) => new Date(b.dateValue || 0) - new Date(a.dateValue || 0))
       return {
         key,
@@ -380,11 +395,6 @@ export function PlaceFlipCard({
   if (!feature) return null
 
   const heroPhoto = representativePhoto(feature)
-  // 기록 그룹의 사진 중 현재 표지와 같은 게 있으면 표지 뱃지 표시
-  const isCoverGroup = (group) => Boolean(heroPhoto) && (group.photos || []).some((photo) => {
-    const src = typeof photo === "string" ? photo : photo?.url || photo?.src || photo?.cloudUrl || ""
-    return src && src === heroPhoto
-  })
   const name = (feature.title || "").trim() || "이름 없는 장소"
   const registered = formatDotDate(feature.createdAt || feature.updatedAt)
   const cardTags = (feature.tags || []).map((tag) => `${tag || ""}`.trim()).filter(Boolean)
@@ -399,20 +409,6 @@ export function PlaceFlipCard({
       showToast?.("사진을 바꿨어요")
     } catch {
       showToast?.("사진 담기에 실패했어요. 잠시 후 다시 시도해 주세요.")
-    } finally {
-      setPhotoBusy(false)
-    }
-  }
-
-  // 기록 사진을 표지로 승격 — 이미 저장된 URL 이라 재업로드 없이 표지만 바꾼다
-  const handlePromoteCover = async (url) => {
-    if (!onSetCoverUrl || !url || photoBusy) return
-    setPhotoBusy(true)
-    try {
-      await onSetCoverUrl(url)
-      showToast?.("이 사진을 표지로 정했어요")
-    } catch {
-      showToast?.("표지 변경에 실패했어요. 잠시 후 다시 시도해주세요.")
     } finally {
       setPhotoBusy(false)
     }
@@ -797,12 +793,7 @@ export function PlaceFlipCard({
                           {open ? (
                             <div className="bd-recsec__body">
                               {section.groups.slice(0, 12).map((group) => (
-                                <RecordItem
-                                  key={group.id}
-                                  group={group}
-                                  onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
-                                  isCover={isCoverGroup(group)}
-                                />
+                                <RecordItem key={group.id} group={group} />
                               ))}
                             </div>
                           ) : null}
@@ -811,12 +802,7 @@ export function PlaceFlipCard({
                     })
                   ) : (
                     recordSections.sections[0].groups.slice(0, 8).map((group) => (
-                      <RecordItem
-                        key={group.id}
-                        group={group}
-                        onPromoteCover={onSetCoverUrl ? handlePromoteCover : null}
-                        isCover={isCoverGroup(group)}
-                      />
+                      <RecordItem key={group.id} group={group} />
                     ))
                   )
                 ) : (

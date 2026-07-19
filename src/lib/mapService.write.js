@@ -679,7 +679,7 @@ export async function saveFeatureOperatorNote(featureId, note = "") {
 
 // ─── Media ───
 
-export async function createMediaRecord(featureId, { storagePath, publicUrl, mimeType, fileExt, sizeBytes, mediaType, duration, recordId }) {
+export async function createMediaRecord(featureId, { storagePath, publicUrl, mimeType, fileExt, sizeBytes, mediaType, duration, recordId, mapId }) {
   const supabase = requireSupabase()
   const payload = {
     feature_id: featureId,
@@ -691,29 +691,36 @@ export async function createMediaRecord(featureId, { storagePath, publicUrl, mim
     size_bytes: sizeBytes || 0,
     duration_sec: duration ?? null,
   }
-  if (recordId) {
-    payload.record_id = recordId
-  }
+  if (recordId) payload.record_id = recordId
+  if (mapId) payload.map_id = mapId
 
-  let { data, error } = await supabase
-    .from("feature_media")
-    .insert(payload)
-    .select("*")
-    .single()
-
-  if (error && getMissingColumnName(error) === "record_id") {
-    const { record_id, ...fallbackPayload } = payload
-    void record_id
+  // record_id(042) · map_id(083) 는 후행 마이그레이션 컬럼 — 미적용 환경에선
+  // "없는 컬럼만" 빼고 재시도해 사진 저장 자체가 실패하지 않게 한다.
+  const OPTIONAL_COLUMNS = ["record_id", "map_id"]
+  let attempt = payload
+  let data
+  let error
+  for (let i = 0; i <= OPTIONAL_COLUMNS.length; i += 1) {
     ;({ data, error } = await supabase
       .from("feature_media")
-      .insert(fallbackPayload)
+      .insert(attempt)
       .select("*")
       .single())
+    if (!error) break
+    const missing = getMissingColumnName(error)
+    if (!missing || !OPTIONAL_COLUMNS.includes(missing) || !(missing in attempt)) break
+    const { [missing]: _dropped, ...rest } = attempt
+    void _dropped
+    attempt = rest
   }
 
   if (error) throw error
   const media = normalizeMedia(data)
-  return recordId && !media.recordId ? { ...media, recordId } : media
+  return {
+    ...media,
+    recordId: media.recordId || recordId || null,
+    mapId: media.mapId || mapId || null,
+  }
 }
 
 export async function deleteMediaRecord(mediaId) {

@@ -11,6 +11,7 @@ export function useMediaHandlers({
   updateFeatures,
   showToast,
   cloudMode = false,
+  activeMapId = null,
 }) {
   const photoInputRef = useRef(null)
 
@@ -59,6 +60,8 @@ export function useMediaHandlers({
     const targetFeature = mediaTargetFeature || featureSheet
     if (!file || !targetFeature) return
     const recordId = `${options?.recordId || ""}`.trim()
+    // 출처 지도 — 지도 편집에서 남기면 그 지도 id(메모와 동일 스코프), 없으면 수첩(null)
+    const mapId = options?.mapId || activeMapId || null
     try {
       assertPhotoFileAllowed(file)
       const img = await new Promise((resolve, reject) => {
@@ -89,6 +92,7 @@ export function useMediaHandlers({
         mimeType: blob.type,
         sizeBytes: blob.size,
         recordId: recordId || null,
+        mapId: mapId || null,
       }
       appendMediaEntry(featureId, "photos", photoEntry)
       if (cloudMode) {
@@ -109,6 +113,7 @@ export function useMediaHandlers({
                 sizeBytes: cloudMeta.sizeBytes,
                 mediaType: "photo",
                 recordId: recordId || undefined,
+                mapId: mapId || undefined,
               })
               syncedEntry = {
                 id: record.id,
@@ -119,6 +124,7 @@ export function useMediaHandlers({
                 mimeType: cloudMeta.mimeType,
                 sizeBytes: cloudMeta.sizeBytes,
                 recordId: recordId || record.recordId || null,
+                mapId: mapId || record.mapId || null,
               }
             } catch (error) {
               console.warn("Photo cloud record failed; keeping upload metadata for retry", error)

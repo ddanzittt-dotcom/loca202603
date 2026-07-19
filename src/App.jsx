@@ -966,7 +966,7 @@ export default function App() {
   const {
     photoInputRef,
     handlePhotoSelected, handleDeletePhoto,
-  } = useMediaHandlers({ featureSheet, mediaTargetFeature: inlineRecordFeature, setFeatureSheet, updateFeatures, showToast, cloudMode })
+  } = useMediaHandlers({ featureSheet, mediaTargetFeature: inlineRecordFeature, setFeatureSheet, updateFeatures, showToast, cloudMode, activeMapId: activeMap?.id || null })
 
   const {
     touchMap, resetEditorState,
@@ -2437,17 +2437,6 @@ export default function App() {
             if (!url) {
               // 로컬 모드 또는 업로드 실패 — 압축된 data URL 로 즉시 반영(로컬 저장에 유지)
               url = await blobToDataUrl(blob)
-            }
-            const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null })
-            setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))
-            setPlaceCardFeature((current) => (current ? patch(current) : current))
-          }}
-          onSetCoverUrl={async (url) => {
-            // 기록 사진(이미 저장된 URL)을 표지로 승격 — 재업로드 없이 표지 필드만 바꾼다
-            if (!url) return
-            const featureId = placeCardFeature.id || placeCardFeature.feature_id
-            if (cloudMode) {
-              await updateFeature(featureId, { emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null }).catch(() => {})
             }
             const patch = (feature) => ({ ...feature, emojiKind: "photo", emojiPhotoUrl: url, emojiPhotoFocusX: null, emojiPhotoFocusY: null })
             setFeatures((current) => current.map((feature) => (feature.id === featureId ? patch(feature) : feature)))

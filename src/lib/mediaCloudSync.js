@@ -99,6 +99,7 @@ async function ensureMediaRecord(featureId, mediaType, media, cloudMeta) {
     sizeBytes: cloudMeta.sizeBytes || media.sizeBytes || 0,
     mediaType,
     recordId: media.recordId || undefined,
+    mapId: media.mapId || undefined,
   })
 }
 
@@ -113,6 +114,7 @@ function mergeSyncedMedia(media, record, cloudMeta, localKey) {
     ext: record.ext || cloudMeta.fileExt || media.ext,
     sizeBytes: record.sizeBytes || cloudMeta.sizeBytes || media.sizeBytes,
     recordId: record.recordId || media.recordId || null,
+    mapId: record.mapId || media.mapId || null,
   }
 
   if (localKey) next.localId = media.localId || localKey
