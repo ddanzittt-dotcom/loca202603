@@ -1,9 +1,9 @@
 import { requireSupabase } from "./supabase"
 
-// 커뮤니티(모두의 지도) 모더레이션 RPC 래퍼.
+// 관리자(/admin) RPC 래퍼.
 // 서버 함수(SECURITY DEFINER)가 is_platform_admin 으로 권한을 게이트하므로
 // 클라이언트 판별은 UX 용이고, 실제 보안은 함수가 담당한다.
-// 관련 마이그레이션: 022(is_platform_admin), 036/045(모더레이션 RPC).
+// 관련 마이그레이션: 022(is_platform_admin), 055~057(대시보드 RPC), 081(analytics v2).
 
 function parseRpcJson(data) {
   return typeof data === "string" ? JSON.parse(data) : data
@@ -25,36 +25,6 @@ export async function checkPlatformAdmin() {
   const { data, error } = await supabase.rpc("is_platform_admin")
   if (error) return false
   return Boolean(data)
-}
-
-// 관리 화면에서 다루는 상태 탭
-export const MODERATION_TABS = [
-  { key: "pending", label: "승인 대기" },
-  { key: "approved", label: "승인됨" },
-  { key: "rejected", label: "반려" },
-  { key: "hidden", label: "숨김" },
-]
-
-// 상태 변경으로 지정 가능한 값 (RPC 는 approved/rejected/hidden 만 허용)
-export const MODERATION_ACTIONS = [
-  { key: "approved", label: "승인" },
-  { key: "rejected", label: "반려" },
-  { key: "hidden", label: "숨김" },
-]
-
-export async function listModerationRecords(status = "pending", limit = 80) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("list_community_moderation_records", {
-    p_status: status,
-    p_limit: limit,
-  })
-  if (error) {
-    const wrapped = new Error(friendlyAdminError(error))
-    wrapped.cause = error
-    throw wrapped
-  }
-  const parsed = parseRpcJson(data)
-  return Array.isArray(parsed?.records) ? parsed.records : []
 }
 
 // 운영 통계 개요 (get_admin_overview RPC) — platform_admin 전용
@@ -131,18 +101,4 @@ export async function getAdminRegionInsights(days = 30) {
     throw wrapped
   }
   return parseRpcJson(data) || {}
-}
-
-export async function updateModerationStatus(recordId, status) {
-  const supabase = requireSupabase()
-  const { data, error } = await supabase.rpc("update_community_moderation_status", {
-    p_record_id: recordId,
-    p_status: status,
-  })
-  if (error) {
-    const wrapped = new Error(friendlyAdminError(error))
-    wrapped.cause = error
-    throw wrapped
-  }
-  return parseRpcJson(data)
 }

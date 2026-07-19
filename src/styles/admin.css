@@ -272,17 +272,6 @@
   font-size: 11px;
   font-weight: 800;
 }
-.admin-badge--place { background: var(--accent-faint); color: var(--accent-deep); }
-.admin-badge--route { background: var(--bg-deep); color: var(--ink-soft); }
-
-.admin-card__title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--ink-strong);
-  line-height: 1.35;
-}
-
 .admin-card__desc {
   margin: 0 0 8px;
   font-size: 13px;
@@ -307,16 +296,6 @@
   font-weight: 600;
 }
 
-.admin-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 0 0 12px;
-}
-.admin-card__meta div { display: flex; align-items: center; gap: 5px; }
-.admin-card__meta dt { margin: 0; font-size: 11px; color: var(--ink-faint); font-weight: 700; }
-.admin-card__meta dd { margin: 0; font-size: 12px; color: var(--ink-mute); }
-
 .admin-card__actions {
   display: flex;
   gap: 7px;
@@ -339,12 +318,6 @@
   cursor: pointer;
 }
 .admin-act:disabled { opacity: 0.55; cursor: default; }
-.admin-act--approved { border-color: #12905a; color: #12905a; }
-.admin-act--approved:hover:not(:disabled) { background: #12905a; color: #fff; }
-.admin-act--rejected { border-color: #dc2626; color: #dc2626; }
-.admin-act--rejected:hover:not(:disabled) { background: #dc2626; color: #fff; }
-.admin-act--hidden { border-color: var(--ink-mute); color: var(--ink-soft); }
-.admin-act--hidden:hover:not(:disabled) { background: var(--ink-soft); color: #fff; }
 
 /* 버튼 (안내 화면) */
 .admin-btn {
@@ -525,21 +498,4 @@
   font-size: 11px;
   color: var(--ink-soft);
   text-align: right;
-}
-
-/* 토스트 */
-.admin-toast {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  max-width: 88vw;
-  padding: 11px 16px;
-  border-radius: var(--radius-pill);
-  background: var(--ink-strong);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
-  z-index: 50;
 }
