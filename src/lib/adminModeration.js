@@ -102,3 +102,18 @@ export async function getAdminRegionInsights(days = 30) {
   }
   return parseRpcJson(data) || {}
 }
+
+// 동네 밀도 지도 (get_admin_geo_density RPC, migration 082) — platform_admin 전용
+// 0.05도(약 5km) 격자 집계 → 개별 위치 비노출. 반환:
+//   { days, grid, cells: [{ lat, lng, cards, new_finds, top_region }],
+//     max_cards, total_cards, total_new_finds, overseas_cards, untagged_coords, generated_at }
+export async function getAdminGeoDensity(days = 90) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_geo_density", { p_days: days })
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}

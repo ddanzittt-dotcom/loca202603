@@ -472,6 +472,30 @@
   vertical-align: middle;
 }
 
+/* ── 동네 밀도 지도 (082) ── */
+.admin-geomap__frame {
+  margin: 4px auto 0;
+  max-width: 460px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-big);
+  background: var(--card);
+}
+.admin-geomap__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+/* 지도 아래 안내 캡션 (밀도 지도 등) — 얕은 회색 소문자 */
+.admin-caption {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
 /* 피드백 운영 메모 인라인 편집 */
 .admin-note-editor {
   display: flex;

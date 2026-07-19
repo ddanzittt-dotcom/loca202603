@@ -4,13 +4,15 @@ import { getCurrentUser, onAuthStateChange } from "../lib/auth"
 import {
   checkPlatformAdmin,
   getAdminDemographics,
+  getAdminGeoDensity,
   getAdminInsights,
   getAdminKpis,
   getAdminOverview,
   getAdminRegionInsights,
   getAdminTimeseries,
 } from "../lib/adminModeration"
-import { downloadCsv, formatStamp as fileStamp } from "../lib/adminExport"
+import { downloadCsv, downloadSvgPng, formatStamp as fileStamp } from "../lib/adminExport"
+import { GeoDensityMap } from "../components/admin/GeoDensityMap"
 import {
   FEEDBACK_STATUS_TABS,
   feedbackCategoryLabel,
@@ -84,6 +86,14 @@ const TS_COLUMNS = [
   ["memos", "기록"],
   ["shares", "공유"],
 ]
+
+// 동네 밀도 지도 — 기간/지표 선택 (지역·태그 탭, get_admin_geo_density 082)
+const GEO_DAY_OPTIONS = [30, 90, 365]
+const GEO_METRICS = [
+  { key: "cards", label: "전체 카드" },
+  { key: "new_finds", label: "새발견(NEW FIND)" },
+]
+const geoDaysLabel = (d) => (d === 365 ? "1년" : `${d}일`)
 
 // 퍼널 단계 (get_admin_kpis funnel/funnel_30d)
 const FUNNEL_STEPS = [
@@ -294,6 +304,12 @@ export function AdminScreen() {
   // 지역 상세 (081)
   const [regionInsights, setRegionInsights] = useState(null)
   const [regionInsightsError, setRegionInsightsError] = useState("")
+  // 동네 밀도 지도 (082)
+  const [geoDensity, setGeoDensity] = useState(null)
+  const [geoDensityError, setGeoDensityError] = useState("")
+  const [geoDays, setGeoDays] = useState(90)
+  const [geoMetric, setGeoMetric] = useState("cards")
+  const geoMapRef = useRef(null)
   // 피드백 (치즈냥의 귓속말)
   const [feedbackRecords, setFeedbackRecords] = useState([])
   const [feedbackCounts, setFeedbackCounts] = useState({})
@@ -354,6 +370,22 @@ export function AdminScreen() {
     }
   }, [])
 
+  // 동네 밀도 지도 (기간 칩으로 재호출) — 시퀀스 가드로 늦게 도착한 이전 요청 응답을 폐기
+  const geoSeqRef = useRef(0)
+  const loadGeoDensity = useCallback(async (days) => {
+    const seq = ++geoSeqRef.current
+    setGeoDensityError("")
+    try {
+      const data = await getAdminGeoDensity(days)
+      if (geoSeqRef.current !== seq) return
+      setGeoDensity(data)
+    } catch (error) {
+      if (geoSeqRef.current !== seq) return
+      setGeoDensity(null)
+      setGeoDensityError(error?.message || "밀도 지도를 불러오지 못했어요.")
+    }
+  }, [])
+
   const loadAll = useCallback(async () => {
     setLoading(true)
     setInsightsError("")
@@ -388,17 +420,32 @@ export function AdminScreen() {
       setRegionInsights(null)
       setRegionInsightsError(error?.message || "지역 상세를 불러오지 못했어요.")
     }
+    // 동네 밀도 지도 (082) — 미적용 환경이면 에러 카드로만 표시. 기간은 90일로 리셋
+    setGeoDays(90)
+    await loadGeoDensity(90)
     // 뱃지 카운트를 위해 항상 함께 로드 (기본 '새 이야기' 목록)
     setFeedbackStatus("new")
     await loadFeedback("new")
     setLoading(false)
-  }, [loadFeedback, loadTimeseries])
+  }, [loadFeedback, loadTimeseries, loadGeoDensity])
 
   // 기간 칩 선택 — 시계열만 재호출
   const selectTsDays = useCallback((days) => {
     setTsDays(days)
     loadTimeseries(days)
   }, [loadTimeseries])
+
+  // 밀도 지도 기간 칩 선택 — 밀도 지도만 재호출
+  const selectGeoDays = useCallback((days) => {
+    setGeoDays(days)
+    loadGeoDensity(days)
+  }, [loadGeoDensity])
+
+  // 밀도 지도 PNG 저장 (미팅용 한 장)
+  const handleGeoPng = useCallback(() => {
+    if (!geoMapRef.current) return
+    downloadSvgPng(geoMapRef.current, `loca_밀도지도_${fileStamp()}.png`)
+  }, [])
 
   // 상태 필터 변경
   const selectFeedbackStatus = useCallback((status) => {
@@ -749,6 +796,50 @@ export function AdminScreen() {
       {/* ─────────── 지역·태그 ─────────── */}
       {activeTab === "region" ? (
         <>
+          <section className="admin-overview admin-geomap" aria-label="동네 밀도 지도">
+            <h2 className="admin-section-title">동네 밀도 지도 (최근 {geoDaysLabel(geoDays)})</h2>
+            {geoDensityError ? (
+              <p className="admin-error">{geoDensityError} (supabase/migrations/082 적용 확인)</p>
+            ) : !geoDensity ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <div className="admin-kchips" role="group" aria-label="기간 선택">
+                  {GEO_DAY_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`admin-kchip${geoDays === d ? " is-active" : ""}`}
+                      onClick={() => selectGeoDays(d)}
+                    >
+                      {geoDaysLabel(d)}
+                    </button>
+                  ))}
+                </div>
+                <div className="admin-kchips" role="group" aria-label="지표 선택">
+                  {GEO_METRICS.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      className={`admin-kchip${geoMetric === m.key ? " is-active" : ""}`}
+                      onClick={() => setGeoMetric(m.key)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="admin-geomap__frame">
+                  <GeoDensityMap ref={geoMapRef} data={geoDensity} metric={geoMetric} />
+                </div>
+                <p className="admin-empty-note">
+                  총 카드 {num(geoDensity?.total_cards)} · 새발견 {num(geoDensity?.total_new_finds)} · 국외 {num(geoDensity?.overseas_cards)} 제외 · 미태깅좌표 {num(geoDensity?.untagged_coords)}
+                </p>
+                <p className="admin-caption">격자(약 5km) 집계라 개별 위치는 드러나지 않습니다. 좌표 미태깅 카드는 제외됩니다.</p>
+                <button type="button" className="admin-csv-btn" onClick={handleGeoPng}>이미지 저장(PNG)</button>
+              </>
+            )}
+          </section>
+
           <section className="admin-overview" aria-label="지역 자산">
             <h2 className="admin-section-title">지역 자산</h2>
             {insightsError ? (
