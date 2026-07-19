@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { FeatureEmoji } from "../FeatureEmoji"
 import { buildFeatureRecordGroups, formatRecordDate } from "../../lib/featureRecordGroups"
 import { getPlaceType } from "../../lib/placeTypes"
-import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate, photoFocusPosition } from "../../lib/binderCardData"
-import { PlaceSharePoster } from "./PlaceSharePoster"
+import { looksLikeAddress, representativePhoto, cardArtFeature, mixHex, formatDotDate, photoFocusPosition, regionLabel } from "../../lib/binderCardData"
 import { holoTiltMove, holoTiltLeave } from "./holoTilt"
-import { capturePosterBlob, shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
+import { shareImage, downloadImage, sanitizeCardFilename } from "../../lib/cardShareImage"
+import { renderShareCardBlob } from "../../lib/shareCardCanvas"
 import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
 import { logEvent } from "../../lib/analytics"
 
@@ -226,6 +226,7 @@ export function PlaceFlipCard({
   onSetCoverUrl,
   onSetPhotoFocus,
   onUpdateCard,
+  collectorHandle,
   showToast,
 }) {
   const [flipped, setFlipped] = useState(false)
@@ -246,6 +247,7 @@ export function PlaceFlipCard({
   // 카드 편집(이름·설명·태그)
   const [editing, setEditing] = useState(false)
   const [edName, setEdName] = useState("")
+  const [edEnLabel, setEdEnLabel] = useState("")
   const [edDesc, setEdDesc] = useState("")
   const [edTags, setEdTags] = useState([])
   const [edTagInput, setEdTagInput] = useState("")
@@ -253,9 +255,9 @@ export function PlaceFlipCard({
   const fileInputRef = useRef(null)
   const recFileInputRef = useRef(null)
   const flipRafRef = useRef(0)
-  const posterRef = useRef(null)
   const [imgBusy, setImgBusy] = useState(null) // "share" | "download" | null
-  const [share, setShare] = useState(null) // null | { loading: true } | { blob, url }
+  const [share, setShare] = useState(null) // null | { loading: true } | { blob, url, format }
+  const [shareFormat, setShareFormat] = useState("feed") // "feed" | "story"
   const shareRef = useRef(null)
   shareRef.current = share
   // 표지 사진 위치(초점) 조정 시트
@@ -370,6 +372,7 @@ export function PlaceFlipCard({
   // ── 카드 편집 ──
   const openEdit = () => {
     setEdName(feature.title || "")
+    setEdEnLabel(feature.enLabel || "")
     // note 가 주소면 설명은 비워둔다 (설명과 주소는 분리 — 주소는 하단 스펙에 자동 표시)
     setEdDesc(looksLikeAddress(feature.note) ? "" : `${feature.note || ""}`)
     setEdTags((feature.tags || []).map((tag) => `${tag || ""}`.trim()).filter(Boolean))
@@ -398,9 +401,11 @@ export function PlaceFlipCard({
     const trimmedDesc = edDesc.trim()
     // 설명을 적었으면 note=설명, 비웠고 원래 note 가 주소였으면 그대로 유지
     const note = trimmedDesc || (looksLikeAddress(feature.note) ? feature.note : "")
+    // 영문 라벨 — 영문/숫자/공백/·-만 허용(로마자 표기용), 비면 null 로 지워짐
+    const enLabel = edEnLabel.trim().replace(/[^A-Za-z0-9 .'&·-]/g, "").slice(0, 40)
     setEdSaving(true)
     try {
-      await onUpdateCard?.({ title, note, tags })
+      await onUpdateCard?.({ title, note, tags, enLabel })
       setEditing(false)
       showToast?.("카드를 수정했어요")
     } catch {
@@ -446,18 +451,40 @@ export function PlaceFlipCard({
     }
   }
 
-  // 상단 공유 버튼 → 카드(시안) 이미지를 만들어 미리보기를 연다
-  const openSharePreview = async () => {
-    if (share) return
-    setShare({ loading: true })
+  // 상단 공유 버튼 → 카드(지시서 v1.0)를 캔버스로 렌더해 미리보기를 연다.
+  // 사진 있으면 카드 A(사진형). 지역은 개인정보 보호로 시·군·읍면동 수준만.
+  const buildShareData = () => ({
+    dexNo,
+    typeLabel: type.label,
+    handle: collectorHandle || feature.createdByName || "",
+    name,
+    enLabel: feature.enLabel || "",
+    desc: descText,
+    address: regionLabel(feature),
+    date: formatDotDate(feature.createdAt || feature.updatedAt) || "",
+    photoUrl: heroPhoto || "",
+    focusX: Number.isFinite(Number(feature.emojiPhotoFocusX)) ? Number(feature.emojiPhotoFocusX) : 50,
+    focusY: Number.isFinite(Number(feature.emojiPhotoFocusY)) ? Number(feature.emojiPhotoFocusY) : 50,
+  })
+  // 주어진 포맷(피드 4:5 / 스토리 9:16)으로 카드를 렌더해 미리보기에 넣는다
+  const doRenderShare = async (fmt) => {
+    setShareFormat(fmt)
+    setShare((cur) => {
+      if (cur?.url) URL.revokeObjectURL(cur.url)
+      return { loading: true }
+    })
     try {
-      const blob = await capturePosterBlob(posterRef.current)
+      const blob = await renderShareCardBlob(buildShareData(), fmt)
       if (!blob) throw new Error("capture failed")
-      setShare({ blob, url: URL.createObjectURL(blob) })
+      setShare({ blob, url: URL.createObjectURL(blob), format: fmt })
     } catch {
       setShare(null)
       showToast?.("카드 이미지를 만들지 못했어요. 잠시 후 다시 시도해주세요.")
     }
+  }
+  const openSharePreview = () => {
+    if (share) return
+    doRenderShare(shareFormat)
   }
 
   const closeSharePreview = () => {
@@ -568,6 +595,19 @@ export function PlaceFlipCard({
                       onChange={(event) => setEdName(event.target.value)}
                       maxLength={40}
                       autoFocus
+                    />
+                  </label>
+                  <label className="bd-editfield">
+                    <span className="bd-editfield__label">영문 라벨 <i className="bd-editfield__opt">선택 · 공유 카드에 표기</i></span>
+                    <input
+                      className="bd-editinput"
+                      type="text"
+                      value={edEnLabel}
+                      onChange={(event) => setEdEnLabel(event.target.value)}
+                      maxLength={40}
+                      placeholder="예: MINDUNGSAN"
+                      autoCapitalize="characters"
+                      spellCheck={false}
                     />
                   </label>
                   <label className="bd-editfield">
@@ -711,11 +751,6 @@ export function PlaceFlipCard({
           </div>
         </div>
       </div>
-
-      {/* 인스타 공유용 포스터 — 화면 밖에서 렌더되어 캡처 대상이 된다 */}
-      <div className="cardshare-hidden" aria-hidden="true">
-        <PlaceSharePoster feature={feature} dexNo={dexNo} innerRef={posterRef} />
-      </div>
     </div>
 
     {/* 표지 사진 위치 조정 시트 */}
@@ -737,8 +772,30 @@ export function PlaceFlipCard({
       <div className="csp-share-ov" onClick={closeSharePreview} role="presentation">
         <div className="csp-share-panel" onClick={(event) => event.stopPropagation()}>
           <button type="button" className="csp-share-close" onClick={closeSharePreview} aria-label="닫기">✕</button>
+          <div className="csp-fmt-tabs" role="tablist" aria-label="공유 크기">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shareFormat === "feed"}
+              className={`csp-fmt-tab${shareFormat === "feed" ? " is-on" : ""}`}
+              onClick={() => { if (shareFormat !== "feed") doRenderShare("feed") }}
+              disabled={share.loading}
+            >
+              피드 <b>4:5</b>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shareFormat === "story"}
+              className={`csp-fmt-tab${shareFormat === "story" ? " is-on" : ""}`}
+              onClick={() => { if (shareFormat !== "story") doRenderShare("story") }}
+              disabled={share.loading}
+            >
+              스토리 <b>9:16</b>
+            </button>
+          </div>
           <div
-            className="csp-share-imgwrap csp-share-imgwrap--holo"
+            className={`csp-share-imgwrap csp-share-imgwrap--holo${shareFormat === "story" ? " csp-share-imgwrap--story" : ""}`}
             onPointerMove={share.loading ? undefined : holoTiltMove}
             onPointerLeave={share.loading ? undefined : holoTiltLeave}
           >

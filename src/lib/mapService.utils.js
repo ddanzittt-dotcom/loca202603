@@ -192,6 +192,7 @@ export function normalizeFeature(row, memos = [], photos = []) {
     emojiPhotoUrl: row.emoji_photo_url || null,
     emojiPhotoFocusX: Number.isFinite(Number(row.emoji_photo_focus_x)) ? Number(row.emoji_photo_focus_x) : null,
     emojiPhotoFocusY: Number.isFinite(Number(row.emoji_photo_focus_y)) ? Number(row.emoji_photo_focus_y) : null,
+    enLabel: row.en_label || null,
     tags: row.tags || [],
     note: row.note || "",
     highlight: Boolean(row.highlight),
@@ -248,6 +249,8 @@ export function toFeatureInsert(feature = {}, fallbackType = "pin") {
     payload.emoji_photo_focus_y = Math.min(100, Math.max(0, Math.round(Number(feature.emojiPhotoFocusY))))
   }
 
+  if ("enLabel" in feature) payload.en_label = feature.enLabel?.trim() || null
+
   if ("isSample" in feature) payload.is_sample = Boolean(feature.isSample)
   if ("sampleBatch" in feature) payload.sample_batch = feature.sampleBatch || null
   if ("sampleKey" in feature) payload.sample_key = feature.sampleKey || null
@@ -295,6 +298,7 @@ export function toFeaturePatch(updates = {}) {
 
   if ("tags" in updates) payload.tags = updates.tags || []
   if ("note" in updates) payload.note = updates.note || ""
+  if ("enLabel" in updates) payload.en_label = updates.enLabel?.trim() || null
   if ("highlight" in updates) payload.highlight = Boolean(updates.highlight)
   if ("sortOrder" in updates) payload.sort_order = updates.sortOrder || 0
   if ("createdBy" in updates) payload.created_by = updates.createdBy
