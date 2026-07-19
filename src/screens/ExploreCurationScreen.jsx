@@ -22,6 +22,7 @@ import {
   wildlifeToPrefill,
 } from "../lib/exploreCuration"
 import { fetchCatalogItems } from "../lib/exploreCatalog"
+import { EVENT_TYPES, logEvent } from "../lib/analytics"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
 import { fetchRealTerrain } from "../lib/realTerrain"
@@ -276,6 +277,18 @@ export function ExploreCurationScreen({ onRegister, showToast }) {
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
+
+  // 큐레이션 상세 열람 로깅 — 목록 카드·캐러셀·레이더 도트 어느 경로로 열려도 여기 1곳에서 기록
+  useEffect(() => {
+    if (!detailItem) return
+    const itemId = detailItem.data?.id
+    logEvent(EVENT_TYPES.EXPLORE_DETAIL_VIEW, {
+      meta: {
+        category: detailItem.type,
+        ...(itemId != null ? { item_id: String(itemId) } : {}),
+      },
+    })
+  }, [detailItem])
 
   // 실제 지형(OSM) — 레이더 오버월드 배경용. 실패하면 null → 절차 생성 필드 폴백
   const [terrain, setTerrain] = useState(null)

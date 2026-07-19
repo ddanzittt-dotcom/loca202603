@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2, LogIn, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react"
 import { getCurrentUser, onAuthStateChange } from "../lib/auth"
 import {
   checkPlatformAdmin,
   getAdminDemographics,
   getAdminInsights,
+  getAdminKpis,
   getAdminOverview,
+  getAdminRegionInsights,
+  getAdminTimeseries,
 } from "../lib/adminModeration"
+import { downloadCsv, formatStamp as fileStamp } from "../lib/adminExport"
 import {
   FEEDBACK_STATUS_TABS,
   feedbackCategoryLabel,
@@ -16,10 +20,12 @@ import {
 import { ageBandLabel } from "../lib/demographics"
 
 // 데이터 대시보드 — /admin. platform_admin 전용(서버 RPC 게이트 + 클라이언트 선판별).
-// 탭 구성: 개요 / 지역·태그 / 인구통계 / 활동·유통 / 피드백. (커뮤니티 검수는 제거됨)
+// 탭 구성: 개요 / 핵심 지표 / 지역·태그 / 인구통계 / 활동·유통 / 피드백. (커뮤니티 검수는 제거됨)
+// 핵심 지표·지역 상세는 migration 081 RPC(get_admin_kpis/get_admin_timeseries/get_admin_region_insights) 필요.
 
 const DASH_TABS = [
   { key: "overview", label: "개요" },
+  { key: "kpi", label: "핵심 지표" },
   { key: "region", label: "지역·태그" },
   { key: "demographics", label: "인구통계" },
   { key: "activity", label: "활동·유통" },
@@ -55,6 +61,39 @@ const FEEDBACK_NEXT_ACTIONS = {
   ],
 }
 
+// 일별 추이 — 기간/지표 선택 (핵심 지표 탭)
+const TS_DAY_OPTIONS = [7, 30, 90]
+const TS_METRICS = [
+  { key: "new_users", label: "가입" },
+  { key: "new_cards", label: "새 카드" },
+  { key: "map_views", label: "조회" },
+  { key: "sessions", label: "세션" },
+  { key: "shares", label: "공유" },
+]
+
+// 시계열 표·CSV 공통 컬럼 (get_admin_timeseries 응답 순서)
+const TS_COLUMNS = [
+  ["new_users", "가입"],
+  ["new_cards", "새 카드"],
+  ["collects", "채집 이벤트"],
+  ["map_views", "지도 조회"],
+  ["sessions", "세션"],
+  ["active_users", "활성 사용자"],
+  ["publishes", "발행"],
+  ["saves", "저장"],
+  ["memos", "기록"],
+  ["shares", "공유"],
+]
+
+// 퍼널 단계 (get_admin_kpis funnel/funnel_30d)
+const FUNNEL_STEPS = [
+  { key: "signed_up", label: "가입" },
+  { key: "collected", label: "채집" },
+  { key: "built_map", label: "지도 구성" },
+  { key: "published", label: "발행" },
+  { key: "shared", label: "공유" },
+]
+
 function num(value) {
   return value === null || value === undefined ? "–" : Number(value).toLocaleString("ko-KR")
 }
@@ -73,6 +112,11 @@ function formatStamp(value) {
   } catch {
     return ""
   }
+}
+
+// "2026-06-20" → "06/20"
+function shortDate(value) {
+  return `${value || ""}`.slice(5).replace("-", "/")
 }
 
 function StatCard({ label, value, sub }) {
@@ -96,13 +140,13 @@ function WeeklyChart({ weekly }) {
           <div key={w.week_start} className="admin-bar">
             <span className="admin-bar__count">{num(w.features)}</span>
             <span className="admin-bar__fill" style={{ height: `${Math.max(4, Math.round((Number(w.features) / max) * 72))}px` }} />
-            <span className="admin-bar__label">{`${w.week_start}`.slice(5).replace("-", "/")}</span>
+            <span className="admin-bar__label">{shortDate(w.week_start)}</span>
           </div>
         ))}
       </div>
       <table className="admin-table admin-table--tight">
         <thead>
-          <tr><th>주</th>{weeks.map((w) => <th key={w.week_start}>{`${w.week_start}`.slice(5).replace("-", "/")}</th>)}</tr>
+          <tr><th>주</th>{weeks.map((w) => <th key={w.week_start}>{shortDate(w.week_start)}</th>)}</tr>
         </thead>
         <tbody>
           <tr><td>새 카드</td>{weeks.map((w) => <td key={w.week_start}>{num(w.features)}</td>)}</tr>
@@ -111,6 +155,122 @@ function WeeklyChart({ weekly }) {
         </tbody>
       </table>
     </>
+  )
+}
+
+// 일별 세로 바 차트 — 선택 지표 1개 (막대 많으면 가로 스크롤)
+function DailyChart({ series, metricKey, metricLabel }) {
+  const rows = series || []
+  if (!rows.length) return <p className="admin-empty-note">시계열 데이터가 없어요.</p>
+  const max = Math.max(1, ...rows.map((r) => Number(r?.[metricKey]) || 0))
+  const many = rows.length > 31
+  const labelEvery = many ? 7 : rows.length > 14 ? 2 : 1
+  return (
+    <div className="admin-bars-scroll">
+      <div className="admin-bars admin-bars--daily" role="img" aria-label={`일별 ${metricLabel}`}>
+        {rows.map((r, i) => {
+          const v = Number(r?.[metricKey]) || 0
+          const showLabel = i % labelEvery === 0 || i === rows.length - 1
+          return (
+            <div key={r?.d || i} className="admin-bar">
+              <span className="admin-bar__count">{many && v === 0 ? "" : num(v)}</span>
+              <span className="admin-bar__fill" style={{ height: `${Math.max(3, Math.round((v / max) * 72))}px` }} />
+              <span className="admin-bar__label">{showLabel ? shortDate(r?.d) : ""}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// 리텐션 코호트 표 — 셀 배경 강도로 잔존율 표현 (미도래 주차 null → "—")
+function CohortTable({ cohorts }) {
+  const rows = cohorts || []
+  if (!rows.length) return <p className="admin-empty-note">코호트 데이터가 없어요.</p>
+  const weekCols = [0, 1, 2, 3, 4]
+  return (
+    <table className="admin-table admin-table--tight admin-cohort">
+      <thead>
+        <tr><th>가입 주</th><th>가입자</th>{weekCols.map((n) => <th key={n}>W{n}</th>)}</tr>
+      </thead>
+      <tbody>
+        {rows.map((c, ri) => {
+          const signups = Number(c?.signups) || 0
+          return (
+            <tr key={c?.cohort_week || ri}>
+              <td>{c?.cohort_week || "–"}</td>
+              <td>{num(c?.signups)}</td>
+              {weekCols.map((n) => {
+                const v = c?.[`w${n}`]
+                if (v === null || v === undefined) return <td key={n} className="admin-cohort__na">—</td>
+                const ratio = signups ? Math.min(1, Number(v) / signups) : 0
+                return (
+                  <td key={n} style={{ background: `color-mix(in srgb, var(--accent) ${Math.round(ratio * 45)}%, transparent)` }}>
+                    {num(v)}
+                    <span className="admin-cohort__pct">{signups ? ` (${Math.round(ratio * 100)}%)` : ""}</span>
+                  </td>
+                )
+              })}
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
+}
+
+// 가입→채집→지도 구성→발행→공유 5단 가로 바 (수 + 이전 단계 대비 전환율)
+function FunnelBars({ data }) {
+  if (!data) return <p className="admin-empty-note">퍼널 데이터가 없어요.</p>
+  const base = Math.max(1, ...FUNNEL_STEPS.map((s) => Number(data?.[s.key]) || 0))
+  return (
+    <div className="admin-funnel">
+      {FUNNEL_STEPS.map((step, i) => {
+        const v = Number(data?.[step.key]) || 0
+        const prev = i > 0 ? Number(data?.[FUNNEL_STEPS[i - 1].key]) || 0 : null
+        const conv = prev === null ? null : prev > 0 ? Math.round((v / prev) * 100) : null
+        return (
+          <div key={step.key} className="admin-funnel__row">
+            <span className="admin-funnel__label">{step.label}</span>
+            <span className="admin-funnel__track">
+              <span className="admin-funnel__fill" style={{ width: `${Math.max(2, Math.round((v / base) * 100))}%` }} />
+            </span>
+            <span className="admin-funnel__value">
+              {num(v)}
+              {conv !== null ? <em>{conv}%</em> : null}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// 지역 상세 표 — contributors < k 행에 k-익명 미달 뱃지
+function RegionDetailTable({ rows, kThreshold, days }) {
+  const list = rows || []
+  if (!list.length) return <p className="admin-empty-note">데이터가 없어요.</p>
+  return (
+    <table className="admin-table admin-table--tight">
+      <thead>
+        <tr><th>지역</th><th>카드</th><th>최근 {days}일</th><th>새발견</th><th>기여자</th></tr>
+      </thead>
+      <tbody>
+        {list.map((r, i) => (
+          <tr key={r?.region || i}>
+            <td>
+              {r?.region || "–"}
+              {Number(r?.contributors) < kThreshold ? <span className="admin-kbadge">k&lt;{kThreshold}</span> : null}
+            </td>
+            <td>{num(r?.cards)}</td>
+            <td>{Number(r?.cards_recent) ? `+${num(r.cards_recent)}` : "–"}</td>
+            <td>{num(r?.new_finds)}</td>
+            <td>{num(r?.contributors)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
@@ -124,12 +284,25 @@ export function AdminScreen() {
   const [demographics, setDemographics] = useState(null)
   const [demographicsError, setDemographicsError] = useState("")
   const [loading, setLoading] = useState(false)
+  // 핵심 지표 (081)
+  const [kpis, setKpis] = useState(null)
+  const [kpisError, setKpisError] = useState("")
+  const [timeseries, setTimeseries] = useState(null)
+  const [timeseriesError, setTimeseriesError] = useState("")
+  const [tsDays, setTsDays] = useState(30)
+  const [tsMetric, setTsMetric] = useState("new_cards")
+  // 지역 상세 (081)
+  const [regionInsights, setRegionInsights] = useState(null)
+  const [regionInsightsError, setRegionInsightsError] = useState("")
   // 피드백 (치즈냥의 귓속말)
   const [feedbackRecords, setFeedbackRecords] = useState([])
   const [feedbackCounts, setFeedbackCounts] = useState({})
   const [feedbackStatus, setFeedbackStatus] = useState("new")
   const [feedbackError, setFeedbackError] = useState("")
   const [feedbackBusyId, setFeedbackBusyId] = useState(null)
+  // 피드백 운영 메모 (admin_note) 인라인 편집
+  const [noteEditId, setNoteEditId] = useState(null)
+  const [noteDraft, setNoteDraft] = useState("")
 
   useEffect(() => {
     document.title = "LOCA 데이터 대시보드"
@@ -165,10 +338,28 @@ export function AdminScreen() {
     }
   }, [])
 
+  // 일별 시계열 (기간 칩으로 재호출) — 시퀀스 가드로 늦게 도착한 이전 요청 응답을 폐기
+  const tsSeqRef = useRef(0)
+  const loadTimeseries = useCallback(async (days) => {
+    const seq = ++tsSeqRef.current
+    setTimeseriesError("")
+    try {
+      const data = await getAdminTimeseries(days)
+      if (tsSeqRef.current !== seq) return
+      setTimeseries(data)
+    } catch (error) {
+      if (tsSeqRef.current !== seq) return
+      setTimeseries(null)
+      setTimeseriesError(error?.message || "시계열을 불러오지 못했어요.")
+    }
+  }, [])
+
   const loadAll = useCallback(async () => {
     setLoading(true)
     setInsightsError("")
     setDemographicsError("")
+    setKpisError("")
+    setRegionInsightsError("")
     try { setOverview(await getAdminOverview()) } catch { setOverview(null) }
     try {
       setInsights(await getAdminInsights())
@@ -182,15 +373,37 @@ export function AdminScreen() {
       setDemographics(null)
       setDemographicsError(error?.message || "인구통계를 불러오지 못했어요.")
     }
+    // 핵심 지표 (081) — 미적용 환경이면 에러 카드로만 표시하고 다른 탭은 정상 동작
+    try {
+      setKpis(await getAdminKpis())
+    } catch (error) {
+      setKpis(null)
+      setKpisError(error?.message || "핵심 지표를 불러오지 못했어요.")
+    }
+    setTsDays(30)
+    await loadTimeseries(30)
+    try {
+      setRegionInsights(await getAdminRegionInsights(30))
+    } catch (error) {
+      setRegionInsights(null)
+      setRegionInsightsError(error?.message || "지역 상세를 불러오지 못했어요.")
+    }
     // 뱃지 카운트를 위해 항상 함께 로드 (기본 '새 이야기' 목록)
     setFeedbackStatus("new")
     await loadFeedback("new")
     setLoading(false)
-  }, [loadFeedback])
+  }, [loadFeedback, loadTimeseries])
+
+  // 기간 칩 선택 — 시계열만 재호출
+  const selectTsDays = useCallback((days) => {
+    setTsDays(days)
+    loadTimeseries(days)
+  }, [loadTimeseries])
 
   // 상태 필터 변경
   const selectFeedbackStatus = useCallback((status) => {
     setFeedbackStatus(status)
+    setNoteEditId(null)
     loadFeedback(status)
   }, [loadFeedback])
 
@@ -207,6 +420,100 @@ export function AdminScreen() {
       setFeedbackBusyId(null)
     }
   }, [loadFeedback])
+
+  // 메모 편집 토글 — 열 때 기존 admin_note 를 초안으로
+  const toggleNoteEditor = useCallback((row) => {
+    setNoteEditId((prev) => (prev === row.id ? null : row.id))
+    setNoteDraft(row.admin_note || "")
+  }, [])
+
+  // 메모 저장 — 상태는 그대로 두고 p_note 만 갱신 (빈 문자열은 보내지 않음: RPC 는 null=기존 유지)
+  const handleSaveNote = useCallback(async (row) => {
+    const note = noteDraft.trim()
+    if (!note) return
+    setFeedbackBusyId(row.id)
+    setFeedbackError("")
+    try {
+      await updateFeedbackStatus(row.id, row.status, note)
+      setNoteEditId(null)
+      await loadFeedback(feedbackStatus)
+    } catch (error) {
+      setFeedbackError(error?.message || "메모를 저장하지 못했어요.")
+    } finally {
+      setFeedbackBusyId(null)
+    }
+  }, [noteDraft, feedbackStatus, loadFeedback])
+
+  // ── CSV 다운로드 ──
+
+  const handleOverviewCsv = useCallback(() => {
+    if (!overview) return
+    const rows = Object.entries(overview).map(([key, value]) => [key, value ?? ""])
+    downloadCsv(`loca_overview_${fileStamp()}.csv`, ["필드", "값"], rows)
+  }, [overview])
+
+  const handleTimeseriesCsv = useCallback(() => {
+    const series = timeseries?.series
+    if (!series?.length) return
+    const rows = series.map((r) => [r?.d ?? "", ...TS_COLUMNS.map(([key]) => r?.[key] ?? 0)])
+    downloadCsv(
+      `loca_timeseries_${timeseries?.days || tsDays}d_${fileStamp()}.csv`,
+      ["날짜", ...TS_COLUMNS.map(([, label]) => label)],
+      rows,
+    )
+  }, [timeseries, tsDays])
+
+  const handleRetentionCsv = useCallback(() => {
+    const cohorts = kpis?.retention?.cohorts
+    if (!cohorts?.length) return
+    const rows = cohorts.map((c) => [
+      c?.cohort_week ?? "",
+      c?.signups ?? 0,
+      ...[0, 1, 2, 3, 4].map((n) => (c?.[`w${n}`] === null || c?.[`w${n}`] === undefined ? "" : c[`w${n}`])),
+    ])
+    downloadCsv(`loca_retention_cohorts_${fileStamp()}.csv`, ["가입 주", "가입자", "W0", "W1", "W2", "W3", "W4"], rows)
+  }, [kpis])
+
+  // 지역 상세 통합 CSV — kOnly=true 면 contributors >= k 행만 (지자체 제출용)
+  const handleRegionCsv = useCallback((kOnly) => {
+    if (!regionInsights) return
+    const k = Number(regionInsights?.k_threshold) || 5
+    const days = Number(regionInsights?.days) || 30
+    const groups = [["시도", regionInsights?.sido], ["시군구", regionInsights?.sigungu], ["동", regionInsights?.dong]]
+    const rows = []
+    groups.forEach(([label, list]) => {
+      (list || []).forEach((r) => {
+        if (kOnly && Number(r?.contributors) < k) return
+        rows.push([label, r?.region ?? "", r?.cards ?? 0, r?.cards_recent ?? 0, r?.new_finds ?? 0, r?.contributors ?? 0])
+      })
+    })
+    const suffix = kOnly ? `_k${k}` : ""
+    downloadCsv(
+      `loca_region_insights_${days}d${suffix}_${fileStamp()}.csv`,
+      ["구분", "지역", "카드", `최근${days}일`, "새발견", "기여자"],
+      rows,
+    )
+  }, [regionInsights])
+
+  const handleAgeRegionCsv = useCallback(() => {
+    const rows = demographics?.age_x_region
+    if (!rows?.length) return
+    downloadCsv(
+      `loca_age_x_region_k${demographics?.k_threshold || 5}_${fileStamp()}.csv`,
+      ["연령대", "지역", "이용자"],
+      rows.map((r) => [ageBandLabel(r?.age_band) || r?.age_band || "", r?.region_sido ?? "", r?.users ?? 0]),
+    )
+  }, [demographics])
+
+  const handleAgeNeighborhoodCsv = useCallback(() => {
+    const rows = demographics?.age_x_neighborhood
+    if (!rows?.length) return
+    downloadCsv(
+      `loca_age_x_neighborhood_k${demographics?.k_threshold || 5}_${fileStamp()}.csv`,
+      ["연령대", "동네", "이용자", "카드"],
+      rows.map((r) => [ageBandLabel(r?.age_band) || r?.age_band || "", r?.region ?? "", r?.users ?? 0, r?.cards ?? 0]),
+    )
+  }, [demographics])
 
   useEffect(() => {
     if (phase === "ready") loadAll()
@@ -243,7 +550,15 @@ export function AdminScreen() {
     )
   }
 
-  const stamp = demographics?.generated_at || insights?.generated_at
+  const stamp = kpis?.generated_at || demographics?.generated_at || insights?.generated_at
+  // 081 적용 여부 — map_views_total 이 오면 views_total 은 '전체 이벤트 수'로 정정
+  const hasMapViews = overview?.map_views_total !== undefined && overview?.map_views_total !== null
+  const kThreshold = Number(regionInsights?.k_threshold) || 5
+  const regionDays = Number(regionInsights?.days) || 30
+  const tsMetricLabel = TS_METRICS.find((m) => m.key === tsMetric)?.label || tsMetric
+  const stickiness = Number(kpis?.activity?.mau)
+    ? `${Math.round((Number(kpis?.activity?.dau) / Number(kpis.activity.mau)) * 100)}%`
+    : "—"
 
   return (
     <div className="admin-shell">
@@ -287,17 +602,23 @@ export function AdminScreen() {
             {!overview ? (
               <p className="admin-error">통계를 불러오지 못했어요. 056 마이그레이션 적용 여부를 확인해 주세요.</p>
             ) : (
-              <div className="admin-stats">
-                <StatCard label="전체 가입자" value={num(overview.users_total)} sub={`최근 7일 +${num(overview.users_7d)} · 30일 +${num(overview.users_30d)}`} />
-                <StatCard label="전체 지도" value={num(overview.maps_total)} sub={`발행 ${num(overview.maps_published)} · 7일 +${num(overview.maps_7d)}`} />
-                <StatCard label="장소·기록(카드)" value={num(overview.features_total)} sub={`장소 ${num(overview.features_pin)} · 길 ${num(overview.features_route)} · 영역 ${num(overview.features_area)}`} />
-                <StatCard label="기록(메모)" value={num(overview.memos_total)} sub={`팔로우 ${num(overview.follows_total)}건`} />
-                <StatCard label="누적 조회수" value={num(overview.views_total)} sub={`최근 7일 ${num(overview.views_7d)}`} />
-                <StatCard label="순 방문자(30일)" value={num(overview.visitors_30d)} sub={overview.visitors_30d === null ? "집계 불가" : "고유 세션 기준"} />
-                {overview.community_total !== null && overview.community_total !== undefined ? (
-                  <StatCard label="커뮤니티 기록" value={num(overview.community_total)} sub={`승인 대기 ${num(overview.community_pending)}`} />
-                ) : null}
-              </div>
+              <>
+                <div className="admin-stats">
+                  <StatCard label="전체 가입자" value={num(overview.users_total)} sub={`최근 7일 +${num(overview.users_7d)} · 30일 +${num(overview.users_30d)}`} />
+                  <StatCard label="전체 지도" value={num(overview.maps_total)} sub={`발행 ${num(overview.maps_published)} · 7일 +${num(overview.maps_7d)}`} />
+                  <StatCard label="장소·기록(카드)" value={num(overview.features_total)} sub={`장소 ${num(overview.features_pin)} · 길 ${num(overview.features_route)} · 영역 ${num(overview.features_area)}`} />
+                  <StatCard label="기록(메모)" value={num(overview.memos_total)} sub={`팔로우 ${num(overview.follows_total)}건`} />
+                  <StatCard label={hasMapViews ? "전체 이벤트 수" : "누적 조회수"} value={num(overview.views_total)} sub={`최근 7일 ${num(overview.views_7d)}`} />
+                  {hasMapViews ? (
+                    <StatCard label="지도 조회수" value={num(overview.map_views_total)} sub={`최근 7일 +${num(overview.map_views_7d)}`} />
+                  ) : null}
+                  <StatCard label="순 방문자(30일)" value={num(overview.visitors_30d)} sub={overview.visitors_30d === null ? "집계 불가" : "고유 세션 기준"} />
+                  {overview.community_total !== null && overview.community_total !== undefined ? (
+                    <StatCard label="커뮤니티 기록" value={num(overview.community_total)} sub={`승인 대기 ${num(overview.community_pending)}`} />
+                  ) : null}
+                </div>
+                <button type="button" className="admin-csv-btn" onClick={handleOverviewCsv}>운영 스냅샷 CSV</button>
+              </>
             )}
           </section>
 
@@ -308,52 +629,197 @@ export function AdminScreen() {
         </>
       ) : null}
 
+      {/* ─────────── 핵심 지표 ─────────── */}
+      {activeTab === "kpi" ? (
+        <>
+          <p className="admin-caveat">
+            조회·세션·채집 이벤트 계측은 2026-07-19 복원 — 이전 기간의 조회/세션 지표는 과소집계입니다.
+          </p>
+
+          <section className="admin-overview" aria-label="활성 사용자 지표">
+            <h2 className="admin-section-title">활성 사용자</h2>
+            {kpisError ? (
+              <p className="admin-error">{kpisError} (supabase/migrations/081 적용 확인)</p>
+            ) : !kpis ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <div className="admin-stats">
+                <StatCard label="DAU" value={num(kpis?.activity?.dau)} sub={`기록 기준 ${num(kpis?.content?.dau)}`} />
+                <StatCard label="WAU" value={num(kpis?.activity?.wau)} sub={`기록 기준 ${num(kpis?.content?.wau)}`} />
+                <StatCard label="MAU" value={num(kpis?.activity?.mau)} sub={`기록 기준 ${num(kpis?.content?.mau)}`} />
+                <StatCard label="스티키니스" value={stickiness} sub="DAU / MAU" />
+                <StatCard label="오늘 세션" value={num(kpis?.activity?.sessions_today)} sub="최근 24시간 고유 세션" />
+                <StatCard label="재방문 방문자(30일)" value={num(kpis?.activity?.returning_visitors_30d)} sub="2일 이상 방문한 브라우저" />
+              </div>
+            )}
+          </section>
+
+          <section className="admin-overview" aria-label="일별 추이">
+            <h2 className="admin-section-title">일별 추이</h2>
+            {timeseriesError ? (
+              <p className="admin-error">{timeseriesError} (supabase/migrations/081 적용 확인)</p>
+            ) : !timeseries ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <div className="admin-kchips" role="group" aria-label="기간 선택">
+                  {TS_DAY_OPTIONS.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`admin-kchip${tsDays === d ? " is-active" : ""}`}
+                      onClick={() => selectTsDays(d)}
+                    >
+                      {d}일
+                    </button>
+                  ))}
+                </div>
+                <div className="admin-kchips" role="group" aria-label="지표 선택">
+                  {TS_METRICS.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      className={`admin-kchip${tsMetric === m.key ? " is-active" : ""}`}
+                      onClick={() => setTsMetric(m.key)}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <DailyChart series={timeseries?.series} metricKey={tsMetric} metricLabel={tsMetricLabel} />
+                {(timeseries?.series || []).length ? (
+                  <>
+                    <table className="admin-table admin-table--tight">
+                      <thead>
+                        <tr>
+                          <th>지표</th>
+                          {(timeseries?.series || []).map((r, i) => <th key={r?.d || i}>{shortDate(r?.d)}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {TS_COLUMNS.map(([key, label]) => (
+                          <tr key={key}>
+                            <td>{label}</td>
+                            {(timeseries?.series || []).map((r, i) => <td key={r?.d || i}>{num(r?.[key])}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <button type="button" className="admin-csv-btn" onClick={handleTimeseriesCsv}>CSV 다운로드</button>
+                  </>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          <section className="admin-overview" aria-label="리텐션 코호트">
+            <h2 className="admin-section-title">리텐션 (가입 주 코호트, 최근 8주)</h2>
+            {kpisError ? (
+              <p className="admin-error">{kpisError} (supabase/migrations/081 적용 확인)</p>
+            ) : !kpis ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <CohortTable cohorts={kpis?.retention?.cohorts} />
+                {(kpis?.retention?.cohorts || []).length ? (
+                  <button type="button" className="admin-csv-btn" onClick={handleRetentionCsv}>CSV 다운로드</button>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          <section className="admin-overview" aria-label="전환 퍼널">
+            <h2 className="admin-section-title">퍼널 — 가입 → 채집 → 지도 구성 → 발행 → 공유</h2>
+            {kpisError ? (
+              <p className="admin-error">{kpisError} (supabase/migrations/081 적용 확인)</p>
+            ) : !kpis ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <h3 className="admin-subtitle">전체 기간</h3>
+                <FunnelBars data={kpis?.funnel} />
+                <h3 className="admin-subtitle">최근 30일 가입자</h3>
+                <FunnelBars data={kpis?.funnel_30d} />
+              </>
+            )}
+          </section>
+        </>
+      ) : null}
+
       {/* ─────────── 지역·태그 ─────────── */}
       {activeTab === "region" ? (
-        <section className="admin-overview" aria-label="지역 자산">
-          <h2 className="admin-section-title">지역 자산</h2>
-          {insightsError ? (
-            <p className="admin-error">{insightsError} (057 적용 여부 확인)</p>
-          ) : !insights ? (
-            <p className="admin-empty-note">데이터를 불러오는 중…</p>
-          ) : (
-            <>
-              <div className="admin-stats">
-                <StatCard label="NEW FIND (지도에 없던 곳)" value={num(insights.new_find_total)} sub={`최근 7일 +${num(insights.new_find_7d)}`} />
-                <StatCard label="동네 태깅률" value={pct(insights.features_region_tagged, insights.features_geo_total)} sub={`${num(insights.features_region_tagged)} / ${num(insights.features_geo_total)} 카드`} />
-                <StatCard label="기록된 동네 수" value={(insights.region_top || []).length >= 15 ? "15+" : num((insights.region_top || []).length)} sub="카드가 있는 법정동" />
-              </div>
-              {(insights.region_top || []).length ? (
-                <>
-                  <h3 className="admin-subtitle">동네 랭킹 (카드 많은 순 TOP 15)</h3>
-                  <table className="admin-table">
-                    <thead><tr><th>동네</th><th>카드</th><th>최근 7일</th><th>새발견</th></tr></thead>
-                    <tbody>
-                      {insights.region_top.map((row) => (
-                        <tr key={row.region}>
-                          <td>{row.region}</td>
-                          <td>{num(row.total)}</td>
-                          <td>{row.d7 ? `+${num(row.d7)}` : "–"}</td>
-                          <td>{num(row.new_finds)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              ) : (
-                <p className="admin-empty-note">아직 동네 태깅된 카드가 없어요.</p>
-              )}
-              {(insights.top_tags || []).length ? (
-                <>
-                  <h3 className="admin-subtitle">인기 태그 TOP 15</h3>
-                  <div className="admin-chips" aria-label="인기 태그">
-                    {insights.top_tags.map((t) => (<span key={t.tag} className="admin-chip">#{t.tag} <em>{num(t.cnt)}</em></span>))}
-                  </div>
-                </>
-              ) : null}
-            </>
-          )}
-        </section>
+        <>
+          <section className="admin-overview" aria-label="지역 자산">
+            <h2 className="admin-section-title">지역 자산</h2>
+            {insightsError ? (
+              <p className="admin-error">{insightsError} (057 적용 여부 확인)</p>
+            ) : !insights ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <div className="admin-stats">
+                  <StatCard label="NEW FIND (지도에 없던 곳)" value={num(insights.new_find_total)} sub={`최근 7일 +${num(insights.new_find_7d)}`} />
+                  <StatCard label="동네 태깅률" value={pct(insights.features_region_tagged, insights.features_geo_total)} sub={`${num(insights.features_region_tagged)} / ${num(insights.features_geo_total)} 카드`} />
+                  <StatCard label="기록된 동네 수" value={(insights.region_top || []).length >= 15 ? "15+" : num((insights.region_top || []).length)} sub="카드가 있는 법정동" />
+                </div>
+                {(insights.region_top || []).length ? (
+                  <>
+                    <h3 className="admin-subtitle">동네 랭킹 (카드 많은 순 TOP 15)</h3>
+                    <table className="admin-table">
+                      <thead><tr><th>동네</th><th>카드</th><th>최근 7일</th><th>새발견</th></tr></thead>
+                      <tbody>
+                        {insights.region_top.map((row) => (
+                          <tr key={row.region}>
+                            <td>{row.region}</td>
+                            <td>{num(row.total)}</td>
+                            <td>{row.d7 ? `+${num(row.d7)}` : "–"}</td>
+                            <td>{num(row.new_finds)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                ) : (
+                  <p className="admin-empty-note">아직 동네 태깅된 카드가 없어요.</p>
+                )}
+                {(insights.top_tags || []).length ? (
+                  <>
+                    <h3 className="admin-subtitle">인기 태그 TOP 15</h3>
+                    <div className="admin-chips" aria-label="인기 태그">
+                      {insights.top_tags.map((t) => (<span key={t.tag} className="admin-chip">#{t.tag} <em>{num(t.cnt)}</em></span>))}
+                    </div>
+                  </>
+                ) : null}
+              </>
+            )}
+          </section>
+
+          <section className="admin-overview" aria-label="지역 상세">
+            <h2 className="admin-section-title">지역 상세 (최근 {regionDays}일 기준 최근 활동)</h2>
+            {regionInsightsError ? (
+              <p className="admin-error">{regionInsightsError} (supabase/migrations/081 적용 확인)</p>
+            ) : !regionInsights ? (
+              <p className="admin-empty-note">데이터를 불러오는 중…</p>
+            ) : (
+              <>
+                <p className="admin-empty-note">
+                  기여자가 {num(kThreshold)}명 미만인 행은 <span className="admin-kbadge">k&lt;{kThreshold}</span> 표시 — 외부(지자체) 제출 시 제외 대상이에요.
+                  {Number(regionInsights?.untagged_cards) ? ` · 좌표는 있지만 동네 미태깅 카드 ${num(regionInsights.untagged_cards)}개` : ""}
+                </p>
+                <h3 className="admin-subtitle">시도</h3>
+                <RegionDetailTable rows={regionInsights?.sido} kThreshold={kThreshold} days={regionDays} />
+                <h3 className="admin-subtitle">시군구 (TOP 30)</h3>
+                <RegionDetailTable rows={regionInsights?.sigungu} kThreshold={kThreshold} days={regionDays} />
+                <h3 className="admin-subtitle">동 (TOP 30)</h3>
+                <RegionDetailTable rows={regionInsights?.dong} kThreshold={kThreshold} days={regionDays} />
+                <div className="admin-csv-row">
+                  <button type="button" className="admin-csv-btn" onClick={() => handleRegionCsv(false)}>내부용 CSV</button>
+                  <button type="button" className="admin-csv-btn" onClick={() => handleRegionCsv(true)}>지자체 제출용 CSV (k-익명)</button>
+                </div>
+              </>
+            )}
+          </section>
+        </>
       ) : null}
 
       {/* ─────────── 인구통계 ─────────── */}
@@ -424,6 +890,7 @@ export function AdminScreen() {
                       ))}
                     </tbody>
                   </table>
+                  <button type="button" className="admin-csv-btn" onClick={handleAgeRegionCsv}>CSV 다운로드 (k-익명 적용본)</button>
                 </>
               ) : null}
 
@@ -444,6 +911,7 @@ export function AdminScreen() {
                       ))}
                     </tbody>
                   </table>
+                  <button type="button" className="admin-csv-btn" onClick={handleAgeNeighborhoodCsv}>CSV 다운로드 (k-익명 적용본)</button>
                 </>
               ) : null}
 
@@ -556,6 +1024,7 @@ export function AdminScreen() {
             {feedbackRecords.map((row) => {
               const ctx = row.context || {}
               const busy = feedbackBusyId === row.id
+              const noteOpen = noteEditId === row.id
               return (
                 <article key={row.id} className="admin-card">
                   <div className="admin-card__head">
@@ -588,7 +1057,36 @@ export function AdminScreen() {
                         {busy ? "..." : action.label}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      className="admin-act"
+                      disabled={busy}
+                      onClick={() => toggleNoteEditor(row)}
+                    >
+                      {noteOpen ? "메모 닫기" : "메모"}
+                    </button>
                   </div>
+                  {noteOpen ? (
+                    <div className="admin-note-editor">
+                      <textarea
+                        value={noteDraft}
+                        onChange={(e) => setNoteDraft(e.target.value)}
+                        placeholder="운영 메모 (내부용 — 사용자에게 보이지 않아요)"
+                        maxLength={500}
+                      />
+                      <p className="admin-caption">{noteDraft.length}/500</p>
+                      <div className="admin-csv-row">
+                        <button
+                          type="button"
+                          className="admin-csv-btn"
+                          disabled={busy || !noteDraft.trim()}
+                          onClick={() => handleSaveNote(row)}
+                        >
+                          {busy ? "저장 중…" : "메모 저장"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </article>
               )
             })}

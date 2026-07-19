@@ -4,29 +4,40 @@ import { MEDIA_POLICY } from "./mediaPolicy"
 const QUEUE_KEY = "loca.event_queue"
 const MAX_RETRY = 5
 
-// ─── 대시보드 지표에 필요한 이벤트 타입 정의 ───
-// 대시보드 집계 기준과 일치해야 한다.
-// unique_visits, total_views  ← map_view
-// pin_click_rate              ← feature_click / map_view
-// checkin_rate                ← checkin (DISTINCT session) / map_view (DISTINCT session)
-// completion_rate             ← completion / checkin (DISTINCT session)
-// qr_share                   ← source='qr' / total map_view
-// avg_satisfaction            ← survey_responses.rating AVG (별도 테이블)
-// survey_count               ← survey_responses COUNT (별도 테이블)
+// ─── 클라이언트 이벤트 타입 정의 (B2C) ───
+// view_logs 테이블에 적재되는 제품 사용 이벤트 전체 목록.
+// /admin 운영 통계·데이터 인사이트 집계의 원천이 된다.
+// 이벤트 타입 추가 시 supabase/migrations/081 의 view_logs_guard 화이트리스트도 함께 갱신.
 export const EVENT_TYPES = {
+  // 열람/세션
   MAP_VIEW: "map_view",
+  SESSION_START: "session_start",
+  SESSION_END: "session_end",
+  QR_SCAN: "qr_scan",
+  // 피처(장소 카드) 상호작용
   FEATURE_CLICK: "feature_click",
   FEATURE_VIEW: "feature_view",
   FEATURE_VIEW_END: "feature_view_end",
-  QR_SCAN: "qr_scan",
-  SESSION_END: "session_end",
-  SHARE_CLICK: "share_click",
-  MAP_SAVE: "map_save",
   FEATURE_CREATE: "feature_create",
+  COLLECT: "collect",
+  // 지도 라이프사이클
+  MAP_SAVE: "map_save",
   MAP_PUBLISH: "map_publish",
   MAP_UNPUBLISH: "map_unpublish",
   MAP_IMPORT: "map_import",
+  MAP_ADD_TO_PROFILE: "map_add_to_profile",
+  MAP_REMOVE_FROM_PROFILE: "map_remove_from_profile",
+  MAP_SET_PUBLIC: "map_set_public",
+  MAP_SET_UNLISTED: "map_set_unlisted",
+  // 공유/소셜
+  SHARE_CLICK: "share_click",
+  PLACE_CARD_SHARE: "place_card_share",
   FOLLOW_TOGGLE: "follow_toggle",
+  MAP_LIKE: "map_like",
+  // 탐색/산책/피드백
+  WALK_START: "walk_start",
+  EXPLORE_DETAIL_VIEW: "explore_detail_view",
+  FEEDBACK_SUBMITTED: "feedback_submitted",
 }
 
 /**
@@ -97,6 +108,24 @@ export function markMapViewed(mapId) {
   if (_viewedMaps.has(key)) return false
   _viewedMaps.add(key)
   return true
+}
+
+// ─── session_start 중복 방지 ───
+const SESSION_STARTED_KEY = "loca_session_started"
+
+/**
+ * 세션 시작(session_start)을 기록해도 되는지 확인한다.
+ * sessionStorage 가드로 탭 세션당 1회만 true — 새로고침/리렌더 중복 방지.
+ * (markMapViewed 패턴과 동일한 1회성 가드)
+ */
+export function markSessionStarted() {
+  try {
+    if (sessionStorage.getItem(SESSION_STARTED_KEY)) return false
+    sessionStorage.setItem(SESSION_STARTED_KEY, "1")
+    return true
+  } catch {
+    return false
+  }
 }
 
 // ─── 이벤트 큐 (오프라인 대응) ───
@@ -224,6 +253,14 @@ export async function flushEventQueue() {
  * @param {object} payload - { map_id, feature_id?, source?, referrer?, meta?: {} }
  */
 export async function logEvent(eventType, payload = {}) {
+  // GA4 미러링 — DB 적재 성공/실패와 무관하게 발화 시점에 1회
+  try {
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      const mirrorSource = payload.source || payload.referrer || getUtmSource() || "direct"
+      window.gtag("event", eventType, { map_id: payload.map_id || undefined, source: mirrorSource || undefined })
+    }
+  } catch { /* no-op */ }
+
   if (!hasSupabaseEnv || !supabase) return
 
   // 오프라인이면 바로 큐에 저장

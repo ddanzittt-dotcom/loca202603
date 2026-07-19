@@ -4,7 +4,7 @@ import { MapErrorBoundary } from "../components/MapErrorBoundary"
 import { FeatureEmoji, resolvePlaceMarkerEmoji } from "../components/FeatureEmoji"
 import { MapRenderer } from "../components/MapRenderer"
 import { hasSupabaseEnv } from "../lib/supabase"
-import { logEvent } from "../lib/analytics"
+import { EVENT_TYPES, logEvent, markMapViewed, setUtmSource } from "../lib/analytics"
 import { getFeatureCenter } from "../lib/appUtils"
 import { triggerSelectionFeedback } from "../lib/haptics"
 import { saveMap as saveMapRecord } from "../lib/mapService"
@@ -72,6 +72,28 @@ export function SharedMapViewer({ map, features, onSaveToApp, onBack, savingToAp
     const timer = window.setTimeout(() => setIntroPlaying(false), 2000)
     return () => window.clearTimeout(timer)
   }, [])
+
+  // 지도 열람(map_view) 로깅 — markMapViewed 가드로 세션당 지도별 1회.
+  // 발행 지도(/s/:slug, DB 로드)만 map.slug 를 가지므로 slug 유무로 두 경로를 구분한다:
+  //   발행 지도 → map_id 로 실제 maps(id) 전달 (view_logs FK)
+  //   자체 포함 공유(?data=) → 역직렬화된 id 라 FK 위반 — meta.map_ref 로만 남긴다
+  useEffect(() => {
+    if (!map?.id) return
+    // 유입 utm_source 캡처 (App 부트 캡처의 보조 — 쿼리가 남아 있으면 세션에 저장)
+    try {
+      const utm = new URLSearchParams(window.location.search).get("utm_source")
+      if (utm) setUtmSource(utm)
+    } catch { /* no-op */ }
+    if (!markMapViewed(map.id)) return
+    const isPublished = Boolean(map.slug)
+    logEvent(EVENT_TYPES.MAP_VIEW, {
+      ...(isPublished ? { map_id: map.id } : {}),
+      meta: {
+        ...(map.slug ? { slug: map.slug } : {}),
+        ...(isPublished ? {} : { map_ref: map.id, mode: "adhoc" }),
+      },
+    })
+  }, [map?.id, map?.slug])
 
   const featureCounts = useMemo(() => {
     const counts = { pin: 0, route: 0, area: 0 }

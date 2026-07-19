@@ -93,6 +93,46 @@ export async function getAdminDemographics() {
   return parseRpcJson(data) || {}
 }
 
+// 일별 활동 시계열 (get_admin_timeseries RPC, migration 081) — platform_admin 전용
+// 반환: { days, series: [{ d, new_users, new_cards, collects, map_views, sessions, active_users, publishes, saves, memos, shares }], generated_at }
+export async function getAdminTimeseries(days = 30) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_timeseries", { p_days: days })
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
+// 핵심 KPI (get_admin_kpis RPC, migration 081) — platform_admin 전용
+// 반환: { activity: {dau,wau,mau,sessions_today,returning_visitors_30d}, content: {dau,wau,mau},
+//         retention: { cohorts: [...] }, funnel, funnel_30d, generated_at }
+export async function getAdminKpis() {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_kpis")
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
+// 지역 상세 인사이트 (get_admin_region_insights RPC, migration 081) — platform_admin 전용
+// 서버는 contributors 원값을 반환(내부 대시보드용) — 외부 제출용 k-익명 필터는 클라이언트 담당
+export async function getAdminRegionInsights(days = 30) {
+  const supabase = requireSupabase()
+  const { data, error } = await supabase.rpc("get_admin_region_insights", { p_days: days })
+  if (error) {
+    const wrapped = new Error(friendlyAdminError(error))
+    wrapped.cause = error
+    throw wrapped
+  }
+  return parseRpcJson(data) || {}
+}
+
 export async function updateModerationStatus(recordId, status) {
   const supabase = requireSupabase()
   const { data, error } = await supabase.rpc("update_community_moderation_status", {

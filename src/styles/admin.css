@@ -1,7 +1,7 @@
 /* 커뮤니티 관리 화면 (/admin) — tokens-v2 기반 */
 
 .admin-shell {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   min-height: 100vh;
   padding: 16px 14px 48px;
@@ -369,6 +369,163 @@
 }
 
 .admin-error { color: var(--accent-deep); font-size: 13px; font-weight: 600; }
+
+/* ── 핵심 지표 탭 (081) ── */
+
+/* 계측 복원 캐비앳 안내 */
+.admin-caveat {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-deep);
+  color: var(--ink-mute);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* 기간·지표 선택 칩 — admin-chips 변형 (선택 상태 강조) */
+.admin-kchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.admin-kchip {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink-mute);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-kchip.is-active {
+  background: var(--ink-strong);
+  border-color: var(--ink-strong);
+  color: #fff;
+}
+
+/* 일별 바 차트 — 막대 많으면 가로 스크롤 */
+.admin-bars-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.admin-bars--daily {
+  width: max-content;
+  min-width: 100%;
+}
+.admin-bars--daily .admin-bar { flex: 0 0 auto; width: 30px; }
+.admin-bars--daily .admin-bar__count { font-size: 9.5px; min-height: 12px; }
+.admin-bars--daily .admin-bar__label { min-height: 12px; white-space: nowrap; }
+
+/* CSV 다운로드 버튼 (기존 버튼 톤) */
+.admin-csv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.admin-csv-btn:hover:not(:disabled) { background: var(--bg-deep); }
+.admin-csv-btn:disabled { opacity: 0.5; cursor: default; }
+.admin-csv-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 리텐션 코호트 표 — 셀 배경 강도는 인라인 스타일(잔존율 비례) */
+.admin-cohort td { text-align: center; }
+.admin-cohort td:first-child { text-align: left; }
+.admin-cohort__pct { font-size: 10.5px; color: var(--ink-mute); font-weight: 600; }
+.admin-cohort__na { color: var(--ink-faint); }
+
+/* 퍼널 (가입→채집→지도 구성→발행→공유) */
+.admin-funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+.admin-funnel__row { display: flex; align-items: center; gap: 8px; }
+.admin-funnel__label {
+  flex: 0 0 64px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.admin-funnel__track {
+  flex: 1;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-deep);
+  overflow: hidden;
+}
+.admin-funnel__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+.admin-funnel__value {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-mute);
+}
+.admin-funnel__value em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-left: 4px;
+}
+
+/* k-익명 미달 뱃지 (지역 상세) */
+.admin-kbadge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: #FCEBEB;
+  color: #a3211f;
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* 피드백 운영 메모 인라인 편집 */
+.admin-note-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+.admin-note-editor textarea {
+  width: 100%;
+  min-height: 64px;
+  padding: 9px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+.admin-note-editor .admin-csv-btn { margin-top: 0; }
+.admin-note-editor .admin-caption {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+  text-align: right;
+}
 
 /* 토스트 */
 .admin-toast {

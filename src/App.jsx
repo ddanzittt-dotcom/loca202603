@@ -33,7 +33,7 @@ import {
   themePalette,
 } from "./lib/appUtils"
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
-import { logEvent } from "./lib/analytics"
+import { EVENT_TYPES, logEvent, markSessionStarted, setUtmSource } from "./lib/analytics"
 import { captureError } from "./lib/monitoring"
 import { addFeatureMemo, backfillRegionNames, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
@@ -455,6 +455,15 @@ export default function App() {
     return () => window.removeEventListener("vite:preloadError", handlePreloadError)
   }, [])
 
+  // 유입 utm_source 캡처 — 아래 URL 정리 effect(replaceState)가 쿼리를 지우기 전에
+  // 세션에 보관해 이후 모든 이벤트(map_view 등)에 자동 포함되게 한다.
+  useEffect(() => {
+    try {
+      const utm = new URLSearchParams(window.location.search).get("utm_source")
+      if (utm) setUtmSource(utm)
+    } catch { /* no-op */ }
+  }, [])
+
   useEffect(() => { setStorageWarningCallback(showToast) }, [showToast])
   useEffect(() => {
     const isEditableElement = (el) => {
@@ -541,6 +550,15 @@ export default function App() {
     setSharedMapData, setShareEditorOpen,
     showToast, routeAtLoad,
   })
+
+  // 세션 시작 로깅 — sessionStorage 가드로 탭 세션당 1회.
+  // 로그인 복원(authReady) 후에 발화해 authed 판정을 정확히 한다 (supabase env 없으면 no-op).
+  useEffect(() => {
+    if (hasSupabaseEnv && !authReady) return
+    if (markSessionStarted()) {
+      logEvent(EVENT_TYPES.SESSION_START, { meta: { authed: Boolean(authUser) } })
+    }
+  }, [authReady, authUser])
 
   const needsAuthForPersonalArea = hasSupabaseEnv && authReady && !authUser
 
@@ -1359,6 +1377,8 @@ export default function App() {
   const [collectSheetOpen, setCollectSheetOpen] = useState(false)
   // 탐색 큐레이션 → 등록 프리필 (행사/공간 카드에서 진입)
   const [collectPrefill, setCollectPrefill] = useState(null)
+  // 채집 유입 경로 — 산책 모드 경유("walk")만 구분, 나머지는 기본 시트("collect_sheet")
+  const collectOriginRef = useRef("collect_sheet")
 
   // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
   const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
@@ -1838,6 +1858,17 @@ export default function App() {
     }
   }, [activeMapId, activeMapSource, activeTab, mapsView, routeAtLoad, sharedMapData])
 
+  // 산책 모드 진입 로깅 — 타이틀 버튼·/walk 딥링크 어느 경로든 켜질 때 1회
+  const walkStartLoggedRef = useRef(false)
+  useEffect(() => {
+    if (showWalk && !walkStartLoggedRef.current) {
+      walkStartLoggedRef.current = true
+      logEvent(EVENT_TYPES.WALK_START)
+    } else if (!showWalk) {
+      walkStartLoggedRef.current = false
+    }
+  }, [showWalk])
+
   // --- Render ---
 
   if (sharedMapData) {
@@ -1919,6 +1950,7 @@ export default function App() {
       lng: spot.lng,
       asNewFind: true,
     }
+    collectOriginRef.current = "walk"
     setCollectPrefill(prefill)
     setCollectSheetOpen(true)
     return true
@@ -2465,7 +2497,7 @@ export default function App() {
       <CollectSheet
         open={collectSheetOpen}
         prefill={collectPrefill}
-        onClose={() => { setCollectSheetOpen(false); setCollectPrefill(null) }}
+        onClose={() => { setCollectSheetOpen(false); setCollectPrefill(null); collectOriginRef.current = "collect_sheet" }}
         cloudMode={cloudMode}
         currentUserId={authUser?.id || viewerProfile.id}
         myLocation={myLocation}
@@ -2479,6 +2511,13 @@ export default function App() {
           )))
         }}
         onCollected={(collected, { isNewFind } = {}) => {
+          // 채집 완료 로깅 — 지도 없이 채집되면 map_id 는 null, feature_id 는 meta 로 합류
+          logEvent(EVENT_TYPES.COLLECT, {
+            map_id: collected?.mapId || null,
+            feature_id: collected?.id || null,
+            meta: { is_new_find: Boolean(isNewFind), origin: collectOriginRef.current },
+          })
+          collectOriginRef.current = "collect_sheet"
           setFeatures((current) => [collected, ...current])
           setCollectSheetOpen(false)
           setCollectPrefill(null)
