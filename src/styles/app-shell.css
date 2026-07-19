@@ -995,6 +995,15 @@
     padding: 94px clamp(28px, 4vw, 64px) 48px;
   }
 
+  /* 내 수첩(대시보드)·내 정보(계정)은 별도 컨테이너 클래스가 없어, 베이스의
+     .app-shell .web-section.screen--scroll(0,3,0) 상단 여백(24px)에 밀려 헤더
+     (FIELD NOTE 아이브로우+제목)가 58px 배너에 가려졌다. 같은 특이도로 상단
+     여백을 되살려 배너 아래로 내린다. (maps-library 규칙과 동일 패턴) */
+  .app-shell .web-section--dashboard.screen--scroll,
+  .app-shell .web-section--account.screen--scroll {
+    padding: 94px clamp(28px, 4vw, 64px) 48px;
+  }
+
   .web-section__inner {
     width: min(100%, 1440px);
   }
@@ -4352,6 +4361,14 @@
   font-size: 10px;
   color: #8A8574;
   margin-bottom: 4px;
+}
+.bd-editfield__opt {
+  font-family: Pretendard, sans-serif;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #B5AE9C;
+  margin-left: 6px;
 }
 .bd-editinput {
   width: 100%;
