@@ -30,6 +30,7 @@
     "ingest:heritage-detail": "node scripts/ingest/enrich-heritage-detail.mjs",
     "ingest:museums": "node scripts/ingest/ingest-museums.mjs",
     "ingest:all": "node scripts/ingest/run-all.mjs",
+    "backup:media": "node scripts/backup-media.mjs",
     "preview:host": "vite preview --host 127.0.0.1 --port 4173",
     "cap:copy": "npm run build && npx cap copy",
     "cap:sync": "npm run build && npx cap sync",
