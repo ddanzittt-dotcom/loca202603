@@ -175,6 +175,7 @@ export function PlacesScreen({
             <span className="bd-bindertt">
               {searching ? `검색 "${query.trim()}" ${filteredFeatures.length}장` : `카드 ${recordFeatures.length}장`}
             </span>
+            <span className="bd-headhint">🖼 카드의 표지사진을 바꾸면 예쁜 카드로 바뀌어요!</span>
             <label className="bd-pagesize">
               <span>페이지당</span>
               <select value={pageSize} onChange={(event) => changePageSize(Number(event.target.value))} aria-label="페이지당 카드 수">

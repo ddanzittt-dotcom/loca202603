@@ -406,9 +406,9 @@ export function PlaceFlipCard({
     setPhotoBusy(true)
     try {
       await onSetPhoto(file)
-      showToast?.("사진을 바꿨어요")
+      showToast?.("표지를 바꿨어요")
     } catch {
-      showToast?.("사진 담기에 실패했어요. 잠시 후 다시 시도해 주세요.")
+      showToast?.("표지를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.")
     } finally {
       setPhotoBusy(false)
     }
@@ -630,7 +630,7 @@ export function PlaceFlipCard({
                     onClick={() => fileInputRef.current?.click()}
                     disabled={photoBusy}
                   >
-                    📷 사진 {heroPhoto ? "변경" : "담기"}
+                    📷 표지 바꾸기
                   </button>
                   <input
                     ref={fileInputRef}
