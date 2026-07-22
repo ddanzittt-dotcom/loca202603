@@ -7318,11 +7318,35 @@
 .hcat-duo {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
+  gap: 10px;
 }
 @media (min-width: 960px) {
   /* 배너 위 정렬 — 치즈냥이 위쪽에 붙어 콘텐츠 버튼 영역을 침범하지 않게 */
-  .hcat-duo { align-items: flex-start; gap: 6px; }
+  .hcat-duo { align-items: flex-start; gap: 10px; }
+}
+
+/* 고양이 + 아래 라벨 (말풍선 대신 상시 이름표) */
+.hcat-one {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.hcat-label {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 9.5px;
+  line-height: 1.15;
+  color: #1F1A12;
+  background: rgba(255, 253, 244, 0.94);
+  border: 1.5px solid #1F1A12;
+  border-radius: 6px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 1.5px 1.5px 0 rgba(31, 26, 18, 0.3);
+}
+@media (min-width: 960px) {
+  .hcat-label { font-size: 10.5px; }
 }
 .ccat {
   position: relative;

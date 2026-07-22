@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import { isCheeseGreetSeen, markCheeseGreetSeen } from "../../lib/onboarding"
 
 // 도우미 고양이 듀오 — "로카냥"(도움말) + "치즈냥"(피드백 귓속말).
 // 좌하단(데스크톱: 레일 하단 중앙)에 상주하며, 로카냥을 누르면 도움말 메뉴,
@@ -222,53 +221,9 @@ const HELP_TOPICS = [
   { chapter: "walk", emoji: "🐾", label: "산책 모드" },
 ]
 
-// 랜덤 말풍선 — 이따금 로카냥이 말을 건다
-const IDLE_LINES = [
-  "도움이 필요해?",
-  "나를 누르면 내가 알려줄게!",
-  "궁금한 거 있으면 눌러줘",
-  "채집은 잘 되고 있어?",
-  "오늘도 좋은 채집 되길! 냐옹",
-  "지도 만들기, 생각보다 쉬워!",
-  "마음에 든 곳은 바로 채집해봐",
-  "카드를 누르면 기록을 남길 수 있어",
-  "산책 모드 해봤어? 타이틀 화면에서 들어갈 수 있어",
-  "'내 수첩'의 동네 도감, 채워지고 있어?",
-  "새발견 카드엔 ★이 붙어. 몇 장 모았어?",
-  "카드 '공유'로 인스타 이미지도 만들 수 있다냥",
-  "지도는 친구랑 같이 만들 수도 있어!",
-  "냐옹~",
-]
-
-// 치즈냥 말풍선 — 로카냥보다 드물게(약 30%) 끼어든다
-const CHEESE_IDLE_LINES = [
-  "로카에게 하고픈 말 있어? 귓속말해줘!",
-  "칭찬도 불만도 다 들어줄게",
-  "불편한 게 있으면 나한테 살짝 말해줘",
-  "네 이야기가 로카를 바꿔 냥",
-]
-const CHEESE_GREET_LINE = "나는 치즈냥! 로카에게 전할 이야기가 있으면 나한테 귓속말해줘"
-
-const BUBBLE_FIRST_DELAY = 2500 // 첫 등장
-const BUBBLE_SHOW_MS = 4200 // 표시 시간
-const BUBBLE_GAP_MS = 14000 // 다음 등장까지
-
-// 이야기 제출 모션 타임라인 — 감사 폴짝 → 우측 대시 → 자리 비움 → 복귀 인사.
-// 각 페이즈는 자기 지속시간이 끝나면 다음 페이즈로 넘어간다 (idle 은 종착).
-const RUN_PHASE_NEXT = {
-  thanks: { phase: "dash", after: 1200 },
-  dash: { phase: "away", after: 800 },
-  away: { phase: "return", after: 12000 },
-  return: { phase: "idle", after: 3000 },
-}
-
-export function HelperCat({ onOpenTutorial, onOpenFeedback, runSignal = 0, showFeedbackCat = false }) {
+export function HelperCat({ onOpenTutorial, onOpenFeedback, showFeedbackCat = false }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [idleBubble, setIdleBubble] = useState(null) // { who: "loca"|"cheese", text }
-  const [runPhase, setRunPhase] = useState("idle") // idle → thanks → dash → away → return
   const rootRef = useRef(null)
-  const lastLineRef = useRef("")
-  const greetPendingRef = useRef(showFeedbackCat && !isCheeseGreetSeen())
 
   // 바깥 탭/ESC 로 메뉴 닫기
   useEffect(() => {
@@ -287,86 +242,8 @@ export function HelperCat({ onOpenTutorial, onOpenFeedback, runSignal = 0, showF
     }
   }, [menuOpen])
 
-  // 랜덤 말풍선 루프 — 한 번에 한 마리만 말한다. 메뉴가 열려 있거나
-  // 치즈냥이 이야기를 전달하러 간 동안은 쉬어간다.
-  useEffect(() => {
-    if (menuOpen || runPhase !== "idle") return undefined
-    let showTimer = null
-    let hideTimer = null
-    const speak = () => {
-      let who = "loca"
-      let line = ""
-      if (greetPendingRef.current) {
-        // 치즈냥 첫 인사 — 1회만
-        greetPendingRef.current = false
-        markCheeseGreetSeen()
-        who = "cheese"
-        line = CHEESE_GREET_LINE
-      } else {
-        who = showFeedbackCat && Math.random() < 0.3 ? "cheese" : "loca"
-        const pool = (who === "cheese" ? CHEESE_IDLE_LINES : IDLE_LINES).filter((l) => l !== lastLineRef.current)
-        line = pool[Math.floor(Math.random() * pool.length)]
-      }
-      lastLineRef.current = line
-      setIdleBubble({ who, text: line })
-      hideTimer = window.setTimeout(() => {
-        setIdleBubble(null)
-        showTimer = window.setTimeout(speak, BUBBLE_GAP_MS)
-      }, BUBBLE_SHOW_MS)
-    }
-    showTimer = window.setTimeout(speak, BUBBLE_FIRST_DELAY)
-    return () => {
-      window.clearTimeout(showTimer)
-      window.clearTimeout(hideTimer)
-    }
-  }, [menuOpen, runPhase, showFeedbackCat])
-
-  // 이야기 제출 모션 시작 — runSignal 이 바뀌면 thanks 페이즈로 진입
-  useEffect(() => {
-    if (!runSignal) return undefined
-    const kick = window.setTimeout(() => {
-      setMenuOpen(false)
-      setIdleBubble(null)
-      setRunPhase("thanks")
-    }, 0)
-    return () => window.clearTimeout(kick)
-  }, [runSignal])
-
-  // 페이즈 체인 — 각 페이즈가 제 시간이 지나면 다음 페이즈를 예약한다.
-  // 언마운트 시 cleanup 으로 타이머가 정리되고, 리마운트하면 idle(복귀 완료) 상태로 시작.
-  useEffect(() => {
-    const next = RUN_PHASE_NEXT[runPhase]
-    if (!next) return undefined
-    const timer = window.setTimeout(() => setRunPhase(next.phase), next.after)
-    return () => window.clearTimeout(timer)
-  }, [runPhase])
-
-  const handleCheeseClick = () => {
-    if (runPhase !== "idle") return
-    setMenuOpen(false)
-    if (onOpenFeedback) {
-      setIdleBubble(null)
-      onOpenFeedback()
-    } else {
-      // 피드백 시트 연결 전 임시 안내 (2단계에서 onOpenFeedback 으로 대체)
-      setIdleBubble({ who: "cheese", text: "귓속말 창구를 준비하고 있어! 조금만 기다려 냥" })
-    }
-  }
-
-  const cheeseBubbleText =
-    runPhase === "thanks"
-      ? "고마워! 잘 전달할게!"
-      : runPhase === "return"
-        ? "잘 전달했어! 냥"
-        : idleBubble?.who === "cheese"
-          ? idleBubble.text
-          : ""
-
   return (
     <div className="hcat" ref={rootRef}>
-      {idleBubble && idleBubble.who === "loca" && !menuOpen ? (
-        <div className="hcat-bubble" aria-hidden="true">{idleBubble.text}</div>
-      ) : null}
       {menuOpen ? (
         <div className="hcat-menu" role="menu" aria-label="도움말 메뉴">
           <span className="hcat-menu__title">뭐가 궁금해?</span>
@@ -388,29 +265,29 @@ export function HelperCat({ onOpenTutorial, onOpenFeedback, runSignal = 0, showF
         </div>
       ) : null}
       <div className="hcat-duo">
-        <button
-          type="button"
-          className={`hcat-btn${menuOpen ? " is-open" : ""}`}
-          onClick={() => { setIdleBubble(null); setMenuOpen((open) => !open) }}
-          aria-label="도우미 로카냥 — 도움말 열기"
-          aria-expanded={menuOpen}
-        >
-          <TuxCatSprite size={30} waving={menuOpen} />
-        </button>
+        <div className="hcat-one">
+          <button
+            type="button"
+            className={`hcat-btn${menuOpen ? " is-open" : ""}`}
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label="지도 도우미 로카냥 — 도움말 열기"
+            aria-expanded={menuOpen}
+          >
+            <TuxCatSprite size={30} waving={menuOpen} />
+          </button>
+          <span className="hcat-label">지도 도우미 로카냥</span>
+        </div>
         {showFeedbackCat ? (
-          <div className={`ccat${runPhase !== "idle" ? ` is-${runPhase}` : ""}`}>
-            {cheeseBubbleText && !menuOpen ? (
-              <div className="hcat-bubble ccat-bubble" aria-hidden="true">{cheeseBubbleText}</div>
-            ) : null}
+          <div className="hcat-one">
             <button
               type="button"
               className="ccat-btn"
-              onClick={handleCheeseClick}
-              disabled={runPhase !== "idle"}
-              aria-label="치즈냥 — 로카에게 이야기 보내기"
+              onClick={() => { setMenuOpen(false); onOpenFeedback?.() }}
+              aria-label="불편접수 치즈냥 — 이야기 보내기"
             >
-              <CheeseCatSprite size={40} waving={runPhase === "thanks"} />
+              <CheeseCatSprite size={40} />
             </button>
+            <span className="hcat-label">불편접수 치즈냥</span>
           </div>
         ) : null}
       </div>
