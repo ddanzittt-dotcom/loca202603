@@ -2853,6 +2853,19 @@
 }
 .contrib-tabhint b { color: #7A5A00; font-weight: 700; }
 
+/* 주소 입력 지오코딩 결과 힌트 (지도 대신 텍스트로 위치 확인) */
+.contrib-geohint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: -6px 0 12px;
+  font-size: 12px;
+  color: #8B7F63;
+  line-height: 1.4;
+}
+.contrib-geohint--ok { color: #3F6030; font-weight: 600; }
+.contrib-geohint--miss { color: #C0442B; }
+
 .contrib-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5647,6 +5660,14 @@
     box-shadow: 1.5px 1.5px 0 rgba(31, 26, 18, 0.85);
   }
 
+  .app-shell--tab-explore .xc-tab-report {
+    height: 25px;
+    padding: 0 9px;
+    gap: 3px;
+    font-size: 10.5px;
+    box-shadow: 1.5px 1.5px 0 rgba(31, 26, 18, 0.85);
+  }
+
   .xc-view__feed {
     grid-area: feed;
     min-width: 0;
@@ -6418,16 +6439,24 @@
   background: #FFD338;
   box-shadow: 2px 2px 0 #1F1A12;
 }
-/* 목록 하단 풀폭 변형 */
-.xc-cta--foot {
-  width: 100%;
-  justify-content: center;
-  margin-top: 12px;
-  height: 40px;
-  background: #FFFDF4;
-  border-style: dashed;
-  color: #5C513B;
+/* 탭 줄 상시 진입 "제보하기" 버튼 — 필터 탭과 구분되게 빨강 액션, 우측 끝으로 */
+.xc-tab-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 12px;
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #E5493A;
+  color: #FFF6E8;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
 }
+.xc-tab-report:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(31, 26, 18, 0.9); }
 
 /* 탐색 큐레이션 — 공간 필터 칩 + 공간 카드 배지 */
 

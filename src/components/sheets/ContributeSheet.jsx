@@ -1,38 +1,32 @@
 import { useEffect, useRef, useState } from "react"
-import { Search as SearchIcon, X, ImagePlus, Loader2, ChevronLeft } from "lucide-react"
-import { KoreaMap } from "../koreaMap"
-import { fetchPlaceMatch } from "../../lib/placeMatch"
-import { reverseGeocodeAddress } from "../../lib/reverseGeocode"
+import { X, ImagePlus, Loader2, MapPin } from "lucide-react"
 import {
   CONTRIBUTE_TABS,
   WALK_CATEGORIES,
   submitContribution,
   uploadContributionPhoto,
+  geocodePlace,
+  ensureKakaoServices,
 } from "../../lib/contribute"
 
 // 이웃 제보 시트 — 탐색탭(즐기기·배우기·걷기·머물기)에 들어갈 항목을 사용자가 직접 제보한다.
-// 흐름: (start) 탭 고르기 + 위치 검색/지도찍기 → (detail) 탭별 정보 입력 → 제출(pending).
-// 관리자 승인 시 explore_catalog 로 미러 발행. 위치·주소는 CollectSheet 와 같은 매커니즘 재사용.
-
-const SEOUL_CENTER = { lat: 37.5665, lng: 126.978, zoom: 13 }
+// 지도에 콕 찍는 대신 "주소(또는 장소명)"를 직접 입력받아 카카오 services 로 좌표를 얻는다
+// (맵핑이 어렵다는 피드백 반영 — 폼이 먼저 뜨고 주소를 타이핑). 관리자 승인 시 explore_catalog 미러 발행.
 
 export function ContributeSheet({
   open,
   onClose,
   isLoggedIn,
-  myLocation,
   initialTab = null, // 진입한 탭(있으면 그 탭 선택된 채 시작)
   showToast,
   onSubmitted,
   onRequireLogin,
 }) {
   const [tab, setTab] = useState(initialTab || "walk")
-  const [step, setStep] = useState("start") // start(탭+위치) → detail
-  const [point, setPoint] = useState(null)
-  const [pickedAddress, setPickedAddress] = useState("")
-  const [query, setQuery] = useState("")
-  const [searchResults, setSearchResults] = useState([])
-  const [searching, setSearching] = useState(false)
+  // 위치 — 주소 텍스트 입력 + 지오코딩 결과
+  const [address, setAddress] = useState("")
+  const [resolved, setResolved] = useState(null) // { query, lat, lng, addr } | null (lat null = 못 찾음)
+  const [geocoding, setGeocoding] = useState(false)
   // 공통 필드
   const [name, setName] = useState("")
   const [summary, setSummary] = useState("")
@@ -50,20 +44,19 @@ export function ContributeSheet({
   const [schedule, setSchedule] = useState("") // learn 일정(요일·시간)
   const [fee, setFee] = useState("") // learn 수강료
   const [saving, setSaving] = useState(false)
-  const searchTimerRef = useRef(null)
   const fileRef = useRef(null)
+  const latestQRef = useRef("")
 
   // 열림 시 초기 탭 반영 / 닫힘 시 전체 초기화
   useEffect(() => {
     if (open) {
       setTab(initialTab || "walk")
+      ensureKakaoServices() // 지오코딩용 카카오 SDK 미리 데우기 (지도 없이 주소만 입력받으므로)
       return
     }
-    setStep("start")
-    setPoint(null)
-    setPickedAddress("")
-    setQuery("")
-    setSearchResults([])
+    setAddress("")
+    setResolved(null)
+    setGeocoding(false)
     setName("")
     setSummary("")
     setPhone("")
@@ -81,28 +74,25 @@ export function ContributeSheet({
     setSaving(false)
   }, [open, initialTab])
 
-  // 키워드 검색 (선택 위치/내 위치 기준)
+  // 주소 입력 → 디바운스 지오코딩(장소명·주소 모두 지원). 지도 없이 좌표 확보.
   useEffect(() => {
-    if (!open || step !== "start") return undefined
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-    const keyword = query.trim()
-    if (keyword.length < 2) {
-      setSearchResults([])
+    if (!open) return undefined
+    const q = address.trim()
+    latestQRef.current = q
+    if (q.length < 2) {
+      setResolved(null)
+      setGeocoding(false)
       return undefined
     }
-    searchTimerRef.current = setTimeout(async () => {
-      setSearching(true)
-      try {
-        const bias = point || myLocation || SEOUL_CENTER
-        setSearchResults(await fetchPlaceMatch({ lat: bias.lat, lng: bias.lng, q: keyword }))
-      } catch {
-        setSearchResults([])
-      } finally {
-        setSearching(false)
-      }
-    }, 350)
-    return () => clearTimeout(searchTimerRef.current)
-  }, [query, open, step, point, myLocation])
+    setGeocoding(true)
+    const timer = setTimeout(async () => {
+      const loc = await geocodePlace(q)
+      if (latestQRef.current !== q) return // 그 사이 입력이 바뀌면 폐기
+      setResolved(loc ? { ...loc, query: q } : { query: q, lat: null, lng: null, addr: "" })
+      setGeocoding(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [address, open])
 
   if (!open) return null
 
@@ -124,33 +114,6 @@ export function ContributeSheet({
     )
   }
 
-  const focusPoint = point
-    ? { lat: point.lat, lng: point.lng, zoom: 16 }
-    : myLocation
-      ? { lat: myLocation.lat, lng: myLocation.lng, zoom: 14 }
-      : SEOUL_CENTER
-
-  const handleMapPick = (tapped) => {
-    if (!tapped || !Number.isFinite(tapped.lat)) return
-    setPoint({ lat: tapped.lat, lng: tapped.lng })
-    setPickedAddress("")
-    reverseGeocodeAddress(tapped.lat, tapped.lng).then((address) => {
-      setPoint((current) => {
-        if (current && current.lat === tapped.lat && current.lng === tapped.lng) setPickedAddress(address)
-        return current
-      })
-    })
-  }
-
-  const pickSearchResult = (candidate) => {
-    setPoint({ lat: candidate.lat, lng: candidate.lng })
-    setPickedAddress(candidate.address || "")
-    if (!name.trim()) setName(candidate.name || "")
-    setQuery("")
-    setSearchResults([])
-    setStep("detail")
-  }
-
   const handlePhoto = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -167,14 +130,23 @@ export function ContributeSheet({
 
   const handleSubmit = async () => {
     const trimmedName = name.trim()
-    if (!point) { showToast?.("위치를 골라주세요."); return }
+    const addrText = address.trim()
     if (!trimmedName) { showToast?.("이름을 적어주세요."); return }
-    const addr = pickedAddress.trim()
-    if (!addr) { showToast?.("위치의 주소를 확인하지 못했어요. 검색으로 선택해 주세요."); return }
+    if (!addrText) { showToast?.("주소를 입력해주세요."); return }
     if (tab === "enjoy" && !startDate) { showToast?.("행사 시작일을 입력해주세요."); return }
 
     setSaving(true)
     try {
+      // 좌표 확보 — 입력창 지오코딩 결과 우선, 없으면 지금 다시 지오코딩
+      const loc = (resolved && resolved.query === addrText && resolved.lat != null)
+        ? resolved
+        : await geocodePlace(addrText)
+      if (!loc || loc.lat == null) {
+        showToast?.("주소를 찾지 못했어요. 도로명·지번 주소나 장소명을 확인해 주세요.")
+        setSaving(false)
+        return
+      }
+
       const detail = {}
       if (tab === "learn") {
         if (org.trim()) detail.institution = org.trim()
@@ -185,9 +157,9 @@ export function ContributeSheet({
       const res = await submitContribution({
         tab,
         title: trimmedName,
-        addr,
-        lat: point.lat,
-        lng: point.lng,
+        addr: loc.addr || addrText,
+        lat: loc.lat,
+        lng: loc.lng,
         category: categoryByTab,
         summary: summary.trim() || null,
         phone: phone.trim() || null,
@@ -219,193 +191,156 @@ export function ContributeSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <header className="clt-head">
-          <strong>{step === "start" ? "무엇을 알릴까요?" : `${activeTab.label} 제보`}</strong>
+          <strong>{activeTab.label} 제보</strong>
           <button type="button" className="clt-close" onClick={onClose} aria-label="닫기"><X size={15} strokeWidth={2.4} /></button>
         </header>
 
-        {step === "start" ? (
-          <>
-            {/* 탭 고르기 */}
-            <div className="contrib-tabs" role="tablist" aria-label="제보 종류">
-              {CONTRIBUTE_TABS.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === item.key}
-                  className={`contrib-tab${tab === item.key ? " is-active" : ""}`}
-                  onClick={() => setTab(item.key)}
-                >
-                  <span className="contrib-tab__emoji" aria-hidden="true">{item.emoji}</span>
-                  <span className="contrib-tab__label">{item.label}</span>
-                </button>
-              ))}
-            </div>
-            <p className="contrib-tabhint"><b>{activeTab.hint}</b> · 예: {activeTab.examples}</p>
-
-            {/* 위치 검색 + 지도 찍기 */}
-            <label className="clt-search">
-              <SearchIcon size={14} strokeWidth={2.2} aria-hidden="true" />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="상호·지명 검색 (예: 성수 카페)"
-              />
-            </label>
-
-            {searchResults.length > 0 ? (
-              <ul className="clt-results">
-                {searchResults.map((candidate) => (
-                  <li key={`${candidate.name}-${candidate.lat}-${candidate.lng}`}>
-                    <button type="button" onClick={() => pickSearchResult(candidate)}>
-                      <strong>{candidate.name}</strong>
-                      <span>{candidate.categoryName} · {candidate.address}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {searching ? <p className="clt-hint">찾는 중…</p> : null}
-
-            <div className="clt-map">
-              <KoreaMap
-                features={[]}
-                selectedFeatureId={null}
-                draftPoints={point ? [[point.lng, point.lat]] : []}
-                draftMode="pin"
-                focusPoint={focusPoint}
-                fitTrigger={0}
-                onMapTap={handleMapPick}
-                onFeatureTap={() => {}}
-                showLabels={false}
-              />
-            </div>
-            {point ? (
-              <p className="clt-hint clt-hint--picked">📍 {pickedAddress || "찍은 위치"}</p>
-            ) : (
-              <p className="clt-hint">지도를 눌러 위치를 고르거나, 위에서 검색해 보세요.</p>
-            )}
-
-            <button type="button" className="clt-primary" disabled={!point} onClick={() => setStep("detail")}>
-              다음
+        {/* 탭 고르기 */}
+        <div className="contrib-tabs" role="tablist" aria-label="제보 종류">
+          {CONTRIBUTE_TABS.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.key}
+              className={`contrib-tab${tab === item.key ? " is-active" : ""}`}
+              onClick={() => setTab(item.key)}
+            >
+              <span className="contrib-tab__emoji" aria-hidden="true">{item.emoji}</span>
+              <span className="contrib-tab__label">{item.label}</span>
             </button>
-          </>
-        ) : (
+          ))}
+        </div>
+        <p className="contrib-tabhint"><b>{activeTab.hint}</b> · 예: {activeTab.examples}</p>
+
+        <label className="clt-field">
+          <span className="clt-field__label">이름</span>
+          <input
+            className="clt-name"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={activeTab.label + " 이름"}
+            maxLength={60}
+          />
+        </label>
+
+        {/* 위치 — 주소/장소명 직접 입력 (지도 없이 타이핑) */}
+        <label className="clt-field">
+          <span className="clt-field__label">주소 (또는 장소명)</span>
+          <input
+            className="clt-desc"
+            type="text"
+            value={address}
+            onChange={(event) => setAddress(event.target.value)}
+            placeholder="예: 충남 천안시 동남구 남부대로 / 독립기념관"
+            maxLength={200}
+          />
+        </label>
+        {geocoding ? (
+          <p className="contrib-geohint">위치 확인 중…</p>
+        ) : resolved && resolved.lat != null ? (
+          <p className="contrib-geohint contrib-geohint--ok">
+            <MapPin size={12} strokeWidth={2.4} aria-hidden="true" /> {resolved.addr}
+          </p>
+        ) : resolved && resolved.lat == null ? (
+          <p className="contrib-geohint contrib-geohint--miss">위치를 못 찾았어요. 도로명·지번 주소나 장소명을 확인해 주세요.</p>
+        ) : null}
+
+        {/* 탭별 필드 */}
+        {tab === "enjoy" ? (
+          <div className="contrib-grid">
+            <label className="clt-field">
+              <span className="clt-field__label">시작일 *</span>
+              <input className="clt-desc" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            </label>
+            <label className="clt-field">
+              <span className="clt-field__label">종료일</span>
+              <input className="clt-desc" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
+            </label>
+          </div>
+        ) : null}
+
+        {tab === "learn" ? (
           <>
             <label className="clt-field">
-              <span className="clt-field__label">이름</span>
-              <input
-                className="clt-name"
-                type="text"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={activeTab.label + " 이름"}
-                maxLength={60}
-              />
+              <span className="clt-field__label">기관·공방명</span>
+              <input className="clt-desc" type="text" value={org} onChange={(event) => setOrg(event.target.value)} placeholder="예: 자온길 도자기 공방" maxLength={40} />
             </label>
-
-            {/* 탭별 필드 */}
-            {tab === "enjoy" ? (
-              <div className="contrib-grid">
-                <label className="clt-field">
-                  <span className="clt-field__label">시작일 *</span>
-                  <input className="clt-desc" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-                </label>
-                <label className="clt-field">
-                  <span className="clt-field__label">종료일</span>
-                  <input className="clt-desc" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-                </label>
-              </div>
-            ) : null}
-
-            {tab === "learn" ? (
-              <>
-                <label className="clt-field">
-                  <span className="clt-field__label">기관·공방명</span>
-                  <input className="clt-desc" type="text" value={org} onChange={(event) => setOrg(event.target.value)} placeholder="예: 자온길 도자기 공방" maxLength={40} />
-                </label>
-                <div className="contrib-grid">
-                  <label className="clt-field">
-                    <span className="clt-field__label">접수 시작</span>
-                    <input className="clt-desc" type="date" value={applyStart} onChange={(event) => setApplyStart(event.target.value)} />
-                  </label>
-                  <label className="clt-field">
-                    <span className="clt-field__label">접수 마감</span>
-                    <input className="clt-desc" type="date" value={applyEnd} onChange={(event) => setApplyEnd(event.target.value)} />
-                  </label>
-                </div>
-                <label className="clt-field">
-                  <span className="clt-field__label">일정 (요일·시간)</span>
-                  <input className="clt-desc" type="text" value={schedule} onChange={(event) => setSchedule(event.target.value)} placeholder="예: 매주 토 14:00~16:00" maxLength={40} />
-                </label>
-                <label className="clt-field">
-                  <span className="clt-field__label">수강료</span>
-                  <input className="clt-desc" type="text" value={fee} onChange={(event) => setFee(event.target.value)} placeholder="예: 3만원 (재료비 별도) / 무료" maxLength={40} />
-                </label>
-              </>
-            ) : null}
-
-            {tab === "walk" ? (
-              <label className="clt-field">
-                <span className="clt-field__label">종류</span>
-                <select className="clt-desc contrib-select" value={category} onChange={(event) => setCategory(event.target.value)}>
-                  {WALK_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-              </label>
-            ) : null}
-
-            <label className="clt-field">
-              <span className="clt-field__label">한줄 소개 (선택)</span>
-              <input className="clt-desc" type="text" value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="어떤 곳인지 짧게 알려주세요" maxLength={80} />
-            </label>
-
-            {/* 사진 */}
-            <div className="clt-field">
-              <span className="clt-field__label">사진 (선택)</span>
-              <div className="contrib-photo">
-                {photoUrl ? (
-                  <div className="contrib-photo__preview">
-                    <img src={photoUrl} alt="" />
-                    <button type="button" onClick={() => setPhotoUrl("")} aria-label="사진 제거"><X size={13} strokeWidth={2.6} /></button>
-                  </div>
-                ) : (
-                  <button type="button" className="contrib-photo__add" onClick={() => fileRef.current?.click()} disabled={photoBusy}>
-                    {photoBusy
-                      ? <><Loader2 size={15} className="contrib-spin" aria-hidden="true" /> 올리는 중…</>
-                      : <><ImagePlus size={15} strokeWidth={2.2} aria-hidden="true" /> 사진 추가</>}
-                  </button>
-                )}
-                <input ref={fileRef} type="file" accept="image/*" hidden onChange={handlePhoto} />
-              </div>
-            </div>
-
             <div className="contrib-grid">
               <label className="clt-field">
-                <span className="clt-field__label">연락처 (선택)</span>
-                <input className="clt-desc" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="전화번호" maxLength={30} />
+                <span className="clt-field__label">접수 시작</span>
+                <input className="clt-desc" type="date" value={applyStart} onChange={(event) => setApplyStart(event.target.value)} />
               </label>
               <label className="clt-field">
-                <span className="clt-field__label">링크 (선택)</span>
-                <input className="clt-desc" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="안내 페이지 주소" maxLength={200} />
+                <span className="clt-field__label">접수 마감</span>
+                <input className="clt-desc" type="date" value={applyEnd} onChange={(event) => setApplyEnd(event.target.value)} />
               </label>
             </div>
-
-            <p className="contrib-notice">
-              제보는 관리자 확인 후 탐색에 올라가요. 게시되면 <b>내 닉네임</b>이 제보자로 표시돼요.
-              {tab === "walk" ? " 카페·가게 등 영리 업소·광고는 승인되지 않아요." : ""}
-            </p>
-
-            <div className="clt-actions">
-              <button type="button" className="clt-ghost" onClick={() => setStep("start")}>
-                <ChevronLeft size={14} strokeWidth={2.4} aria-hidden="true" /> 위치
-              </button>
-              <button type="button" className="clt-primary" disabled={saving || !name.trim()} onClick={handleSubmit}>
-                {saving ? "보내는 중…" : "제보하기"}
-              </button>
-            </div>
+            <label className="clt-field">
+              <span className="clt-field__label">일정 (요일·시간)</span>
+              <input className="clt-desc" type="text" value={schedule} onChange={(event) => setSchedule(event.target.value)} placeholder="예: 매주 토 14:00~16:00" maxLength={40} />
+            </label>
+            <label className="clt-field">
+              <span className="clt-field__label">수강료</span>
+              <input className="clt-desc" type="text" value={fee} onChange={(event) => setFee(event.target.value)} placeholder="예: 3만원 (재료비 별도) / 무료" maxLength={40} />
+            </label>
           </>
-        )}
+        ) : null}
+
+        {tab === "walk" ? (
+          <label className="clt-field">
+            <span className="clt-field__label">종류</span>
+            <select className="clt-desc contrib-select" value={category} onChange={(event) => setCategory(event.target.value)}>
+              {WALK_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+        ) : null}
+
+        <label className="clt-field">
+          <span className="clt-field__label">한줄 소개 (선택)</span>
+          <input className="clt-desc" type="text" value={summary} onChange={(event) => setSummary(event.target.value)} placeholder="어떤 곳인지 짧게 알려주세요" maxLength={80} />
+        </label>
+
+        {/* 사진 */}
+        <div className="clt-field">
+          <span className="clt-field__label">사진 (선택)</span>
+          <div className="contrib-photo">
+            {photoUrl ? (
+              <div className="contrib-photo__preview">
+                <img src={photoUrl} alt="" />
+                <button type="button" onClick={() => setPhotoUrl("")} aria-label="사진 제거"><X size={13} strokeWidth={2.6} /></button>
+              </div>
+            ) : (
+              <button type="button" className="contrib-photo__add" onClick={() => fileRef.current?.click()} disabled={photoBusy}>
+                {photoBusy
+                  ? <><Loader2 size={15} className="contrib-spin" aria-hidden="true" /> 올리는 중…</>
+                  : <><ImagePlus size={15} strokeWidth={2.2} aria-hidden="true" /> 사진 추가</>}
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={handlePhoto} />
+          </div>
+        </div>
+
+        <div className="contrib-grid">
+          <label className="clt-field">
+            <span className="clt-field__label">연락처 (선택)</span>
+            <input className="clt-desc" type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="전화번호" maxLength={30} />
+          </label>
+          <label className="clt-field">
+            <span className="clt-field__label">링크 (선택)</span>
+            <input className="clt-desc" type="url" value={sourceUrl} onChange={(event) => setSourceUrl(event.target.value)} placeholder="안내 페이지 주소" maxLength={200} />
+          </label>
+        </div>
+
+        <p className="contrib-notice">
+          제보는 관리자 확인 후 탐색에 올라가요. 게시되면 <b>내 닉네임</b>이 제보자로 표시돼요.
+          {tab === "walk" ? " 카페·가게 등 영리 업소·광고는 승인되지 않아요." : ""}
+        </p>
+
+        <button type="button" className="clt-primary" disabled={saving || !name.trim()} onClick={handleSubmit}>
+          {saving ? "보내는 중…" : "제보하기"}
+        </button>
       </section>
     </div>
   )

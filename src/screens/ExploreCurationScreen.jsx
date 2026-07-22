@@ -497,15 +497,12 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
   const openDetail = (type) => (data) => setDetailItem({ type, data })
 
   // 이웃 제보 진입 — 즐기기·배우기·걷기 3탭만(전체·자연 제외, 1차). 로그인 게이트는 시트가 담당.
+  // 상시 진입은 탭 줄의 "제보하기" 버튼. 이건 빈 상태에서 한 번 더 권하는 CTA.
   const canContribute = activeTab === "enjoy" || activeTab === "learn" || activeTab === "walk"
-  const contributeCta = (variant) => (canContribute && onContribute ? (
-    <button
-      type="button"
-      className={`xc-cta${variant === "foot" ? " xc-cta--foot" : ""}`}
-      onClick={() => onContribute(activeTab)}
-    >
+  const contributeCta = () => (canContribute && onContribute ? (
+    <button type="button" className="xc-cta" onClick={() => onContribute(activeTab)}>
       <Megaphone size={13} strokeWidth={2.4} aria-hidden="true" />
-      {variant === "foot" ? "여기 없는 곳을 알고 있나요? 제보하기" : "아는 곳 직접 제보하기"}
+      아는 곳 직접 제보하기
     </button>
   ) : null)
 
@@ -549,6 +546,16 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
             </button>
           )
         })}
+        {onContribute ? (
+          <button
+            type="button"
+            className="xc-tab-report"
+            onClick={() => onContribute(["enjoy", "learn", "walk"].includes(activeTab) ? activeTab : null)}
+          >
+            <Megaphone size={12} strokeWidth={2.4} aria-hidden="true" />
+            제보하기
+          </button>
+        ) : null}
       </div>
 
       {/* 오른쪽: 목록 — 전체는 섹션 캐러셀, 카테고리 탭은 세로 목록 */}
@@ -618,22 +625,19 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
             <div className="xc-empty">
               <strong>{active.emptyTitle}</strong>
               <span>{active.emptySub}</span>
-              {contributeCta("empty")}
+              {contributeCta()}
             </div>
           ) : (
-            <>
-              {active.entries.slice(0, activeTab === "nature" ? 80 : 60).map(({ item, type }) => (
-                <ListRow
-                  key={`${type}-${item.id}`}
-                  item={item}
-                  type={type}
-                  anchorId={cardAnchorId(type, item.id)}
-                  onRegister={onRegister}
-                  onOpen={openDetail(type)}
-                />
-              ))}
-              {contributeCta("foot")}
-            </>
+            active.entries.slice(0, activeTab === "nature" ? 80 : 60).map(({ item, type }) => (
+              <ListRow
+                key={`${type}-${item.id}`}
+                item={item}
+                type={type}
+                anchorId={cardAnchorId(type, item.id)}
+                onRegister={onRegister}
+                onOpen={openDetail(type)}
+              />
+            ))
           )}
         </div>
       </div>

@@ -74,6 +74,59 @@ async function downscalePhoto(file) {
   return blob
 }
 
+// 카카오 services SDK(Geocoder·Places) 로드 보장 — index.html 의 loadKakaoMap 로더 사용.
+// ContributeSheet 는 지도를 안 띄우므로(맵핑 어렵다는 피드백) SDK 로드 트리거가 없다 →
+// 지오코딩 전에 여기서 명시적으로 로드(멱등, 키 없으면 false).
+export function ensureKakaoServices() {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") { resolve(false); return }
+    if (window.kakao?.maps?.services) { resolve(true); return }
+    if (typeof window.loadKakaoMap !== "function") { resolve(false); return }
+    window.loadKakaoMap((ok) => resolve(Boolean(ok) && Boolean(window.kakao?.maps?.services)))
+  })
+}
+
+// 주소·장소명 → 좌표 (카카오 services SDK, 클라이언트 — /api 프록시 불필요).
+// 지도 없이 주소만 입력받아 좌표를 얻는다: 1) 키워드(장소명·상호) 검색 → 2) 주소 검색 폴백.
+// 반환 { lat, lng, addr } | null. addr 은 매칭된 도로명/지번(없으면 입력값).
+export function geocodePlace(query) {
+  return new Promise((resolve) => {
+    const q = String(query || "").trim()
+    if (!q) { resolve(null); return }
+    ensureKakaoServices().then((ready) => {
+      const kakao = typeof window !== "undefined" ? window.kakao : null
+      if (!ready || !kakao?.maps?.services) { resolve(null); return }
+      const svc = kakao.maps.services
+      const ok = (lat, lng, addr) => {
+        const nlat = Number(lat)
+        const nlng = Number(lng)
+        if (!Number.isFinite(nlat) || !Number.isFinite(nlng)) { resolve(null); return }
+        resolve({ lat: nlat, lng: nlng, addr: addr || q })
+      }
+      try {
+        new svc.Places().keywordSearch(q, (data, status) => {
+          if (status === svc.Status.OK && Array.isArray(data) && data[0]) {
+            const p = data[0]
+            ok(p.y, p.x, p.road_address_name || p.address_name || q)
+            return
+          }
+          // 장소명으로 못 찾으면 도로명·지번 주소로 재시도
+          new svc.Geocoder().addressSearch(q, (res, st) => {
+            if (st === svc.Status.OK && Array.isArray(res) && res[0]) {
+              const r = res[0]
+              ok(r.y, r.x, r.road_address?.address_name || r.address_name || q)
+            } else {
+              resolve(null)
+            }
+          })
+        })
+      } catch {
+        resolve(null)
+      }
+    })
+  })
+}
+
 // 제보 사진 임시 업로드 → publicUrl (contrib-pending/<id>). 승인 시 admin 이 영구 경로로 복사.
 export async function uploadContributionPhoto(file) {
   const blob = await downscalePhoto(file)
