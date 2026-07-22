@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { X, ImagePlus, Loader2, MapPin } from "lucide-react"
+import { StaticMapPreview } from "../explore/StaticMapPreview"
 import {
   CONTRIBUTE_TABS,
   WALK_CATEGORIES,
@@ -225,26 +226,31 @@ export function ContributeSheet({
           />
         </label>
 
-        {/* 위치 — 주소/장소명 직접 입력 (지도 없이 타이핑) */}
+        {/* 위치 — 주소 직접 입력 → 지오코딩 → 지도에 마커 표시(확인용, 콕찍기 아님) */}
         <label className="clt-field">
-          <span className="clt-field__label">주소 (또는 장소명)</span>
+          <span className="clt-field__label">주소</span>
           <input
             className="clt-desc"
             type="text"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
-            placeholder="예: 충남 천안시 동남구 남부대로 / 독립기념관"
+            placeholder="예: 충남 천안시 서북구 성정로 75"
             maxLength={200}
           />
         </label>
         {geocoding ? (
           <p className="contrib-geohint">위치 확인 중…</p>
         ) : resolved && resolved.lat != null ? (
-          <p className="contrib-geohint contrib-geohint--ok">
-            <MapPin size={12} strokeWidth={2.4} aria-hidden="true" /> {resolved.addr}
-          </p>
+          <>
+            <p className="contrib-geohint contrib-geohint--ok">
+              <MapPin size={12} strokeWidth={2.4} aria-hidden="true" /> {resolved.addr}
+            </p>
+            <div className="contrib-map" key={`${resolved.lat},${resolved.lng}`}>
+              <StaticMapPreview lat={resolved.lat} lng={resolved.lng} title={name || activeTab.label} level={4} />
+            </div>
+          </>
         ) : resolved && resolved.lat == null ? (
-          <p className="contrib-geohint contrib-geohint--miss">위치를 못 찾았어요. 도로명·지번 주소나 장소명을 확인해 주세요.</p>
+          <p className="contrib-geohint contrib-geohint--miss">위치를 못 찾았어요. 도로명·지번 주소를 확인해 주세요.</p>
         ) : null}
 
         {/* 탭별 필드 */}
@@ -289,12 +295,23 @@ export function ContributeSheet({
         ) : null}
 
         {tab === "walk" ? (
-          <label className="clt-field">
+          <div className="clt-field">
             <span className="clt-field__label">종류</span>
-            <select className="clt-desc contrib-select" value={category} onChange={(event) => setCategory(event.target.value)}>
-              {WALK_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
+            <div className="contrib-chips" role="radiogroup" aria-label="종류">
+              {WALK_CATEGORIES.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  role="radio"
+                  aria-checked={category === item}
+                  className={`contrib-chip${category === item ? " is-active" : ""}`}
+                  onClick={() => setCategory(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
 
         <label className="clt-field">

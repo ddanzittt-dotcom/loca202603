@@ -2872,12 +2872,37 @@
   gap: 8px;
 }
 
-/* date/tel/url/select 는 .clt-desc 스킨을 그대로 쓴다 — date 위젯 최소 높이만 보정 */
+/* date/tel/url 는 .clt-desc 스킨을 그대로 쓴다 — date 위젯 최소 높이만 보정 */
 .contrib-sheet input[type="date"].clt-desc { min-height: 42px; }
-.contrib-select {
-  width: 100%;
-  appearance: none;
+
+/* 종류 선택 — 네이티브 select 대신 탭 가능한 칩(확실히 선택됨) */
+.contrib-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.contrib-chip {
+  height: 34px;
+  padding: 0 13px;
+  border: 2px solid #1F1A12;
+  border-radius: 999px;
+  background: #FFFDF4;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12.5px;
+  color: #1F1A12;
   cursor: pointer;
+}
+.contrib-chip.is-active { background: #FFD338; }
+.contrib-chip:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(31, 26, 18, 0.9); }
+
+/* 주소 확인 지도 — 입력한 주소 위치에 마커(StaticMapPreview 재사용, 콕찍기 아님) */
+.contrib-map {
+  height: 170px;
+  margin: 0 0 12px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .contrib-photo { display: flex; }
