@@ -6,6 +6,7 @@ import { PixelWordmark } from "./components/PixelWordmark"
 import { PlaceFlipCard } from "./components/binder/PlaceFlipCard"
 import { NewFindBurst } from "./components/binder/NewFindBurst"
 import { CollectSheet } from "./components/sheets/CollectSheet"
+import { ContributeSheet } from "./components/sheets/ContributeSheet"
 import { NotificationPanel, NotificationBanner } from "./components/NotificationPanel"
 import { useNotifications } from "./hooks/useNotifications"
 import {
@@ -1379,6 +1380,10 @@ export default function App() {
   // 채집 유입 경로 — 산책 모드 경유("walk")만 구분, 나머지는 기본 시트("collect_sheet")
   const collectOriginRef = useRef("collect_sheet")
 
+  // 이웃 제보 시트 — 탐색탭 항목을 사용자가 직접 제보(migration 084). 진입 탭을 초기 선택.
+  const [contributeOpen, setContributeOpen] = useState(false)
+  const [contributeTab, setContributeTab] = useState(null)
+
   // 지도 만들기 빌더 (C단계) — 채집한 카드를 골라 지도로 묶기
   const [mapBuilderOpen, setMapBuilderOpen] = useState(false)
   const [mapBuilderBusy, setMapBuilderBusy] = useState(false)
@@ -2035,6 +2040,10 @@ export default function App() {
                 setCollectPrefill(prefillCandidate)
                 setCollectSheetOpen(true)
               }}
+              onContribute={(tabKey) => {
+                setContributeTab(tabKey || null)
+                setContributeOpen(true)
+              }}
             />
           </WebPageFrame>
         ) : null}
@@ -2517,6 +2526,16 @@ export default function App() {
             showToast("카드로 담았어요")
           }
         }}
+      />
+
+      <ContributeSheet
+        open={contributeOpen}
+        initialTab={contributeTab}
+        isLoggedIn={Boolean(authUser)}
+        myLocation={myLocation}
+        showToast={showToast}
+        onClose={() => { setContributeOpen(false); setContributeTab(null) }}
+        onRequireLogin={() => setActiveTab("login")}
       />
 
       <MapBuilderSheet

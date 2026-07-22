@@ -132,9 +132,9 @@ async function fetchCatalogFestivals(location) {
   const dLat = bboxKm / 110.574
   const dLng = bboxKm / (111.32 * Math.max(0.2, Math.cos((location.lat * Math.PI) / 180)))
   const params = new URLSearchParams({
-    select: "id,title,addr,lat,lng,start_date,end_date,phone,source_url",
+    select: "id,title,addr,lat,lng,start_date,end_date,phone,source_url,image,source,detail",
     tab: "eq.enjoy",
-    source: "eq.festival",
+    source: "in.(festival,contribution)", // 문화축제표준데이터 + 이웃 제보(084)
     and: `(lat.gte.${location.lat - dLat},lat.lte.${location.lat + dLat},lng.gte.${location.lng - dLng},lng.lte.${location.lng + dLng})`,
     limit: "200",
   })
@@ -153,15 +153,17 @@ async function fetchCatalogFestivals(location) {
 
   return rows.map((row) => ({
     id: String(row.id),
-    source: "festival",
+    source: row.source === "contribution" ? "contribution" : "festival",
     title: row.title || "",
     addr: row.addr || "",
-    image: "",
+    image: row.image || "", // 이웃 제보는 승인 시 복사된 사진 URL, 표준데이터 축제는 이미지 없음
     lat: toNumber(row.lat),
     lng: toNumber(row.lng),
     startDate: String(row.start_date || "").replace(/-/g, ""),
     endDate: String(row.end_date || "").replace(/-/g, ""),
     tel: row.phone || "",
+    sourceUrl: row.source_url || "",
+    contributor: row.detail?.contributor || "", // 제보자 닉네임 스냅샷 (상세 시트 표기)
     contentTypeId: 15,
   }))
 }

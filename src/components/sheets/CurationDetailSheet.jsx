@@ -270,6 +270,8 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {catalogDetail?.cost != null ? (
               <InfoRow label="수강료" value={Number(catalogDetail.cost) === 0 ? "무료" : `${Number(catalogDetail.cost).toLocaleString()}원`} />
             ) : null}
+            {/* 이웃 제보(084) 강좌 — 수강료는 자유 텍스트(detail.fee) */}
+            <InfoRow label="수강료" value={catalogDetail?.fee} />
             {/* 박물관·미술관 — 관람시간·관람료(어른/청소년/어린이) */}
             <InfoRow label="관람" value={catalogDetail?.hours} />
             {catalogDetail?.adultFee || catalogDetail?.youthFee || catalogDetail?.childFee ? (
@@ -292,6 +294,8 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             {isEvent ? <InfoRow label="요금" value={detail?.useTimeFestival} /> : <InfoRow label="요금" value={detail?.useFee} />}
             {!isEvent ? <InfoRow label="휴무" value={detail?.restDate} /> : null}
             <InfoRow label="문의" value={data.phone || data.tel || detail?.tel} />
+            {/* 이웃 제보 기여자 표기 (승인 시 스냅샷된 닉네임 — 084 decision #4) */}
+            <InfoRow label="제보자" value={(catalogDetail?.contributor || data.contributor) ? `${catalogDetail?.contributor || data.contributor}님` : ""} />
           </div>
 
           {detailLoading ? (

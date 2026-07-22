@@ -2803,6 +2803,124 @@
 .clt-actions .clt-primary {
   flex: 1;
 }
+.clt-actions .clt-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ── 이웃 제보 시트 (ContributeSheet — .clt- 크롬 재사용 + 아래 전용 조각) ── */
+.contrib-sheet { width: min(100%, 460px); }
+
+.contrib-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.contrib-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: 2px solid #1F1A12;
+  border-radius: 9px;
+  background: #FFFDF4;
+  padding: 9px 4px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(31, 26, 18, 0.9);
+}
+.contrib-tab__emoji { font-size: 20px; line-height: 1; }
+.contrib-tab__label {
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  color: #1F1A12;
+}
+.contrib-tab.is-active {
+  background: #FFD338;
+  box-shadow: 3px 3px 0 #1F1A12;
+}
+.contrib-tab:not(.is-active):active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(31, 26, 18, 0.9);
+}
+
+.contrib-tabhint {
+  margin: 0 0 12px;
+  font-size: 11.5px;
+  color: #8B7F63;
+  line-height: 1.5;
+}
+.contrib-tabhint b { color: #7A5A00; font-weight: 700; }
+
+.contrib-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* date/tel/url/select 는 .clt-desc 스킨을 그대로 쓴다 — date 위젯 최소 높이만 보정 */
+.contrib-sheet input[type="date"].clt-desc { min-height: 42px; }
+.contrib-select {
+  width: 100%;
+  appearance: none;
+  cursor: pointer;
+}
+
+.contrib-photo { display: flex; }
+.contrib-photo__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 13px;
+  color: #1F1A12;
+  border: 2px dashed #1F1A12;
+  border-radius: 8px;
+  background: #FFFDF4;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.contrib-photo__add:disabled { opacity: 0.6; cursor: default; }
+.contrib-photo__preview {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.contrib-photo__preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.contrib-photo__preview button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #1F1A12;
+  border-radius: 6px;
+  background: #FFF6E8;
+  cursor: pointer;
+  color: #1F1A12;
+}
+
+.contrib-notice {
+  margin: 2px 0 12px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(245, 196, 27, 0.14);
+  border: 1px solid rgba(122, 90, 0, 0.18);
+  color: #5B5340;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.contrib-notice b { color: #7A5A00; font-weight: 700; }
+
+.contrib-spin { animation: contrib-spin 0.8s linear infinite; }
+@keyframes contrib-spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
    디테일 시트 픽셀 스킨 — 장소 상세 / 기록 작성 / 공유 / 공용 바텀시트
@@ -6274,6 +6392,41 @@
   font-size: 12px;
   color: #1F1A12;
   cursor: pointer;
+}
+
+/* 이웃 제보 진입 CTA (빈 상태·목록 하단) */
+.xc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 2px solid #1F1A12;
+  border-radius: 8px;
+  background: #FFD338;
+  box-shadow: 2px 2px 0 #1F1A12;
+  font-family: "DungGeunMo", Pretendard, sans-serif;
+  font-size: 12px;
+  color: #1F1A12;
+  cursor: pointer;
+}
+.xc-cta:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 #1F1A12; }
+/* 빈 상태 안의 CTA — .xc-empty button 기본형(크림)을 이기도록 스코프 상향 */
+.xc-empty .xc-cta {
+  margin-top: 10px;
+  height: 34px;
+  background: #FFD338;
+  box-shadow: 2px 2px 0 #1F1A12;
+}
+/* 목록 하단 풀폭 변형 */
+.xc-cta--foot {
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+  height: 40px;
+  background: #FFFDF4;
+  border-style: dashed;
+  color: #5C513B;
 }
 
 /* 탐색 큐레이션 — 공간 필터 칩 + 공간 카드 배지 */

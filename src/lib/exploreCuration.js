@@ -202,7 +202,7 @@ export function wildlifeSortKey(item) {
 }
 
 // 카드 소스 배지 라벨 — 카드에는 출처+상태 배지만 단다 (스펙 v3.3 §5)
-const EVENT_SOURCE_LABELS = { tourapi: "관광공사", culture: "문화포털", kopis: "KOPIS", festival: "공공데이터" }
+const EVENT_SOURCE_LABELS = { tourapi: "관광공사", culture: "문화포털", kopis: "KOPIS", festival: "공공데이터", contribution: "이웃 제보" }
 
 export function curationSourceLabel(type, item) {
   if (type === "wildlife") return item?.source === "gbif" ? "GBIF" : "iNaturalist"

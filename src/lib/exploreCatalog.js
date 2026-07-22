@@ -46,6 +46,7 @@ const SOURCE_LABELS = {
   trail: "공공데이터",
   heritage: "국가유산청",
   durunubi: "두루누비",
+  contribution: "이웃 제보",
 }
 
 // 카탈로그 source → 기존 탐색 공간의 kind 키 (스프라이트·채집 카테고리 매핑 재사용)
@@ -58,6 +59,7 @@ const SOURCE_KINDS = {
   farmvillage: "farmvillage",
   trail: "trail",
   heritage: "history", // 역사 스프라이트·culture 채집 카테고리 재사용
+  contribution: "contribution", // 이웃 제보 — 인터리빙 시 한 묶음(도배 방지), 스프라이트는 px-map 폴백
 }
 
 // "3.21~5.23" — 강좌 교육기간 카드 표기

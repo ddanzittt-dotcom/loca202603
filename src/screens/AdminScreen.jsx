@@ -19,6 +19,13 @@ import {
   listAdminFeedback,
   updateFeedbackStatus,
 } from "../lib/feedback"
+import {
+  CONTRIBUTE_STATUS_TABS,
+  contributeTabLabel,
+  listAdminContributions,
+  reviewContribution,
+  copyContributionPhotoToPermanent,
+} from "../lib/contribute"
 import { ageBandLabel } from "../lib/demographics"
 
 // 데이터 대시보드 — /admin. platform_admin 전용(서버 RPC 게이트 + 클라이언트 선판별).
@@ -31,6 +38,7 @@ const DASH_TABS = [
   { key: "region", label: "지역·태그" },
   { key: "demographics", label: "인구통계" },
   { key: "activity", label: "활동·유통" },
+  { key: "contrib", label: "제보 검수" },
   { key: "feedback", label: "피드백" },
 ]
 
@@ -61,6 +69,20 @@ const FEEDBACK_NEXT_ACTIONS = {
   spam: [
     { status: "new", label: "복구" },
   ],
+}
+
+// 제보 검수 — 탐색 탭별 배지 색상
+const CONTRIB_TAB_BADGE = {
+  enjoy: "admin-cbadge--enjoy",
+  learn: "admin-cbadge--learn",
+  walk: "admin-cbadge--walk",
+}
+
+// 제보 상태별 액션 — 승인(published)/반려(rejected). 반려는 사유 입력 후 확정.
+const CONTRIB_NEXT_ACTIONS = {
+  pending: [{ status: "published", label: "승인", kind: "ok" }, { status: "rejected", label: "반려", kind: "no" }],
+  published: [{ status: "rejected", label: "게시 내리기", kind: "no" }],
+  rejected: [{ status: "published", label: "승인", kind: "ok" }],
 }
 
 // 일별 추이 — 기간/지표 선택 (핵심 지표 탭)
@@ -319,6 +341,15 @@ export function AdminScreen() {
   // 피드백 운영 메모 (admin_note) 인라인 편집
   const [noteEditId, setNoteEditId] = useState(null)
   const [noteDraft, setNoteDraft] = useState("")
+  // 제보 검수 (explore_contributions, 084)
+  const [contribRecords, setContribRecords] = useState([])
+  const [contribCounts, setContribCounts] = useState({})
+  const [contribStatus, setContribStatus] = useState("pending")
+  const [contribError, setContribError] = useState("")
+  const [contribBusyId, setContribBusyId] = useState(null)
+  // 반려 사유 인라인 입력
+  const [contribRejectId, setContribRejectId] = useState(null)
+  const [contribRejectDraft, setContribRejectDraft] = useState("")
 
   useEffect(() => {
     document.title = "LOCA 데이터 대시보드"
@@ -351,6 +382,19 @@ export function AdminScreen() {
     } catch (error) {
       setFeedbackRecords([])
       setFeedbackError(error?.message || "피드백을 불러오지 못했어요.")
+    }
+  }, [])
+
+  // 특정 상태의 제보 목록 + 상태별 카운트(탭 뱃지 pending)를 불러온다 (084)
+  const loadContributions = useCallback(async (status) => {
+    setContribError("")
+    try {
+      const { records, counts } = await listAdminContributions(status)
+      setContribRecords(records)
+      setContribCounts(counts)
+    } catch (error) {
+      setContribRecords([])
+      setContribError(error?.message || "제보를 불러오지 못했어요.")
     }
   }, [])
 
@@ -426,8 +470,11 @@ export function AdminScreen() {
     // 뱃지 카운트를 위해 항상 함께 로드 (기본 '새 이야기' 목록)
     setFeedbackStatus("new")
     await loadFeedback("new")
+    // 제보 검수 뱃지(대기) — 기본 'pending' 목록 (084)
+    setContribStatus("pending")
+    await loadContributions("pending")
     setLoading(false)
-  }, [loadFeedback, loadTimeseries, loadGeoDensity])
+  }, [loadFeedback, loadContributions, loadTimeseries, loadGeoDensity])
 
   // 기간 칩 선택 — 시계열만 재호출
   const selectTsDays = useCallback((days) => {
@@ -490,6 +537,51 @@ export function AdminScreen() {
       setFeedbackBusyId(null)
     }
   }, [noteDraft, feedbackStatus, loadFeedback])
+
+  // ── 제보 검수 (084) ──
+
+  // 상태 필터 변경
+  const selectContribStatus = useCallback((status) => {
+    setContribStatus(status)
+    setContribRejectId(null)
+    loadContributions(status)
+  }, [loadContributions])
+
+  // 승인 — 사진을 관리자 소유 영구 경로로 복사(제보자 탈퇴에도 생존) 후 published + explore_catalog 미러
+  const handleApproveContribution = useCallback(async (row) => {
+    setContribBusyId(row.id)
+    setContribError("")
+    try {
+      const permImage = await copyContributionPhotoToPermanent(row.image, row.id)
+      await reviewContribution(row.id, "published", { image: permImage })
+      await loadContributions(contribStatus)
+    } catch (error) {
+      setContribError(error?.message || "승인하지 못했어요.")
+    } finally {
+      setContribBusyId(null)
+    }
+  }, [loadContributions, contribStatus])
+
+  // 반려 사유 인라인 토글
+  const toggleContribReject = useCallback((row) => {
+    setContribRejectId((prev) => (prev === row.id ? null : row.id))
+    setContribRejectDraft(row.reject_reason || "")
+  }, [])
+
+  // 반려 확정 — 게시됐던 건이면 미러도 삭제(RPC 가 처리)
+  const handleRejectContribution = useCallback(async (row) => {
+    setContribBusyId(row.id)
+    setContribError("")
+    try {
+      await reviewContribution(row.id, "rejected", { rejectReason: contribRejectDraft.trim() || null })
+      setContribRejectId(null)
+      await loadContributions(contribStatus)
+    } catch (error) {
+      setContribError(error?.message || "반려하지 못했어요.")
+    } finally {
+      setContribBusyId(null)
+    }
+  }, [loadContributions, contribStatus, contribRejectDraft])
 
   // ── CSV 다운로드 ──
 
@@ -622,7 +714,8 @@ export function AdminScreen() {
 
       <nav className="admin-tabs" aria-label="대시보드 탭">
         {DASH_TABS.map((tab) => {
-          const newCount = tab.key === "feedback" ? Number(feedbackCounts.new) || 0 : 0
+          const newCount = tab.key === "feedback" ? Number(feedbackCounts.new) || 0
+            : tab.key === "contrib" ? Number(contribCounts.pending) || 0 : 0
           return (
             <button
               key={tab.key}
@@ -1083,6 +1176,112 @@ export function AdminScreen() {
       ) : null}
 
       {/* ─────────── 피드백 (치즈냥의 귓속말) ─────────── */}
+      {/* ─────────── 제보 검수 (084) ─────────── */}
+      {activeTab === "contrib" ? (
+        <section className="admin-overview" aria-label="이웃 제보 검수">
+          <h2 className="admin-section-title">이웃 제보 검수 — 탐색탭 사용자 제보</h2>
+
+          <div className="admin-chips" role="tablist" aria-label="제보 상태 필터">
+            {CONTRIBUTE_STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                role="tab"
+                aria-selected={contribStatus === tab.key}
+                className={`admin-fchip${contribStatus === tab.key ? " is-active" : ""}`}
+                onClick={() => selectContribStatus(tab.key)}
+              >
+                {tab.label}
+                <em>{num(contribCounts[tab.key] ?? 0)}</em>
+              </button>
+            ))}
+          </div>
+
+          {contribError ? <p className="admin-error">{contribError} (084 적용 여부 확인)</p> : null}
+
+          {!contribError && contribRecords.length === 0 ? (
+            <p className="admin-empty-note">
+              {contribStatus === "pending" ? "검토할 제보가 없어요." : "이 상태의 제보가 없어요."}
+            </p>
+          ) : null}
+
+          <div className="admin-list" style={{ marginTop: 12 }}>
+            {contribRecords.map((row) => {
+              const busy = contribBusyId === row.id
+              const rejecting = contribRejectId === row.id
+              const detail = row.detail || {}
+              const dateRange = [row.start_date, row.end_date].filter(Boolean).join(" ~ ")
+              const applyRange = [row.apply_start, row.apply_end].filter(Boolean).join(" ~ ")
+              return (
+                <article key={row.id} className="admin-card">
+                  <div className="admin-card__head">
+                    <span className={`admin-badge ${CONTRIB_TAB_BADGE[row.tab] || ""}`}>
+                      {contributeTabLabel(row.tab)}
+                    </span>
+                    <span className="admin-fmeta">
+                      {row.nickname || "탈퇴한 이웃"} · {formatStamp(row.submitted_at)}
+                    </span>
+                  </div>
+                  <p className="admin-card__title">{row.title}</p>
+                  {row.summary ? <p className="admin-card__desc">{row.summary}</p> : null}
+                  {row.image ? <img className="admin-cthumb" src={row.image} alt="" loading="lazy" /> : null}
+                  <div className="admin-cmeta">
+                    {row.addr ? <span>📍 {row.addr}</span> : null}
+                    {row.category ? <span>{row.category}</span> : null}
+                    {dateRange ? <span>기간 {dateRange}</span> : null}
+                    {applyRange ? <span>접수 {applyRange}</span> : null}
+                    {detail.institution ? <span>기관 {detail.institution}</span> : null}
+                    {detail.day ? <span>일정 {detail.day}</span> : null}
+                    {detail.fee ? <span>수강료 {detail.fee}</span> : null}
+                    {row.phone ? <span>☎ {row.phone}</span> : null}
+                    {row.source_url ? <a href={row.source_url} target="_blank" rel="noreferrer noopener">링크</a> : null}
+                  </div>
+                  {row.status === "rejected" && row.reject_reason ? (
+                    <p className="admin-empty-note">반려 사유: {row.reject_reason}</p>
+                  ) : null}
+                  <div className="admin-card__actions">
+                    {(CONTRIB_NEXT_ACTIONS[row.status] || []).map((action) => (
+                      <button
+                        key={action.status}
+                        type="button"
+                        className={`admin-act admin-cact--${action.kind}`}
+                        disabled={busy}
+                        onClick={() => (action.status === "published"
+                          ? handleApproveContribution(row)
+                          : toggleContribReject(row))}
+                      >
+                        {busy ? "..." : action.label}
+                      </button>
+                    ))}
+                  </div>
+                  {rejecting ? (
+                    <div className="admin-note-editor">
+                      <textarea
+                        value={contribRejectDraft}
+                        onChange={(e) => setContribRejectDraft(e.target.value)}
+                        placeholder="반려 사유 (선택 — 제보자 참고용)"
+                        maxLength={500}
+                      />
+                      <p className="admin-caption">{contribRejectDraft.length}/500</p>
+                      <div className="admin-csv-row">
+                        <button
+                          type="button"
+                          className="admin-csv-btn"
+                          disabled={busy}
+                          onClick={() => handleRejectContribution(row)}
+                        >
+                          {busy ? "처리 중…" : "반려 확정"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {activeTab === "feedback" ? (
         <section className="admin-overview" aria-label="사용자 피드백">
           <h2 className="admin-section-title">치즈냥의 귓속말 — 사용자 피드백</h2>
