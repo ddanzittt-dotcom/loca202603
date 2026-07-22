@@ -4,6 +4,7 @@ import { StaticMapPreview } from "../explore/StaticMapPreview"
 import {
   CONTRIBUTE_TABS,
   WALK_CATEGORIES,
+  NATURE_CATEGORIES,
   submitContribution,
   uploadContributionPhoto,
   geocodePlace,
@@ -37,7 +38,8 @@ export function ContributeSheet({
   const [photoBusy, setPhotoBusy] = useState(false)
   // 탭별 필드
   const [category, setCategory] = useState(WALK_CATEGORIES[0]) // walk 종류
-  const [startDate, setStartDate] = useState("") // enjoy 시작일
+  const [natureCategory, setNatureCategory] = useState(NATURE_CATEGORIES[0].label) // nature 분류
+  const [startDate, setStartDate] = useState("") // enjoy 시작일 / nature 발견 날짜
   const [endDate, setEndDate] = useState("") // enjoy 종료일
   const [applyStart, setApplyStart] = useState("") // learn 접수 시작
   const [applyEnd, setApplyEnd] = useState("") // learn 접수 마감
@@ -65,6 +67,7 @@ export function ContributeSheet({
     setPhotoUrl("")
     setPhotoBusy(false)
     setCategory(WALK_CATEGORIES[0])
+    setNatureCategory(NATURE_CATEGORIES[0].label)
     setStartDate("")
     setEndDate("")
     setApplyStart("")
@@ -154,7 +157,10 @@ export function ContributeSheet({
         if (schedule.trim()) detail.day = schedule.trim()
         if (fee.trim()) detail.fee = fee.trim()
       }
-      const categoryByTab = tab === "walk" ? category : tab === "learn" ? "강좌" : "행사"
+      const categoryByTab = tab === "walk" ? category
+        : tab === "learn" ? "강좌"
+          : tab === "nature" ? natureCategory
+            : "행사"
       const res = await submitContribution({
         tab,
         title: trimmedName,
@@ -166,7 +172,8 @@ export function ContributeSheet({
         phone: phone.trim() || null,
         sourceUrl: sourceUrl.trim() || null,
         image: photoUrl || null,
-        startDate: tab === "enjoy" ? startDate : null,
+        // nature 는 발견 날짜를 start_date 에 싣는다(관측일 observedOn) — 목록 쿼리에 있어 detail 불필요
+        startDate: (tab === "enjoy" || tab === "nature") ? startDate : null,
         endDate: tab === "enjoy" ? endDate : null,
         applyStart: tab === "learn" ? applyStart : null,
         applyEnd: tab === "learn" ? applyEnd : null,
@@ -221,7 +228,7 @@ export function ContributeSheet({
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder={activeTab.label + " 이름"}
+            placeholder={tab === "nature" ? "무엇을 봤나요? (예: 청둥오리)" : `${activeTab.label} 이름`}
             maxLength={60}
           />
         </label>
@@ -312,6 +319,32 @@ export function ContributeSheet({
               ))}
             </div>
           </div>
+        ) : null}
+
+        {tab === "nature" ? (
+          <>
+            <div className="clt-field">
+              <span className="clt-field__label">분류</span>
+              <div className="contrib-chips" role="radiogroup" aria-label="분류">
+                {NATURE_CATEGORIES.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    role="radio"
+                    aria-checked={natureCategory === item.label}
+                    className={`contrib-chip${natureCategory === item.label ? " is-active" : ""}`}
+                    onClick={() => setNatureCategory(item.label)}
+                  >
+                    {item.emoji} {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="clt-field">
+              <span className="clt-field__label">발견 날짜 (선택)</span>
+              <input className="clt-desc" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
+            </label>
+          </>
         ) : null}
 
         <label className="clt-field">

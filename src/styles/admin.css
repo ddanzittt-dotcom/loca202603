@@ -144,6 +144,7 @@
 .admin-cbadge--enjoy { background: #FDECEC; color: #C0442B; }
 .admin-cbadge--learn { background: var(--accent-faint); color: var(--accent-deep); }
 .admin-cbadge--walk { background: var(--sage-soft, #E1EAD7); color: #3f6030; }
+.admin-cbadge--nature { background: #E3F0E8; color: #2f7d55; }
 .admin-cact--ok { border-color: #12905a; color: #12905a; }
 .admin-cact--ok:hover:not(:disabled) { background: #12905a; color: #fff; }
 .admin-cact--no { border-color: #C0442B; color: #C0442B; }

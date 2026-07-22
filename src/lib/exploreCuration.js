@@ -205,7 +205,10 @@ export function wildlifeSortKey(item) {
 const EVENT_SOURCE_LABELS = { tourapi: "관광공사", culture: "문화포털", kopis: "KOPIS", festival: "공공데이터", contribution: "이웃 제보" }
 
 export function curationSourceLabel(type, item) {
-  if (type === "wildlife") return item?.source === "gbif" ? "GBIF" : "iNaturalist"
+  if (type === "wildlife") {
+    if (item?.source === "contribution") return "이웃 제보"
+    return item?.source === "gbif" ? "GBIF" : "iNaturalist"
+  }
   return EVENT_SOURCE_LABELS[item?.source] || item?.sourceLabel || ""
 }
 

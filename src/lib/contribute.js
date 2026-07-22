@@ -16,6 +16,21 @@ export const CONTRIBUTE_TABS = [
   { key: "enjoy", label: "즐기기", emoji: "🎪", hint: "축제·행사·공연", examples: "동네 축제, 플리마켓, 전시 오프닝" },
   { key: "learn", label: "배우기", emoji: "📚", hint: "강좌·원데이클래스·공방", examples: "도자기 공방, 마을 강좌, 미술 수업" },
   { key: "walk", label: "걷기·머물기", emoji: "🌳", hint: "공원·시장·산책로·명소", examples: "동네 공원, 전통시장, 골목길" },
+  { key: "nature", label: "자연", emoji: "🦋", hint: "동네에서 만난 생물", examples: "새, 곤충, 들꽃, 물고기" },
+]
+
+// 자연(nature) 제보 분류 — label 은 카드 배지, taxonGroup·emoji 는 wildlife 카드 변환용.
+// api/wildlife.js TAXON_META 와 정합(+곤충). explore_catalog 에는 category(label)만 저장하고
+// emoji·taxonGroup 은 클라이언트가 이 표로 되살린다(목록 쿼리에서 detail 을 빼기 위해).
+export const NATURE_CATEGORIES = [
+  { label: "새", taxonGroup: "Aves", emoji: "🐦" },
+  { label: "곤충", taxonGroup: "Insecta", emoji: "🐛" },
+  { label: "식물", taxonGroup: "Plantae", emoji: "🌿" },
+  { label: "포유류", taxonGroup: "Mammalia", emoji: "🦔" },
+  { label: "양서류", taxonGroup: "Amphibia", emoji: "🐸" },
+  { label: "파충류", taxonGroup: "Reptilia", emoji: "🦎" },
+  { label: "물고기", taxonGroup: "Actinopterygii", emoji: "🐟" },
+  { label: "기타", taxonGroup: "", emoji: "🐾" },
 ]
 
 // admin 검수 상태 탭

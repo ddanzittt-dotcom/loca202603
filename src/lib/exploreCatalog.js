@@ -283,6 +283,75 @@ export async function fetchCatalogItems(tab, location) {
   }
 }
 
+// ── 자연(nature) 제보 → wildlife 카드 변환 (2차) ──
+// 자연 탭은 /api/wildlife(iNat·GBIF)만 보고 explore_catalog 을 안 봤다. 이웃 제보(nature)를
+// 그 목록에 섞으려면 카탈로그 row 를 wildlife 카드 모양으로 바꿔야 한다.
+// 분류(category 라벨)만 저장하고 이모지·분류군은 이 표로 되살린다 → 목록 쿼리에 detail 불필요.
+// contribute.js NATURE_CATEGORIES 와 동기화(라벨·이모지·taxonGroup).
+const NATURE_META = {
+  "새": { taxonGroup: "Aves", emoji: "🐦" },
+  "곤충": { taxonGroup: "Insecta", emoji: "🐛" },
+  "식물": { taxonGroup: "Plantae", emoji: "🌿" },
+  "포유류": { taxonGroup: "Mammalia", emoji: "🦔" },
+  "양서류": { taxonGroup: "Amphibia", emoji: "🐸" },
+  "파충류": { taxonGroup: "Reptilia", emoji: "🦎" },
+  "물고기": { taxonGroup: "Actinopterygii", emoji: "🐟" },
+  "기타": { taxonGroup: "", emoji: "🐾" },
+}
+
+// 자연 제보 explore_catalog row → wildlife 카드 아이템 (ListRow/MiniCard/CurationDetailSheet wildlife 브랜치 호환)
+export function normalizeNatureCatalogItem(row, location) {
+  const meta = NATURE_META[row.category] || { taxonGroup: "", emoji: "🐾" }
+  const lat = Number(row.lat)
+  const lng = Number(row.lng)
+  const distKm = location && Number.isFinite(lat) && Number.isFinite(lng)
+    ? Math.round(haversineKm(location.lat, location.lng, lat, lng) * 10) / 10
+    : null
+  return {
+    id: row.id,
+    catalogId: row.id,
+    source: "contribution",
+    title: row.title || "",
+    taxonGroup: meta.taxonGroup,
+    category: row.category || "생물",
+    emoji: meta.emoji,
+    photo: row.image || "",
+    photoLarge: row.image || "",
+    place: row.addr || row.region_text || "",
+    observedOn: row.start_date || "", // 발견 날짜(observedOn)를 start_date 에 저장
+    lat,
+    lng,
+    distKm,
+    contributor: row.detail?.contributor || "", // 자연은 저용량이라 목록에 detail 포함(제보자 표기)
+  }
+}
+
+// 자연 제보 조회 — tab='nature' 카탈로그(전량 이웃 제보)를 wildlife 카드로. 소량이라 단순 bbox.
+export async function fetchNatureContributions(location) {
+  if (!hasSupabaseEnv || !supabase) return []
+  const lat = Number(location?.lat)
+  const lng = Number(location?.lng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return []
+  const radiusKm = RADIUS_TIERS_KM[RADIUS_TIERS_KM.length - 1] // 20km
+  const dLat = radiusKm / 110.574
+  const dLng = radiusKm / (111.32 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)))
+  try {
+    const { data, error } = await supabase
+      .from("explore_catalog")
+      .select("id,source,tab,title,category,addr,lat,lng,region_text,image,start_date,detail")
+      .eq("tab", "nature")
+      .gte("lat", lat - dLat).lte("lat", lat + dLat)
+      .gte("lng", lng - dLng).lte("lng", lng + dLng)
+      .limit(200)
+    if (error || !Array.isArray(data)) return []
+    return data
+      .map((row) => normalizeNatureCatalogItem(row, { lat, lng }))
+      .filter((item) => item.title && Number.isFinite(item.lat) && Number.isFinite(item.lng))
+  } catch {
+    return []
+  }
+}
+
 // route 폴리라인 지연 조회 — 채집(카드 등록) 시점에만 부른다.
 // 반환: [[lng, lat], ...] (map_features.points / 로컬 피처와 동일한 표준형)
 export async function fetchCatalogRoutePoints(catalogId) {

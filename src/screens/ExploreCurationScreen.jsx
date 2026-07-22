@@ -21,7 +21,7 @@ import {
   wildlifeSortKey,
   wildlifeToPrefill,
 } from "../lib/exploreCuration"
-import { fetchCatalogItems } from "../lib/exploreCatalog"
+import { fetchCatalogItems, fetchNatureContributions } from "../lib/exploreCatalog"
 import { EVENT_TYPES, logEvent } from "../lib/analytics"
 import { CurationDetailSheet } from "../components/sheets/CurationDetailSheet"
 import { PixelRadar } from "../components/explore/PixelRadar"
@@ -274,6 +274,7 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
   // 사전 적재 카탈로그 — Supabase 직접 조회, 실패해도 빈 목록 (스펙 v3.3 §3.5)
   const [walkCatalog, setWalkCatalog] = useState({ key: null, items: [] }) // ③ 공원·시장·둘레길
   const [learnCatalog, setLearnCatalog] = useState({ key: null, items: [] }) // ② 강좌·도서관·체험마을
+  const [natureCatalog, setNatureCatalog] = useState({ key: null, items: [] }) // ④ 자연 이웃 제보(wildlife 병합)
 
   const effectiveLocation = location || DEFAULT_EXPLORE_LOCATION
   const requestKey = `${effectiveLocation.lat},${effectiveLocation.lng}|${reloadKey}`
@@ -349,6 +350,14 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
     fetchCatalogItems("learn", effectiveLocation)
       .then((items) => { if (!cancelled) setLearnCatalog({ key: requestKey, items }) })
       .catch(() => { if (!cancelled) setLearnCatalog({ key: requestKey, items: [] }) })
+    return () => { cancelled = true }
+  }, [effectiveLocation, requestKey])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchNatureContributions(effectiveLocation)
+      .then((items) => { if (!cancelled) setNatureCatalog({ key: requestKey, items }) })
+      .catch(() => { if (!cancelled) setNatureCatalog({ key: requestKey, items: [] }) })
     return () => { cancelled = true }
   }, [effectiveLocation, requestKey])
 
@@ -432,12 +441,12 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
     return interleaveByKind(sorted, (entry) => entry.item.kind || entry.item.source || "etc", 2)
   }, [visiblePlaces, walkCatalog, requestKey])
 
-  // ④ 자연 — 거리순 + 최근 관측 가중
-  const natureEntries = useMemo(
-    () => visibleWildlife.map(wildEntry)
-      .sort((a, b) => wildlifeSortKey(a.item) - wildlifeSortKey(b.item)),
-    [visibleWildlife],
-  )
+  // ④ 자연 — 거리순 + 최근 관측 가중. TourAPI 생물(iNat·GBIF) + 이웃 제보(nature) 병합.
+  const natureEntries = useMemo(() => {
+    const contribs = natureCatalog.key === requestKey ? natureCatalog.items : []
+    return [...visibleWildlife, ...contribs].map(wildEntry)
+      .sort((a, b) => wildlifeSortKey(a.item) - wildlifeSortKey(b.item))
+  }, [visibleWildlife, natureCatalog, requestKey])
 
   // 전체 = 레이더용 병합(거리순). 목록 UI는 섹션 캐러셀이 담당.
   const allEntries = useMemo(
@@ -472,7 +481,14 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
       emptyTitle: "주변에서 걷고 머물 곳을 찾지 못했어요",
       emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요.",
     },
-    nature: { loading: wildLoading, error: wildError, entries: natureEntries, emptyTitle: "주변 관측 기록이 아직 없어요", emptySub: "위치를 바꾸거나 새로고침(↻)을 눌러보세요." },
+    // 이웃 제보(nature)가 있으면 wildlife API 실패·로딩과 무관하게 목록 우선 (walk 와 동일 패턴)
+    nature: {
+      loading: wildLoading && natureEntries.length === 0,
+      error: natureEntries.length > 0 ? "" : wildError,
+      entries: natureEntries,
+      emptyTitle: "주변 관측 기록이 아직 없어요",
+      emptySub: "동네에서 만난 생물을 제보해 이 칸을 채워보세요.",
+    },
   }
 
   // 레이더 도트 = 활성 탭 항목 (탭 = 지도 필터). '전체'는 전 종류.
@@ -496,9 +512,9 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
   const active = tabState[activeTab]
   const openDetail = (type) => (data) => setDetailItem({ type, data })
 
-  // 이웃 제보 진입 — 즐기기·배우기·걷기 3탭만(전체·자연 제외, 1차). 로그인 게이트는 시트가 담당.
+  // 이웃 제보 진입 — 즐기기·배우기·걷기·자연 탭(전체 제외). 로그인 게이트는 시트가 담당.
   // 상시 진입은 탭 줄의 "제보하기" 버튼. 이건 빈 상태에서 한 번 더 권하는 CTA.
-  const canContribute = activeTab === "enjoy" || activeTab === "learn" || activeTab === "walk"
+  const canContribute = activeTab === "enjoy" || activeTab === "learn" || activeTab === "walk" || activeTab === "nature"
   const contributeCta = () => (canContribute && onContribute ? (
     <button type="button" className="xc-cta" onClick={() => onContribute(activeTab)}>
       <Megaphone size={13} strokeWidth={2.4} aria-hidden="true" />
@@ -550,7 +566,7 @@ export function ExploreCurationScreen({ onRegister, onContribute, showToast }) {
           <button
             type="button"
             className="xc-tab-report"
-            onClick={() => onContribute(["enjoy", "learn", "walk"].includes(activeTab) ? activeTab : null)}
+            onClick={() => onContribute(["enjoy", "learn", "walk", "nature"].includes(activeTab) ? activeTab : null)}
           >
             <Megaphone size={12} strokeWidth={2.4} aria-hidden="true" />
             제보하기

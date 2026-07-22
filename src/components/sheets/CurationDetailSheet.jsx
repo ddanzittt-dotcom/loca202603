@@ -163,6 +163,8 @@ export function CurationDetailSheet({ item, onClose, onRegister }) {
             <div className="xdt-rows">
               <InfoRow label="관측지" value={data.place} />
               <InfoRow label="관측일" value={data.observedOn} />
+              {/* 이웃 제보(nature, 085) 기여자 표기 */}
+              <InfoRow label="제보자" value={data.contributor ? `${data.contributor}님` : ""} />
             </div>
 
             <p className="xdt-note">

@@ -76,6 +76,7 @@ const CONTRIB_TAB_BADGE = {
   enjoy: "admin-cbadge--enjoy",
   learn: "admin-cbadge--learn",
   walk: "admin-cbadge--walk",
+  nature: "admin-cbadge--nature",
 }
 
 // 제보 상태별 액션 — 승인(published)/반려(rejected). 반려는 사유 입력 후 확정.
