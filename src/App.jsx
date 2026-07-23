@@ -47,6 +47,7 @@ import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
 import { CONSENT_VERSION, friendlyAuthError, getMyConsentState, recordMyConsent } from "./lib/auth"
 import { clearOAuthReturnFromUrl, getOAuthReturn } from "./lib/authReturn"
+import { applyPublicOgMeta, getPublishedMapOgMeta } from "./lib/publicOgMeta"
 import { ConsentGate } from "./components/ConsentGate"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
@@ -1848,6 +1849,9 @@ export default function App() {
       .then((result) => {
         if (!isMounted) return
         if (result) {
+          // 문서 메타를 이 지도 기준으로 교체 — 그대로 두면 홈 제목/홈 canonical 이 남아
+          // 발행 지도가 "홈의 중복 페이지"로 색인에서 탈락한다.
+          applyPublicOgMeta(getPublishedMapOgMeta(result.map, result.features?.length || 0))
           setSharedMapData({ map: result.map, features: result.features })
           setActiveTab("maps")
           setMapsView("editor")

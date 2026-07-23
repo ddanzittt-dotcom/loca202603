@@ -35,6 +35,21 @@ function upsertMeta(selector, attributeName, attributeValue, content) {
   element.setAttribute("content", content)
 }
 
+// canonical 갱신 — index.html 의 canonical 은 홈("https://loca.im/")으로 고정돼 있어,
+// SPA 로 열린 하위 페이지(발행 지도 등)가 그대로 두면 "홈의 중복"으로 선언되어 색인에서 빠진다.
+// 쿼리스트링(utm_source 등)은 제거한 경로만 canonical 로 쓴다.
+function upsertCanonical(url) {
+  if (typeof document === "undefined" || !url) return
+  const clean = url.split("?")[0].split("#")[0]
+  let element = document.head.querySelector("link[rel='canonical']")
+  if (!element) {
+    element = document.createElement("link")
+    element.setAttribute("rel", "canonical")
+    document.head.appendChild(element)
+  }
+  element.setAttribute("href", clean)
+}
+
 export function buildPixelMarkerOgFallback(record = {}, origin = "") {
   const iconKey = record.pixel_icon_key || getPublicMarkerIconKey(record)
   const title = compactText(record.title, record.type === "route" ? "LOCA 길" : "LOCA 장소")
@@ -104,6 +119,28 @@ export function getRecommendSearchOgMeta(query = "", origin = "") {
   }
 }
 
+// 발행 지도(/s/:slug) 메타 — SPA 로 열렸을 때 제목·설명·canonical 을 지도별로 바꾼다.
+// (검색봇은 api/og/[slug].js 가 서버에서 렌더한 HTML 을 받지만, JS 를 실행하는 크롤러와
+//  브라우저 탭 제목·공유 시점의 메타를 위해 클라이언트에서도 맞춰 둔다)
+export function getPublishedMapOgMeta(map = {}, featureCount = 0, origin = "") {
+  const title = compactText(map.title, "LOCA 지도")
+  const description = compactText(
+    map.description,
+    featureCount > 0 ? `좋아하는 곳 ${featureCount}곳을 모아 만든 지도예요.` : "좋아하는 곳을 모아 만든 지도예요."
+  )
+  const url = absoluteUrl(`/s/${encodeURIComponent(map.slug || "")}`, origin)
+  return {
+    title: `${title} - LOCA 로카`,
+    description,
+    image: absoluteUrl("/og-image.png", origin),
+    imageAlt: `${title} 지도 커버`,
+    url,
+    canonical: url,
+    type: "article",
+    siteName: LOCA_SITE_NAME,
+  }
+}
+
 export function applyPublicOgMeta(meta = {}) {
   if (typeof document === "undefined") return
   const title = compactText(meta.title, "LOCA")
@@ -112,6 +149,7 @@ export function applyPublicOgMeta(meta = {}) {
   const url = meta.url || getCurrentUrl()
 
   document.title = title
+  upsertCanonical(meta.canonical || url)
   upsertMeta("meta[name='description']", "name", "description", description)
   upsertMeta("meta[property='og:type']", "property", "og:type", meta.type || "website")
   upsertMeta("meta[property='og:title']", "property", "og:title", title)
