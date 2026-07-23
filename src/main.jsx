@@ -42,13 +42,12 @@ import "./styles/editor-redesign-fixes.css"
 import "./styles/editor-focused.css"
 import "./styles/admin.css"
 import App from "./App"
-// /community-web · /admin 은 lazy (진입 경로가 맞을 때만 청크 로드) — 상세는 lazyRoutes.jsx 주석 참조.
+// /recommend · /maps/search · /admin 은 lazy (진입 경로가 맞을 때만 청크 로드) — lazyRoutes.jsx 주석 참조.
 // App 은 기본 경로라 정적 유지.
 import { AdminScreen, BootFallback, PublicCommunityPage } from "./lazyRoutes"
 import { publicRecommendMaps } from "./data/publicRecommendMaps"
 import {
   applyPublicOgMeta,
-  getCommunitySearchOgMeta,
   getRecommendMapOgMeta,
   getRecommendSearchOgMeta,
 } from "./lib/publicOgMeta"
@@ -96,16 +95,14 @@ if (initialRecommendMap) {
   applyPublicOgMeta(getRecommendMapOgMeta(initialRecommendMap))
 } else if (publicPath === "/maps/search") {
   applyPublicOgMeta(getRecommendSearchOgMeta(new URLSearchParams(window.location.search).get("q") || ""))
-} else if (publicPath === "/community-web") {
-  applyPublicOgMeta(getCommunitySearchOgMeta(new URLSearchParams(window.location.search).get("q") || ""))
 }
 
+// /community-web(모두의 지도)은 2026-07-23 철거 — 라우트 제거로 SPA fallback(App)이 받는다.
+// 같은 화면 컴포넌트가 담당하는 추천할지도(/recommend/:slug, /maps/search)는 유지.
 const publicPage = recommendMatch
   ? <PublicCommunityPage page="recommend" recommendSlug={decodeURIComponent(recommendMatch[1])} />
   : publicPath === "/maps/search"
-  ? <PublicCommunityPage page="search" />
-  : publicPath === "/community-web"
-    ? <PublicCommunityPage page="community" />
+    ? <PublicCommunityPage page="search" />
     : publicPath === "/admin"
       ? <AdminScreen />
       : <App />

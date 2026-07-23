@@ -36,7 +36,7 @@ import {
 import { hasSupabaseEnv, supabase } from "./lib/supabase"
 import { EVENT_TYPES, logEvent, markSessionStarted, setUtmSource } from "./lib/analytics"
 import { captureError } from "./lib/monitoring"
-import { addFeatureMemo, backfillRegionNames, getCommunityMapBundle, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
+import { addFeatureMemo, backfillRegionNames, getMapBundle, getPublishedMapBySlug, respondCollaborationInvite, saveMap as saveMapRecord, updateFeature } from "./lib/mapService"
 import { uploadMediaToCloud } from "./lib/mediaStore"
 import { compressImageFile, blobToDataUrl } from "./lib/imageCompress"
 import { listFeatureChangeRequests } from "./lib/mapService.read"
@@ -342,7 +342,7 @@ function SignedInScreen({ user, onOpenMaps, onOpenProfile, onSignOut }) {
 
 const resolveStoredMapTarget = (mapId, maps) => {
   if (!mapId) return null
-  if (mapId === "community-map") return { source: "community", mapId }
+  // 모두의 지도(community-map)는 2026-07-23 철거 — 저장된 마지막 지도가 그것이어도 복원하지 않는다.
   if (demoMaps.some((map) => map.id === mapId)) return { source: "demo", mapId }
   if (maps.some((map) => map.id === mapId)) return { source: "local", mapId }
   return null
@@ -1636,22 +1636,6 @@ export default function App() {
       if (cancelled || syncRunning) return
       syncRunning = true
       try {
-        if (activeMapSource === "community") {
-          const bundle = await getCommunityMapBundle()
-          if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
-
-          setCommunityMapId(bundle.map.id)
-          setCommunityMapFeatures((current) => (
-            mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
-          ))
-          setActiveMapId((current) => (
-            current === "community-map" || current === mapId
-              ? bundle.map.id
-              : current
-          ))
-          return
-        }
-
         const bundle = await getMapBundle(mapId)
         if (cancelled || !bundle?.map || bundle.map.id !== mapId) return
 
@@ -1691,13 +1675,7 @@ export default function App() {
         scheduleSync,
       )
 
-    if (activeMapSource === "community") {
-      channel = channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "community_records" },
-        scheduleSync,
-      )
-    } else {
+    {
       channel = channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table: "feature_memos" },
@@ -1748,35 +1726,9 @@ export default function App() {
 
   // --- Route effects ---
 
-  useEffect(() => {
-    if (!hasSupabaseEnv || !authReady) return
-    let cancelled = false
-
-    const hydrateCommunityMap = async () => {
-      try {
-        const bundle = await getCommunityMapBundle()
-        if (cancelled || !bundle?.map) return
-
-        setCommunityMapId(bundle.map.id)
-        setCommunityMapFeatures((current) => (
-          mergeFeatureListWithLocalMedia(Array.isArray(bundle.features) ? bundle.features : [], current)
-        ))
-        setActiveMapId((current) => (current === "community-map" ? bundle.map.id : current))
-
-        if (routeAtLoad?.type === "map" && (routeAtLoad.mapId === "community-map" || routeAtLoad.mapId === bundle.map.id)) {
-          setActiveTab("maps")
-          setMapsView("editor")
-          setActiveMapSource("community")
-          setActiveMapId(bundle.map.id)
-        }
-      } catch (error) {
-        console.error("Failed to hydrate community map", error)
-      }
-    }
-
-    hydrateCommunityMap()
-    return () => { cancelled = true }
-  }, [authReady, authUser, routeAtLoad, setActiveMapId, setActiveMapSource, setActiveTab, setMapsView, setCommunityMapFeatures])
+  // (2026-07-23 철거) 모두의 지도 하이드레이션 effect 제거.
+  // 진입 경로가 없는데도 매 세션 부팅마다 Supabase 를 3회(maps + map_features + community_records)
+  // 조회하고 있었다. 데이터는 0행이었다.
 
   useEffect(() => {
     if (!hasSupabaseEnv || !authReady || !authUser || !communityMapId || communityMapId === "community-map") {

@@ -406,44 +406,20 @@ const recommendItemToFeature = (item, map) => {
 
 const getRecommendMapFeatures = (map) => map.items.map((item) => recommendItemToFeature(item, map))
 
-function PublicTopBar({ activeTab, onTabChange, onSavedOpen, showRecommendTab = false }) {
+// 2026-07-23: 모두의 지도(/community-web) 철거 — 이 공개 웹은 추천할지도 전용 표면이 됐다.
+// 탭 전환 UI 와 로고 링크에서 모두의 지도 진입을 제거한다(화면 내부 커뮤니티 코드는 미도달 상태로 잔존).
+function PublicTopBar({ onSavedOpen }) {
   return (
     <header className="public-top">
-      <a className="public-logo" href="/community-web" aria-label="LOCA 모두의 지도">
+      <a className="public-logo" href="/maps/search" aria-label="LOCA 추천할지도">
         <BrandLogo as="span" className="public-logo__brand" dotClassName="public-logo__dot" />
-        <span className="public-logo__section">모두의 지도</span>
+        <span className="public-logo__section">추천할지도</span>
       </a>
-      {showRecommendTab ? (
-        <nav className="public-tabs" aria-label="공개 지도 탭">
-          <button
-            type="button"
-            className={activeTab === "community" ? "is-active" : ""}
-            aria-pressed={activeTab === "community"}
-            onClick={() => onTabChange("community")}
-          >
-            모두의 지도
-          </button>
-          <button
-            type="button"
-            className={activeTab === "recommend" ? "is-active" : ""}
-            aria-pressed={activeTab === "recommend"}
-            onClick={() => onTabChange("recommend")}
-          >
-            추천할지도
-          </button>
-        </nav>
-      ) : (
-        <nav className="public-tabs public-tabs--single" aria-label="공개 지도 탭">
-        <button
-          type="button"
-          className="is-active"
-          aria-pressed="true"
-          onClick={() => onTabChange("community")}
-        >
-          모두의 지도
+      <nav className="public-tabs public-tabs--single" aria-label="공개 지도 탭">
+        <button type="button" className="is-active" aria-pressed="true">
+          추천할지도
         </button>
       </nav>
-      )}
       <button className="public-saved-button" type="button" onClick={onSavedOpen}>
         <Archive size={15} />
         저장함
@@ -2100,11 +2076,12 @@ function SavedBoxView({ onClose, onConnect }) {
   )
 }
 
-export function PublicCommunityPage({ page = "community", recommendSlug = "" }) {
+// 2026-07-23 모두의 지도 철거 후: 이 화면은 추천할지도(/recommend/:slug, /maps/search) 전용이다.
+// page 기본값을 "search" 로 바꿔, 라우트가 유실돼도 커뮤니티 탭으로 떨어지지 않게 한다.
+export function PublicCommunityPage({ page = "search", recommendSlug = "" }) {
   const queryRecommendSlug = new URLSearchParams(window.location.search).get("recommend") || ""
   const initialRecommendSlug = recommendSlug || queryRecommendSlug
-  const showRecommendTab = ENABLE_RECOMMEND_TAB || page === "search" || page === "recommend" || Boolean(initialRecommendSlug)
-  const [activeTab, setActiveTab] = useState(page === "search" || page === "recommend" || initialRecommendSlug ? "recommend" : "community")
+  const activeTab = "recommend"
   const [view, setView] = useState("map")
   const [saveNotice, setSaveNotice] = useState(null)
   const [connectOpen, setConnectOpen] = useState(false)
@@ -2147,23 +2124,11 @@ export function PublicCommunityPage({ page = "community", recommendSlug = "" }) 
     }
   }, [])
 
-  const handleTabChange = (nextTab) => {
-    if (isSearchRoute && nextTab === "community") {
-      window.location.href = "/community-web"
-      return
-    }
-    setActiveTab(nextTab)
-    setView("map")
-  }
+  // (2026-07-23) 탭 전환 핸들러 제거 — 추천할지도 단일 탭이라 전환 대상이 없다.
 
   return (
-    <main className={`public-map-page ${activeTab === "community" && !isSearchRoute && view !== "saved" ? "public-map-page--map-first" : "public-map-page--directory"}`}>
-      <PublicTopBar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        onSavedOpen={() => setView("saved")}
-        showRecommendTab={showRecommendTab}
-      />
+    <main className="public-map-page public-map-page--directory">
+      <PublicTopBar onSavedOpen={() => setView("saved")} />
 
       {view === "saved" ? (
         <SavedBoxView

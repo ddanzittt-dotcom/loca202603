@@ -9,9 +9,9 @@
 //    나중에 승인제(admin 이 허용한 지도만 색인)로 열 경우 이 파일과 og 핸들러를 함께 바꿀 것.
 import { SITE_URL } from "./_lib/publishedMaps.js"
 
+// /community-web(모두의 지도)은 2026-07-23 철거됨 — 데이터 0행·진입 경로 없음.
 const STATIC_URLS = [
   { path: "/", changefreq: "daily", priority: "1.0" },
-  { path: "/community-web", changefreq: "daily", priority: "0.8" },
   { path: "/terms", changefreq: "monthly", priority: "0.3" },
   { path: "/privacy", changefreq: "monthly", priority: "0.3" },
 ]

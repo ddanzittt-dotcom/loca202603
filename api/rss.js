@@ -14,11 +14,6 @@ const FEED_ENTRIES = [
     title: "LOCA 로카 — 나만의 지도 만들기",
     description: "좋아하는 장소를 기록하고, 카드로 모아 나만의 지도를 만들어 보세요.",
   },
-  {
-    path: "/community-web",
-    title: "모두의 지도 — 사람들이 남긴 장소와 길",
-    description: "사람들이 남긴 장소와 길을 지도에서 찾아보세요.",
-  },
 ]
 
 export default function handler(req, res) {
