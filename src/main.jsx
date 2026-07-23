@@ -12,7 +12,7 @@ if (import.meta.env.DEV && import.meta.env.VITE_REACT_GRAB === "1") {
 // 현재 URL 을 동기 스냅샷해야 한다. 아래 import 들보다 먼저 평가되어야 함.
 import "./lib/authReturn"
 
-import { StrictMode } from "react"
+import { StrictMode, Suspense } from "react"
 import { createRoot } from "react-dom/client"
 import { StatusBar, Style } from "@capacitor/status-bar"
 import { SplashScreen } from "@capacitor/splash-screen"
@@ -42,8 +42,9 @@ import "./styles/editor-redesign-fixes.css"
 import "./styles/editor-focused.css"
 import "./styles/admin.css"
 import App from "./App"
-import { PublicCommunityPage } from "./screens/PublicCommunityPage"
-import { AdminScreen } from "./screens/AdminScreen"
+// /community-web · /admin 은 lazy (진입 경로가 맞을 때만 청크 로드) — 상세는 lazyRoutes.jsx 주석 참조.
+// App 은 기본 경로라 정적 유지.
+import { AdminScreen, BootFallback, PublicCommunityPage } from "./lazyRoutes"
 import { publicRecommendMaps } from "./data/publicRecommendMaps"
 import {
   applyPublicOgMeta,
@@ -111,6 +112,8 @@ const publicPage = recommendMatch
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    {publicPage}
+    <Suspense fallback={<BootFallback />}>
+      {publicPage}
+    </Suspense>
   </StrictMode>,
 )
