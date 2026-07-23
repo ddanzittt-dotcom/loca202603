@@ -168,11 +168,53 @@ Supabase Dashboard → Storage → New bucket:
 Supabase Dashboard → Authentication → URL Configuration:
 - Site URL: `https://loca.im`
 - Redirect URLs에 추가:
-  - `https://loca.im`
   - `https://loca.im/**`
-  - (프리뷰용) `https://*.vercel.app` 또는 `https://*.netlify.app`
+  - `http://localhost:5173/**` (로컬 개발)
+  - (프리뷰용) `https://*.vercel.app/**`
 
-### 4. 초대코드 등록 (B2B 테스트용)
+> ⚠️ 반드시 **끝에 `/**`** 를 붙일 것. 간편 로그인 복귀 주소에 `?login=kakao` 쿼리 마커가 붙기 때문에
+> (`src/lib/auth.js` `buildOAuthRedirectTo`), 쿼리를 포함하지 못하는 형태로 등록하면 복귀가 차단된다.
+
+### 4. 간편 로그인(카카오·구글) 설정
+
+#### 4-1. Kakao Developers (https://developers.kakao.com)
+
+1. 내 애플리케이션 → 애플리케이션 추가
+2. **앱 설정 → 플랫폼 → Web** 사이트 도메인 등록
+   - `https://loca.im`
+   - `http://localhost:5173` (로컬 테스트용)
+3. **제품 설정 → 카카오 로그인** → 활성화 ON
+   - Redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+     (Supabase 프로젝트 URL 뒤에 `/auth/v1/callback` — loca.im 이 아님에 주의)
+4. **제품 설정 → 카카오 로그인 → 보안** → Client Secret 코드 생성 후 **활성화 상태 ON**
+   (Supabase Kakao provider 가 secret 을 요구한다)
+5. **제품 설정 → 카카오 로그인 → 동의항목**
+   - 닉네임 / 프로필 사진: 필수 또는 선택 동의
+   - **카카오계정(이메일)**: ⚠️ *필수 동의*로 설정하려면 비즈니스 앱 전환이 필요하다.
+     선택 동의로 두면 사용자가 거부했을 때 **이메일 없는 계정**이 생성될 수 있으므로,
+     실계정 왕복 테스트로 `auth.users.email` 이 채워지는지 반드시 확인할 것.
+     (`handle_new_user()` 트리거(077)는 이메일이 없어도 닉네임 기반으로 slug 를 만들도록 되어 있다)
+6. Supabase Dashboard → Authentication → Providers → **Kakao** 활성화
+   - Client ID: 카카오 앱의 **REST API 키**
+   - Client Secret: 위 4번에서 만든 값
+
+#### 4-2. Google Cloud Console (https://console.cloud.google.com)
+
+1. API 및 서비스 → **OAuth 동의 화면** → 외부(External) → 앱 게시
+2. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID → 웹 애플리케이션**
+   - 승인된 JavaScript 원본: `https://loca.im`
+   - 승인된 리디렉션 URI: `https://<project-ref>.supabase.co/auth/v1/callback`
+3. Supabase Dashboard → Authentication → Providers → **Google** 활성화
+   - Client ID / Client Secret 입력
+
+#### 4-3. 앱 쪽 확인 사항
+
+- 간편 로그인 신규 가입자는 가입 폼을 거치지 않으므로 약관 동의를 **로그인 후 `ConsentGate`**(migration 073 RPC)가 받는다
+- 공개 아이디(slug)는 `handle_new_user()` 트리거(migration 077)가 이메일/닉네임 기반으로 자동 배정한다
+- 로그인 방식 계측(`view_logs.event_type = 'login'`)은 **migration 086** 적용 후에만 쌓인다
+  (081 가드 트리거가 화이트리스트 밖 이벤트를 조용히 폐기한다)
+
+### 5. 초대코드 등록 (B2B 테스트용 — 현재 앱 미사용)
 
 SQL Editor에서:
 ```sql

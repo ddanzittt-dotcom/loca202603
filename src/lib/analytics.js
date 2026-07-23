@@ -14,6 +14,8 @@ export const EVENT_TYPES = {
   SESSION_START: "session_start",
   SESSION_END: "session_end",
   QR_SCAN: "qr_scan",
+  // 로그인 — meta: { provider: "email"|"kakao"|"google", isSignup } (migration 086 화이트리스트)
+  LOGIN: "login",
   // 피처(장소 카드) 상호작용
   FEATURE_CLICK: "feature_click",
   FEATURE_VIEW: "feature_view",

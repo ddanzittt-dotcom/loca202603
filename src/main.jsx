@@ -8,6 +8,10 @@ if (import.meta.env.DEV && import.meta.env.VITE_REACT_GRAB === "1") {
   import("react-grab")
 }
 
+// ⚠️ 최상단 유지 — supabase 클라이언트(detectSessionInUrl)가 OAuth 복귀 해시를 지우기 전에
+// 현재 URL 을 동기 스냅샷해야 한다. 아래 import 들보다 먼저 평가되어야 함.
+import "./lib/authReturn"
+
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import { StatusBar, Style } from "@capacitor/status-bar"

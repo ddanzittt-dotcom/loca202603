@@ -45,7 +45,8 @@ import { addPlacements, removePlacement, featureInMap } from "./lib/featurePlace
 import { scopeFeatureMemos } from "./lib/featureRecordGroups"
 import { createId } from "./lib/appUtils"
 import { add as addNotification, NOTI_TYPES } from "./lib/notificationStore"
-import { CONSENT_VERSION, getMyConsentState, recordMyConsent } from "./lib/auth"
+import { CONSENT_VERSION, friendlyAuthError, getMyConsentState, recordMyConsent } from "./lib/auth"
+import { clearOAuthReturnFromUrl, getOAuthReturn } from "./lib/authReturn"
 import { ConsentGate } from "./components/ConsentGate"
 // 라우트별 코드 스플리팅 - 라이트웹(/s/:slug)은 SharedMapViewer 청크만 로딩
 const AuthScreen = lazy(() => import("./screens/AuthScreen").then((m) => ({ default: m.AuthScreen })))
@@ -370,6 +371,10 @@ export default function App() {
       return { type: "invalid-shared" }
     }
   }, [])
+  // 카카오/구글 간편 로그인 복귀 — ?login=<provider> 마커 또는 #error=... (authReturn.js 가 진입 시 스냅샷)
+  const oauthReturnAtLoad = useMemo(() => getOAuthReturn(), [])
+  const oauthHandledRef = useRef(false)
+
   const initialStoredTarget = routeAtLoad?.type === "map" ? resolveStoredMapTarget(routeAtLoad.mapId, maps) : null
   const initialSharedMapData = routeAtLoad?.type === "shared" ? routeAtLoad.payload : null
   const [sharedMapData, setSharedMapData] = useState(initialSharedMapData)
@@ -378,8 +383,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(initialSharedMapData || initialStoredTarget ? "maps" : "explore")
   // 타이틀(입장) 화면 오버레이 — loca.im 루트로 들어오면 매번 첫 화면으로 표시.
   // 공유/슬러그/지도/산책/공유타깃 등 딥링크(routeAtLoad != null)면 건너뛴다.
+  // 간편 로그인 복귀(oauthReturnAtLoad)도 건너뛴다 — 로그인 눌렀는데 다시 타이틀이 뜨면 흐름이 끊긴다.
   // + loca. 로고 클릭 시 언제든 재진입.
-  const [showTitle, setShowTitle] = useState(() => !routeAtLoad)
+  const [showTitle, setShowTitle] = useState(() => !routeAtLoad && !oauthReturnAtLoad)
   // 산책 모드 게임 오버레이 — 타이틀 "게임으로 동네 탐색하기" 또는 /walk 딥링크로 진입
   const [showWalk, setShowWalk] = useState(routeAtLoad?.type === "walk")
   // 로카냥 튜토리얼 — null | { step, auto: "guest" | "authed" | null }
@@ -637,14 +643,40 @@ export default function App() {
     setActiveTab("login")
   }, [])
 
-  const handleAuthSuccess = useCallback((mode) => {
+  // 이메일 가입/로그인은 AuthScreen 이, 카카오·구글은 아래 OAuth 복귀 이펙트가 호출한다.
+  const handleAuthSuccess = useCallback((mode, provider = "email") => {
     showToast(mode === "signup" ? "가입 완료! 만나서 반가워요." : "로그인했어요.")
     setActiveTab("maps")
     setMapsView("list")
     setActiveMapSource("local")
+    logEvent(EVENT_TYPES.LOGIN, { meta: { provider, isSignup: mode === "signup" } })
     // 신규 가입자에게만 연령대·지역 온보딩 1회 노출
     if (mode === "signup" && !isProfileOnboardSeen()) setProfileOnboardOpen(true)
   }, [setActiveMapSource, setActiveTab, setMapsView, showToast])
+
+  // 간편 로그인(카카오·구글) 복귀 처리.
+  // provider 리다이렉트로 페이지가 통째로 리로드되므로 AuthScreen 의 onSuccess 는 실행되지 않는다.
+  // 세션이 붙은 뒤(authReady && authUser) 여기서 이메일 가입과 같은 후처리를 한 번만 태운다.
+  useEffect(() => {
+    if (!oauthReturnAtLoad || oauthHandledRef.current) return
+    // 로그인 취소·거부 등 provider 가 해시로 돌려준 실패
+    if (oauthReturnAtLoad.error) {
+      oauthHandledRef.current = true
+      showToast(friendlyAuthError(oauthReturnAtLoad.errorDescription || oauthReturnAtLoad.error))
+      setActiveTab("login")
+      clearOAuthReturnFromUrl()
+      return
+    }
+    if (!authReady) return
+    if (!authUser) return
+    oauthHandledRef.current = true
+    // 신규 가입 판정 — 계정 생성 5분 이내면 방금 만들어진 계정으로 본다.
+    // (약관 동의는 별도로 ConsentGate(073 RPC)가 잡으므로 여기서는 온보딩·토스트만 담당)
+    const createdAt = Date.parse(authUser.created_at || "")
+    const isNew = Number.isFinite(createdAt) && Date.now() - createdAt < 5 * 60 * 1000
+    handleAuthSuccess(isNew ? "signup" : "login", oauthReturnAtLoad.provider || "oauth")
+    clearOAuthReturnFromUrl()
+  }, [authReady, authUser, handleAuthSuccess, oauthReturnAtLoad, setActiveTab, showToast])
 
   const closeProfileOnboard = useCallback(() => {
     markProfileOnboardSeen()
@@ -1854,9 +1886,13 @@ export default function App() {
     const nextPath = activeTab === "maps" && mapsView === "editor" && routeMapId
       ? sharedMapPath ?? buildMapRoutePath(routeMapId)
       : "/"
-    const currentPath = `${window.location.pathname}${window.location.search}`
-    if (currentPath !== nextPath) {
-      window.history.replaceState(null, "", nextPath)
+    // 해시는 보존한다 — 간편 로그인/비밀번호 재설정 복귀는 토큰이 #access_token=... 으로 오는데,
+    // supabase(detectSessionInUrl)가 읽기 전에 이 정리 effect 가 해시를 날리면 로그인이 통째로 실패한다.
+    // (읽고 나면 supabase 가 직접 해시를 지운다)
+    const hash = window.location.hash || ""
+    const currentPath = `${window.location.pathname}${window.location.search}${hash}`
+    if (currentPath !== `${nextPath}${hash}`) {
+      window.history.replaceState(null, "", `${nextPath}${hash}`)
     }
   }, [activeMapId, activeMapSource, activeTab, mapsView, routeAtLoad, sharedMapData])
 
