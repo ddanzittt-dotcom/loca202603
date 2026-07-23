@@ -1,49 +1,50 @@
-// RSS 2.0 피드 — 최신 공개 발행 지도. /rss.xml → 이 함수 (vercel.json rewrite).
-// 네이버 서치어드바이저 RSS 제출용(사이트맵과 별도의 신규 콘텐츠 발견 채널).
-// 작성자 정보(닉네임 포함)는 싣지 않는다 — 최소 노출 원칙.
-import { fetchPublicPublishedMaps, escapeXml, SITE_URL } from "./_lib/publishedMaps.js"
+// RSS 2.0 피드 — /rss.xml → 이 함수 (vercel.json rewrite).
+// 네이버 서치어드바이저에 제출된 신규 콘텐츠 발견 채널.
+//
+// ⚠️ 정책(2026-07-23): **사용자가 만든 지도(/s/:slug)는 싣지 않는다.**
+//    RSS 제출은 사실상 색인 요청이므로, 검열되지 않은 사용자 콘텐츠를 외부로
+//    내보내지 않는다는 사이트맵과 동일한 원칙을 따른다(api/sitemap.js 주석 참조).
+//    현재는 서비스가 직접 책임지는 공개 표면만 싣는다. 승인제를 도입하면
+//    "admin 이 색인 허용한 지도"만 여기에 추가할 것.
+import { escapeXml, SITE_URL } from "./_lib/publishedMaps.js"
 
-const FEED_LIMIT = 50
-const DESC_MAX = 300
+const FEED_ENTRIES = [
+  {
+    path: "/",
+    title: "LOCA 로카 — 나만의 지도 만들기",
+    description: "좋아하는 장소를 기록하고, 카드로 모아 나만의 지도를 만들어 보세요.",
+  },
+  {
+    path: "/community-web",
+    title: "모두의 지도 — 사람들이 남긴 장소와 길",
+    description: "사람들이 남긴 장소와 길을 지도에서 찾아보세요.",
+  },
+]
 
-export default async function handler(req, res) {
-  let maps = []
-  try {
-    maps = await fetchPublicPublishedMaps({
-      columns: "slug, title, description, published_at, updated_at",
-      limit: FEED_LIMIT,
-    })
-  } catch (err) {
-    console.error("rss: published maps fetch failed:", err.message)
-  }
+export default function handler(req, res) {
+  const buildDate = new Date().toUTCString()
 
-  const items = maps.map((m) => {
-    const link = `${SITE_URL}/s/${encodeURIComponent(m.slug)}`
-    const pubDate = toRfc822(m.published_at || m.updated_at)
-    const description = truncate(m.description || "", DESC_MAX)
+  const items = FEED_ENTRIES.map((entry) => {
+    const link = `${SITE_URL}${entry.path}`
     return [
       "    <item>",
-      `      <title>${escapeXml(m.title || "LOCA 지도")}</title>`,
+      `      <title>${escapeXml(entry.title)}</title>`,
       `      <link>${link}</link>`,
       `      <guid isPermaLink="true">${link}</guid>`,
-      pubDate ? `      <pubDate>${pubDate}</pubDate>` : null,
-      description ? `      <description>${escapeXml(description)}</description>` : null,
+      `      <description>${escapeXml(entry.description)}</description>`,
       "    </item>",
-    ]
-      .filter(Boolean)
-      .join("\n")
+    ].join("\n")
   })
 
-  const lastBuild = toRfc822(maps[0]?.published_at || maps[0]?.updated_at) || new Date().toUTCString()
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>LOCA · 새로 발행된 지도</title>
+    <title>LOCA · 로컬 큐레이션 지도</title>
     <link>${SITE_URL}</link>
     <atom:link href="${SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
-    <description>내 동네를 기록하는 로컬 큐레이션 지도 — 방금 발행된 공개 지도들</description>
+    <description>좋아하는 장소를 기록해 나만의 지도를 만드는 서비스</description>
     <language>ko</language>
-    <lastBuildDate>${lastBuild}</lastBuildDate>
+    <lastBuildDate>${buildDate}</lastBuildDate>
 ${items.join("\n")}
   </channel>
 </rss>
@@ -52,15 +53,4 @@ ${items.join("\n")}
   res.setHeader("Content-Type", "application/rss+xml; charset=utf-8")
   res.setHeader("Cache-Control", "public, s-maxage=1800, stale-while-revalidate=86400")
   res.status(200).send(xml)
-}
-
-function toRfc822(value) {
-  if (!value) return null
-  const d = new Date(value)
-  return Number.isNaN(d.getTime()) ? null : d.toUTCString()
-}
-
-function truncate(text, max) {
-  const t = String(text).trim()
-  return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
